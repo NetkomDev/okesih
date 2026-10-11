@@ -1,97 +1,196 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
+
+interface KitchenTicket {
+  id: string;
+  ticketNumber: string;
+  tableNumber: string;
+  elapsedMinutes: number;
+  status: "NEW" | "COOKING" | "READY";
+  items: { name: string; qty: number; notes?: string }[];
+}
 
 export default function KdsModulePage() {
+  const [tickets, setTickets] = useState<KitchenTicket[]>([
+    {
+      id: "tk-01",
+      ticketNumber: "#012",
+      tableNumber: "05",
+      elapsedMinutes: 8,
+      status: "COOKING",
+      items: [
+        { name: "Indomie Goreng + Telur", qty: 2, notes: "Pedas level 3, sawi banyak" },
+        { name: "Es Teh Manis Jumbo", qty: 2, notes: "Normal" },
+      ],
+    },
+    {
+      id: "tk-02",
+      ticketNumber: "#013",
+      tableNumber: "02",
+      elapsedMinutes: 3,
+      status: "NEW",
+      items: [
+        { name: "Kopi Susu Panas", qty: 1, notes: "Gula aren sedikit" },
+        { name: "Roti Bakar Keju", qty: 1, notes: "Susu kental manis" },
+      ],
+    },
+    {
+      id: "tk-03",
+      ticketNumber: "#014",
+      tableNumber: "08",
+      elapsedMinutes: 1,
+      status: "NEW",
+      items: [
+        { name: "Kopi Hitam Tubruk", qty: 3, notes: "Pahit kental" },
+      ],
+    },
+  ]);
+
+  const markCooking = (id: string) => {
+    setTickets((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, status: "COOKING" } : t))
+    );
+  };
+
+  const markReady = (id: string, ticketNum: string, tableNum: string) => {
+    setTickets((prev) => prev.filter((t) => t.id !== id));
+    alert(`✓ Pesanan ${ticketNum} (Meja #${tableNum}) SELESAI!\nStatus berubah HIJAU di Layar TV dan siap diantar waiters.`);
+  };
+
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "var(--bg-deep-black)" }}>
-      {/* KDS Header */}
+      {/* KDS Top Header */}
       <header
         style={{
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "1rem 1.5rem",
+          padding: "1rem 1.75rem",
           borderBottom: "1px solid var(--border-subtle)",
           background: "var(--bg-surface-1)",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-          <Link href="/" style={{ fontSize: "1.2rem", fontWeight: 800 }}>
-            🍳 OKESIH <span style={{ color: "#FBBF24" }}>KITCHEN DISPLAY (KDS)</span>
+          <Link href="/" style={{ fontSize: "1.25rem", fontWeight: 900 }}>
+            🍳 OKESIH <span style={{ color: "#FBBF24" }}>BARISTA &amp; DAPUR (KDS)</span>
           </Link>
           <span className="badge badge-ready">● Realtime WebSocket Aktif</span>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "1.25rem" }}>
           <div style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>
-            Pesanan Mengantre: <strong style={{ color: "#FFF" }}>3 Tiket</strong>
+            Tiket Aktif: <strong style={{ color: "#FFF" }}>{tickets.length} Meja</strong>
           </div>
-          <button className="btn-secondary" style={{ padding: "0.5rem 1rem", fontSize: "0.85rem" }}>
-            🔊 Test Audio Bel
+          <button className="btn-secondary" style={{ padding: "0.45rem 0.85rem", fontSize: "0.8rem" }}>
+            🔊 Test Audio Dapur
           </button>
         </div>
       </header>
 
       {/* Ticket Grid */}
-      <div style={{ padding: "1.5rem", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "1.25rem" }}>
-        {/* Ticket 1: Cooking */}
-        <div className="glass-panel" style={{ padding: "1.25rem", border: "1px solid rgba(245, 158, 11, 0.4)" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "0.75rem" }}>
-            <div>
-              <span style={{ fontSize: "1.5rem", fontWeight: 900, color: "#FBBF24" }}>#012</span>
-              <span style={{ fontSize: "0.8rem", color: "var(--text-dim)", marginLeft: "0.5rem" }}>12 Menit lalu</span>
-            </div>
-            <span className="badge badge-cooking">Sedang Digarap</span>
-          </div>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginBottom: "1.5rem" }}>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span style={{ fontWeight: 700, fontSize: "1rem" }}>2x Indomie Goreng Telur</span>
-              <span style={{ color: "var(--brand-orange-light)", fontWeight: 700 }}>Pedas level 3</span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span style={{ fontWeight: 700, fontSize: "1rem" }}>1x Es Teh Manis Jumbo</span>
-              <span style={{ color: "var(--text-dim)" }}>Normal</span>
-            </div>
-          </div>
-
-          <button
-            className="btn-primary"
+      <main style={{ padding: "1.5rem", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: "1.25rem" }}>
+        {tickets.map((t) => (
+          <div
+            key={t.id}
+            className="glass-panel"
             style={{
-              width: "100%",
-              background: "linear-gradient(135deg, #10B981, #059669)",
-              boxShadow: "0 4px 16px rgba(16, 185, 129, 0.35)",
+              padding: "1.25rem",
+              border: t.status === "COOKING" ? "1px solid rgba(245, 158, 11, 0.5)" : "1px solid rgba(59, 130, 246, 0.4)",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+              boxShadow: t.status === "COOKING" ? "0 4px 20px rgba(245, 158, 11, 0.15)" : "none",
             }}
           >
-            ✓ SELESAI & PANGGIL PELANGGAN
-          </button>
-        </div>
-
-        {/* Ticket 2: New Order */}
-        <div className="glass-panel" style={{ padding: "1.25rem", border: "1px solid rgba(59, 130, 246, 0.4)" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "0.75rem" }}>
             <div>
-              <span style={{ fontSize: "1.5rem", fontWeight: 900, color: "#60A5FA" }}>#013</span>
-              <span style={{ fontSize: "0.8rem", color: "var(--text-dim)", marginLeft: "0.5rem" }}>2 Menit lalu</span>
-            </div>
-            <span className="badge badge-new">Pesanan Baru</span>
-          </div>
+              {/* Header Tiket: Nomor Tiket & Nomor Meja yang Jelas! */}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "flex-start",
+                  marginBottom: "1rem",
+                  borderBottom: "1px solid var(--border-subtle)",
+                  paddingBottom: "0.75rem",
+                }}
+              >
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    <span style={{ fontSize: "1.75rem", fontWeight: 900, color: t.status === "COOKING" ? "#FBBF24" : "#60A5FA" }}>
+                      {t.ticketNumber}
+                    </span>
+                    {/* Badge Nomor Meja yang Sangat Menonjol */}
+                    <span
+                      style={{
+                        background: "rgba(255, 69, 0, 0.2)",
+                        border: "1px solid rgba(255, 69, 0, 0.5)",
+                        color: "var(--brand-orange-light)",
+                        padding: "0.2rem 0.6rem",
+                        borderRadius: "8px",
+                        fontWeight: 900,
+                        fontSize: "0.95rem",
+                      }}
+                    >
+                      📍 MEJA #{t.tableNumber}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: "0.75rem", color: "var(--text-dim)", marginTop: "0.25rem" }}>
+                    Dikonfirmasi kasir: {t.elapsedMinutes} menit lalu
+                  </div>
+                </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginBottom: "1.5rem" }}>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span style={{ fontWeight: 700, fontSize: "1rem" }}>1x Kopi Susu Panas</span>
-              <span style={{ color: "var(--text-dim)" }}>Gula aren sedikit</span>
+                <span className={t.status === "COOKING" ? "badge badge-cooking" : "badge badge-new"}>
+                  {t.status === "COOKING" ? "Sedang Diracik" : "Baru Masuk"}
+                </span>
+              </div>
+
+              {/* Daftar Menu Dipesan */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginBottom: "1.5rem" }}>
+                {t.items.map((item, idx) => (
+                  <div key={idx} style={{ display: "flex", flexDirection: "column" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 800, fontSize: "1.05rem" }}>
+                      <span>{item.qty}x {item.name}</span>
+                    </div>
+                    {item.notes && (
+                      <span style={{ fontSize: "0.8rem", color: "var(--brand-orange-light)", fontWeight: 700, marginTop: "0.15rem" }}>
+                        Catatan: {item.notes}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span style={{ fontWeight: 700, fontSize: "1rem" }}>1x Roti Bakar Keju</span>
-              <span style={{ color: "var(--text-dim)" }}>Susu kental manis</span>
+
+            {/* Tombol Aksi Barista */}
+            <div>
+              {t.status === "NEW" ? (
+                <button
+                  onClick={() => markCooking(t.id)}
+                  className="btn-secondary"
+                  style={{ width: "100%", fontWeight: 700, borderColor: "rgba(59, 130, 246, 0.5)" }}
+                >
+                  Mulai Racik Pesanan Meja #{t.tableNumber} →
+                </button>
+              ) : (
+                <button
+                  onClick={() => markReady(t.id, t.ticketNumber, t.tableNumber)}
+                  className="btn-primary"
+                  style={{
+                    width: "100%",
+                    background: "linear-gradient(135deg, #10B981, #059669)",
+                    boxShadow: "0 4px 16px rgba(16, 185, 129, 0.35)",
+                    fontWeight: 800,
+                  }}
+                >
+                  ✓ SELESAI (SIAP DIANTAR KE MEJA #{t.tableNumber})
+                </button>
+              )}
             </div>
           </div>
-
-          <button className="btn-secondary" style={{ width: "100%", fontWeight: 700, borderColor: "rgba(59, 130, 246, 0.4)" }}>
-            MULAI GARAP TIKET INI →
-          </button>
-        </div>
-      </div>
+        ))}
+      </main>
     </div>
   );
 }

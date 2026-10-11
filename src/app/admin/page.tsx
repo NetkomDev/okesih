@@ -1,6 +1,12 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
 
 export default function AdminDashboardPage() {
+  const [queueDismissDuration, setQueueDismissDuration] = useState<number>(60);
+  const [qrisShopName, setQrisShopName] = useState<string>("WARKOP KITA (BANK BCA)");
+
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "var(--bg-deep-black)", color: "#FFF" }}>
       {/* Admin Top Bar */}
@@ -19,7 +25,7 @@ export default function AdminDashboardPage() {
             🛡️ OKESIH <span style={{ color: "var(--brand-orange-light)" }}>MANAGEMENT</span>
           </Link>
           <span className="badge" style={{ background: "rgba(255, 255, 255, 0.1)", color: "#E5E7EB" }}>
-            Superadmin & Tenant Portal
+            Superadmin &amp; Tenant Portal
           </span>
         </div>
 
@@ -56,7 +62,7 @@ export default function AdminDashboardPage() {
 
           <div className="glass-panel" style={{ padding: "1.5rem" }}>
             <div style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginBottom: "0.5rem" }}>
-              Akumulasi Tagihan SaaS (@ Rp 50)
+              Tagihan Sewa SaaS (@ Rp 50)
             </div>
             <div style={{ fontSize: "2rem", fontWeight: 900, color: "var(--brand-orange-light)" }}>
               Rp 12.400
@@ -68,21 +74,96 @@ export default function AdminDashboardPage() {
 
           <div className="glass-panel" style={{ padding: "1.5rem" }}>
             <div style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginBottom: "0.5rem" }}>
-              Status Shift Kasir
+              Aliran Kas Masuk Pelanggan
             </div>
-            <div style={{ fontSize: "2rem", fontWeight: 900, color: "#10B981" }}>Aktif</div>
+            <div style={{ fontSize: "2rem", fontWeight: 900, color: "#10B981" }}>100% Warkop</div>
             <div style={{ fontSize: "0.8rem", color: "var(--text-dim)", marginTop: "0.25rem" }}>
-              Kasir: kasir1 (Shift Siang)
+              Langsung ke Rekening / QRIS Toko
             </div>
           </div>
 
           <div className="glass-panel" style={{ padding: "1.5rem" }}>
             <div style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginBottom: "0.5rem" }}>
-              Validasi OCR Terakhir
+              Auto-Dismiss Antrean TV
             </div>
-            <div style={{ fontSize: "2rem", fontWeight: 900, color: "#3B82F6" }}>LUNAS</div>
+            <div style={{ fontSize: "2rem", fontWeight: 900, color: "#3B82F6" }}>{queueDismissDuration}s</div>
             <div style={{ fontSize: "0.8rem", color: "var(--text-dim)", marginTop: "0.25rem" }}>
-              Shift Kemarin: Rp 14.645 (Verified)
+              Diatur oleh Super Admin Pusat
+            </div>
+          </div>
+        </div>
+
+        {/* Section: Pengaturan Konfigurasi Pusat & QRIS Toko */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem", marginBottom: "2rem" }}>
+          {/* Card 1: Pengaturan Durasi Menghilangnya Antrean TV (Super Admin) */}
+          <div className="glass-panel" style={{ padding: "1.75rem" }}>
+            <h3 style={{ fontSize: "1.2rem", fontWeight: 800, marginBottom: "0.5rem" }}>
+              ⏱️ Durasi Auto-Dismiss Antrean TV (Pusat)
+            </h3>
+            <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginBottom: "1.25rem" }}>
+              Mengatur berapa lama nomor antrean yang telah berwarna HIJAU (siap diambil/diantar) akan bertahan di Layar TV sebelum otomatis menghilang.
+            </p>
+
+            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+              {[30, 45, 60, 90, 120].map((sec) => (
+                <button
+                  key={sec}
+                  onClick={() => setQueueDismissDuration(sec)}
+                  className={queueDismissDuration === sec ? "btn-primary" : "btn-secondary"}
+                  style={{ padding: "0.5rem 1rem", fontSize: "0.85rem", fontWeight: 800 }}
+                >
+                  {sec} Detik
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Card 2: Pengaturan QRIS Statis Toko (Owner Warkop) */}
+          <div className="glass-panel" style={{ padding: "1.75rem" }}>
+            <h3 style={{ fontSize: "1.2rem", fontWeight: 800, marginBottom: "0.5rem" }}>
+              💳 QRIS Statis Toko (Rekening Warkop)
+            </h3>
+            <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginBottom: "1.25rem" }}>
+              QRIS ini akan ditampilkan kepada pelanggan saat checkout dari meja. Uang 100% langsung masuk ke warkop Anda.
+            </p>
+
+            <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+              <div
+                style={{
+                  width: "60px",
+                  height: "60px",
+                  background: "#FFF",
+                  borderRadius: "8px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#000",
+                  fontSize: "10px",
+                  fontWeight: 900,
+                  textAlign: "center",
+                }}
+              >
+                [QRIS AKTIF]
+              </div>
+              <div style={{ flex: 1 }}>
+                <input
+                  type="text"
+                  value={qrisShopName}
+                  onChange={(e) => setQrisShopName(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "0.5rem 0.75rem",
+                    borderRadius: "var(--radius-sm)",
+                    background: "var(--bg-surface-1)",
+                    border: "1px solid var(--border-subtle)",
+                    color: "#FFF",
+                    fontSize: "0.85rem",
+                  }}
+                />
+              </div>
+              <button className="btn-secondary" style={{ padding: "0.5rem 0.85rem", fontSize: "0.85rem", whiteSpace: "nowrap" }}>
+                Ganti Gambar QRIS
+              </button>
             </div>
           </div>
         </div>
@@ -93,7 +174,7 @@ export default function AdminDashboardPage() {
             <div>
               <h2 style={{ fontSize: "1.3rem", fontWeight: 800 }}>Manajemen Akun Staf Warkop</h2>
               <p style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>
-                Buat username &amp; password instan untuk kasir atau tim dapur tanpa perlu registrasi email atau OTP.
+                Buat username &amp; password instan untuk kasir atau barista tanpa perlu registrasi email atau OTP.
               </p>
             </div>
             <button className="btn-primary" style={{ padding: "0.6rem 1.25rem", fontSize: "0.85rem" }}>

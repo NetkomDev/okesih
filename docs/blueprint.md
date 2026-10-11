@@ -40,28 +40,43 @@ Keseluruhan sistem dibagi menjadi 5 modul UI. Secara struktur di Vercel, ini ber
 1. **Modul Kasir (POS) - `/pos`:** PWA *Offline-First* di tablet/HP kasir. UI kotak besar untuk *tap-tap* cepat. Mendukung koneksi *Bluetooth Thermal Printer* (Web Bluetooth API).
 2. **Modul Dapur (KDS) - `/kds`:** PWA di tablet/monitor dapur. Menggunakan **Supabase Realtime** untuk menerima pesanan baru instan. Pesanan memiliki indikator warna SLA.
 3. **Modul Antrean (Queue TV) - `/tv`:** PWA untuk Smart TV. Menampilkan nomor antrean (Diproses vs Siap) dengan integrasi pemanggil Web Speech API (TTS) dan audio fallback.
-4. **Modul Pelanggan (QR Menu) - `/menu/[warkopId]`:** Katalog digital yang mem-fetch data dari Supabase. Pelanggan memilih menu dan menghasilkan *Barcode/QR Pesanan* untuk di-*scan* di kasir.
-5. **Modul Superadmin - `/admin`:** Dashboard manajemen pusat (hak akses divalidasi server-side).
+4. **Modul Pelanggan (QR Menu Meja) - `/menu/[warkopId]?table=[no_meja]`:** Katalog digital interaktif per meja bernomor. Pelanggan memilih menu, melihat QRIS milik warkop, dan mengunggah screenshot bukti pembayaran langsung dari meja tanpa harus antre di kasir.
+5. **Modul Superadmin - `/admin`:** Dashboard manajemen pusat (hak akses divalidasi server-side), termasuk pengaturan durasi auto-dismiss antrean TV dan manajemen tenant.
 
 ## 4. ALUR KERJA OPERASIONAL LENGKAP (END-TO-END WORKFLOW)
 
 ### A. Fase Onboarding (Pendaftaran)
 1. Admin OKESIH mendaftarkan warkop baru di modul Superadmin (membuat *Tenant ID* di Supabase).
-2. Sistem mengalokasikan **Rentang Kode Unik QRIS permanen** untuk warkop tersebut (Misal Warkop A selalu `100-199`, Warkop B `200-299`).
-3. Admin mengatur *Menu*, *Harga*, dan batasan *Timer Offline* (misal: 4 jam).
-4. Pemilik warkop men-generate akun staf (username dan password kasir/dapur).
-5. Staf membuka URL POS, KDS, dan TV di perangkat masing-masing, login dengan username + password, lalu menekan "Add to Homescreen" (Install PWA).
+2. Sistem mengalokasikan **Rentang Kode Unik QRIS permanen** untuk penagihan sewa warkop tersebut (Misal Warkop A selalu `100-199`, Warkop B `200-299`).
+3. Admin mengatur *Menu*, *Harga*, batas *Timer Offline* (misal: 4 jam), dan durasi **Auto-Dismiss Antrean TV** (misal: 60 detik).
+4. Pemilik warkop mengunggah QRIS Statis toko mereka dan men-generate akun staf (username dan password kasir/dapur/barista).
+5. Pemilik mencetak QR Code meja bernomor (`/menu/[id_warkop]?table=01`, `table=02`, dst.) dan menempelkannya di setiap meja warkop.
+6. Staf membuka URL POS, KDS, dan TV di perangkat masing-masing, login dengan username + password, lalu menekan "Add to Homescreen" (Install PWA).
 
-### B. Fase Operasional (High-Throughput harian)
-1. **Pemesanan:** Pelanggan memesan via QR Menu di meja atau langsung ke Kasir.
-2. **Input Kasir:** Kasir menekan pesanan di tablet dan menekan tombol "BAYAR".
-3. **Proses Data:**
-   * Data pesanan di-INSERT ke tabel `transactions` di Supabase.
-   * Jika *offline*, data masuk ke IndexedDB lokal (Dexie).
-   * Sistem menghitung penambahan tagihan sewa SaaS (+Rp 50 per transaksi).
-4. **Real-time Distribusi:** Supabase Realtime men-*trigger* `INSERT` *event*, membuat layar KDS (Dapur) memunculkan pesanan tersebut dalam waktu < 1 detik.
-5. **Penyelesaian:** Dapur menekan tombol "Selesai" di layar KDS. Supabase meng-UPDATE status transaksi menjadi `READY`.
-6. **Pemanggilan:** Perubahan status men-*trigger* Modul TV Antrean untuk memindahkan nomor ke kolom "SIAP DIAMBIL" dan membunyikan suara robot *"OKESIH, Nomor 12 silakan diambil"*.
+### B. Fase Operasional (High-Throughput Pesanan Meja Pelanggan)
+1. **Pilih Meja & Scan QR:** Pelanggan duduk di meja dan memindai QR Code di meja tersebut menggunakan smartphone mereka. Sistem membuka halaman menu dengan nomor meja terkunci otomatis.
+2. **Pilih Pesanan & Bayar Mandiri:** Pelanggan memilih minuman/makanan, menekan checkout, dan melihat nominal total serta gambar **QRIS Statis Toko/Warkop**.
+   * *Catatan Keuangan:* QRIS ini 100% milik owner warkop, sehingga perputaran uang pesanan pelanggan langsung masuk ke rekening warkop (bukan ke sistem OKESIH).
+3. **Upload Bukti Pembayaran:** Pelanggan mentransfer via M-Banking / e-Wallet, lalu mengunggah screenshot bukti transfer di halaman checkout dan menekan tombol **"Kirim Pesanan"**.
+4. **Notifikasi & Alarm Kasir Berdering Keras:**
+   * Pesanan masuk ke tabel `transactions` dengan status `AWAITING_CONFIRMATION`.
+   * PWA Kasir (`/pos`) mendeteksi pesanan meja baru via Supabase Realtime.
+   * **Alarm aplikasi kasir berdering keras secara berulang (audio chime / siren loop)** untuk memastikan kasir segera merespons tiket meja masuk.
+5. **Konfirmasi Kasir (Audit Bukti Pembayaran):**
+   * Kasir membuka tiket pesanan di POS, memeriksa rincian menu dan gambar screenshot bukti transfer pelanggan.
+   * Kasir mencocokkan dana dengan mutasi QRIS warkopnya.
+   * Jika **VALID**: Kasir menekan tombol **"Konfirmasi Pembayaran (Lunas)"**. Status pesanan berubah menjadi `COOKING` (masuk antrean dapur). Alarm kasir otomatis berhenti. Sistem mencatat penambahan tagihan sewa SaaS (+Rp 50/struk).
+   * Jika **PALSU/INVALID**: Kasir menekan tombol **"Tolak Pesanan"** (status `REJECTED`, alarm berhenti, pesanan dibatalkan).
+6. **Masuk Antrean Dapur/Barista (KDS):** Begitu dikonfirmasi kasir, tiket pesanan seketika muncul di layar KDS (`/kds`) menampilkan Nomor Antrean, **Nomor Meja Pemesan**, dan rincian menu.
+7. **Barista Meracik & Klik Selesai:** Barista meracik minuman/makanan. Setelah siap, barista menekan tombol **"Selesai"** di layar KDS. Status pesanan di Supabase ter-UPDATE menjadi `READY`.
+8. **Waiters Mengantar ke Meja:** Waiters melihat tiket `READY` dengan keterangan Nomor Meja yang jelas (misal: "Meja #05"), lalu mengantarkan pesanan langsung ke meja pemesan.
+9. **Antrean TV Berubah Hijau & Panggilan Suara:**
+   * Di Layar Antrean Smart TV (`/tv`), nomor antrean dan nomor meja berpindah ke kolom **"SIAP DIAMBIL / DIANTAR"** dengan warna latar **HIJAU** (`#10B981`).
+   * Sistem membunyikan suara robot otomatis (TTS): *"Pesanan Nomor 12 untuk Meja 5 siap diantar"*.
+10. **Auto-Dismiss (Menghilang Otomatis):**
+    * Setelah berubah hijau, tiket antrean akan bertahan selama durasi yang ditentukan oleh **Super Admin Pusat** (parameter `queue_dismiss_seconds`, default: 60 detik).
+    * Setelah timer habis, tiket antrean otomatis memudar dan menghilang dari layar TV dan KDS.
+11. **Selesai:** Seluruh siklus pesanan meja berhasil dituntaskan dengan cepat dan tertib.
 
 ### C. Fase Penagihan Otomatis (Tutup Shift & OCR)
 1. **Tutup Toko:** Kasir menekan tombol "Tutup Shift". PWA POS mengecek `navigator.onLine`. (Wajib *online* untuk tutup shift).
