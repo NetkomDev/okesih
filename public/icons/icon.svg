@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1E1E24" />
+      <stop offset="100%" stop-color="#0D0D0E" />
+    </linearGradient>
+    <linearGradient id="primaryGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF5722" />
+      <stop offset="50%" stop-color="#FF4500" />
+      <stop offset="100%" stop-color="#D83A00" />
+    </linearGradient>
+    <linearGradient id="glowGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFA07A" stop-opacity="0.8" />
+      <stop offset="100%" stop-color="#FF4500" stop-opacity="0" />
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="16" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background Card -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)" />
+  <rect width="504" height="504" x="4" y="4" rx="108" fill="none" stroke="rgba(255, 69, 0, 0.3)" stroke-width="4" />
+
+  <!-- Subtle glow aura in the center -->
+  <circle cx="256" cy="256" r="140" fill="url(#primaryGrad)" opacity="0.15" filter="url(#glow)" />
+
+  <!-- OKESIH Emblem: High-speed coffee cup & spark -->
+  <g transform="translate(106, 116)">
+    <!-- Steam waves / speed lines -->
+    <path d="M70 40 C75 10, 95 10, 100 40 C105 70, 125 70, 130 40" fill="none" stroke="url(#primaryGrad)" stroke-width="12" stroke-linecap="round" opacity="0.9" />
+    <path d="M130 30 C135 5, 155 5, 160 30 C165 55, 185 55, 190 30" fill="none" stroke="url(#primaryGrad)" stroke-width="12" stroke-linecap="round" opacity="0.7" />
+    <path d="M190 40 C195 15, 215 15, 220 40 C225 65, 245 65, 250 40" fill="none" stroke="url(#primaryGrad)" stroke-width="12" stroke-linecap="round" opacity="0.9" />
+
+    <!-- Cup Body -->
+    <path d="M40 90 L260 90 C260 90, 250 210, 150 210 C50 210, 40 90, 40 90 Z" fill="url(#primaryGrad)" />
+
+    <!-- Cup Handle -->
+    <path d="M250 110 C290 110, 290 170, 245 175" fill="none" stroke="url(#primaryGrad)" stroke-width="22" stroke-linecap="round" />
+
+    <!-- Saucer Base -->
+    <path d="M20 235 L280 235 C290 235, 290 250, 275 250 L25 250 C10 250, 10 235, 20 235 Z" fill="#FFFFFF" opacity="0.9" />
+
+    <!-- Bolt Accent (Speed & High-Throughput) -->
+    <polygon points="155,100 130,150 155,150 140,195 175,140 150,140" fill="#FFFFFF" />
+  </g>
+</svg>

@@ -1,0 +1,50 @@
+import type { MetadataRoute } from "next";
+
+export default function manifest(): MetadataRoute.Manifest {
+  return {
+    name: "OKESIH.COM — POS & Kitchen Display Warkop",
+    short_name: "OKESIH",
+    description: "Sistem POS Kasir, Kitchen Display, dan Antrean TV untuk Warkop Berkecepatan Tinggi",
+    start_url: "/",
+    display: "standalone",
+    orientation: "any",
+    background_color: "#0D0D0E",
+    theme_color: "#FF4500",
+    icons: [
+      {
+        src: "/icons/icon-192.png",
+        sizes: "192x192",
+        type: "image/png",
+        purpose: "maskable",
+      },
+      {
+        src: "/icons/icon-512.png",
+        sizes: "512x512",
+        type: "image/png",
+        purpose: "any",
+      },
+    ],
+    shortcuts: [
+      {
+        name: "Kasir (POS)",
+        url: "/pos",
+        description: "Buka Modul Kasir POS",
+      },
+      {
+        name: "Dapur (KDS)",
+        url: "/kds",
+        description: "Buka Modul Kitchen Display System",
+      },
+      {
+        name: "Antrean TV",
+        url: "/tv",
+        description: "Buka Layar Antrean Smart TV",
+      },
+      {
+        name: "Dashboard Admin",
+        url: "/admin",
+        description: "Buka Dashboard Manajemen Warkop",
+      },
+    ],
+  };
+}
