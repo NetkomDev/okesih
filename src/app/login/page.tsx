@@ -207,9 +207,9 @@ export default function LoginPage() {
           <div>
             <label
               style={{
-                fontSize: "0.8rem",
+                fontSize: "0.85rem",
                 fontWeight: 700,
-                color: "var(--text-muted)",
+                color: "var(--text-pure-white)",
                 display: "block",
                 marginBottom: "0.4rem",
               }}
@@ -242,7 +242,7 @@ export default function LoginPage() {
                   borderRadius: "12px",
                   background: "var(--bg-surface-1)",
                   border: "1px solid var(--border-subtle)",
-                  color: "#FFF",
+                  color: "var(--text-pure-white)",
                   fontSize: "0.95rem",
                   outline: "none",
                 }}
@@ -253,9 +253,9 @@ export default function LoginPage() {
           <div>
             <label
               style={{
-                fontSize: "0.8rem",
+                fontSize: "0.85rem",
                 fontWeight: 700,
-                color: "var(--text-muted)",
+                color: "var(--text-pure-white)",
                 display: "block",
                 marginBottom: "0.4rem",
               }}
@@ -287,7 +287,7 @@ export default function LoginPage() {
                   borderRadius: "12px",
                   background: "var(--bg-surface-1)",
                   border: "1px solid var(--border-subtle)",
-                  color: "#FFF",
+                  color: "var(--text-pure-white)",
                   fontSize: "0.95rem",
                   outline: "none",
                 }}
