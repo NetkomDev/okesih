@@ -1,3 +1,10 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "./supabase/client";
+import type { User } from "@supabase/supabase-js";
+
 /**
  * Helper utilitas untuk sistem autentikasi OKESIH tanpa OTP/Email ribet.
  *
@@ -7,10 +14,10 @@
 
 export const AUTH_DUMMY_DOMAIN = "okesih.local";
 
+export type UserRole = "SUPERADMIN" | "OWNER" | "KASIR" | "DAPUR";
+
 /**
  * Normalisasi username menjadi email internal Supabase Auth.
- * Jika input sudah berupa format email, biarkan apa adanya.
- * Jika warkopSlug diberikan, format menjadi username.warkopSlug@okesih.local agar username unik antar warkop.
  */
 export function usernameToEmail(username: string, warkopSlug?: string): string {
   const cleanUsername = username.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "");
@@ -39,4 +46,110 @@ export function emailToUsername(email: string): string {
     return localPart.split(".")[0];
   }
   return localPart;
+}
+
+/**
+ * Ekstraksi peran (role) pengguna secara andal dari user metadata atau email.
+ */
+export function extractUserRole(user: User | null | undefined): UserRole | null {
+  if (!user) return null;
+
+  const metaRole = (user.user_metadata?.role as string | undefined)?.toUpperCase();
+  if (metaRole === "SUPERADMIN") return "SUPERADMIN";
+  if (metaRole === "OWNER") return "OWNER";
+  if (metaRole === "KASIR") return "KASIR";
+  if (metaRole === "DAPUR") return "DAPUR";
+
+  const email = (user.email || "").toLowerCase().trim();
+  if (email.startsWith("superadmin")) return "SUPERADMIN";
+  if (email.startsWith("owner")) return "OWNER";
+  if (email.startsWith("kasir")) return "KASIR";
+  if (email.startsWith("dapur")) return "DAPUR";
+
+  return null;
+}
+
+/**
+ * Fungsi logout aman yang membersihkan seluruh sesi Supabase Auth
+ * dan mengembalikan pengguna ke halaman utama.
+ */
+export async function logoutUser(): Promise<void> {
+  try {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+  } catch (err) {
+    console.error("Error signing out:", err);
+  } finally {
+    window.location.href = "/";
+  }
+}
+
+/**
+ * Hook Auth Guard untuk mengunci halaman dashboard sesuai hak akses (role).
+ * Menutup celah keamanan sehingga pengguna tidak dapat sembarangan membuka
+ * halaman yang bukan hak aksesnya atau berpindah peran tanpa otentikasi.
+ */
+export function useAuthGuard(allowedRoles: UserRole[]) {
+  const router = useRouter();
+  const [isAuthorized, setIsAuthorized] = useState<boolean>(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentRole, setCurrentRole] = useState<UserRole | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const verifyRole = async () => {
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (!user) {
+          if (isMounted) {
+            router.replace("/?error=login_required");
+          }
+          return;
+        }
+
+        const role = extractUserRole(user);
+
+        if (!role || !allowedRoles.includes(role)) {
+          if (isMounted) {
+            // Arahkan ke dashboard yang menjadi haknya jika mencoba masuk ke halaman lain
+            if (role === "SUPERADMIN") {
+              router.replace("/superadmin");
+            } else if (role === "OWNER") {
+              router.replace("/owner");
+            } else if (role === "KASIR") {
+              router.replace("/pos");
+            } else if (role === "DAPUR") {
+              router.replace("/kds");
+            } else {
+              router.replace("/?error=unauthorized");
+            }
+          }
+          return;
+        }
+
+        if (isMounted) {
+          setCurrentUser(user);
+          setCurrentRole(role);
+          setIsAuthorized(true);
+          setLoading(false);
+        }
+      } catch {
+        if (isMounted) {
+          router.replace("/?error=auth_failed");
+        }
+      }
+    };
+
+    verifyRole();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [router, allowedRoles]);
+
+  return { isAuthorized, currentUser, currentRole, loading };
 }

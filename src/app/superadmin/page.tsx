@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useAuthGuard, logoutUser } from "@/lib/auth-helpers";
 
 interface TenantWarkop {
   id: string;
@@ -18,6 +19,7 @@ interface TenantWarkop {
 }
 
 export default function SuperAdminDashboardPage() {
+  const { isAuthorized, loading, currentUser } = useAuthGuard(["SUPERADMIN"]);
   const [tenants, setTenants] = useState<TenantWarkop[]>([
     {
       id: "ten-01",
@@ -157,6 +159,31 @@ export default function SuperAdminDashboardPage() {
   const totalAllTransactions = tenants.reduce((sum, t) => sum + t.todayTransactions, 0);
   const totalSaasRevenue = tenants.reduce((sum, t) => sum + t.totalSaasBilling, 0);
 
+  if (loading || !isAuthorized) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: "#06090E",
+          color: "#F0F6FC",
+          gap: "1rem",
+        }}
+      >
+        <div style={{ fontSize: "2.5rem" }}>🛡️</div>
+        <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#38BDF8" }}>
+          Memverifikasi Otoritas Super Admin Pusat...
+        </div>
+        <div style={{ fontSize: "0.85rem", color: "#64748B" }}>
+          Pemeriksaan token peran &amp; hak akses ekosistem OKESIH
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#06090E", color: "#F0F6FC" }}>
       {/* Super Admin Top Navigation */}
@@ -215,24 +242,21 @@ export default function SuperAdminDashboardPage() {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-          {/* Switcher Button ke Dashboard Tenant / Owner */}
-          <Link
-            href="/owner"
-            style={{
-              background: "rgba(255, 69, 0, 0.15)",
-              border: "1px solid rgba(255, 69, 0, 0.4)",
-              color: "var(--brand-orange-light)",
-              fontSize: "0.8rem",
-              fontWeight: 800,
-              padding: "0.45rem 0.85rem",
-              borderRadius: "8px",
-              display: "flex",
-              alignItems: "center",
-              gap: "0.35rem",
-            }}
-          >
-            ☕ Buka Portal Owner Warkop →
-          </Link>
+          {currentUser && (
+            <span
+              style={{
+                fontSize: "0.8rem",
+                color: "#7DD3FC",
+                background: "rgba(14, 165, 233, 0.1)",
+                border: "1px solid rgba(14, 165, 233, 0.3)",
+                padding: "0.35rem 0.75rem",
+                borderRadius: "6px",
+                fontWeight: 700,
+              }}
+            >
+              👤 {currentUser.email || "superadmin"}
+            </span>
+          )}
 
           <button
             onClick={handleOpenRegisterModal}
@@ -248,9 +272,19 @@ export default function SuperAdminDashboardPage() {
             + Daftarkan Tenant Warkop
           </button>
 
-          <Link href="/" className="btn-secondary" style={{ padding: "0.5rem 0.85rem", fontSize: "0.8rem" }}>
+          <button
+            onClick={logoutUser}
+            className="btn-secondary"
+            style={{
+              padding: "0.5rem 0.85rem",
+              fontSize: "0.8rem",
+              color: "#F87171",
+              borderColor: "rgba(239, 68, 68, 0.4)",
+              cursor: "pointer",
+            }}
+          >
             Logout
-          </Link>
+          </button>
         </div>
       </header>
 

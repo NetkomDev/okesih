@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useAuthGuard, logoutUser } from "@/lib/auth-helpers";
 
 interface StaffMember {
   id: string;
@@ -21,6 +22,7 @@ interface WaiterRoster {
 }
 
 export default function TenantOwnerDashboardPage() {
+  const { isAuthorized, loading, currentUser } = useAuthGuard(["OWNER"]);
   // Warkop Details
   const [warkopName, setWarkopName] = useState<string>("Warkop Giras Nusantara");
   const [qrisMerchantName, setQrisMerchantName] = useState<string>("GIRAS NUSANTARA (BCA)");
@@ -98,6 +100,31 @@ export default function TenantOwnerDashboardPage() {
     alert(`✓ Waiters "${newW.name}" berhasil ditambahkan ke daftar pelayan warkop!`);
   };
 
+  if (loading || !isAuthorized) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: "var(--bg-deep-black)",
+          color: "#FFF",
+          gap: "1rem",
+        }}
+      >
+        <div style={{ fontSize: "2.5rem" }}>☕</div>
+        <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "var(--brand-orange-light)" }}>
+          Memverifikasi Otoritas Owner Warkop...
+        </div>
+        <div style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>
+          Pemeriksaan token peran &amp; hak akses portal bisnis tenant
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "var(--bg-deep-black)", color: "#FFF" }}>
       {/* Top Header Tenant Owner */}
@@ -144,23 +171,21 @@ export default function TenantOwnerDashboardPage() {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-          <Link
-            href="/superadmin"
-            style={{
-              background: "rgba(14, 165, 233, 0.15)",
-              border: "1px solid rgba(14, 165, 233, 0.4)",
-              color: "#38BDF8",
-              fontSize: "0.8rem",
-              fontWeight: 800,
-              padding: "0.45rem 0.85rem",
-              borderRadius: "8px",
-              display: "flex",
-              alignItems: "center",
-              gap: "0.35rem",
-            }}
-          >
-            🛡️ Buka HQ Superadmin →
-          </Link>
+          {currentUser && (
+            <span
+              style={{
+                fontSize: "0.8rem",
+                color: "var(--brand-orange-light)",
+                background: "rgba(255, 69, 0, 0.1)",
+                border: "1px solid rgba(255, 69, 0, 0.3)",
+                padding: "0.35rem 0.75rem",
+                borderRadius: "6px",
+                fontWeight: 700,
+              }}
+            >
+              👤 {currentUser.email || "owner1"}
+            </span>
+          )}
 
           <Link href="/pos" className="btn-secondary" style={{ padding: "0.5rem 0.85rem", fontSize: "0.8rem" }}>
             Layar Kasir
@@ -168,9 +193,19 @@ export default function TenantOwnerDashboardPage() {
           <Link href="/kds" className="btn-secondary" style={{ padding: "0.5rem 0.85rem", fontSize: "0.8rem" }}>
             Layar Dapur
           </Link>
-          <Link href="/" className="btn-secondary" style={{ padding: "0.5rem 0.85rem", fontSize: "0.8rem" }}>
+          <button
+            onClick={logoutUser}
+            className="btn-secondary"
+            style={{
+              padding: "0.5rem 0.85rem",
+              fontSize: "0.8rem",
+              color: "#F87171",
+              borderColor: "rgba(239, 68, 68, 0.4)",
+              cursor: "pointer",
+            }}
+          >
             Logout
-          </Link>
+          </button>
         </div>
       </header>
 

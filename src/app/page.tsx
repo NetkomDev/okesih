@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { extractUserRole } from "@/lib/auth-helpers";
 
 export default function HomePage() {
   const router = useRouter();
@@ -11,6 +12,18 @@ export default function HomePage() {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState("");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const err = params.get("error");
+      if (err === "login_required") {
+        setLoginError("Sesi login diperlukan untuk mengakses dashboard tersebut.");
+      } else if (err === "unauthorized") {
+        setLoginError("Akses Ditolak: Anda tidak memiliki izin untuk halaman tersebut.");
+      }
+    }
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,19 +49,19 @@ export default function HomePage() {
         return;
       }
 
-      const role = data.user?.user_metadata?.role;
-      const user = username.toLowerCase().trim();
+      // Deteksi peran pengguna secara andal untuk mencegah celah keamanan
+      const role = extractUserRole(data.user);
 
-      if (user === "superadmin" || role === "SUPERADMIN") {
+      if (role === "SUPERADMIN") {
         router.push("/superadmin");
-      } else if (user === "owner1" || user === "owner" || role === "OWNER") {
+      } else if (role === "OWNER") {
         router.push("/owner");
-      } else if (user === "kasir1" || role === "KASIR") {
+      } else if (role === "KASIR") {
         router.push("/pos");
-      } else if (user === "dapur" || role === "DAPUR") {
+      } else if (role === "DAPUR") {
         router.push("/kds");
       } else {
-        router.push("/owner");
+        router.push("/admin");
       }
     } catch (err: unknown) {
       setLoginError(err instanceof Error ? err.message : "Terjadi kesalahan sistem");
