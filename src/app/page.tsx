@@ -10,8 +10,10 @@ export default function HomePage() {
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState("");
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
   // FAQ Accordion State
   const [openFaq, setOpenFaq] = useState<number | null>(0);
@@ -79,11 +81,27 @@ export default function HomePage() {
       const err = params.get("error");
       if (err === "login_required") {
         setLoginError("Sesi login diperlukan untuk mengakses dashboard tersebut.");
+        setIsLoginModalOpen(true);
       } else if (err === "unauthorized") {
         setLoginError("Akses Ditolak: Anda tidak memiliki izin untuk halaman tersebut.");
+        setIsLoginModalOpen(true);
+      }
+
+      if (window.location.hash === "#login") {
+        setIsLoginModalOpen(true);
       }
     }
   }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isLoginModalOpen) {
+        setIsLoginModalOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isLoginModalOpen]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -283,22 +301,24 @@ export default function HomePage() {
               <span>Jadi Mitra Marketing</span>
             </a>
 
-            <a
-              href="#login"
+            <button
+              type="button"
+              onClick={() => setIsLoginModalOpen(true)}
               className="btn-primary desktop-only-btn"
               style={{
                 padding: "0.55rem 1.15rem",
                 fontSize: "0.85rem",
                 fontWeight: 800,
-                textDecoration: "none",
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "0.4rem",
+                cursor: "pointer",
+                border: "none",
               }}
             >
               <span>Masuk ke Akun</span>
               <span>→</span>
-            </a>
+            </button>
 
             <button
               type="button"
@@ -391,14 +411,17 @@ export default function HomePage() {
               >
                 📱 Coba Demo QR Menu Meja
               </Link>
-              <a
-                href="#login"
+              <button
+                type="button"
                 className="btn-secondary"
-                onClick={() => setIsMobileMenuOpen(false)}
-                style={{ textAlign: "center", padding: "0.85rem", fontWeight: 800, fontSize: "0.9rem", textDecoration: "none" }}
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  setIsLoginModalOpen(true);
+                }}
+                style={{ textAlign: "center", padding: "0.85rem", fontWeight: 800, fontSize: "0.9rem", cursor: "pointer", border: "1px solid var(--border-subtle)" }}
               >
                 🔑 Masuk ke Akun Sistem
-              </a>
+              </button>
             </div>
           </div>
         )}
@@ -490,13 +513,22 @@ export default function HomePage() {
             >
               📱 Coba Demo QR Menu Meja Pelanggan
             </Link>
-            <a
-              href="#login"
+            <button
+              type="button"
+              onClick={() => setIsLoginModalOpen(true)}
               className="btn-secondary"
-              style={{ padding: "0.85rem 1.6rem", fontSize: "0.95rem", fontWeight: 800, textDecoration: "none" }}
+              style={{
+                padding: "0.85rem 1.6rem",
+                fontSize: "0.95rem",
+                fontWeight: 800,
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.5rem",
+              }}
             >
-              🔑 Masuk ke Portal Operasional
-            </a>
+              <span>🔑 Masuk ke Portal Operasional</span>
+            </button>
           </div>
 
           {/* Value Props Strip */}
@@ -1448,128 +1480,399 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* SECTION: FORM LOGIN RESMI STAF & OWNER */}
+        {/* SECTION: CLOSING CTA / PORTAL AKSES KELOLA RESMI */}
         <section
-          id="login"
+          id="akses-sistem"
           className="section-container"
           style={{
-            padding: "4rem 2rem 5rem",
-            maxWidth: "600px",
+            padding: "5rem 2rem 6rem",
+            maxWidth: "1140px",
             margin: "0 auto",
             width: "100%",
+            position: "relative",
           }}
         >
+          {/* Ambient Glow */}
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              overflow: "hidden",
+              pointerEvents: "none",
+              zIndex: 0,
+            }}
+          >
+            <div
+              className="organic-shape"
+              style={{
+                width: "500px",
+                height: "500px",
+                bottom: "-100px",
+                right: "10%",
+                background: "radial-gradient(circle, #FF4500 0%, rgba(255, 69, 0, 0) 70%)",
+                opacity: 0.12,
+              }}
+            />
+          </div>
+
           <div
             className="glass-panel-glow mobile-compact-panel"
             style={{
-              padding: "2.5rem 2rem",
+              padding: "4rem 2.5rem",
               textAlign: "center",
+              borderRadius: "28px",
+              position: "relative",
+              overflow: "hidden",
+              border: "1px solid rgba(255, 69, 0, 0.25)",
+              background: "linear-gradient(180deg, rgba(28, 28, 33, 0.95) 0%, rgba(18, 18, 22, 0.98) 100%)",
             }}
           >
             <div
               style={{
-                width: "48px",
-                height: "48px",
-                borderRadius: "14px",
-                background: "linear-gradient(135deg, #FF5722, #FF4500)",
-                display: "flex",
+                display: "inline-flex",
                 alignItems: "center",
-                justifyContent: "center",
-                margin: "0 auto 1.25rem",
-                fontSize: "24px",
+                gap: "0.5rem",
+                padding: "0.4rem 1.15rem",
+                borderRadius: "var(--radius-pill)",
+                backgroundColor: "rgba(255, 69, 0, 0.12)",
+                border: "1px solid rgba(255, 69, 0, 0.3)",
+                color: "var(--brand-orange-light)",
+                fontSize: "0.825rem",
+                fontWeight: 800,
+                marginBottom: "1.5rem",
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
               }}
             >
-              🔐
+              🔒 Akses Aman Ekosistem OKESIH
             </div>
 
-            <h2 style={{ fontSize: "1.5rem", fontWeight: 900, marginBottom: "0.5rem" }}>
-              Masuk ke Sistem OKESIH
+            <h2
+              style={{
+                fontSize: "clamp(1.8rem, 4vw, 2.75rem)",
+                fontWeight: 900,
+                letterSpacing: "-0.03em",
+                marginBottom: "1rem",
+                lineHeight: 1.2,
+              }}
+            >
+              Kelola Usaha Kuliner Anda dalam Satu Sentuhan
             </h2>
-            <p style={{ fontSize: "0.875rem", color: "var(--text-muted)", marginBottom: "1.75rem" }}>
-              Masukkan username dan password yang diberikan oleh Owner warkop/Super Admin Anda.
+
+            <p
+              style={{
+                fontSize: "1.05rem",
+                color: "var(--text-muted)",
+                maxWidth: "680px",
+                margin: "0 auto 2.5rem",
+                lineHeight: 1.65,
+              }}
+            >
+              Sudah memiliki akun resmi sebagai Super Admin, Owner Kafe, Kasir, atau Tim Dapur?
+              Masuk melalui portal terenkripsi untuk mengelola transaksi, memantau omzet, dan memperbarui menu secara real-time.
             </p>
 
-            <form
-              onSubmit={handleLogin}
-              style={{ display: "flex", flexDirection: "column", gap: "1rem", textAlign: "left" }}
+            {/* Tombol Akses & Kemitraan */}
+            <div
+              style={{
+                display: "flex",
+                gap: "1rem",
+                justifyContent: "center",
+                flexWrap: "wrap",
+                marginBottom: "2.5rem",
+              }}
             >
-              {loginError && (
-                <div
-                  style={{
-                    background: "rgba(239, 68, 68, 0.15)",
-                    border: "1px solid #EF4444",
-                    color: "#FCA5A5",
-                    padding: "0.75rem 1rem",
-                    borderRadius: "var(--radius-sm)",
-                    fontSize: "0.85rem",
-                    fontWeight: 600,
-                  }}
-                >
-                  ⚠️ {loginError}
-                </div>
-              )}
-
-              <div>
-                <label style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-muted)", display: "block", marginBottom: "0.35rem" }}>
-                  Username Akun
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Ketik username Anda..."
-                  style={{
-                    width: "100%",
-                    padding: "0.875rem 1rem",
-                    borderRadius: "var(--radius-sm)",
-                    background: "var(--bg-surface-1)",
-                    border: "1px solid var(--border-subtle)",
-                    color: "#FFF",
-                    fontSize: "0.95rem",
-                    outline: "none",
-                  }}
-                />
-              </div>
-
-              <div>
-                <label style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-muted)", display: "block", marginBottom: "0.35rem" }}>
-                  Password
-                </label>
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  style={{
-                    width: "100%",
-                    padding: "0.875rem 1rem",
-                    borderRadius: "var(--radius-sm)",
-                    background: "var(--bg-surface-1)",
-                    border: "1px solid var(--border-subtle)",
-                    color: "#FFF",
-                    fontSize: "0.95rem",
-                    outline: "none",
-                  }}
-                />
-              </div>
-
               <button
-                type="submit"
-                disabled={isLoading}
+                type="button"
+                onClick={() => setIsLoginModalOpen(true)}
                 className="btn-primary"
-                style={{ width: "100%", marginTop: "0.5rem", padding: "0.95rem", fontWeight: 800, fontSize: "0.95rem" }}
+                style={{
+                  padding: "0.95rem 2rem",
+                  fontSize: "1rem",
+                  fontWeight: 900,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.6rem",
+                  cursor: "pointer",
+                  borderRadius: "var(--radius-pill)",
+                  boxShadow: "0 4px 20px rgba(255, 69, 0, 0.4)",
+                  border: "none",
+                }}
               >
-                {isLoading ? "Memverifikasi Otoritas..." : "Masuk ke Sistem"}
+                <span>🔐 Masuk ke Portal Operasional</span>
+                <span>→</span>
               </button>
-            </form>
 
-            <div style={{ marginTop: "1.5rem", fontSize: "0.75rem", color: "var(--text-dim)" }}>
-              Sistem mendeteksi otomatis peran Anda (Super Admin, Owner, Kasir, atau Dapur) dan mengarahkan langsung ke dashboard yang berwenang.
+              <a
+                href="#rekrutmen-marketing"
+                className="marketing-pill-btn"
+                style={{
+                  padding: "0.95rem 1.75rem",
+                  fontSize: "0.95rem",
+                  fontWeight: 800,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                }}
+              >
+                <span>💼 Peluang Mitra Marketing</span>
+              </a>
+            </div>
+
+            {/* Trust Badges Bar */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                gap: "2rem",
+                flexWrap: "wrap",
+                fontSize: "0.825rem",
+                color: "var(--text-dim)",
+                borderTop: "1px solid rgba(255, 255, 255, 0.06)",
+                paddingTop: "2rem",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                <span>🛡️</span>
+                <span>Role-Based Access Control (RBAC)</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                <span>⚡</span>
+                <span>Sinkronisasi Offline-First Cloud</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                <span>🔐</span>
+                <span>Enkripsi Kredensial Berstandar Industri</span>
+              </div>
             </div>
           </div>
         </section>
+
+        {/* MODAL DIALOG: PORTAL AKSES LOGIN RESMI (ELEGAN & TIDAK VULGAR) */}
+        {isLoginModalOpen && (
+          <div
+            className="login-modal-backdrop"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setIsLoginModalOpen(false);
+            }}
+          >
+            <div className="login-modal-card" role="dialog" aria-modal="true">
+              {/* Tombol Tutup ✕ */}
+              <button
+                type="button"
+                className="login-close-btn"
+                onClick={() => setIsLoginModalOpen(false)}
+                aria-label="Tutup Portal Login"
+              >
+                ✕
+              </button>
+
+              {/* Header Modal */}
+              <div style={{ textAlign: "center", marginBottom: "1.75rem" }}>
+                <div
+                  style={{
+                    width: "52px",
+                    height: "52px",
+                    borderRadius: "16px",
+                    background: "linear-gradient(135deg, #FF5722, #FF4500)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    margin: "0 auto 1rem",
+                    fontSize: "26px",
+                    boxShadow: "0 6px 20px rgba(255, 69, 0, 0.4)",
+                  }}
+                >
+                  🔐
+                </div>
+                <h3 style={{ fontSize: "1.45rem", fontWeight: 900, letterSpacing: "-0.02em", marginBottom: "0.35rem" }}>
+                  Masuk ke Sistem OKESIH
+                </h3>
+                <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", lineHeight: 1.5 }}>
+                  Portal akses operasional terpadu Super Admin, Owner, Kasir, dan Dapur.
+                </p>
+              </div>
+
+              {/* Form Input */}
+              <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
+                {loginError && (
+                  <div
+                    style={{
+                      background: "rgba(239, 68, 68, 0.15)",
+                      border: "1px solid #EF4444",
+                      color: "#FCA5A5",
+                      padding: "0.75rem 1rem",
+                      borderRadius: "var(--radius-sm)",
+                      fontSize: "0.825rem",
+                      fontWeight: 600,
+                    }}
+                  >
+                    ⚠️ {loginError}
+                  </div>
+                )}
+
+                <div>
+                  <label
+                    style={{
+                      fontSize: "0.8rem",
+                      fontWeight: 700,
+                      color: "var(--text-muted)",
+                      display: "block",
+                      marginBottom: "0.4rem",
+                    }}
+                  >
+                    Username Akun
+                  </label>
+                  <div style={{ position: "relative" }}>
+                    <span
+                      style={{
+                        position: "absolute",
+                        left: "1rem",
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        fontSize: "0.95rem",
+                        color: "var(--text-dim)",
+                      }}
+                    >
+                      👤
+                    </span>
+                    <input
+                      type="text"
+                      required
+                      autoFocus
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      placeholder="Username akun Anda..."
+                      style={{
+                        width: "100%",
+                        padding: "0.85rem 1rem 0.85rem 2.6rem",
+                        borderRadius: "12px",
+                        background: "var(--bg-surface-1)",
+                        border: "1px solid var(--border-subtle)",
+                        color: "#FFF",
+                        fontSize: "0.95rem",
+                        outline: "none",
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label
+                    style={{
+                      fontSize: "0.8rem",
+                      fontWeight: 700,
+                      color: "var(--text-muted)",
+                      display: "block",
+                      marginBottom: "0.4rem",
+                    }}
+                  >
+                    Password
+                  </label>
+                  <div style={{ position: "relative" }}>
+                    <span
+                      style={{
+                        position: "absolute",
+                        left: "1rem",
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        fontSize: "0.95rem",
+                        color: "var(--text-dim)",
+                      }}
+                    >
+                      🔒
+                    </span>
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      style={{
+                        width: "100%",
+                        padding: "0.85rem 2.8rem 0.85rem 2.6rem",
+                        borderRadius: "12px",
+                        background: "var(--bg-surface-1)",
+                        border: "1px solid var(--border-subtle)",
+                        color: "#FFF",
+                        fontSize: "0.95rem",
+                        outline: "none",
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      aria-label={showPassword ? "Sembunyikan Password" : "Lihat Password"}
+                      style={{
+                        position: "absolute",
+                        right: "0.75rem",
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        background: "none",
+                        border: "none",
+                        color: "var(--text-dim)",
+                        fontSize: "1rem",
+                        cursor: "pointer",
+                        padding: "0.25rem",
+                      }}
+                    >
+                      {showPassword ? "👁️" : "🙈"}
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="btn-primary"
+                  style={{
+                    width: "100%",
+                    marginTop: "0.35rem",
+                    padding: "0.95rem",
+                    fontWeight: 800,
+                    fontSize: "0.95rem",
+                    borderRadius: "12px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "0.5rem",
+                    cursor: "pointer",
+                    border: "none",
+                  }}
+                >
+                  {isLoading ? (
+                    <span>⏳ Memverifikasi Otoritas...</span>
+                  ) : (
+                    <>
+                      <span>Masuk ke Sistem</span>
+                      <span>→</span>
+                    </>
+                  )}
+                </button>
+              </form>
+
+              {/* Security Shield Note */}
+              <div
+                style={{
+                  marginTop: "1.5rem",
+                  paddingTop: "1.25rem",
+                  borderTop: "1px solid rgba(255, 255, 255, 0.06)",
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: "0.5rem",
+                  fontSize: "0.75rem",
+                  color: "var(--text-dim)",
+                  lineHeight: 1.5,
+                }}
+              >
+                <span>🛡️</span>
+                <span>
+                  Sistem otomatis mendeteksi peran (Super Admin, Owner, Kasir, Dapur) dan mengarahkan langsung ke dashboard resmi yang berwenang.
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* FOOTER PUBLIK */}
         <footer
@@ -1636,8 +1939,9 @@ export default function HomePage() {
             <span>📱</span>
             <span>Demo QR</span>
           </Link>
-          <a
-            href="#login"
+          <button
+            type="button"
+            onClick={() => setIsLoginModalOpen(true)}
             className="btn-secondary"
             style={{
               flex: 1,
@@ -1649,13 +1953,14 @@ export default function HomePage() {
               alignItems: "center",
               justifyContent: "center",
               gap: "0.35rem",
-              textDecoration: "none",
               borderRadius: "10px",
+              cursor: "pointer",
+              border: "1px solid var(--border-subtle)",
             }}
           >
             <span>🔑</span>
             <span>Masuk Akun</span>
-          </a>
+          </button>
         </div>
       </main>
     </>

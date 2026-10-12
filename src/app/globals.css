@@ -433,3 +433,75 @@ button {
   box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.6);
 }
 
+/* Elegant Login Modal Dialog Animations & Utilities */
+@keyframes modalBackdropFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modalContentPopIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.login-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem 1rem;
+  background: rgba(8, 8, 10, 0.82);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  animation: modalBackdropFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.login-modal-card {
+  width: 100%;
+  max-width: 440px;
+  background: linear-gradient(180deg, rgba(26, 26, 32, 0.96) 0%, rgba(16, 16, 20, 0.98) 100%);
+  border: 1px solid rgba(255, 69, 0, 0.35);
+  border-radius: 24px;
+  padding: 2.25rem 2rem;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.85), 0 0 35px rgba(255, 69, 0, 0.2);
+  position: relative;
+  animation: modalContentPopIn 0.26s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.login-close-btn {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.25rem;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.login-close-btn:hover {
+  background: rgba(255, 69, 0, 0.2);
+  border-color: rgba(255, 69, 0, 0.5);
+  color: #FFF;
+  transform: rotate(90deg);
+}
+
