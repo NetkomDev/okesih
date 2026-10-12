@@ -456,14 +456,8 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: "1.25rem",
-            }}
-          >
-            {/* Card 1 */}
+          <div className="solusi-grid">
+            {/* Card 1: Warkop & Kedai Kopi */}
             <div className="glass-panel mobile-compact-panel" style={{ padding: "1.5rem" }}>
               <div style={{ fontSize: "2.2rem", marginBottom: "0.75rem" }}>☕</div>
               <h3 style={{ fontSize: "1.15rem", fontWeight: 800, marginBottom: "0.5rem" }}>Warkop &amp; Kedai Kopi</h3>
@@ -472,7 +466,7 @@ export default function HomePage() {
               </p>
             </div>
 
-            {/* Card 2 */}
+            {/* Card 2: Rumah Makan & Warteg */}
             <div className="glass-panel mobile-compact-panel" style={{ padding: "1.5rem" }}>
               <div style={{ fontSize: "2.2rem", marginBottom: "0.75rem" }}>🍽️</div>
               <h3 style={{ fontSize: "1.15rem", fontWeight: 800, marginBottom: "0.5rem" }}>Rumah Makan &amp; Warteg</h3>
@@ -481,7 +475,7 @@ export default function HomePage() {
               </p>
             </div>
 
-            {/* Card 3 */}
+            {/* Card 3: Kafe & Bistro Modern */}
             <div className="glass-panel mobile-compact-panel" style={{ padding: "1.5rem" }}>
               <div style={{ fontSize: "2.2rem", marginBottom: "0.75rem" }}>🍰</div>
               <h3 style={{ fontSize: "1.15rem", fontWeight: 800, marginBottom: "0.5rem" }}>Kafe &amp; Bistro Modern</h3>
@@ -490,7 +484,7 @@ export default function HomePage() {
               </p>
             </div>
 
-            {/* Card 4 */}
+            {/* Card 4: Kedai Mie, Bakso & Soto */}
             <div className="glass-panel mobile-compact-panel" style={{ padding: "1.5rem" }}>
               <div style={{ fontSize: "2.2rem", marginBottom: "0.75rem" }}>🍜</div>
               <h3 style={{ fontSize: "1.15rem", fontWeight: 800, marginBottom: "0.5rem" }}>Kedai Mie, Bakso &amp; Soto</h3>
@@ -499,12 +493,39 @@ export default function HomePage() {
               </p>
             </div>
 
-            {/* Card 5 */}
+            {/* Card 5: Stand Minuman & Boba */}
+            <div className="glass-panel mobile-compact-panel" style={{ padding: "1.5rem" }}>
+              <div style={{ fontSize: "2.2rem", marginBottom: "0.75rem" }}>🧋</div>
+              <h3 style={{ fontSize: "1.15rem", fontWeight: 800, marginBottom: "0.5rem" }}>Stand Minuman &amp; Boba</h3>
+              <p style={{ fontSize: "0.825rem", color: "var(--text-muted)", lineHeight: 1.5 }}>
+                Layanan cepat take-away &amp; grab-and-go. Urai antrean panjang dengan cepat serta integrasi pencatatan cup harian.
+              </p>
+            </div>
+
+            {/* Card 6: Food Court & Franchise */}
             <div className="glass-panel mobile-compact-panel" style={{ padding: "1.5rem" }}>
               <div style={{ fontSize: "2.2rem", marginBottom: "0.75rem" }}>🍔</div>
               <h3 style={{ fontSize: "1.15rem", fontWeight: 800, marginBottom: "0.5rem" }}>Food Court &amp; Franchise</h3>
               <p style={{ fontSize: "0.825rem", color: "var(--text-muted)", lineHeight: 1.5 }}>
-                Layar Smart TV memanggil nomor antrean dengan suara robot TTS, koordinasi pesanan multi-menu tetap rapi.
+                Layar Smart TV memanggil nomor antrean dengan suara robot TTS, koordinasi pesanan multi-tenant tetap rapi.
+              </p>
+            </div>
+
+            {/* Card 7: Bakery & Toko Roti */}
+            <div className="glass-panel mobile-compact-panel" style={{ padding: "1.5rem" }}>
+              <div style={{ fontSize: "2.2rem", marginBottom: "0.75rem" }}>🥐</div>
+              <h3 style={{ fontSize: "1.15rem", fontWeight: 800, marginBottom: "0.5rem" }}>Bakery &amp; Toko Roti</h3>
+              <p style={{ fontSize: "0.825rem", color: "var(--text-muted)", lineHeight: 1.5 }}>
+                Pencatatan kasir praktis untuk take-away maupun dine-in, kelola etalase varian rasa dengan update stok harian.
+              </p>
+            </div>
+
+            {/* Card 8: Angkringan & Street Food */}
+            <div className="glass-panel mobile-compact-panel" style={{ padding: "1.5rem" }}>
+              <div style={{ fontSize: "2.2rem", marginBottom: "0.75rem" }}>🍢</div>
+              <h3 style={{ fontSize: "1.15rem", fontWeight: 800, marginBottom: "0.5rem" }}>Angkringan &amp; Street Food</h3>
+              <p style={{ fontSize: "0.825rem", color: "var(--text-muted)", lineHeight: 1.5 }}>
+                Sistem kasir mobile yang bisa dibawa pelayan ke meja pelanggan, tetap lancar offline walau sinyal internet terbatas.
               </p>
             </div>
           </div>
