@@ -249,19 +249,25 @@ export default function HomePage() {
               type="button"
               onClick={() => setIsLoginModalOpen(true)}
               className="btn-primary desktop-only-btn"
+              title="Masuk ke Akun"
+              aria-label="Masuk ke Akun"
               style={{
-                padding: "0.55rem 1.15rem",
-                fontSize: "0.85rem",
-                fontWeight: 800,
+                width: "38px",
+                height: "38px",
+                padding: "0",
+                fontSize: "1.2rem",
+                borderRadius: "10px",
                 display: "inline-flex",
                 alignItems: "center",
-                gap: "0.4rem",
+                justifyContent: "center",
                 cursor: "pointer",
                 border: "none",
+                background: "linear-gradient(135deg, #FF5722, #FF4500)",
+                boxShadow: "0 4px 14px var(--brand-orange-glow)",
+                flexShrink: 0,
               }}
             >
-              <span>Masuk ke Akun</span>
-              <span>→</span>
+              🚪
             </button>
 
             <button
@@ -367,7 +373,7 @@ export default function HomePage() {
                 }}
                 style={{ textAlign: "center", padding: "0.85rem", fontWeight: 800, fontSize: "0.9rem", cursor: "pointer", border: "1px solid var(--border-subtle)" }}
               >
-                🔑 Masuk ke Akun Sistem
+                🚪 Masuk ke Akun
               </button>
             </div>
           </div>
