@@ -83,7 +83,7 @@ export default function HomePage() {
     "applicationCategory": "BusinessApplication",
     "operatingSystem": "All (Web, Android, iOS, Windows, macOS)",
     "description":
-      "Platform sistem kasir POS Offline-First, Kitchen Display (KDS), QR Menu Meja, dan Antrean TV cerdas untuk warung, kafe, rumah makan, resto, dan warkop.",
+      "Platform sistem kasir POS Offline-First, Kitchen Display (KDS), QR Menu Meja, dan Antrean TV cerdas untuk kafe, resto, rumah makan, dan warkop.",
     "offers": {
       "@type": "Offer",
       "price": "50",
@@ -182,7 +182,7 @@ export default function HomePage() {
                 OKESIH<span style={{ color: "var(--brand-orange-light)" }}>.COM</span>
               </div>
               <div className="brand-tagline-text" style={{ fontSize: "0.75rem", color: "var(--text-dim)", fontWeight: 500 }}>
-                Platform Kasir &amp; Operasional Cerdas untuk Warung, Kafe, Resto &amp; Warkop
+                Platform Kasir &amp; Operasional Kafe, Resto &amp; Warkop
               </div>
             </div>
           </Link>

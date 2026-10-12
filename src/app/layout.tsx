@@ -15,15 +15,14 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL("https://okesih.vercel.app"),
   title: {
-    default: "OKESIH - Aplikasi Kasir POS & Self-Order untuk Warung, Kafe, Resto & Warkop",
+    default: "OKESIH - Aplikasi Kasir POS & Self-Order untuk Kafe, Resto & Warkop",
     template: "%s | OKESIH POS & Operasional Usaha",
   },
   description:
-    "Software POS Kasir Offline-First, Kitchen Display (KDS), QR Menu Meja, dan Antrean Smart TV untuk Warung Makan, Kafe, Rumah Makan, Resto, dan Warkop. Tanpa beli alat mahal, bayar sewa hanya Rp 50 per transaksi.",
+    "Software POS Kasir Offline-First, Kitchen Display (KDS), QR Menu Meja, dan Antrean Smart TV untuk Kafe, Rumah Makan, Resto, dan Warkop. Tanpa beli alat mahal, bayar sewa hanya Rp 50 per transaksi.",
   keywords: [
     "aplikasi kasir",
     "pos kasir warkop",
-    "aplikasi kasir warung makan",
     "pos kafe dan resto",
     "software kasir offline",
     "qr menu meja",
@@ -44,7 +43,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "OKESIH - Aplikasi Kasir POS & Self-Order Cerdas untuk Segala Usaha Kuliner",
     description:
-      "Pesanan ngalir cepat, usaha bebas macet! POS Kasir Offline-First, KDS Dapur, QR Menu Meja, dan Antrean TV. Cocok untuk Warung, Kafe, Rumah Makan, & Warkop. Hanya Rp 50/struk.",
+      "Pesanan ngalir cepat, usaha bebas macet! POS Kasir Offline-First, KDS Dapur, QR Menu Meja, dan Antrean TV. Cocok untuk Kafe, Rumah Makan, Resto & Warkop. Hanya Rp 50/struk.",
     url: "https://okesih.vercel.app",
     siteName: "OKESIH.COM",
     locale: "id_ID",
@@ -52,7 +51,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "OKESIH - Aplikasi Kasir POS & Antrean Cerdas untuk Warung, Kafe & Resto",
+    title: "OKESIH - Aplikasi Kasir POS & Antrean Cerdas untuk Kafe, Resto & Warkop",
     description:
       "Tingkatkan kecepatan pesanan dan omzet usaha kuliner Anda dengan POS Offline-First dan QR Menu Meja. Cukup pakai HP sendiri, hanya Rp 50/struk.",
   },
