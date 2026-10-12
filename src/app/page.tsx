@@ -1084,7 +1084,14 @@ export default function HomePage() {
                 onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <h3 style={{ fontSize: "1rem", fontWeight: 800, color: openFaq === idx ? "var(--brand-orange-light)" : "#FFF" }}>
+                  <h3
+                    style={{
+                      fontSize: "1rem",
+                      fontWeight: 800,
+                      color: openFaq === idx ? "var(--brand-orange-light)" : "var(--text-pure-white)",
+                      transition: "color 0.2s ease",
+                    }}
+                  >
                     {faq.q}
                   </h3>
                   <span style={{ fontSize: "1.2rem", fontWeight: 700, color: "var(--brand-orange-light)" }}>

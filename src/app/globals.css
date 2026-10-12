@@ -575,11 +575,25 @@ button {
 [data-theme="light"] h4,
 [data-theme="light"] h5,
 [data-theme="light"] h6 {
-  color: #0F172A !important;
+  color: #0F172A;
 }
 
 [data-theme="light"] p {
   color: var(--text-muted);
+}
+
+/* FAQ Accordion Item Styling di Light Mode */
+[data-theme="light"] .faq-item-button,
+[data-theme="light"] .faq-item-button > span:first-child {
+  color: #0F172A;
+}
+
+[data-theme="light"] .glass-panel button[type="button"] {
+  color: #0F172A !important;
+}
+
+[data-theme="light"] .glass-panel button[type="button"] > span:first-child {
+  color: #0F172A;
 }
 
 [data-theme="light"] strong {

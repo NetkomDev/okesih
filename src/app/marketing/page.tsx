@@ -791,6 +791,7 @@ export default function MarketingProgramPage() {
             >
               <button
                 type="button"
+                className="faq-item-button"
                 onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
                 style={{
                   width: "100%",
@@ -801,13 +802,21 @@ export default function MarketingProgramPage() {
                   justifyContent: "space-between",
                   alignItems: "center",
                   textAlign: "left",
-                  color: "#FFF",
+                  color: "var(--text-pure-white)",
+                  cursor: "pointer",
                 }}
               >
-                <span style={{ fontSize: "0.95rem", fontWeight: 800, color: openFaq === idx ? "#34D399" : "#FFF" }}>
+                <span
+                  style={{
+                    fontSize: "0.95rem",
+                    fontWeight: 800,
+                    color: openFaq === idx ? "#059669" : "var(--text-pure-white)",
+                    transition: "color 0.2s ease",
+                  }}
+                >
                   {faq.q}
                 </span>
-                <span style={{ fontSize: "1.2rem", fontWeight: 700, color: "#34D399", marginLeft: "1rem" }}>
+                <span style={{ fontSize: "1.2rem", fontWeight: 700, color: "#10B981", marginLeft: "1rem" }}>
                   {openFaq === idx ? "−" : "+"}
                 </span>
               </button>
@@ -819,7 +828,7 @@ export default function MarketingProgramPage() {
                     fontSize: "0.875rem",
                     color: "var(--text-muted)",
                     lineHeight: 1.6,
-                    borderTop: "1px solid rgba(255, 255, 255, 0.05)",
+                    borderTop: "1px solid var(--border-subtle)",
                     paddingTop: "0.85rem",
                   }}
                 >
