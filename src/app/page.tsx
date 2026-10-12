@@ -39,14 +39,16 @@ export default function HomePage() {
       const role = data.user?.user_metadata?.role;
       const user = username.toLowerCase().trim();
 
-      if (user === "superadmin" || role === "SUPERADMIN" || role === "OWNER") {
-        router.push("/admin");
+      if (user === "superadmin" || role === "SUPERADMIN") {
+        router.push("/superadmin");
+      } else if (user === "owner1" || user === "owner" || role === "OWNER") {
+        router.push("/owner");
       } else if (user === "kasir1" || role === "KASIR") {
         router.push("/pos");
       } else if (user === "dapur" || role === "DAPUR") {
         router.push("/kds");
       } else {
-        router.push("/admin");
+        router.push("/owner");
       }
     } catch (err: unknown) {
       setLoginError(err instanceof Error ? err.message : "Terjadi kesalahan sistem");
@@ -336,35 +338,65 @@ export default function HomePage() {
             </div>
           </Link>
 
-          {/* Card 5: Admin & Billing */}
-          <Link href="/admin" className="glass-panel" style={{ padding: "1.75rem", display: "block", transition: "all 0.2s ease" }}>
+          {/* Card 5: Portal Owner Warkop */}
+          <Link href="/owner" className="glass-panel" style={{ padding: "1.75rem", display: "block", transition: "all 0.2s ease" }}>
             <div
               style={{
                 width: "48px",
                 height: "48px",
                 borderRadius: "14px",
-                background: "linear-gradient(135deg, #374151, #1F2937)",
+                background: "linear-gradient(135deg, #FF5722, #FF4500)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 fontSize: "24px",
                 marginBottom: "1.25rem",
-                border: "1px solid rgba(255, 255, 255, 0.1)",
+                boxShadow: "0 6px 16px var(--brand-orange-glow)",
+              }}
+            >
+              ☕
+            </div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem" }}>
+              <h3 style={{ fontSize: "1.2rem", fontWeight: 800 }}>Portal Owner Warkop</h3>
+              <span className="badge badge-ready">Tenant Portal</span>
+            </div>
+            <p style={{ fontSize: "0.875rem", color: "var(--text-muted)", lineHeight: 1.5, marginBottom: "1.25rem" }}>
+              Kelola sistem bisnis warkop Anda: buat akun staf kasir, daftar waiters, QRIS toko, katalog menu, dan omzet harian.
+            </p>
+            <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--brand-orange-light)" }}>
+              Buka Dashboard Owner →
+            </div>
+          </Link>
+
+          {/* Card 6: Super Admin Pusat HQ */}
+          <Link href="/superadmin" className="glass-panel" style={{ padding: "1.75rem", display: "block", transition: "all 0.2s ease", border: "1px solid rgba(56, 189, 248, 0.3)" }}>
+            <div
+              style={{
+                width: "48px",
+                height: "48px",
+                borderRadius: "14px",
+                background: "linear-gradient(135deg, #0EA5E9, #0284C7)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "24px",
+                marginBottom: "1.25rem",
+                boxShadow: "0 6px 16px rgba(14, 165, 233, 0.3)",
               }}
             >
               🛡️
             </div>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem" }}>
-              <h3 style={{ fontSize: "1.2rem", fontWeight: 800 }}>Owner & Admin</h3>
-              <span className="badge" style={{ background: "rgba(255, 255, 255, 0.1)", color: "#E5E7EB" }}>
-                Multi-Tenant
+              <h3 style={{ fontSize: "1.2rem", fontWeight: 800 }}>Super Admin Pusat</h3>
+              <span className="badge" style={{ background: "rgba(14, 165, 233, 0.2)", color: "#38BDF8" }}>
+                SaaS HQ
               </span>
             </div>
             <p style={{ fontSize: "0.875rem", color: "var(--text-muted)", lineHeight: 1.5, marginBottom: "1.25rem" }}>
-              Dashboard manajemen warkop, pembuatan akun staf praktis (username + password), dan verifikasi tagihan QRIS OCR.
+              Daftarkan tenant warkop baru, pantau seluruh resume ekosistem SaaS, dan kelola konfigurasi global pusat.
             </p>
-            <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#E5E7EB" }}>
-              Dashboard Manajemen →
+            <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#38BDF8" }}>
+              Buka Command Center HQ →
             </div>
           </Link>
         </div>
@@ -480,6 +512,22 @@ export default function HomePage() {
                   type="button"
                   onClick={() => fillCredentials("superadmin", "adminokesih2026!")}
                   style={{
+                    background: "rgba(14, 165, 233, 0.15)",
+                    border: "1px solid rgba(14, 165, 233, 0.4)",
+                    color: "#38BDF8",
+                    fontSize: "0.75rem",
+                    fontWeight: 800,
+                    padding: "0.35rem 0.75rem",
+                    borderRadius: "var(--radius-pill)",
+                    cursor: "pointer",
+                  }}
+                >
+                  🛡️ superadmin
+                </button>
+                <button
+                  type="button"
+                  onClick={() => fillCredentials("owner1", "owner123!")}
+                  style={{
                     background: "rgba(255, 69, 0, 0.15)",
                     border: "1px solid rgba(255, 69, 0, 0.4)",
                     color: "var(--brand-orange-light)",
@@ -490,7 +538,7 @@ export default function HomePage() {
                     cursor: "pointer",
                   }}
                 >
-                  🛡️ superadmin
+                  ☕ owner1
                 </button>
                 <button
                   type="button"
