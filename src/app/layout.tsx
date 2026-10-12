@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL("https://okesih.vercel.app"),
   title: {
-    default: "OKESIH - Aplikasi Kasir POS & Self-Order untuk Kafe, Resto & Warkop",
+    default: "OKESIH - Platform Kasir & Operasional Kafe & Resto",
     template: "%s | OKESIH POS & Operasional Usaha",
   },
   description:

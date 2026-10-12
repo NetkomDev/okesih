@@ -182,7 +182,7 @@ export default function HomePage() {
                 OKESIH<span style={{ color: "var(--brand-orange-light)" }}>.COM</span>
               </div>
               <div className="brand-tagline-text" style={{ fontSize: "0.75rem", color: "var(--text-dim)", fontWeight: 500 }}>
-                Platform Kasir &amp; Operasional Kafe, Resto &amp; Warkop
+                Platform Kasir &amp; Operasional Kafe &amp; Resto
               </div>
             </div>
           </Link>
