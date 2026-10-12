@@ -53,30 +53,38 @@ Keseluruhan sistem dibagi menjadi 5 modul UI. Secara struktur di Vercel, ini ber
 5. Pemilik mencetak QR Code meja bernomor (`/menu/[id_warkop]?table=01`, `table=02`, dst.) dan menempelkannya di setiap meja warkop.
 6. Staf membuka URL POS, KDS, dan TV di perangkat masing-masing, login dengan username + password, lalu menekan "Add to Homescreen" (Install PWA).
 
-### B. Fase Operasional (High-Throughput Pesanan Meja Pelanggan)
-1. **Pilih Meja & Scan QR:** Pelanggan duduk di meja dan memindai QR Code di meja tersebut menggunakan smartphone mereka. Sistem membuka halaman menu dengan nomor meja terkunci otomatis.
-2. **Pilih Pesanan & Bayar Mandiri:** Pelanggan memilih minuman/makanan, menekan checkout, dan melihat nominal total serta gambar **QRIS Statis Toko/Warkop**.
-   * *Catatan Keuangan:* QRIS ini 100% milik owner warkop, sehingga perputaran uang pesanan pelanggan langsung masuk ke rekening warkop (bukan ke sistem OKESIH).
-3. **Upload Bukti Pembayaran:** Pelanggan mentransfer via M-Banking / e-Wallet, lalu mengunggah screenshot bukti transfer di halaman checkout dan menekan tombol **"Kirim Pesanan"**.
-4. **Notifikasi & Alarm Kasir Berdering Keras:**
-   * Pesanan masuk ke tabel `transactions` dengan status `AWAITING_CONFIRMATION`.
-   * PWA Kasir (`/pos`) mendeteksi pesanan meja baru via Supabase Realtime.
-   * **Alarm aplikasi kasir berdering keras secara berulang (audio chime / siren loop)** untuk memastikan kasir segera merespons tiket meja masuk.
-5. **Konfirmasi Kasir (Audit Bukti Pembayaran):**
-   * Kasir membuka tiket pesanan di POS, memeriksa rincian menu dan gambar screenshot bukti transfer pelanggan.
-   * Kasir mencocokkan dana dengan mutasi QRIS warkopnya.
-   * Jika **VALID**: Kasir menekan tombol **"Konfirmasi Pembayaran (Lunas)"**. Status pesanan berubah menjadi `COOKING` (masuk antrean dapur). Alarm kasir otomatis berhenti. Sistem mencatat penambahan tagihan sewa SaaS (+Rp 50/struk).
-   * Jika **PALSU/INVALID**: Kasir menekan tombol **"Tolak Pesanan"** (status `REJECTED`, alarm berhenti, pesanan dibatalkan).
-6. **Masuk Antrean Dapur/Barista (KDS):** Begitu dikonfirmasi kasir, tiket pesanan seketika muncul di layar KDS (`/kds`) menampilkan Nomor Antrean, **Nomor Meja Pemesan**, dan rincian menu.
-7. **Barista Meracik & Klik Selesai:** Barista meracik minuman/makanan. Setelah siap, barista menekan tombol **"Selesai"** di layar KDS. Status pesanan di Supabase ter-UPDATE menjadi `READY`.
-8. **Waiters Mengantar ke Meja:** Waiters melihat tiket `READY` dengan keterangan Nomor Meja yang jelas (misal: "Meja #05"), lalu mengantarkan pesanan langsung ke meja pemesan.
-9. **Antrean TV Berubah Hijau & Panggilan Suara:**
-   * Di Layar Antrean Smart TV (`/tv`), nomor antrean dan nomor meja berpindah ke kolom **"SIAP DIAMBIL / DIANTAR"** dengan warna latar **HIJAU** (`#10B981`).
-   * Sistem membunyikan suara robot otomatis (TTS): *"Pesanan Nomor 12 untuk Meja 5 siap diantar"*.
-10. **Auto-Dismiss (Menghilang Otomatis):**
-    * Setelah berubah hijau, tiket antrean akan bertahan selama durasi yang ditentukan oleh **Super Admin Pusat** (parameter `queue_dismiss_seconds`, default: 60 detik).
-    * Setelah timer habis, tiket antrean otomatis memudar dan menghilang dari layar TV dan KDS.
-11. **Selesai:** Seluruh siklus pesanan meja berhasil dituntaskan dengan cepat dan tertib.
+### B. Fase Operasional (High-Throughput Pesanan Meja, Dual Pembayaran, & SOP Waiters)
+1. **Pilih Meja & Scan QR:** Pelanggan duduk di meja dan memindai QR Code meja bernomor (`/menu/[id_warkop]?table=05`). Sistem otomatis mengunci nomor meja.
+2. **Pilih Pesanan & Pilihan Metode Pembayaran:**
+   * **Opsi A - QRIS Warkop (Bayar Sekarang):** Pelanggan scan gambar QRIS Statis warkop di layar HP, transfer via m-banking/e-wallet, lalu mengunggah screenshot bukti transfer. (Uang 100% langsung masuk ke rekening owner warkop).
+   * **Opsi B - BAYAR TUNAI (Cash di Meja):** Pelanggan memilih bayar tunai. Tidak perlu upload gambar. Layar menginstruksikan pelanggan untuk menyiapkan uang tunai pas saat pesanan diantar oleh Waiters/Pelayan.
+3. **Notifikasi & Alarm Kasir Berdering Keras:**
+   * Pesanan masuk ke tabel `transactions` dengan status `AWAITING_CONFIRMATION` dan tanda metode bayar (`QRIS` atau `TUNAI`).
+   * PWA Kasir (`/pos`) mendeteksi pesanan meja baru via Realtime dan **alarm audio berdering keras secara berulang** sampai kasir merespons.
+4. **Konfirmasi Kasir & Cetak Struk Fisik Khusus Waiters:**
+   * Kasir membuka tiket pesanan di POS.
+   * Jika **QRIS**: Kasir memverifikasi screenshot transfer pelanggan. Jika valid, kasir klik "Konfirmasi Pembayaran".
+   * Jika **TUNAI**: Kasir memverifikasi rincian menu dan klik "Konfirmasi Pesanan Tunai".
+   * **Pencatatan Waiters Aktif:** Sistem otomatis mengaitkan transaksi tersebut ke nama **Waiters yang sedang bertugas aktif pada shift tersebut**.
+   * Kasir mencetak struk fisik via Bluetooth Thermal Printer. Pada struk fisik tercetak **TEKS BESAR & TEGAS**:
+     * Untuk Tunai: `[ *** BAYAR TUNAI : Rp 26.000 *** ]` -> *"WAITERS WAJIB TAGIH UANG KE MEJA"*
+     * Untuk QRIS: `[ *** QRIS LUNAS : Rp 26.000 *** ]` -> *"SUDAH LUNAS - TIDAK PERLU TAGIH"*
+   * Alarm kasir otomatis berhenti. Sistem mencatat penambahan tagihan sewa SaaS (+Rp 50/struk).
+5. **Masuk Antrean Dapur/Barista (KDS):** Tiket pesanan seketika muncul di layar KDS (`/kds`) dengan Nomor Antrean, Nomor Meja, dan tanda metode bayar.
+6. **Barista Meracik & Klik Selesai:** Barista meracik menu, meletakkan struk fisik di samping nampan hidangan, lalu menekan tombol **"Selesai"** di layar KDS (status berubah `READY`).
+7. **SOP Pengantaran & Penagihan oleh Waiters:**
+   * Waiters mengambil pesanan beserta struk fisik dari dapur.
+   * **Waiters WAJIB mengecek teks besar pada struk fisik:**
+     * Jika tertulis **BAYAR TUNAI**: Waiters mengantar ke meja, **wajib menagih uang tunai ke pelanggan di meja** sesuai nominal struk, menyerahkan struk ke pelanggan, lalu menyetorkan uang cash tersebut ke laci kasir.
+     * Jika tertulis **QRIS LUNAS**: Waiters langsung menyerahkan pesanan dan struk tanpa menagih.
+8. **Antrean TV Berubah Hijau & Panggilan Suara:**
+   * Di Layar Antrean Smart TV (`/tv`), nomor antrean dan meja berpindah ke kolom **"SIAP DIAMBIL / DIANTAR"** dengan warna latar **HIJAU** (`#10B981`) dan suara robot TTS memanggil meja pelanggan.
+9. **Auto-Dismiss (Menghilang Otomatis):**
+   * Antrean hijau bertahan selama durasi `queue_dismiss_seconds` yang diatur Super Admin Pusat (default: 60 detik), lalu otomatis memudar dan menghilang dari layar TV dan KDS.
+10. **Manajemen Shift Waiters & Rekonsiliasi Kas Laci (Anti-Selisih):**
+    * Di halaman Kasir terdapat fitur **Manajemen Shift Waiters** (input nama waiters aktif & log pergantian shift).
+    * Sistem merekam jam mulai, jam selesai, dan total akumulasi uang tunai yang ditagih oleh masing-masing waiters.
+    * Saat pergantian shift atau tutup toko, kasir dan owner dapat mencocokkan (*reconciliation*) total uang tunai yang seharusnya dikumpulkan waiters dengan uang fisik yang ada di laci kasir.
 
 ### C. Fase Penagihan Otomatis (Tutup Shift & OCR)
 1. **Tutup Toko:** Kasir menekan tombol "Tutup Shift". PWA POS mengecek `navigator.onLine`. (Wajib *online* untuk tutup shift).
@@ -89,18 +97,19 @@ Keseluruhan sistem dibagi menjadi 5 modul UI. Secara struktur di Vercel, ini ber
 5. **Verifikasi OCR (Tesseract.js & Server Validation):**
    * Gambar dikonversi menjadi teks (ekstraksi nominal & tanggal).
    * *Regex Rule:* Mencari string nominal unik (mengabaikan titik/koma) dan mencocokkan tanggal struk dengan hari ini.
-   * Jika **LULUS**: Update status Supabase menjadi `PAID`. Layar kasir terbuka (*Unlock*), shift harian di-*reset*, dan cetak *Z-Report* (Laporan Harian).
+   * Jika **LULUS**: Update status Supabase menjadi `PAID`. Layar kasir terbuka (*Unlock*), shift harian di-*reset*, dan cetak *Z-Report* (Laporan Harian Rekonsiliasi Kas & Penjualan).
    * Jika **GAGAL/BURAM**: Kasir menekan tombol "Bantuan Admin". Status menjadi `PENDING_REVIEW`. Layar terbuka sementara (tenggang 12 jam) agar kasir bisa pulang, sementara Admin memvalidasi manual di *Dashboard*.
 
 ## 5. SKEMA DATABASE (SUPABASE POSTGRESQL) - MULTI-TENANT
 
 Desain tabel utama di Supabase dengan Row Level Security (RLS) berbasis `warkop_id`:
 
-* `warkops`: Menyimpan data klien (`id`, `nama`, `slug`, `unique_code_range_start`, `unique_code_range_end`, `offline_limit_hours`, `is_active`).
+* `warkops`: Menyimpan data klien (`id`, `nama`, `slug`, `qris_image_url`, `queue_dismiss_seconds`, `unique_code_range_start`, `unique_code_range_end`, `offline_limit_hours`, `is_active`).
 * `warkop_members`: Relasi pengguna Auth ke warkop (`id`, `warkop_id`, `user_id`, `username`, `role` [OWNER, KASIR, DAPUR, TV]).
 * `menus`: Katalog produk (`id`, `warkop_id`, `nama`, `harga`, `kategori`, `is_available`).
 * `shifts`: Sesi kerja kasir (`id`, `warkop_id`, `opened_by`, `opened_at`, `closed_at`, `status` [OPEN, CLOSED]).
-* `transactions`: Data penjualan per bon (`id`, `warkop_id`, `shift_id`, `nomor_antrean`, `total_harga`, `status_pesanan` [NEW, COOKING, READY, DONE, VOID], `created_at`, `synced_at`).
+* `waiter_shifts`: Sesi jam kerja waiters (`id`, `warkop_id`, `shift_id`, `waiter_name`, `started_at`, `ended_at`, `total_cash_collected`, `status` [ACTIVE, ENDED]).
+* `transactions`: Data penjualan per bon (`id`, `warkop_id`, `shift_id`, `waiter_shift_id`, `waiter_name`, `table_number`, `nomor_antrean`, `total_harga`, `payment_method` [QRIS, CASH], `payment_proof_url`, `status_pesanan` [AWAITING_CONFIRMATION, COOKING, READY, DONE, VOID, REJECTED], `created_at`, `synced_at`).
 * `transaction_items`: Detail menu yang dibeli di dalam satu bon (`id`, `transaction_id`, `menu_id`, `nama_menu`, `harga_satuan`, `qty`, `notes`).
 * `saas_billings`: Data tagihan warkop ke OKESIH (`id`, `warkop_id`, `tanggal`, `total_transactions`, `tagihan_pokok`, `kode_unik`, `total_tagihan`, `status_bayar` [UNPAID, PAID, PENDING_REVIEW], `bukti_transfer_url`, `ocr_raw_text`, `grace_until`).
 

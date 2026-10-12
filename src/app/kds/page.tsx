@@ -7,6 +7,8 @@ interface KitchenTicket {
   id: string;
   ticketNumber: string;
   tableNumber: string;
+  waiterName: string;
+  paymentMethod: "CASH" | "QRIS";
   elapsedMinutes: number;
   status: "NEW" | "COOKING" | "READY";
   items: { name: string; qty: number; notes?: string }[];
@@ -18,6 +20,8 @@ export default function KdsModulePage() {
       id: "tk-01",
       ticketNumber: "#012",
       tableNumber: "05",
+      waiterName: "Rian",
+      paymentMethod: "QRIS",
       elapsedMinutes: 8,
       status: "COOKING",
       items: [
@@ -28,22 +32,26 @@ export default function KdsModulePage() {
     {
       id: "tk-02",
       ticketNumber: "#013",
-      tableNumber: "02",
+      tableNumber: "03",
+      waiterName: "Rian",
+      paymentMethod: "CASH",
       elapsedMinutes: 3,
       status: "NEW",
       items: [
-        { name: "Kopi Susu Panas", qty: 1, notes: "Gula aren sedikit" },
-        { name: "Roti Bakar Keju", qty: 1, notes: "Susu kental manis" },
+        { name: "Kopi Hitam Tubruk Giras", qty: 1, notes: "Pahit kental" },
+        { name: "Indomie Kuah Dobel Telur", qty: 1, notes: "Telur 1/2 matang" },
       ],
     },
     {
       id: "tk-03",
       ticketNumber: "#014",
       tableNumber: "08",
+      waiterName: "Dani",
+      paymentMethod: "QRIS",
       elapsedMinutes: 1,
       status: "NEW",
       items: [
-        { name: "Kopi Hitam Tubruk", qty: 3, notes: "Pahit kental" },
+        { name: "Kopi Susu Panas Legendaris", qty: 2, notes: "Gula aren sedikit" },
       ],
     },
   ]);
@@ -54,9 +62,14 @@ export default function KdsModulePage() {
     );
   };
 
-  const markReady = (id: string, ticketNum: string, tableNum: string) => {
+  const markReady = (id: string, ticketNum: string, tableNum: string, waiterName: string, method: string) => {
     setTickets((prev) => prev.filter((t) => t.id !== id));
-    alert(`✓ Pesanan ${ticketNum} (Meja #${tableNum}) SELESAI!\nStatus berubah HIJAU di Layar TV dan siap diantar waiters.`);
+    alert(
+      `✓ Pesanan ${ticketNum} (Meja #${tableNum}) SELESAI!\n` +
+      `Waiters: ${waiterName}\n` +
+      `Metode: ${method === "CASH" ? "BAYAR TUNAI (Waiters Wajib Tagih)" : "QRIS LUNAS"}\n` +
+      `Status berubah HIJAU di Layar TV dan suara panggilan TTS berbunyi.`
+    );
   };
 
   return (
@@ -90,7 +103,7 @@ export default function KdsModulePage() {
       </header>
 
       {/* Ticket Grid */}
-      <main style={{ padding: "1.5rem", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: "1.25rem" }}>
+      <main style={{ padding: "1.5rem", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(350px, 1fr))", gap: "1.25rem" }}>
         {tickets.map((t) => (
           <div
             key={t.id}
@@ -105,13 +118,13 @@ export default function KdsModulePage() {
             }}
           >
             <div>
-              {/* Header Tiket: Nomor Tiket & Nomor Meja yang Jelas! */}
+              {/* Header Tiket: Nomor Tiket & Nomor Meja & Indikator Metode Bayar */}
               <div
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "flex-start",
-                  marginBottom: "1rem",
+                  marginBottom: "0.875rem",
                   borderBottom: "1px solid var(--border-subtle)",
                   paddingBottom: "0.75rem",
                 }}
@@ -137,17 +150,52 @@ export default function KdsModulePage() {
                     </span>
                   </div>
                   <div style={{ fontSize: "0.75rem", color: "var(--text-dim)", marginTop: "0.25rem" }}>
-                    Dikonfirmasi kasir: {t.elapsedMinutes} menit lalu
+                    Waiters: <strong style={{ color: "#FFF" }}>{t.waiterName}</strong> • {t.elapsedMinutes} mnt lalu
                   </div>
                 </div>
 
-                <span className={t.status === "COOKING" ? "badge badge-cooking" : "badge badge-new"}>
-                  {t.status === "COOKING" ? "Sedang Diracik" : "Baru Masuk"}
-                </span>
+                <div style={{ textAlign: "right" }}>
+                  <span className={t.status === "COOKING" ? "badge badge-cooking" : "badge badge-new"}>
+                    {t.status === "COOKING" ? "Sedang Diracik" : "Baru Masuk"}
+                  </span>
+
+                  {/* Badge Pembayaran */}
+                  <div style={{ marginTop: "0.35rem" }}>
+                    {t.paymentMethod === "CASH" ? (
+                      <span
+                        style={{
+                          background: "rgba(239, 68, 68, 0.2)",
+                          border: "1px solid #EF4444",
+                          color: "#FCA5A5",
+                          fontSize: "0.7rem",
+                          fontWeight: 800,
+                          padding: "0.15rem 0.45rem",
+                          borderRadius: "4px",
+                        }}
+                      >
+                        💵 BAYAR TUNAI (TAGIH)
+                      </span>
+                    ) : (
+                      <span
+                        style={{
+                          background: "rgba(16, 185, 129, 0.2)",
+                          border: "1px solid #10B981",
+                          color: "#34D399",
+                          fontSize: "0.7rem",
+                          fontWeight: 800,
+                          padding: "0.15rem 0.45rem",
+                          borderRadius: "4px",
+                        }}
+                      >
+                        📱 QRIS LUNAS
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
 
               {/* Daftar Menu Dipesan */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginBottom: "1.5rem" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginBottom: "1rem" }}>
                 {t.items.map((item, idx) => (
                   <div key={idx} style={{ display: "flex", flexDirection: "column" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 800, fontSize: "1.05rem" }}>
@@ -160,6 +208,21 @@ export default function KdsModulePage() {
                     )}
                   </div>
                 ))}
+              </div>
+
+              {/* Instruksi Barista untuk SOP Struk */}
+              <div
+                style={{
+                  background: "var(--bg-surface-2)",
+                  border: "1px dashed var(--border-subtle)",
+                  borderRadius: "6px",
+                  padding: "0.5rem 0.75rem",
+                  fontSize: "0.725rem",
+                  color: "var(--text-muted)",
+                  marginBottom: "1rem",
+                }}
+              >
+                📌 <strong>SOP Dapur:</strong> Letakkan struk fisik thermal di samping nampan hidangan sebelum diserahkan ke Waiters <strong>{t.waiterName}</strong>.
               </div>
             </div>
 
@@ -175,7 +238,7 @@ export default function KdsModulePage() {
                 </button>
               ) : (
                 <button
-                  onClick={() => markReady(t.id, t.ticketNumber, t.tableNumber)}
+                  onClick={() => markReady(t.id, t.ticketNumber, t.tableNumber, t.waiterName, t.paymentMethod)}
                   className="btn-primary"
                   style={{
                     width: "100%",
@@ -184,7 +247,7 @@ export default function KdsModulePage() {
                     fontWeight: 800,
                   }}
                 >
-                  ✓ SELESAI (SIAP DIANTAR KE MEJA #{t.tableNumber})
+                  ✓ SELESAI (SERAHKAN KE WAITERS {t.waiterName.toUpperCase()})
                 </button>
               )}
             </div>

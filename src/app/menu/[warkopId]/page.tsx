@@ -43,6 +43,7 @@ export default function CustomerMenuPage({
 
   const [tableNumber, setTableNumber] = useState<string>(initialTable);
   const [isSelectingTable, setIsSelectingTable] = useState<boolean>(false);
+  const [paymentMethod, setPaymentMethod] = useState<"QRIS" | "CASH">("QRIS");
   const [cart, setCart] = useState<Record<string, CartItem>>({});
   const [isCheckoutOpen, setIsCheckoutOpen] = useState<boolean>(false);
   const [proofImage, setProofImage] = useState<string | null>(null);
@@ -97,7 +98,7 @@ export default function CustomerMenuPage({
   };
 
   const handleSubmitOrder = () => {
-    if (!proofImage) {
+    if (paymentMethod === "QRIS" && !proofImage) {
       alert("Harap unggah screenshot bukti transfer QRIS terlebih dahulu!");
       return;
     }
@@ -106,7 +107,7 @@ export default function CustomerMenuPage({
       setIsSubmitting(false);
       setOrderSent(true);
       setIsCheckoutOpen(false);
-    }, 1200);
+    }, 1000);
   };
 
   return (
@@ -201,26 +202,55 @@ export default function CustomerMenuPage({
       {orderSent && (
         <div style={{ maxWidth: "600px", margin: "1.5rem auto", padding: "0 1rem" }}>
           <div className="glass-panel-glow" style={{ padding: "2rem", textAlign: "center" }}>
-            <div style={{ fontSize: "40px", marginBottom: "1rem" }}>🔔</div>
+            <div style={{ fontSize: "44px", marginBottom: "1rem" }}>
+              {paymentMethod === "CASH" ? "💵" : "📱"}
+            </div>
             <h2 style={{ fontSize: "1.35rem", fontWeight: 800, color: "var(--brand-orange-light)", marginBottom: "0.5rem" }}>
-              Pesanan Terkirim ke Kasir!
+              {paymentMethod === "CASH"
+                ? "Pesanan Masuk (Metode BAYAR TUNAI)!"
+                : "Pesanan Terkirim ke Kasir (QRIS)!"}
             </h2>
             <p style={{ fontSize: "0.9rem", color: "var(--text-muted)", lineHeight: 1.6, marginBottom: "1.5rem" }}>
-              Alarm kasir sedang berdering. Kasir sedang memvalidasi bukti pembayaran QRIS Anda.
-              Setelah dikonfirmasi, barista akan meracik dan waiters mengantar ke <strong>Meja #{tableNumber}</strong>!
+              {paymentMethod === "CASH" ? (
+                <>
+                  Alarm kasir sedang berdering. Kasir memproses pesanan dan mencetak struk bertuliskan{" "}
+                  <strong style={{ color: "#EF4444" }}>[BAYAR TUNAI]</strong>. Barista segera meracik, dan{" "}
+                  <strong>Waiters/Pelayan akan menagih uang tunai langsung di Meja #{tableNumber}</strong> bersamaan
+                  dengan penyerahan hidangan dan struk fisik.
+                </>
+              ) : (
+                <>
+                  Alarm kasir sedang berdering. Kasir sedang memvalidasi bukti pembayaran QRIS Anda. Struk fisik akan
+                  tercetak bertuliskan <strong style={{ color: "#10B981" }}>[QRIS LUNAS]</strong>, sehingga{" "}
+                  <strong>Waiters tidak akan menagih</strong> saat mengantar ke <strong>Meja #{tableNumber}</strong>.
+                </>
+              )}
             </p>
-            <div className="glass-panel" style={{ padding: "1rem", marginBottom: "1.5rem", textAlign: "left", fontSize: "0.85rem" }}>
+            <div className="glass-panel" style={{ padding: "1.1rem", marginBottom: "1.5rem", textAlign: "left", fontSize: "0.85rem" }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.35rem" }}>
                 <span style={{ color: "var(--text-dim)" }}>Tujuan Meja:</span>
-                <strong>Meja #{tableNumber}</strong>
+                <strong style={{ color: "var(--brand-orange-light)" }}>📍 Meja #{tableNumber}</strong>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.35rem" }}>
-                <span style={{ color: "var(--text-dim)" }}>Total Transfer:</span>
-                <strong>Rp {totalPrice.toLocaleString("id-ID")}</strong>
+                <span style={{ color: "var(--text-dim)" }}>Metode Pembayaran:</span>
+                <span
+                  style={{
+                    fontWeight: 800,
+                    color: paymentMethod === "CASH" ? "#FBBF24" : "#34D399",
+                  }}
+                >
+                  {paymentMethod === "CASH" ? "💵 TUNAI (Bayar ke Waiters di Meja)" : "📱 QRIS (Sudah Transfer)"}
+                </span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.35rem" }}>
+                <span style={{ color: "var(--text-dim)" }}>Total Tagihan:</span>
+                <strong style={{ fontSize: "1rem" }}>Rp {totalPrice.toLocaleString("id-ID")}</strong>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span style={{ color: "var(--text-dim)" }}>Status Tiket:</span>
-                <span className="badge badge-cooking">Menunggu Verifikasi Kasir</span>
+                <span style={{ color: "var(--text-dim)" }}>Instruksi Waiters:</span>
+                <span style={{ fontWeight: 700, color: paymentMethod === "CASH" ? "#F87171" : "#34D399" }}>
+                  {paymentMethod === "CASH" ? "⚠️ Waiters Menagih Sesuai Struk" : "✓ Bebas Tagihan (Sudah Lunas)"}
+                </span>
               </div>
             </div>
             <button
@@ -338,12 +368,12 @@ export default function CustomerMenuPage({
           </div>
 
           <button onClick={() => setIsCheckoutOpen(true)} className="btn-primary" style={{ padding: "0.75rem 1.5rem" }}>
-            Lanjut Bayar QRIS →
+            Lanjut Pembayaran →
           </button>
         </div>
       )}
 
-      {/* Checkout Drawer: Tampilkan QRIS Warkop & Upload Bukti Pembayaran */}
+      {/* Checkout Drawer: Pilihan Metode Pembayaran (QRIS Warkop vs BAYAR TUNAI DI MEJA) */}
       {isCheckoutOpen && (
         <div
           style={{
@@ -361,17 +391,17 @@ export default function CustomerMenuPage({
             style={{
               width: "100%",
               maxWidth: "540px",
-              maxHeight: "90vh",
+              maxHeight: "92vh",
               overflowY: "auto",
               padding: "1.75rem",
               borderRadius: "24px 24px 0 0",
               borderTop: "2px solid var(--brand-orange-primary)",
             }}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
               <div>
-                <h2 style={{ fontSize: "1.25rem", fontWeight: 800 }}>Bayar QRIS Warkop (Meja #{tableNumber})</h2>
-                <div style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>Dana 100% langsung ke rekening warkop</div>
+                <h2 style={{ fontSize: "1.25rem", fontWeight: 800 }}>Pilih Pembayaran (Meja #{tableNumber})</h2>
+                <div style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>Pilih cara bayar yang paling nyaman untuk Anda</div>
               </div>
               <button
                 onClick={() => setIsCheckoutOpen(false)}
@@ -382,119 +412,241 @@ export default function CustomerMenuPage({
               </button>
             </div>
 
-            {/* Total Pembayaran & QRIS Warkop Box */}
+            {/* Tab Selector: QRIS vs TUNAI */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "0.5rem",
+                padding: "0.35rem",
+                background: "var(--bg-surface-2)",
+                borderRadius: "var(--radius-md)",
+                marginBottom: "1.25rem",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setPaymentMethod("QRIS")}
+                style={{
+                  padding: "0.75rem 0.5rem",
+                  borderRadius: "var(--radius-sm)",
+                  border: "none",
+                  fontWeight: 800,
+                  fontSize: "0.85rem",
+                  cursor: "pointer",
+                  background: paymentMethod === "QRIS" ? "var(--brand-orange-primary)" : "transparent",
+                  color: paymentMethod === "QRIS" ? "#FFF" : "var(--text-muted)",
+                  transition: "all 0.2s ease",
+                }}
+              >
+                📱 QRIS Warkop
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setPaymentMethod("CASH")}
+                style={{
+                  padding: "0.75rem 0.5rem",
+                  borderRadius: "var(--radius-sm)",
+                  border: "none",
+                  fontWeight: 800,
+                  fontSize: "0.85rem",
+                  cursor: "pointer",
+                  background: paymentMethod === "CASH" ? "#10B981" : "transparent",
+                  color: paymentMethod === "CASH" ? "#FFF" : "var(--text-muted)",
+                  transition: "all 0.2s ease",
+                }}
+              >
+                💵 Bayar Tunai (Di Meja)
+              </button>
+            </div>
+
+            {/* Total Pembayaran Box */}
             <div
               style={{
                 background: "var(--bg-surface-1)",
                 borderRadius: "var(--radius-md)",
-                padding: "1.25rem",
+                padding: "1rem",
                 textAlign: "center",
                 border: "1px solid var(--border-subtle)",
                 marginBottom: "1.25rem",
               }}
             >
-              <div style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>Total Yang Wajib Ditransfer:</div>
-              <div style={{ fontSize: "1.75rem", fontWeight: 900, color: "var(--brand-orange-light)", margin: "0.25rem 0 1rem" }}>
+              <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Total Tagihan Pesanan:</div>
+              <div style={{ fontSize: "1.75rem", fontWeight: 900, color: "var(--brand-orange-light)", margin: "0.25rem 0 0" }}>
                 Rp {totalPrice.toLocaleString("id-ID")}
               </div>
-
-              {/* Mock QRIS Statis Warkop */}
-              <div
-                style={{
-                  width: "180px",
-                  height: "180px",
-                  margin: "0 auto 0.75rem",
-                  backgroundColor: "#FFF",
-                  borderRadius: "12px",
-                  padding: "10px",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <div style={{ fontSize: "0.7rem", fontWeight: 800, color: "#000", marginBottom: "4px" }}>
-                  QRIS WARKOP KITA
-                </div>
-                <div style={{ width: "130px", height: "130px", background: "#000", borderRadius: "6px", display: "flex", alignItems: "center", justifyContent: "center", color: "#FFF", fontSize: "12px", textAlign: "center", padding: "8px" }}>
-                  [SCAN QRIS WARKOP]
-                </div>
-                <div style={{ fontSize: "0.6rem", color: "#666", marginTop: "4px" }}>NMID: ID1029384756</div>
-              </div>
-
-              <div style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>
-                Buka BCA / Mandiri / GoPay / OVO / Dana &amp; scan kode di atas
-              </div>
             </div>
 
-            {/* Unggah Bukti Transfer */}
-            <div style={{ marginBottom: "1.5rem" }}>
-              <label style={{ fontSize: "0.85rem", fontWeight: 700, display: "block", marginBottom: "0.5rem" }}>
-                📸 Unggah Screenshot Bukti Transfer (Wajib)
-              </label>
-
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleFileUpload}
-                id="proof-upload"
-                style={{ display: "none" }}
-              />
-
-              <label
-                htmlFor="proof-upload"
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  padding: "1.25rem",
-                  borderRadius: "var(--radius-md)",
-                  border: "2px dashed rgba(255, 69, 0, 0.4)",
-                  background: "var(--bg-surface-1)",
-                  cursor: "pointer",
-                }}
-              >
-                {proofImage ? (
-                  <div style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: "0.8rem", color: "#10B981", fontWeight: 700, marginBottom: "0.5rem" }}>
-                      ✓ Bukti Transfer Siap Dikirim
+            {/* OPSI 1: KONTEN METODE QRIS */}
+            {paymentMethod === "QRIS" && (
+              <>
+                <div
+                  style={{
+                    background: "var(--bg-surface-1)",
+                    borderRadius: "var(--radius-md)",
+                    padding: "1.25rem",
+                    textAlign: "center",
+                    border: "1px solid var(--border-subtle)",
+                    marginBottom: "1.25rem",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: "180px",
+                      height: "180px",
+                      margin: "0 auto 0.75rem",
+                      backgroundColor: "#FFF",
+                      borderRadius: "12px",
+                      padding: "10px",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <div style={{ fontSize: "0.7rem", fontWeight: 800, color: "#000", marginBottom: "4px" }}>
+                      QRIS WARKOP KITA
                     </div>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={proofImage}
-                      alt="Preview Bukti"
-                      style={{ maxHeight: "120px", borderRadius: "8px", objectFit: "contain" }}
-                    />
-                    <div style={{ fontSize: "0.75rem", color: "var(--text-dim)", marginTop: "0.5rem" }}>
-                      Klik untuk ganti foto
+                    <div style={{ width: "130px", height: "130px", background: "#000", borderRadius: "6px", display: "flex", alignItems: "center", justifyContent: "center", color: "#FFF", fontSize: "12px", textAlign: "center", padding: "8px" }}>
+                      [SCAN QRIS WARKOP]
                     </div>
+                    <div style={{ fontSize: "0.6rem", color: "#666", marginTop: "4px" }}>NMID: ID1029384756</div>
                   </div>
-                ) : (
-                  <>
-                    <div style={{ fontSize: "28px", marginBottom: "0.25rem" }}>📷</div>
-                    <div style={{ fontSize: "0.9rem", fontWeight: 700 }}>Pilih Foto Bukti Transfer</div>
-                    <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Format JPG, PNG atau Screenshot</div>
-                  </>
-                )}
-              </label>
-            </div>
 
-            {/* Tombol Kirim Pesanan */}
-            <button
-              onClick={handleSubmitOrder}
-              disabled={isSubmitting || !proofImage}
-              className="btn-primary"
-              style={{
-                width: "100%",
-                padding: "1rem",
-                fontSize: "1rem",
-                opacity: !proofImage ? 0.5 : 1,
-                cursor: !proofImage ? "not-allowed" : "pointer",
-              }}
-            >
-              {isSubmitting ? "Mengirim ke Kasir..." : `KIRIM PESANAN KE KASIR (MEJA #${tableNumber})`}
-            </button>
+                  <div style={{ fontSize: "0.75rem", color: "var(--text-dim)", marginBottom: "0.5rem" }}>
+                    Scan QRIS di atas via m-Banking/E-Wallet (Dana 100% langsung ke rekening warkop)
+                  </div>
+                  <div style={{ fontSize: "0.72rem", color: "#10B981", fontWeight: 700 }}>
+                    ✓ Struk akan bertuliskan [QRIS LUNAS]. Waiters tidak akan menagih lagi.
+                  </div>
+                </div>
+
+                {/* Unggah Bukti Transfer QRIS */}
+                <div style={{ marginBottom: "1.5rem" }}>
+                  <label style={{ fontSize: "0.85rem", fontWeight: 700, display: "block", marginBottom: "0.5rem" }}>
+                    📸 Unggah Screenshot Bukti Transfer (Wajib)
+                  </label>
+
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileUpload}
+                    id="proof-upload"
+                    style={{ display: "none" }}
+                  />
+
+                  <label
+                    htmlFor="proof-upload"
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      padding: "1.25rem",
+                      borderRadius: "var(--radius-md)",
+                      border: "2px dashed rgba(255, 69, 0, 0.4)",
+                      background: "var(--bg-surface-1)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    {proofImage ? (
+                      <div style={{ textAlign: "center" }}>
+                        <div style={{ fontSize: "0.8rem", color: "#10B981", fontWeight: 700, marginBottom: "0.5rem" }}>
+                          ✓ Bukti Transfer Siap Dikirim
+                        </div>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={proofImage}
+                          alt="Preview Bukti"
+                          style={{ maxHeight: "120px", borderRadius: "8px", objectFit: "contain" }}
+                        />
+                        <div style={{ fontSize: "0.75rem", color: "var(--text-dim)", marginTop: "0.5rem" }}>
+                          Klik untuk ganti foto
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div style={{ fontSize: "28px", marginBottom: "0.25rem" }}>📷</div>
+                        <div style={{ fontSize: "0.9rem", fontWeight: 700 }}>Pilih Foto Bukti Transfer</div>
+                        <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Format JPG, PNG atau Screenshot</div>
+                      </>
+                    )}
+                  </label>
+                </div>
+
+                {/* Tombol Kirim Pesanan QRIS */}
+                <button
+                  onClick={handleSubmitOrder}
+                  disabled={isSubmitting || !proofImage}
+                  className="btn-primary"
+                  style={{
+                    width: "100%",
+                    padding: "1rem",
+                    fontSize: "0.95rem",
+                    opacity: !proofImage ? 0.5 : 1,
+                    cursor: !proofImage ? "not-allowed" : "pointer",
+                  }}
+                >
+                  {isSubmitting ? "Mengirim ke Kasir..." : `KIRIM PESANAN DENGAN BUKTI QRIS (MEJA #${tableNumber})`}
+                </button>
+              </>
+            )}
+
+            {/* OPSI 2: KONTEN METODE BAYAR TUNAI */}
+            {paymentMethod === "CASH" && (
+              <>
+                <div
+                  style={{
+                    background: "rgba(16, 185, 129, 0.08)",
+                    border: "1px solid rgba(16, 185, 129, 0.35)",
+                    borderRadius: "var(--radius-md)",
+                    padding: "1.25rem",
+                    marginBottom: "1.5rem",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.75rem" }}>
+                    <span style={{ fontSize: "22px" }}>💵</span>
+                    <strong style={{ color: "#34D399", fontSize: "0.95rem" }}>
+                      SOP Pembayaran Tunai di Meja
+                    </strong>
+                  </div>
+                  <ul style={{ margin: 0, paddingLeft: "1.25rem", fontSize: "0.825rem", color: "var(--text-muted)", lineHeight: 1.6 }}>
+                    <li>Tidak perlu transfer dan tidak perlu unggah gambar.</li>
+                    <li>
+                      Kasir akan mencetak struk fisik bertuliskan teks besar{" "}
+                      <strong style={{ color: "#EF4444" }}>[*** BAYAR TUNAI : Rp {totalPrice.toLocaleString("id-ID")} ***]</strong>.
+                    </li>
+                    <li>
+                      <strong>Waiters/Pelayan wajib menagih uang tunai</strong> saat mengantar hidangan &amp; struk ke{" "}
+                      <strong style={{ color: "#FFF" }}>Meja #{tableNumber}</strong>.
+                    </li>
+                    <li>
+                      Mohon siapkan uang pas sebesar{" "}
+                      <strong style={{ color: "var(--brand-orange-light)" }}>
+                        Rp {totalPrice.toLocaleString("id-ID")}
+                      </strong>.
+                    </li>
+                  </ul>
+                </div>
+
+                {/* Tombol Kirim Pesanan Tunai */}
+                <button
+                  onClick={handleSubmitOrder}
+                  disabled={isSubmitting}
+                  className="btn-primary"
+                  style={{
+                    width: "100%",
+                    padding: "1rem",
+                    fontSize: "0.95rem",
+                    background: "linear-gradient(135deg, #10B981, #059669)",
+                    boxShadow: "0 4px 16px rgba(16, 185, 129, 0.3)",
+                  }}
+                >
+                  {isSubmitting ? "Mengirim ke Kasir..." : `KIRIM PESANAN BAYAR TUNAI (MEJA #${tableNumber})`}
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}
