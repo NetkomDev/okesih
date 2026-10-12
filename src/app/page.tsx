@@ -1,8 +1,64 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 export default function HomePage() {
+  const router = useRouter();
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [loginError, setLoginError] = useState("");
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setLoginError("");
+
+    try {
+      const supabase = createClient();
+      const email = username.includes("@")
+        ? username.trim().toLowerCase()
+        : `${username.trim().toLowerCase()}@okesih.local`;
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        setLoginError(error.message === "Invalid login credentials"
+          ? "Username atau password salah!"
+          : error.message);
+        setIsLoading(false);
+        return;
+      }
+
+      const role = data.user?.user_metadata?.role;
+      const user = username.toLowerCase().trim();
+
+      if (user === "superadmin" || role === "SUPERADMIN" || role === "OWNER") {
+        router.push("/admin");
+      } else if (user === "kasir1" || role === "KASIR") {
+        router.push("/pos");
+      } else if (user === "dapur" || role === "DAPUR") {
+        router.push("/kds");
+      } else {
+        router.push("/admin");
+      }
+    } catch (err: unknown) {
+      setLoginError(err instanceof Error ? err.message : "Terjadi kesalahan sistem");
+      setIsLoading(false);
+    }
+  };
+
+  const fillCredentials = (u: string, p: string) => {
+    setUsername(u);
+    setPassword(p);
+    setLoginError("");
+  };
   return (
     <main
       style={{
@@ -331,20 +387,35 @@ export default function HomePage() {
           </p>
 
           <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              alert("Modul autentikasi Supabase siap dihubungkan setelah migrasi database Fase 1 diterapkan!");
-            }}
+            onSubmit={handleLogin}
             style={{ display: "flex", flexDirection: "column", gap: "1rem", textAlign: "left" }}
           >
+            {loginError && (
+              <div
+                style={{
+                  background: "rgba(239, 68, 68, 0.15)",
+                  border: "1px solid #EF4444",
+                  color: "#FCA5A5",
+                  padding: "0.75rem 1rem",
+                  borderRadius: "var(--radius-sm)",
+                  fontSize: "0.85rem",
+                  fontWeight: 600,
+                }}
+              >
+                ⚠️ {loginError}
+              </div>
+            )}
+
             <div>
               <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "0.35rem" }}>
-                Username Staf (Contoh: kasir1, dapur, owner)
+                Username Staf (Atau Email)
               </label>
               <input
                 type="text"
                 required
-                placeholder="Masukkan username..."
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="superadmin, kasir1, atau dapur..."
                 style={{
                   width: "100%",
                   padding: "0.875rem 1rem",
@@ -365,6 +436,8 @@ export default function HomePage() {
               <input
                 type="password"
                 required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 style={{
                   width: "100%",
@@ -379,9 +452,80 @@ export default function HomePage() {
               />
             </div>
 
-            <button type="submit" className="btn-primary" style={{ width: "100%", marginTop: "0.5rem" }}>
-              Masuk ke Sistem OKESIH
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="btn-primary"
+              style={{ width: "100%", marginTop: "0.5rem", padding: "0.9rem", fontWeight: 800 }}
+            >
+              {isLoading ? "Memverifikasi..." : "Masuk ke Sistem OKESIH"}
             </button>
+
+            {/* Quick Demo Credentials Box for Reviewer */}
+            <div
+              style={{
+                marginTop: "1.25rem",
+                padding: "1rem",
+                background: "var(--bg-surface-2)",
+                borderRadius: "var(--radius-md)",
+                border: "1px dashed var(--border-subtle)",
+                textAlign: "center",
+              }}
+            >
+              <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: "0.6rem", fontWeight: 700 }}>
+                💡 Klik Cepat Akun Demo (Untuk Reviewer):
+              </div>
+              <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  onClick={() => fillCredentials("superadmin", "adminokesih2026!")}
+                  style={{
+                    background: "rgba(255, 69, 0, 0.15)",
+                    border: "1px solid rgba(255, 69, 0, 0.4)",
+                    color: "var(--brand-orange-light)",
+                    fontSize: "0.75rem",
+                    fontWeight: 800,
+                    padding: "0.35rem 0.75rem",
+                    borderRadius: "var(--radius-pill)",
+                    cursor: "pointer",
+                  }}
+                >
+                  🛡️ superadmin
+                </button>
+                <button
+                  type="button"
+                  onClick={() => fillCredentials("kasir1", "kasir123!")}
+                  style={{
+                    background: "rgba(16, 185, 129, 0.15)",
+                    border: "1px solid rgba(16, 185, 129, 0.4)",
+                    color: "#34D399",
+                    fontSize: "0.75rem",
+                    fontWeight: 800,
+                    padding: "0.35rem 0.75rem",
+                    borderRadius: "var(--radius-pill)",
+                    cursor: "pointer",
+                  }}
+                >
+                  ⚡ kasir1
+                </button>
+                <button
+                  type="button"
+                  onClick={() => fillCredentials("dapur", "dapur123!")}
+                  style={{
+                    background: "rgba(245, 158, 11, 0.15)",
+                    border: "1px solid rgba(245, 158, 11, 0.4)",
+                    color: "#FBBF24",
+                    fontSize: "0.75rem",
+                    fontWeight: 800,
+                    padding: "0.35rem 0.75rem",
+                    borderRadius: "var(--radius-pill)",
+                    cursor: "pointer",
+                  }}
+                >
+                  🍳 dapur
+                </button>
+              </div>
+            </div>
           </form>
         </div>
       </section>
