@@ -255,7 +255,6 @@ export default function HomePage() {
                 width: "38px",
                 height: "38px",
                 padding: "0",
-                fontSize: "1.2rem",
                 borderRadius: "10px",
                 display: "inline-flex",
                 alignItems: "center",
@@ -267,7 +266,21 @@ export default function HomePage() {
                 flexShrink: 0,
               }}
             >
-              🚪
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#FFFFFF"
+                strokeWidth="2.1"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{ display: "block" }}
+              >
+                <path d="M 9 8 V 7 A 4 4 0 0 1 13 3 H 17 A 4 4 0 0 1 21 7 V 17 A 4 4 0 0 1 17 21 H 13 A 4 4 0 0 1 9 17 V 16" />
+                <path d="M 3 12 H 15" />
+                <path d="M 11 8 L 15 12 L 11 16" />
+              </svg>
             </button>
 
             <button
@@ -371,9 +384,35 @@ export default function HomePage() {
                   setIsMobileMenuOpen(false);
                   setIsLoginModalOpen(true);
                 }}
-                style={{ textAlign: "center", padding: "0.85rem", fontWeight: 800, fontSize: "0.9rem", cursor: "pointer", border: "1px solid var(--border-subtle)" }}
+                style={{
+                  textAlign: "center",
+                  padding: "0.85rem",
+                  fontWeight: 800,
+                  fontSize: "0.9rem",
+                  cursor: "pointer",
+                  border: "1px solid var(--border-subtle)",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "0.6rem",
+                }}
               >
-                🚪 Masuk ke Akun
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#FF5722"
+                  strokeWidth="2.1"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={{ display: "inline-block", verticalAlign: "middle" }}
+                >
+                  <path d="M 9 8 V 7 A 4 4 0 0 1 13 3 H 17 A 4 4 0 0 1 21 7 V 17 A 4 4 0 0 1 17 21 H 13 A 4 4 0 0 1 9 17 V 16" />
+                  <path d="M 3 12 H 15" />
+                  <path d="M 11 8 L 15 12 L 11 16" />
+                </svg>
+                <span>Masuk ke Akun</span>
               </button>
             </div>
           </div>
