@@ -15,6 +15,8 @@ export default function HomePage() {
 
   // FAQ Accordion State
   const [openFaq, setOpenFaq] = useState<number | null>(0);
+  // Mobile Menu State
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -140,6 +142,7 @@ export default function HomePage() {
 
         {/* Top Navbar */}
         <header
+          className="site-header"
           style={{
             display: "flex",
             alignItems: "center",
@@ -150,7 +153,8 @@ export default function HomePage() {
             top: 0,
             zIndex: 40,
             backdropFilter: "blur(14px)",
-            background: "rgba(13, 13, 14, 0.85)",
+            WebkitBackdropFilter: "blur(14px)",
+            background: "rgba(13, 13, 14, 0.88)",
           }}
         >
           {/* Logo & Brand */}
@@ -168,21 +172,22 @@ export default function HomePage() {
                 fontWeight: 900,
                 fontSize: "1.25rem",
                 color: "#FFF",
+                flexShrink: 0,
               }}
             >
               ☕
             </div>
             <div>
-              <div style={{ fontSize: "1.25rem", fontWeight: 900, letterSpacing: "-0.03em" }}>
+              <div style={{ fontSize: "1.25rem", fontWeight: 900, letterSpacing: "-0.03em", whiteSpace: "nowrap" }}>
                 OKESIH<span style={{ color: "var(--brand-orange-light)" }}>.COM</span>
               </div>
-              <div style={{ fontSize: "0.75rem", color: "var(--text-dim)", fontWeight: 500 }}>
+              <div className="brand-tagline-text" style={{ fontSize: "0.75rem", color: "var(--text-dim)", fontWeight: 500 }}>
                 Platform Kasir &amp; Operasional Cerdas untuk Warung, Kafe, Resto &amp; Warkop
               </div>
             </div>
           </Link>
 
-          {/* Navigation Links */}
+          {/* Navigation Links (Desktop Only) */}
           <nav style={{ display: "flex", alignItems: "center", gap: "1.5rem" }} className="desktop-nav">
             <a href="#solusi" style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: 600, textDecoration: "none" }}>
               Solusi Usaha
@@ -201,11 +206,11 @@ export default function HomePage() {
             </a>
           </nav>
 
-          {/* Action Button */}
+          {/* Action Buttons & Hamburger Toggle */}
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
             <a
               href="#login"
-              className="btn-primary"
+              className="btn-primary desktop-only-btn"
               style={{
                 padding: "0.55rem 1.15rem",
                 fontSize: "0.85rem",
@@ -219,11 +224,99 @@ export default function HomePage() {
               <span>Masuk ke Akun</span>
               <span>→</span>
             </a>
+
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="mobile-nav-toggle"
+              aria-label={isMobileMenuOpen ? "Tutup Menu" : "Buka Menu"}
+              style={{
+                background: isMobileMenuOpen ? "rgba(255, 69, 0, 0.2)" : "rgba(255, 255, 255, 0.06)",
+                border: isMobileMenuOpen ? "1px solid rgba(255, 69, 0, 0.4)" : "1px solid var(--border-subtle)",
+                borderRadius: "10px",
+                color: isMobileMenuOpen ? "var(--brand-orange-light)" : "#FFF",
+                padding: "0.45rem 0.75rem",
+                fontSize: "1.2rem",
+                cursor: "pointer",
+                display: "none",
+                alignItems: "center",
+                justifyContent: "center",
+                lineHeight: 1,
+              }}
+            >
+              {isMobileMenuOpen ? "✕" : "☰"}
+            </button>
           </div>
         </header>
 
+        {/* Mobile Menu Dropdown / Drawer */}
+        {isMobileMenuOpen && (
+          <div className="mobile-menu-drawer">
+            <a
+              href="#solusi"
+              className="mobile-nav-link"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              <span>☕ Solusi Usaha</span>
+              <span>→</span>
+            </a>
+            <a
+              href="#fitur"
+              className="mobile-nav-link"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              <span>⚡ Fitur Lengkap</span>
+              <span>→</span>
+            </a>
+            <a
+              href="#keunggulan"
+              className="mobile-nav-link"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              <span>💎 Keunggulan</span>
+              <span>→</span>
+            </a>
+            <a
+              href="#tarif"
+              className="mobile-nav-link"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              <span>🏷️ Biaya Sewa Rp 50</span>
+              <span>→</span>
+            </a>
+            <a
+              href="#faq"
+              className="mobile-nav-link"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              <span>❓ Tanya Jawab (FAQ)</span>
+              <span>→</span>
+            </a>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem", marginTop: "0.5rem" }}>
+              <Link
+                href="/menu/giras-nusantara?table=01"
+                target="_blank"
+                className="btn-primary"
+                onClick={() => setIsMobileMenuOpen(false)}
+                style={{ textAlign: "center", padding: "0.85rem", fontWeight: 800, fontSize: "0.9rem" }}
+              >
+                📱 Coba Demo QR Menu Meja
+              </Link>
+              <a
+                href="#login"
+                className="btn-secondary"
+                onClick={() => setIsMobileMenuOpen(false)}
+                style={{ textAlign: "center", padding: "0.85rem", fontWeight: 800, fontSize: "0.9rem", textDecoration: "none" }}
+              >
+                🔑 Masuk ke Akun Sistem
+              </a>
+            </div>
+          </div>
+        )}
+
         {/* HERO SECTION */}
         <section
+          className="hero-container"
           style={{
             padding: "4rem 2rem 2.5rem",
             maxWidth: "1200px",
@@ -236,6 +329,7 @@ export default function HomePage() {
         >
           {/* Badge */}
           <div
+            className="hero-badge"
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -250,6 +344,7 @@ export default function HomePage() {
               marginBottom: "1.5rem",
               textTransform: "uppercase",
               letterSpacing: "0.06em",
+              maxWidth: "100%",
             }}
           >
             ⚡ Solusi POS, Self-Order &amp; Antrean untuk Segala Usaha Penjualan
@@ -257,6 +352,7 @@ export default function HomePage() {
 
           {/* Heading */}
           <h1
+            className="hero-heading"
             style={{
               fontSize: "clamp(2.3rem, 5.5vw, 4rem)",
               fontWeight: 900,
@@ -280,6 +376,7 @@ export default function HomePage() {
 
           {/* Subtitle */}
           <p
+            className="hero-subtitle"
             style={{
               fontSize: "1.15rem",
               lineHeight: 1.65,
@@ -295,7 +392,7 @@ export default function HomePage() {
           </p>
 
           {/* CTA Group */}
-          <div style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap", marginBottom: "3rem" }}>
+          <div className="hero-cta-group" style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap", marginBottom: "3rem" }}>
             <Link
               href="/menu/giras-nusantara?table=01"
               target="_blank"
@@ -315,6 +412,7 @@ export default function HomePage() {
 
           {/* Value Props Strip */}
           <div
+            className="value-props-container"
             style={{
               display: "flex",
               justifyContent: "center",
@@ -341,6 +439,7 @@ export default function HomePage() {
         {/* SECTION: COCOK UNTUK SEGALA BIDANG USAHA KULINER & PENJUALAN */}
         <section
           id="solusi"
+          className="section-container"
           style={{
             padding: "4rem 2rem",
             maxWidth: "1240px",
@@ -365,7 +464,7 @@ export default function HomePage() {
             }}
           >
             {/* Card 1 */}
-            <div className="glass-panel" style={{ padding: "1.5rem" }}>
+            <div className="glass-panel mobile-compact-panel" style={{ padding: "1.5rem" }}>
               <div style={{ fontSize: "2.2rem", marginBottom: "0.75rem" }}>☕</div>
               <h3 style={{ fontSize: "1.15rem", fontWeight: 800, marginBottom: "0.5rem" }}>Warkop &amp; Kedai Kopi</h3>
               <p style={{ fontSize: "0.825rem", color: "var(--text-muted)", lineHeight: 1.5 }}>
@@ -374,7 +473,7 @@ export default function HomePage() {
             </div>
 
             {/* Card 2 */}
-            <div className="glass-panel" style={{ padding: "1.5rem" }}>
+            <div className="glass-panel mobile-compact-panel" style={{ padding: "1.5rem" }}>
               <div style={{ fontSize: "2.2rem", marginBottom: "0.75rem" }}>🍽️</div>
               <h3 style={{ fontSize: "1.15rem", fontWeight: 800, marginBottom: "0.5rem" }}>Rumah Makan &amp; Warteg</h3>
               <p style={{ fontSize: "0.825rem", color: "var(--text-muted)", lineHeight: 1.5 }}>
@@ -383,7 +482,7 @@ export default function HomePage() {
             </div>
 
             {/* Card 3 */}
-            <div className="glass-panel" style={{ padding: "1.5rem" }}>
+            <div className="glass-panel mobile-compact-panel" style={{ padding: "1.5rem" }}>
               <div style={{ fontSize: "2.2rem", marginBottom: "0.75rem" }}>🍰</div>
               <h3 style={{ fontSize: "1.15rem", fontWeight: 800, marginBottom: "0.5rem" }}>Kafe &amp; Bistro Modern</h3>
               <p style={{ fontSize: "0.825rem", color: "var(--text-muted)", lineHeight: 1.5 }}>
@@ -392,7 +491,7 @@ export default function HomePage() {
             </div>
 
             {/* Card 4 */}
-            <div className="glass-panel" style={{ padding: "1.5rem" }}>
+            <div className="glass-panel mobile-compact-panel" style={{ padding: "1.5rem" }}>
               <div style={{ fontSize: "2.2rem", marginBottom: "0.75rem" }}>🍜</div>
               <h3 style={{ fontSize: "1.15rem", fontWeight: 800, marginBottom: "0.5rem" }}>Kedai Mie, Bakso &amp; Soto</h3>
               <p style={{ fontSize: "0.825rem", color: "var(--text-muted)", lineHeight: 1.5 }}>
@@ -401,7 +500,7 @@ export default function HomePage() {
             </div>
 
             {/* Card 5 */}
-            <div className="glass-panel" style={{ padding: "1.5rem" }}>
+            <div className="glass-panel mobile-compact-panel" style={{ padding: "1.5rem" }}>
               <div style={{ fontSize: "2.2rem", marginBottom: "0.75rem" }}>🍔</div>
               <h3 style={{ fontSize: "1.15rem", fontWeight: 800, marginBottom: "0.5rem" }}>Food Court &amp; Franchise</h3>
               <p style={{ fontSize: "0.825rem", color: "var(--text-muted)", lineHeight: 1.5 }}>
@@ -414,6 +513,7 @@ export default function HomePage() {
         {/* SECTION: 4 PILAR MODUL OPERASIONAL */}
         <section
           id="fitur"
+          className="section-container"
           style={{
             padding: "4rem 2rem",
             maxWidth: "1240px",
@@ -438,7 +538,7 @@ export default function HomePage() {
             }}
           >
             {/* Fitur 1 */}
-            <div className="glass-panel" style={{ padding: "2rem" }}>
+            <div className="glass-panel mobile-compact-panel" style={{ padding: "2rem" }}>
               <div
                 style={{
                   width: "50px",
@@ -468,7 +568,7 @@ export default function HomePage() {
             </div>
 
             {/* Fitur 2 */}
-            <div className="glass-panel" style={{ padding: "2rem" }}>
+            <div className="glass-panel mobile-compact-panel" style={{ padding: "2rem" }}>
               <div
                 style={{
                   width: "50px",
@@ -497,7 +597,7 @@ export default function HomePage() {
             </div>
 
             {/* Fitur 3 */}
-            <div className="glass-panel" style={{ padding: "2rem" }}>
+            <div className="glass-panel mobile-compact-panel" style={{ padding: "2rem" }}>
               <div
                 style={{
                   width: "50px",
@@ -526,7 +626,7 @@ export default function HomePage() {
             </div>
 
             {/* Fitur 4 */}
-            <div className="glass-panel" style={{ padding: "2rem" }}>
+            <div className="glass-panel mobile-compact-panel" style={{ padding: "2rem" }}>
               <div
                 style={{
                   width: "50px",
@@ -559,6 +659,7 @@ export default function HomePage() {
         {/* SECTION: KEUNGGULAN UTAMA (MENGAPA MEMILIH OKESIH) */}
         <section
           id="keunggulan"
+          className="section-container"
           style={{
             padding: "4rem 2rem",
             maxWidth: "1140px",
@@ -576,7 +677,7 @@ export default function HomePage() {
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }} className="feature-split-grid">
-            <div className="glass-panel" style={{ padding: "1.75rem" }}>
+            <div className="glass-panel mobile-compact-panel" style={{ padding: "1.75rem" }}>
               <div style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>📱</div>
               <h3 style={{ fontSize: "1.15rem", fontWeight: 800, marginBottom: "0.5rem" }}>
                 Bawa Gadget Sendiri (Nol Investasi Mesin)
@@ -586,7 +687,7 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className="glass-panel" style={{ padding: "1.75rem" }}>
+            <div className="glass-panel mobile-compact-panel" style={{ padding: "1.75rem" }}>
               <div style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>💳</div>
               <h3 style={{ fontSize: "1.15rem", fontWeight: 800, marginBottom: "0.5rem" }}>
                 100% Uang Penjualan Milik Anda
@@ -596,7 +697,7 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className="glass-panel" style={{ padding: "1.75rem" }}>
+            <div className="glass-panel mobile-compact-panel" style={{ padding: "1.75rem" }}>
               <div style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>👥</div>
               <h3 style={{ fontSize: "1.15rem", fontWeight: 800, marginBottom: "0.5rem" }}>
                 Anti-Selisih Kas Laci &amp; Roster Waiters
@@ -606,7 +707,7 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className="glass-panel" style={{ padding: "1.75rem" }}>
+            <div className="glass-panel mobile-compact-panel" style={{ padding: "1.75rem" }}>
               <div style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>🔒</div>
               <h3 style={{ fontSize: "1.15rem", fontWeight: 800, marginBottom: "0.5rem" }}>
                 Akun Staf Praktis Tanpa Verifikasi Email/OTP
@@ -621,6 +722,7 @@ export default function HomePage() {
         {/* SECTION: SIMULASI BIAYA & TARIF SEWA HEMAT */}
         <section
           id="tarif"
+          className="section-container"
           style={{
             padding: "4rem 2rem",
             maxWidth: "1000px",
@@ -629,7 +731,7 @@ export default function HomePage() {
           }}
         >
           <div
-            className="glass-panel"
+            className="glass-panel mobile-compact-panel"
             style={{
               padding: "3rem 2rem",
               textAlign: "center",
@@ -649,6 +751,7 @@ export default function HomePage() {
 
             {/* Perbandingan Grid */}
             <div
+              className="price-compare-grid"
               style={{
                 display: "grid",
                 gridTemplateColumns: "1fr 1fr",
@@ -688,6 +791,7 @@ export default function HomePage() {
         {/* SECTION: PERTANYAAN UMUM (FAQ) */}
         <section
           id="faq"
+          className="section-container"
           style={{
             padding: "4rem 2rem",
             maxWidth: "880px",
@@ -729,7 +833,7 @@ export default function HomePage() {
             ].map((faq, idx) => (
               <div
                 key={idx}
-                className="glass-panel"
+                className="glass-panel mobile-compact-panel"
                 style={{
                   padding: "1.25rem 1.5rem",
                   cursor: "pointer",
@@ -758,6 +862,7 @@ export default function HomePage() {
         {/* SECTION: FORM LOGIN RESMI STAF & OWNER */}
         <section
           id="login"
+          className="section-container"
           style={{
             padding: "4rem 2rem 5rem",
             maxWidth: "600px",
@@ -766,7 +871,7 @@ export default function HomePage() {
           }}
         >
           <div
-            className="glass-panel-glow"
+            className="glass-panel-glow mobile-compact-panel"
             style={{
               padding: "2.5rem 2rem",
               textAlign: "center",
@@ -888,6 +993,7 @@ export default function HomePage() {
           }}
         >
           <div
+            className="footer-container"
             style={{
               maxWidth: "1200px",
               margin: "0 auto",
@@ -905,7 +1011,7 @@ export default function HomePage() {
               <div>Platform Operasional POS &amp; Self-Order Cerdas untuk Usaha Kuliner Indonesia</div>
             </div>
 
-            <div style={{ display: "flex", gap: "1.5rem" }}>
+            <div className="footer-links" style={{ display: "flex", gap: "1.5rem" }}>
               <a href="#solusi" style={{ color: "var(--text-muted)", textDecoration: "none" }}>Solusi Usaha</a>
               <a href="#fitur" style={{ color: "var(--text-muted)", textDecoration: "none" }}>Fitur Modul</a>
               <a href="#tarif" style={{ color: "var(--text-muted)", textDecoration: "none" }}>Skema Sewa</a>
@@ -917,6 +1023,51 @@ export default function HomePage() {
             </div>
           </div>
         </footer>
+
+        {/* FLOATING QUICK BOTTOM BAR FOR MOBILE */}
+        <div className="mobile-bottom-bar">
+          <Link
+            href="/menu/giras-nusantara?table=01"
+            target="_blank"
+            className="btn-primary"
+            style={{
+              flex: 1,
+              fontSize: "0.85rem",
+              padding: "0.75rem 0.5rem",
+              textAlign: "center",
+              fontWeight: 800,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "0.35rem",
+              borderRadius: "10px",
+              textDecoration: "none",
+            }}
+          >
+            <span>📱</span>
+            <span>Demo QR</span>
+          </Link>
+          <a
+            href="#login"
+            className="btn-secondary"
+            style={{
+              flex: 1,
+              fontSize: "0.85rem",
+              padding: "0.75rem 0.5rem",
+              textAlign: "center",
+              fontWeight: 800,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "0.35rem",
+              textDecoration: "none",
+              borderRadius: "10px",
+            }}
+          >
+            <span>🔑</span>
+            <span>Masuk Akun</span>
+          </a>
+        </div>
       </main>
     </>
   );
