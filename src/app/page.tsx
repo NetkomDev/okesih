@@ -188,30 +188,19 @@ export default function HomePage() {
         >
           {/* Logo & Brand */}
           <Link href="/" style={{ display: "flex", alignItems: "center", gap: "0.85rem", textDecoration: "none", color: "inherit" }}>
-            <div
+            <img
+              src="/logo.svg"
+              alt="Logo OKESIH.COM"
+              width={46}
+              height={46}
               style={{
-                width: "42px",
-                height: "42px",
-                borderRadius: "12px",
-                background: "linear-gradient(135deg, rgba(255, 87, 34, 0.15), rgba(255, 69, 0, 0.25))",
-                border: "1px solid rgba(255, 87, 34, 0.4)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                boxShadow: "0 4px 14px var(--brand-orange-glow)",
+                width: "46px",
+                height: "46px",
+                objectFit: "contain",
+                display: "block",
                 flexShrink: 0,
-                overflow: "hidden",
-                padding: "3px",
               }}
-            >
-              <img
-                src="/logo.svg"
-                alt="Logo OKESIH.COM"
-                width={36}
-                height={36}
-                style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
-              />
-            </div>
+            />
             <div>
               <div style={{ fontSize: "1.25rem", fontWeight: 900, letterSpacing: "-0.03em", whiteSpace: "nowrap" }}>
                 OKESIH<span style={{ color: "var(--brand-orange-light)" }}>.COM</span>
@@ -1553,29 +1542,13 @@ export default function HomePage() {
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
-              <div
-                style={{
-                  width: "38px",
-                  height: "38px",
-                  borderRadius: "10px",
-                  background: "linear-gradient(135deg, rgba(255, 87, 34, 0.15), rgba(255, 69, 0, 0.25))",
-                  border: "1px solid rgba(255, 87, 34, 0.3)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                  overflow: "hidden",
-                  padding: "3px",
-                }}
-              >
-                <img
-                  src="/logo.svg"
-                  alt="Logo OKESIH.COM"
-                  width={32}
-                  height={32}
-                  style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
-                />
-              </div>
+              <img
+                src="/logo.svg"
+                alt="Logo OKESIH.COM"
+                width={42}
+                height={42}
+                style={{ width: "42px", height: "42px", objectFit: "contain", display: "block", flexShrink: 0 }}
+              />
               <div>
                 <div style={{ fontSize: "1.1rem", fontWeight: 900, color: "var(--text-pure-white)", marginBottom: "0.25rem" }}>
                   OKESIH<span style={{ color: "var(--brand-orange-light)" }}>.COM</span>

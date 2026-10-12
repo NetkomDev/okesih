@@ -435,29 +435,13 @@ export default function SuperAdminDashboardPage() {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-          <div
-            style={{
-              width: "42px",
-              height: "42px",
-              borderRadius: "10px",
-              background: "linear-gradient(135deg, rgba(14, 165, 233, 0.15), rgba(2, 132, 199, 0.25))",
-              border: "1px solid rgba(14, 165, 233, 0.4)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              boxShadow: "0 0 15px rgba(14, 165, 233, 0.4)",
-              overflow: "hidden",
-              padding: "3px",
-            }}
-          >
-            <img
-              src="/logo.svg"
-              alt="Logo OKESIH.COM"
-              width={34}
-              height={34}
-              style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
-            />
-          </div>
+          <img
+            src="/logo.svg"
+            alt="Logo OKESIH.COM"
+            width={46}
+            height={46}
+            style={{ width: "46px", height: "46px", objectFit: "contain", display: "block", flexShrink: 0 }}
+          />
           <div>
             <div style={{ fontSize: "1.25rem", fontWeight: 900, letterSpacing: "-0.02em" }}>
               OKESIH<span style={{ color: "#38BDF8" }}> HQ</span>

@@ -255,9 +255,9 @@ export default function PosModulePage() {
             <img
               src="/logo.svg"
               alt="Logo OKESIH.COM"
-              width={26}
-              height={26}
-              style={{ objectFit: "contain", display: "inline-block" }}
+              width={36}
+              height={36}
+              style={{ width: "36px", height: "36px", objectFit: "contain", display: "inline-block" }}
             />
             <span>
               OKESIH <span style={{ color: "var(--brand-orange-light)" }}>POS KASIR</span>

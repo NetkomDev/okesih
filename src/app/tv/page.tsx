@@ -93,9 +93,9 @@ export default function TvQueuePage() {
             <img
               src="/logo.svg"
               alt="Logo OKESIH.COM"
-              width={36}
-              height={36}
-              style={{ objectFit: "contain", display: "inline-block" }}
+              width={48}
+              height={48}
+              style={{ width: "48px", height: "48px", objectFit: "contain", display: "inline-block" }}
             />
             <span>
               OKESIH <span style={{ color: "var(--brand-orange-light)" }}>WARKOP KITA</span>

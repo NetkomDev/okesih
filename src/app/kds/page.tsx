@@ -90,9 +90,9 @@ export default function KdsModulePage() {
             <img
               src="/logo.svg"
               alt="Logo OKESIH.COM"
-              width={26}
-              height={26}
-              style={{ objectFit: "contain", display: "inline-block" }}
+              width={34}
+              height={34}
+              style={{ width: "34px", height: "34px", objectFit: "contain", display: "inline-block" }}
             />
             <span>
               🍳 OKESIH <span style={{ color: "#FBBF24" }}>BARISTA &amp; DAPUR (KDS)</span>

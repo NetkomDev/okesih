@@ -143,28 +143,13 @@ export default function MarketingRegisterPage() {
           <ThemeToggle />
           <Link href="/" style={{ textDecoration: "none", color: "inherit" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-              <div
-                style={{
-                  width: "36px",
-                  height: "36px",
-                  borderRadius: "10px",
-                  background: "linear-gradient(135deg, rgba(255, 87, 34, 0.15), rgba(255, 69, 0, 0.25))",
-                  border: "1px solid rgba(255, 87, 34, 0.4)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  overflow: "hidden",
-                  padding: "2px",
-                }}
-              >
-                <img
-                  src="/logo.svg"
-                  alt="Logo OKESIH.COM"
-                  width={30}
-                  height={30}
-                  style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
-                />
-              </div>
+              <img
+                src="/logo.svg"
+                alt="Logo OKESIH.COM"
+                width={40}
+                height={40}
+                style={{ width: "40px", height: "40px", objectFit: "contain", display: "block", flexShrink: 0 }}
+              />
               <span style={{ fontWeight: 900, fontSize: "1.1rem" }}>
                 OKESIH<span style={{ color: "var(--brand-orange-light)" }}>.COM</span>
               </span>
