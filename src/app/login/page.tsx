@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { extractUserRole } from "@/lib/auth-helpers";
+import ThemeToggle from "@/components/ThemeToggle";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -120,7 +121,7 @@ export default function LoginPage() {
         />
       </div>
 
-      {/* Navigasi Kembali */}
+      {/* Navigasi Kembali & Theme Toggle */}
       <div style={{ position: "absolute", top: "2rem", left: "2rem", zIndex: 10 }}>
         <Link
           href="/"
@@ -142,6 +143,10 @@ export default function LoginPage() {
           <span>←</span>
           <span>Kembali ke Beranda</span>
         </Link>
+      </div>
+
+      <div style={{ position: "absolute", top: "2rem", right: "2rem", zIndex: 10 }}>
+        <ThemeToggle />
       </div>
 
       {/* Card Login Terpusat */}

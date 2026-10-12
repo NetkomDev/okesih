@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { extractUserRole } from "@/lib/auth-helpers";
+import ThemeToggle from "@/components/ThemeToggle";
 
 export default function HomePage() {
   const router = useRouter();
@@ -237,8 +238,8 @@ export default function HomePage() {
             </a>
           </nav>
 
-          {/* Action Buttons & Hamburger Toggle */}
-          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+          {/* Action Buttons, Theme Toggle & Hamburger Toggle */}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
             <Link
               href="/marketing"
               className="marketing-pill-btn desktop-only-btn"
@@ -246,6 +247,8 @@ export default function HomePage() {
               <span>💼</span>
               <span>Jadi Mitra Marketing</span>
             </Link>
+
+            <ThemeToggle />
 
             <button
               type="button"
@@ -348,6 +351,9 @@ export default function HomePage() {
               <span>→</span>
             </a>
             <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem", marginTop: "0.5rem" }}>
+              <div style={{ display: "flex", justifyContent: "center", marginBottom: "0.25rem" }}>
+                <ThemeToggle showText={true} />
+              </div>
               <Link
                 href="/menu/giras-nusantara?table=01"
                 target="_blank"
@@ -446,7 +452,7 @@ export default function HomePage() {
             Sistem Kasir (POS) Offline-First, Kitchen Display System (KDS), QR Menu Meja, dan Layar Antrean TV Otomatis.
             Fleksibel untuk <strong>Warkop, Kafe, Rumah Makan, Kedai Kopi, hingga Food Court</strong>.
             Cukup pakai HP &amp; Smart TV yang sudah Anda miliki tanpa biaya alat mahal, sewa flat hanya{" "}
-            <strong style={{ color: "#FFF" }}>Rp 50 per transaksi</strong>.
+            <strong style={{ color: "var(--text-pure-white)" }}>Rp 50 per transaksi</strong>.
           </p>
 
           {/* CTA Group */}
@@ -492,7 +498,7 @@ export default function HomePage() {
               maxWidth: "900px",
               margin: "0 auto",
               fontSize: "0.85rem",
-              color: "#E2E8F0",
+              color: "var(--text-pure-white)",
               fontWeight: 600,
             }}
           >
@@ -861,7 +867,7 @@ export default function HomePage() {
 
               <div style={{ padding: "1.25rem", borderRadius: "10px", background: "rgba(16, 185, 129, 0.08)", border: "1px solid rgba(16, 185, 129, 0.3)" }}>
                 <div style={{ color: "#34D399", fontWeight: 800, marginBottom: "0.5rem" }}>✓ Platform OKESIH.COM</div>
-                <div style={{ fontSize: "0.825rem", color: "#E2E8F0", lineHeight: 1.6 }}>
+                <div style={{ fontSize: "0.825rem", color: "var(--text-pure-white)", lineHeight: 1.6 }}>
                   • Biaya perangkat awal Rp 0 (pakai HP sendiri)<br />
                   • Bayar hanya Rp 50 per transaksi tercetak<br />
                   • 100 struk sehari hanya bayar sewa Rp 5.000<br />
@@ -989,6 +995,7 @@ export default function HomePage() {
 
               <Link
                 href="/marketing/daftar"
+                className="btn-secondary"
                 style={{
                   padding: "1rem 1.75rem",
                   fontSize: "0.9rem",
@@ -998,9 +1005,6 @@ export default function HomePage() {
                   alignItems: "center",
                   gap: "0.5rem",
                   textDecoration: "none",
-                  color: "#E2E8F0",
-                  background: "rgba(255, 255, 255, 0.05)",
-                  border: "1px solid rgba(255, 255, 255, 0.12)",
                 }}
               >
                 <span>📝 Buka Formulir Pendaftaran</span>
@@ -1536,7 +1540,7 @@ export default function HomePage() {
             }}
           >
             <div>
-              <div style={{ fontSize: "1.1rem", fontWeight: 900, color: "#FFF", marginBottom: "0.25rem" }}>
+              <div style={{ fontSize: "1.1rem", fontWeight: 900, color: "var(--text-pure-white)", marginBottom: "0.25rem" }}>
                 OKESIH<span style={{ color: "var(--brand-orange-light)" }}>.COM</span>
               </div>
               <div>Platform Operasional POS &amp; Self-Order Cerdas untuk Usaha Kuliner Indonesia</div>

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import ThemeToggle from "@/components/ThemeToggle";
 
 export default function MarketingProgramPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(0);
@@ -166,6 +167,7 @@ export default function MarketingProgramPage() {
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+            <ThemeToggle />
             <Link
               href="/marketing/daftar"
               className="btn-primary"
@@ -291,6 +293,7 @@ export default function MarketingProgramPage() {
 
           <a
             href="#simulasi"
+            className="btn-secondary"
             style={{
               padding: "1rem 1.75rem",
               fontSize: "0.95rem",
@@ -300,9 +303,6 @@ export default function MarketingProgramPage() {
               alignItems: "center",
               gap: "0.5rem",
               textDecoration: "none",
-              color: "#E2E8F0",
-              background: "rgba(255, 255, 255, 0.05)",
-              border: "1px solid rgba(255, 255, 255, 0.12)",
               transition: "all 0.2s ease",
             }}
           >
@@ -513,7 +513,7 @@ export default function MarketingProgramPage() {
             <div style={{ display: "flex", flexDirection: "column", gap: "1.75rem" }}>
               <div>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
-                  <label style={{ fontSize: "0.9rem", fontWeight: 700, color: "#E2E8F0" }}>
+                  <label style={{ fontSize: "0.9rem", fontWeight: 700, color: "var(--text-pure-white)" }}>
                     Jumlah Tenant / Kafe Binaan:
                   </label>
                   <span style={{ fontSize: "1.1rem", fontWeight: 900, color: "#34D399" }}>
@@ -537,7 +537,7 @@ export default function MarketingProgramPage() {
 
               <div>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
-                  <label style={{ fontSize: "0.9rem", fontWeight: 700, color: "#E2E8F0" }}>
+                  <label style={{ fontSize: "0.9rem", fontWeight: 700, color: "var(--text-pure-white)" }}>
                     Rata-rata Transaksi per Toko / Hari:
                   </label>
                   <span style={{ fontSize: "1.1rem", fontWeight: 900, color: "#FBBF24" }}>
@@ -563,6 +563,7 @@ export default function MarketingProgramPage() {
 
             {/* Hasil Kalkulasi Card */}
             <div
+              className="calc-result-box"
               style={{
                 padding: "2rem",
                 borderRadius: "20px",
@@ -585,7 +586,7 @@ export default function MarketingProgramPage() {
               >
                 Rp {monthlyCommission.toLocaleString("id-ID")}
               </div>
-              <div style={{ fontSize: "0.825rem", color: "#CBD5E1", lineHeight: 1.5 }}>
+              <div style={{ fontSize: "0.825rem", color: "var(--text-muted)", lineHeight: 1.5 }}>
                 Berasal dari <strong>{dailyReceiptsTotal.toLocaleString("id-ID")} struk/hari</strong> × Rp 15 ={" "}
                 <span style={{ color: "#FBBF24" }}>Rp {dailyCommission.toLocaleString("id-ID")}/hari</span>.
               </div>
@@ -593,7 +594,7 @@ export default function MarketingProgramPage() {
                 style={{
                   marginTop: "1.5rem",
                   paddingTop: "1.25rem",
-                  borderTop: "1px solid rgba(255, 255, 255, 0.08)",
+                  borderTop: "1px solid var(--border-subtle)",
                 }}
               >
                 <Link

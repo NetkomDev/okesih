@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import ThemeToggle from "@/components/ThemeToggle";
 
 export default function MarketingRegisterPage() {
   const [mktFullName, setMktFullName] = useState("");
@@ -138,27 +139,30 @@ export default function MarketingRegisterPage() {
           <span>Kembali ke Beranda</span>
         </Link>
 
-        <Link href="/" style={{ textDecoration: "none", color: "inherit" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-            <div
-              style={{
-                width: "36px",
-                height: "36px",
-                borderRadius: "10px",
-                background: "linear-gradient(135deg, #FF5722, #FF4500)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "1.1rem",
-              }}
-            >
-              ☕
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+          <ThemeToggle />
+          <Link href="/" style={{ textDecoration: "none", color: "inherit" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+              <div
+                style={{
+                  width: "36px",
+                  height: "36px",
+                  borderRadius: "10px",
+                  background: "linear-gradient(135deg, #FF5722, #FF4500)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "1.1rem",
+                }}
+              >
+                ☕
+              </div>
+              <span style={{ fontWeight: 900, fontSize: "1.1rem" }}>
+                OKESIH<span style={{ color: "var(--brand-orange-light)" }}>.COM</span>
+              </span>
             </div>
-            <span style={{ fontWeight: 900, fontSize: "1.1rem" }}>
-              OKESIH<span style={{ color: "var(--brand-orange-light)" }}>.COM</span>
-            </span>
-          </div>
-        </Link>
+          </Link>
+        </div>
       </div>
 
       {/* Container Formulir Pendaftaran */}
