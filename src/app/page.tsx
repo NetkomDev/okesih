@@ -166,34 +166,43 @@ export default function HomePage() {
           display: "flex",
           flexDirection: "column",
           position: "relative",
-          overflow: "hidden",
           backgroundColor: "var(--bg-deep-black)",
           color: "#FFF",
         }}
       >
-        {/* Background Ambient Glows */}
+        {/* Background Ambient Glows (Isolated, never affects main scroll container) */}
         <div
-          className="organic-shape"
           style={{
-            width: "600px",
-            height: "600px",
-            top: "-200px",
-            right: "-150px",
-            background: "radial-gradient(circle, #FF4500 0%, rgba(255, 69, 0, 0) 70%)",
-            opacity: 0.25,
+            position: "absolute",
+            inset: 0,
+            overflow: "hidden",
+            pointerEvents: "none",
+            zIndex: 0,
           }}
-        />
-        <div
-          className="organic-shape"
-          style={{
-            width: "550px",
-            height: "550px",
-            bottom: "-150px",
-            left: "-100px",
-            background: "radial-gradient(circle, #D83A00 0%, rgba(216, 58, 0, 0) 70%)",
-            opacity: 0.15,
-          }}
-        />
+        >
+          <div
+            className="organic-shape"
+            style={{
+              width: "600px",
+              height: "600px",
+              top: "-200px",
+              right: "-150px",
+              background: "radial-gradient(circle, #FF4500 0%, rgba(255, 69, 0, 0) 70%)",
+              opacity: 0.25,
+            }}
+          />
+          <div
+            className="organic-shape"
+            style={{
+              width: "550px",
+              height: "550px",
+              bottom: "-150px",
+              left: "-100px",
+              background: "radial-gradient(circle, #D83A00 0%, rgba(216, 58, 0, 0) 70%)",
+              opacity: 0.15,
+            }}
+          />
+        </div>
 
         {/* Top Navbar */}
         <header
@@ -901,18 +910,28 @@ export default function HomePage() {
             position: "relative",
           }}
         >
-          {/* Ambient Glow Khusus Section Marketing (Hijau Zamrud & Emas) */}
+          {/* Ambient Glow Khusus Section Marketing (Hijau Zamrud & Emas - Terisolasi) */}
           <div
-            className="organic-shape"
             style={{
-              width: "480px",
-              height: "480px",
-              top: "10%",
-              left: "-100px",
-              background: "radial-gradient(circle, #10B981 0%, rgba(16, 185, 129, 0) 70%)",
-              opacity: 0.12,
+              position: "absolute",
+              inset: 0,
+              overflow: "hidden",
+              pointerEvents: "none",
+              zIndex: 0,
             }}
-          />
+          >
+            <div
+              className="organic-shape"
+              style={{
+                width: "480px",
+                height: "480px",
+                top: "10%",
+                left: "-100px",
+                background: "radial-gradient(circle, #10B981 0%, rgba(16, 185, 129, 0) 70%)",
+                opacity: 0.12,
+              }}
+            />
+          </div>
 
           <div style={{ textAlign: "center", marginBottom: "3rem" }}>
             <div
