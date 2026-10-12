@@ -305,7 +305,7 @@ export default function MarketingRegisterPage() {
         <form onSubmit={handleMarketingSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1.25rem" }}>
             <div>
-              <label style={{ fontSize: "0.825rem", fontWeight: 700, color: "#E2E8F0", display: "block", marginBottom: "0.4rem" }}>
+              <label style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--text-pure-white)", display: "block", marginBottom: "0.4rem" }}>
                 Nama Lengkap <span style={{ color: "#EF4444" }}>*</span>
               </label>
               <input
@@ -320,7 +320,7 @@ export default function MarketingRegisterPage() {
                   borderRadius: "10px",
                   background: "var(--bg-surface-1)",
                   border: "1px solid var(--border-subtle)",
-                  color: "#FFF",
+                  color: "var(--text-pure-white)",
                   fontSize: "0.95rem",
                   outline: "none",
                 }}
@@ -328,7 +328,7 @@ export default function MarketingRegisterPage() {
             </div>
 
             <div>
-              <label style={{ fontSize: "0.825rem", fontWeight: 700, color: "#E2E8F0", display: "block", marginBottom: "0.4rem" }}>
+              <label style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--text-pure-white)", display: "block", marginBottom: "0.4rem" }}>
                 Nomor WhatsApp / HP <span style={{ color: "#EF4444" }}>*</span>
               </label>
               <input
@@ -343,7 +343,7 @@ export default function MarketingRegisterPage() {
                   borderRadius: "10px",
                   background: "var(--bg-surface-1)",
                   border: "1px solid var(--border-subtle)",
-                  color: "#FFF",
+                  color: "var(--text-pure-white)",
                   fontSize: "0.95rem",
                   outline: "none",
                 }}
@@ -353,7 +353,7 @@ export default function MarketingRegisterPage() {
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1.25rem" }}>
             <div>
-              <label style={{ fontSize: "0.825rem", fontWeight: 700, color: "#E2E8F0", display: "block", marginBottom: "0.4rem" }}>
+              <label style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--text-pure-white)", display: "block", marginBottom: "0.4rem" }}>
                 Kota / Wilayah Jangkauan Anda <span style={{ color: "#EF4444" }}>*</span>
               </label>
               <input
@@ -368,18 +368,18 @@ export default function MarketingRegisterPage() {
                   borderRadius: "10px",
                   background: "var(--bg-surface-1)",
                   border: "1px solid var(--border-subtle)",
-                  color: "#FFF",
+                  color: "var(--text-pure-white)",
                   fontSize: "0.95rem",
                   outline: "none",
                 }}
               />
-              <div style={{ fontSize: "0.75rem", color: "var(--text-dim)", marginTop: "0.3rem" }}>
+              <div style={{ fontSize: "0.775rem", color: "var(--text-dim)", marginTop: "0.35rem", fontWeight: 500 }}>
                 Digunakan Super Admin untuk memetakan distribusi materi stiker &amp; tenant.
               </div>
             </div>
 
             <div>
-              <label style={{ fontSize: "0.825rem", fontWeight: 700, color: "#E2E8F0", display: "block", marginBottom: "0.4rem" }}>
+              <label style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--text-pure-white)", display: "block", marginBottom: "0.4rem" }}>
                 Email (Opsional)
               </label>
               <input
@@ -393,7 +393,7 @@ export default function MarketingRegisterPage() {
                   borderRadius: "10px",
                   background: "var(--bg-surface-1)",
                   border: "1px solid var(--border-subtle)",
-                  color: "#FFF",
+                  color: "var(--text-pure-white)",
                   fontSize: "0.95rem",
                   outline: "none",
                 }}
@@ -403,6 +403,7 @@ export default function MarketingRegisterPage() {
 
           {/* Data Rekening Pencairan Komisi */}
           <div
+            className="bank-data-container"
             style={{
               padding: "1.5rem",
               borderRadius: "14px",
@@ -413,13 +414,13 @@ export default function MarketingRegisterPage() {
               gap: "1.1rem",
             }}
           >
-            <div style={{ fontSize: "0.875rem", fontWeight: 800, color: "#34D399" }}>
+            <div className="bank-section-title" style={{ fontSize: "0.9rem", fontWeight: 800, color: "#34D399" }}>
               🏦 Rekening Bank / E-Wallet Pencairan Komisi
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem" }}>
               <div>
-                <label style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-muted)", display: "block", marginBottom: "0.35rem" }}>
+                <label style={{ fontSize: "0.825rem", fontWeight: 700, color: "var(--text-pure-white)", display: "block", marginBottom: "0.35rem" }}>
                   Nama Bank / E-Wallet <span style={{ color: "#EF4444" }}>*</span>
                 </label>
                 <select
@@ -431,7 +432,7 @@ export default function MarketingRegisterPage() {
                     borderRadius: "10px",
                     background: "var(--bg-surface-1)",
                     border: "1px solid var(--border-subtle)",
-                    color: "#FFF",
+                    color: "var(--text-pure-white)",
                     outline: "none",
                   }}
                 >
@@ -451,7 +452,7 @@ export default function MarketingRegisterPage() {
               </div>
 
               <div>
-                <label style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-muted)", display: "block", marginBottom: "0.35rem" }}>
+                <label style={{ fontSize: "0.825rem", fontWeight: 700, color: "var(--text-pure-white)", display: "block", marginBottom: "0.35rem" }}>
                   Nomor Rekening / HP E-Wallet <span style={{ color: "#EF4444" }}>*</span>
                 </label>
                 <input
@@ -466,14 +467,14 @@ export default function MarketingRegisterPage() {
                     borderRadius: "10px",
                     background: "var(--bg-surface-1)",
                     border: "1px solid var(--border-subtle)",
-                    color: "#FFF",
+                    color: "var(--text-pure-white)",
                     outline: "none",
                   }}
                 />
               </div>
 
               <div>
-                <label style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-muted)", display: "block", marginBottom: "0.35rem" }}>
+                <label style={{ fontSize: "0.825rem", fontWeight: 700, color: "var(--text-pure-white)", display: "block", marginBottom: "0.35rem" }}>
                   Nama Pemilik Rekening <span style={{ color: "#EF4444" }}>*</span>
                 </label>
                 <input
@@ -488,7 +489,7 @@ export default function MarketingRegisterPage() {
                     borderRadius: "10px",
                     background: "var(--bg-surface-1)",
                     border: "1px solid var(--border-subtle)",
-                    color: "#FFF",
+                    color: "var(--text-pure-white)",
                     outline: "none",
                   }}
                 />
@@ -497,7 +498,7 @@ export default function MarketingRegisterPage() {
           </div>
 
           <div>
-            <label style={{ fontSize: "0.825rem", fontWeight: 700, color: "#E2E8F0", display: "block", marginBottom: "0.35rem" }}>
+            <label style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--text-pure-white)", display: "block", marginBottom: "0.35rem" }}>
               Catatan Pengalaman / Target Usaha di Area Anda (Opsional)
             </label>
             <textarea
@@ -511,7 +512,7 @@ export default function MarketingRegisterPage() {
                 borderRadius: "10px",
                 background: "var(--bg-surface-1)",
                 border: "1px solid var(--border-subtle)",
-                color: "#FFF",
+                color: "var(--text-pure-white)",
                 outline: "none",
                 fontFamily: "inherit",
                 resize: "vertical",

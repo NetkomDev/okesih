@@ -54,10 +54,10 @@
   --border-subtle: rgba(0, 0, 0, 0.08);
   --border-focus: rgba(255, 69, 0, 0.6);
 
-  /* Seluruh Teks Putih/Terang Menjadi Gelap */
+  /* Seluruh Teks Putih/Terang Menjadi Gelap (High Contrast) */
   --text-pure-white: #0F172A;
-  --text-muted: #475569;
-  --text-dim: #64748B;
+  --text-muted: #334155;
+  --text-dim: #475569;
 
   /* Shadows Terang */
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
@@ -722,18 +722,40 @@ button {
   color: #FFFFFF !important;
 }
 
-/* Form Elements di Light Mode */
+/* Form Elements & Labels di Light Mode */
+[data-theme="light"] label {
+  color: #0F172A !important;
+  font-weight: 700 !important;
+}
+
 [data-theme="light"] input,
 [data-theme="light"] select,
 [data-theme="light"] textarea {
   background: #FFFFFF !important;
   color: #0F172A !important;
-  border-color: rgba(0, 0, 0, 0.15) !important;
+  border: 1px solid rgba(0, 0, 0, 0.22) !important;
 }
 
 [data-theme="light"] input::placeholder,
 [data-theme="light"] textarea::placeholder {
-  color: #94A3B8 !important;
+  color: #64748B !important;
+  opacity: 1 !important;
+}
+
+[data-theme="light"] input:focus,
+[data-theme="light"] select:focus,
+[data-theme="light"] textarea:focus {
+  border-color: #10B981 !important;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15) !important;
+}
+
+[data-theme="light"] .bank-data-container {
+  background: #F8FAFC !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+}
+
+[data-theme="light"] .bank-section-title {
+  color: #059669 !important;
 }
 
 /* Footer di Light Mode */
