@@ -86,8 +86,17 @@ export default function KdsModulePage() {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-          <Link href="/" style={{ fontSize: "1.25rem", fontWeight: 900 }}>
-            🍳 OKESIH <span style={{ color: "#FBBF24" }}>BARISTA &amp; DAPUR (KDS)</span>
+          <Link href="/" style={{ fontSize: "1.25rem", fontWeight: 900, display: "flex", alignItems: "center", gap: "0.5rem", textDecoration: "none", color: "inherit" }}>
+            <img
+              src="/logo.svg"
+              alt="Logo OKESIH.COM"
+              width={26}
+              height={26}
+              style={{ objectFit: "contain", display: "inline-block" }}
+            />
+            <span>
+              🍳 OKESIH <span style={{ color: "#FBBF24" }}>BARISTA &amp; DAPUR (KDS)</span>
+            </span>
           </Link>
           <span className="badge badge-ready">● Realtime WebSocket Aktif</span>
         </div>

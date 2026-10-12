@@ -89,8 +89,17 @@ export default function TvQueuePage() {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "1.25rem" }}>
-          <Link href="/" style={{ fontSize: "1.75rem", fontWeight: 900 }}>
-            ☕ OKESIH <span style={{ color: "var(--brand-orange-light)" }}>WARKOP KITA</span>
+          <Link href="/" style={{ fontSize: "1.75rem", fontWeight: 900, display: "flex", alignItems: "center", gap: "0.75rem", textDecoration: "none", color: "inherit" }}>
+            <img
+              src="/logo.svg"
+              alt="Logo OKESIH.COM"
+              width={36}
+              height={36}
+              style={{ objectFit: "contain", display: "inline-block" }}
+            />
+            <span>
+              OKESIH <span style={{ color: "var(--brand-orange-light)" }}>WARKOP KITA</span>
+            </span>
           </Link>
           <span className="badge badge-ready" style={{ fontSize: "0.85rem", padding: "0.35rem 0.85rem" }}>
             ● Layar Antrean Smart TV

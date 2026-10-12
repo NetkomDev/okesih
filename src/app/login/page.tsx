@@ -163,19 +163,27 @@ export default function LoginPage() {
           <Link href="/" style={{ textDecoration: "none", display: "inline-block" }}>
             <div
               style={{
-                width: "56px",
-                height: "56px",
+                width: "60px",
+                height: "60px",
                 borderRadius: "16px",
-                background: "linear-gradient(135deg, #FF5722, #FF4500)",
+                background: "linear-gradient(135deg, rgba(255, 87, 34, 0.15), rgba(255, 69, 0, 0.25))",
+                border: "1px solid rgba(255, 87, 34, 0.4)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 margin: "0 auto 1.25rem",
-                fontSize: "28px",
-                boxShadow: "0 8px 24px rgba(255, 69, 0, 0.4)",
+                boxShadow: "0 8px 24px rgba(255, 69, 0, 0.35)",
+                overflow: "hidden",
+                padding: "6px",
               }}
             >
-              ☕
+              <img
+                src="/logo.svg"
+                alt="Logo OKESIH.COM"
+                width={48}
+                height={48}
+                style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+              />
             </div>
           </Link>
           <h1 style={{ fontSize: "1.5rem", fontWeight: 900, letterSpacing: "-0.02em", marginBottom: "0.35rem" }}>

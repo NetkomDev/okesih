@@ -28,20 +28,8 @@ export default function OfflineFallbackPage() {
           boxShadow: "0 20px 40px rgba(0, 0, 0, 0.6)",
         }}
       >
-        <div
-          style={{
-            width: "64px",
-            height: "64px",
-            margin: "0 auto 1.5rem",
-            borderRadius: "50%",
-            background: "linear-gradient(135deg, #FF4500, #FF7A00)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: "28px",
-          }}
-        >
-          📶
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: "1.25rem" }}>
+          <img src="/logo.svg" alt="OKESIH Logo" width={48} height={48} style={{ objectFit: "contain" }} />
         </div>
 
         <h1

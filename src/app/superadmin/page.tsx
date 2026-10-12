@@ -440,16 +440,23 @@ export default function SuperAdminDashboardPage() {
               width: "42px",
               height: "42px",
               borderRadius: "10px",
-              background: "linear-gradient(135deg, #0EA5E9, #0284C7)",
+              background: "linear-gradient(135deg, rgba(14, 165, 233, 0.15), rgba(2, 132, 199, 0.25))",
+              border: "1px solid rgba(14, 165, 233, 0.4)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontWeight: 900,
-              fontSize: "1.3rem",
               boxShadow: "0 0 15px rgba(14, 165, 233, 0.4)",
+              overflow: "hidden",
+              padding: "3px",
             }}
           >
-            🛡️
+            <img
+              src="/logo.svg"
+              alt="Logo OKESIH.COM"
+              width={34}
+              height={34}
+              style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+            />
           </div>
           <div>
             <div style={{ fontSize: "1.25rem", fontWeight: 900, letterSpacing: "-0.02em" }}>

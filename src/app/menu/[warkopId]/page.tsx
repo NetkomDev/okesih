@@ -143,8 +143,9 @@ export default function CustomerMenuPage({
                 📍 Meja #{tableNumber} (Ubah)
               </button>
             </div>
-            <Link href="/" style={{ fontSize: "0.8rem", color: "var(--text-dim)" }}>
-              Beranda
+            <Link href="/" style={{ fontSize: "0.8rem", color: "var(--text-dim)", display: "flex", alignItems: "center", gap: "0.35rem", textDecoration: "none" }}>
+              <img src="/logo.svg" alt="OKESIH Logo" width={18} height={18} style={{ objectFit: "contain" }} />
+              <span>OKESIH</span>
             </Link>
           </div>
 

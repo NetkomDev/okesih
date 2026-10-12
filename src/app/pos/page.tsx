@@ -251,8 +251,17 @@ export default function PosModulePage() {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-          <Link href="/" style={{ fontSize: "1.2rem", fontWeight: 800 }}>
-            ☕ OKESIH <span style={{ color: "var(--brand-orange-light)" }}>POS KASIR</span>
+          <Link href="/" style={{ fontSize: "1.2rem", fontWeight: 800, display: "flex", alignItems: "center", gap: "0.5rem", textDecoration: "none", color: "inherit" }}>
+            <img
+              src="/logo.svg"
+              alt="Logo OKESIH.COM"
+              width={26}
+              height={26}
+              style={{ objectFit: "contain", display: "inline-block" }}
+            />
+            <span>
+              OKESIH <span style={{ color: "var(--brand-orange-light)" }}>POS KASIR</span>
+            </span>
           </Link>
           <span className="badge badge-ready">● PWA Online</span>
 
