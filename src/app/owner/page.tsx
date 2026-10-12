@@ -4,6 +4,15 @@ import Link from "next/link";
 import { useState } from "react";
 import { useAuthGuard, logoutUser } from "@/lib/auth-helpers";
 
+interface MenuItem {
+  id: string;
+  name: string;
+  price: number;
+  category: "Kopi" | "Dingin" | "Makanan" | "Camilan" | "Lainnya";
+  description: string;
+  isAvailable: boolean;
+}
+
 interface StaffMember {
   id: string;
   username: string;
@@ -23,9 +32,89 @@ interface WaiterRoster {
 
 export default function TenantOwnerDashboardPage() {
   const { isAuthorized, loading, currentUser } = useAuthGuard(["OWNER"]);
+
   // Warkop Details
   const [warkopName, setWarkopName] = useState<string>("Warkop Giras Nusantara");
-  const [qrisMerchantName, setQrisMerchantName] = useState<string>("GIRAS NUSANTARA (BCA)");
+  const [qrisMerchantName, setQrisMerchantName] = useState<string>("WARKOP GIRAS NUSANTARA (BCA)");
+  const [uniqueCode] = useState<number>(145);
+
+  // KATALOG MENU WARKOP (DIBUAT & DIKELOLA SENDIRI OLEH OWNER TENANT)
+  const [menuList, setMenuList] = useState<MenuItem[]>([
+    {
+      id: "menu-01",
+      name: "Kopi Hitam Tubruk Giras",
+      price: 5000,
+      category: "Kopi",
+      description: "Robusta giling halus diseduh air mendidih kental khas warkop.",
+      isAvailable: true,
+    },
+    {
+      id: "menu-02",
+      name: "Kopi Susu Panas Legendaris",
+      price: 7000,
+      category: "Kopi",
+      description: "Susu kental manis berpadu espresso tubruk aroma sedap.",
+      isAvailable: true,
+    },
+    {
+      id: "menu-03",
+      name: "Es Teh Manis Jumbo",
+      price: 5000,
+      category: "Dingin",
+      description: "Teh melati wangi dingin segar porsi gelas besar.",
+      isAvailable: true,
+    },
+    {
+      id: "menu-04",
+      name: "Extra Joss Susu Dingin",
+      price: 8000,
+      category: "Dingin",
+      description: "Minuman energi segar dicampur susu dan es batu kristal.",
+      isAvailable: true,
+    },
+    {
+      id: "menu-05",
+      name: "Indomie Goreng + Telur",
+      price: 12000,
+      category: "Makanan",
+      description: "Indomie goreng dengan topping telur ceplok dan sawi hijau.",
+      isAvailable: true,
+    },
+    {
+      id: "menu-06",
+      name: "Indomie Kuah Kari Dobel Telur",
+      price: 16000,
+      category: "Makanan",
+      description: "Kuah kari kental dengan 2 butir telur setengah matang.",
+      isAvailable: true,
+    },
+    {
+      id: "menu-07",
+      name: "Roti Bakar Coklat Keju",
+      price: 10000,
+      category: "Camilan",
+      description: "Roti tawar tebal panggang mentega dengan meses coklat dan keju.",
+      isAvailable: true,
+    },
+    {
+      id: "menu-08",
+      name: "Gorengan Tempe / Bakwan (3 Pcs)",
+      price: 5000,
+      category: "Camilan",
+      description: "Gorengan renyah hangat disajikan dengan cabai rawit hijau.",
+      isAvailable: true,
+    },
+  ]);
+
+  // Filter Kategori Menu
+  const [selectedCategory, setSelectedCategory] = useState<string>("Semua");
+
+  // Modal Tambah Menu Baru
+  const [isMenuModalOpen, setIsMenuModalOpen] = useState<boolean>(false);
+  const [newMenuName, setNewMenuName] = useState<string>("");
+  const [newMenuPrice, setNewMenuPrice] = useState<number>(5000);
+  const [newMenuCategory, setNewMenuCategory] = useState<"Kopi" | "Dingin" | "Makanan" | "Camilan" | "Lainnya">("Kopi");
+  const [newMenuDesc, setNewMenuDesc] = useState<string>("");
 
   // Staf Warkop (Kasir & Barista)
   const [staffList, setStaffList] = useState<StaffMember[]>([
@@ -49,6 +138,44 @@ export default function TenantOwnerDashboardPage() {
   const [isWaiterModalOpen, setIsWaiterModalOpen] = useState<boolean>(false);
   const [newWaiterName, setNewWaiterName] = useState<string>("");
   const [newWaiterPhone, setNewWaiterPhone] = useState<string>("");
+
+  const [isCentralPaymentModalOpen, setIsCentralPaymentModalOpen] = useState<boolean>(false);
+
+  // Handler Menu
+  const handleCreateMenu = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMenuName || newMenuPrice <= 0) {
+      alert("Harap isi nama menu dan harga yang valid!");
+      return;
+    }
+
+    const newItem: MenuItem = {
+      id: `menu-${Date.now()}`,
+      name: newMenuName.trim(),
+      price: newMenuPrice,
+      category: newMenuCategory,
+      description: newMenuDesc || "-",
+      isAvailable: true,
+    };
+
+    setMenuList((prev) => [newItem, ...prev]);
+    setIsMenuModalOpen(false);
+    alert(`✓ Menu baru "${newItem.name}" seharga Rp ${newItem.price.toLocaleString("id-ID")} berhasil ditambahkan ke katalog warkop Anda!`);
+  };
+
+  const toggleMenuAvailability = (id: string) => {
+    setMenuList((prev) =>
+      prev.map((m) =>
+        m.id === id ? { ...m, isAvailable: !m.isAvailable } : m
+      )
+    );
+  };
+
+  const handleDeleteMenu = (id: string, name: string) => {
+    if (confirm(`Yakin ingin menghapus menu "${name}" dari katalog warkop?`)) {
+      setMenuList((prev) => prev.filter((m) => m.id !== id));
+    }
+  };
 
   // Handler Buat Staf Instan
   const handleCreateStaff = (e: React.FormEvent) => {
@@ -100,6 +227,11 @@ export default function TenantOwnerDashboardPage() {
     alert(`✓ Waiters "${newW.name}" berhasil ditambahkan ke daftar pelayan warkop!`);
   };
 
+  // Filtered Menu List
+  const filteredMenuList = selectedCategory === "Semua"
+    ? menuList
+    : menuList.filter((m) => m.category === selectedCategory);
+
   if (loading || !isAuthorized) {
     return (
       <div
@@ -145,26 +277,26 @@ export default function TenantOwnerDashboardPage() {
         <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
           <div
             style={{
-              width: "40px",
-              height: "40px",
+              width: "42px",
+              height: "42px",
               borderRadius: "10px",
               background: "linear-gradient(135deg, #FF5722, #FF4500)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               fontWeight: 900,
-              fontSize: "1.2rem",
+              fontSize: "1.3rem",
               boxShadow: "0 0 15px var(--brand-orange-glow)",
             }}
           >
             ☕
           </div>
           <div>
-            <div style={{ fontSize: "1.2rem", fontWeight: 900, letterSpacing: "-0.02em" }}>
+            <div style={{ fontSize: "1.25rem", fontWeight: 900, letterSpacing: "-0.02em" }}>
               {warkopName}
             </div>
             <div style={{ fontSize: "0.75rem", color: "var(--brand-orange-light)", fontWeight: 700 }}>
-              DASHBOARD OWNER WARKOP (TENANT PORTAL)
+              PORTAL OWNER BISNIS WARKOP
             </div>
           </div>
           <span className="badge badge-ready">● Warkop Buka &amp; Beroperasi</span>
@@ -210,16 +342,16 @@ export default function TenantOwnerDashboardPage() {
       </header>
 
       {/* Main Owner Portal Body */}
-      <main style={{ maxWidth: "1280px", margin: "2rem auto", padding: "0 1.5rem" }}>
-        {/* SECTION 1: RINGKASAN OMZET & KEUANGAN BISNIS WARKOP SAYA HARI INI */}
-        <div style={{ marginBottom: "2rem" }}>
+      <main style={{ maxWidth: "1320px", margin: "1.5rem auto 3rem", padding: "0 1.5rem" }}>
+        {/* SECTION 1: RINGKASAN OMZET & KEUANGAN BISNIS WARKOP SAYA */}
+        <section style={{ marginBottom: "2rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "1rem" }}>
             <div>
               <h1 style={{ fontSize: "1.6rem", fontWeight: 900, letterSpacing: "-0.02em" }}>
                 Ringkasan Penjualan Warkop Hari Ini
               </h1>
               <p style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>
-                Pantau omzet tunai vs QRIS, kas di laci kasir, dan estimasi biaya sewa OKESIH (@ Rp 50/struk).
+                Pantau omzet tunai vs QRIS, kas di laci kasir, dan pembayaran sewa OKESIH (@ Rp 50/struk).
               </p>
             </div>
             <Link
@@ -228,49 +360,49 @@ export default function TenantOwnerDashboardPage() {
               className="btn-primary"
               style={{ padding: "0.45rem 0.85rem", fontSize: "0.8rem" }}
             >
-              📱 Buka Menu Meja Pelanggan
+              📱 Preview Menu Meja Pelanggan
             </Link>
           </div>
 
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))",
               gap: "1.25rem",
             }}
           >
             {/* Metric 1 */}
             <div className="glass-panel" style={{ padding: "1.5rem" }}>
-              <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", fontWeight: 700, marginBottom: "0.35rem" }}>
+              <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 700, marginBottom: "0.35rem" }}>
                 TOTAL OMZET PENJUALAN TOKO
               </div>
               <div style={{ fontSize: "2.1rem", fontWeight: 900, color: "var(--brand-orange-light)" }}>
                 Rp 1.450.000
               </div>
               <div style={{ fontSize: "0.75rem", color: "#10B981", marginTop: "0.4rem", fontWeight: 600 }}>
-                100% langsung masuk ke kas/rekening warkop
+                100% langsung masuk ke rekening/kas warkop Anda
               </div>
             </div>
 
             {/* Metric 2 */}
             <div className="glass-panel" style={{ padding: "1.5rem" }}>
-              <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", fontWeight: 700, marginBottom: "0.35rem" }}>
+              <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 700, marginBottom: "0.35rem" }}>
                 RINCIAN PEMBAYARAN PELANGGAN
               </div>
-              <div style={{ fontSize: "1.25rem", fontWeight: 900, color: "#FFF", marginTop: "0.25rem" }}>
+              <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "#FFF", marginTop: "0.25rem" }}>
                 💵 Tunai: <strong style={{ color: "#34D399" }}>Rp 820.000</strong>
               </div>
-              <div style={{ fontSize: "1.25rem", fontWeight: 900, color: "#FFF", marginTop: "0.25rem" }}>
+              <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "#FFF", marginTop: "0.25rem" }}>
                 📱 QRIS: <strong style={{ color: "#60A5FA" }}>Rp 630.000</strong>
               </div>
-              <div style={{ fontSize: "0.75rem", color: "var(--text-dim)", marginTop: "0.4rem" }}>
-                Total 124 transaksi / struk bon
+              <div style={{ fontSize: "0.72rem", color: "var(--text-dim)", marginTop: "0.4rem" }}>
+                Total 124 struk transaksi bon
               </div>
             </div>
 
             {/* Metric 3 */}
             <div className="glass-panel" style={{ padding: "1.5rem" }}>
-              <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", fontWeight: 700, marginBottom: "0.35rem" }}>
+              <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 700, marginBottom: "0.35rem" }}>
                 UANG FISIK DI LACI KASIR
               </div>
               <div style={{ fontSize: "2.1rem", fontWeight: 900, color: "#10B981" }}>
@@ -282,21 +414,214 @@ export default function TenantOwnerDashboardPage() {
             </div>
 
             {/* Metric 4 */}
-            <div className="glass-panel" style={{ padding: "1.5rem" }}>
-              <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", fontWeight: 700, marginBottom: "0.35rem" }}>
-                TAGIHAN SEWA OKESIH (@ Rp 50)
+            <div
+              className="glass-panel"
+              style={{
+                padding: "1.5rem",
+                border: "1px solid rgba(245, 158, 11, 0.3)",
+              }}
+            >
+              <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 700, marginBottom: "0.35rem" }}>
+                SEWA SAAS OKESIH (124 STRUK)
               </div>
-              <div style={{ fontSize: "2.1rem", fontWeight: 900, color: "#FBBF24" }}>
-                Rp 6.200
+              <div style={{ fontSize: "1.8rem", fontWeight: 900, color: "#FBBF24" }}>
+                Rp 6.345
               </div>
-              <div style={{ fontSize: "0.75rem", color: "var(--text-dim)", marginTop: "0.4rem" }}>
-                + Kode Unik 145 = Total Rp 6.345 (Dibayar saat tutup shift)
+              <div style={{ fontSize: "0.72rem", color: "var(--text-dim)", marginTop: "0.3rem" }}>
+                (Rp 6.200 pokok + Kode Unik #{uniqueCode})
               </div>
+              <button
+                onClick={() => setIsCentralPaymentModalOpen(true)}
+                style={{
+                  marginTop: "0.6rem",
+                  width: "100%",
+                  padding: "0.4rem",
+                  borderRadius: "6px",
+                  background: "rgba(245, 158, 11, 0.2)",
+                  border: "1px solid #F59E0B",
+                  color: "#FCD34D",
+                  fontSize: "0.75rem",
+                  fontWeight: 800,
+                  cursor: "pointer",
+                }}
+              >
+                Lihat QRIS Pusat &amp; Setor Sewa →
+              </button>
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* SECTION 2: MANAJEMEN STAF KASIR & BARISTA DAPUR (NO OTP/EMAIL) */}
+        {/* SECTION 2: KATALOG MENU WARKOP (DIBUAT & DIKELOLA SENDIRI OLEH OWNER TENANT) */}
+        <section
+          className="glass-panel"
+          style={{
+            padding: "1.75rem",
+            marginBottom: "2rem",
+            border: "1px solid rgba(255, 69, 0, 0.25)",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "1rem",
+              marginBottom: "1.25rem",
+            }}
+          >
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <h2 style={{ fontSize: "1.3rem", fontWeight: 800 }}>Katalog Menu Warkop Anda</h2>
+                <span className="badge badge-ready">Kelola Mandiri</span>
+              </div>
+              <div style={{ fontSize: "0.825rem", color: "var(--text-muted)" }}>
+                Dibuat &amp; ditetapkan langsung oleh Anda. Tersinkronisasi otomatis ke QR Menu Meja pelanggan dan Layar Kasir POS.
+              </div>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+              {/* Category Filter Pills */}
+              <div style={{ display: "flex", gap: "0.35rem", background: "rgba(255, 255, 255, 0.05)", padding: "3px", borderRadius: "8px" }}>
+                {["Semua", "Kopi", "Dingin", "Makanan", "Camilan"].map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setSelectedCategory(cat)}
+                    style={{
+                      padding: "0.35rem 0.75rem",
+                      borderRadius: "6px",
+                      fontSize: "0.75rem",
+                      fontWeight: 800,
+                      cursor: "pointer",
+                      border: "none",
+                      background: selectedCategory === cat ? "var(--brand-orange)" : "transparent",
+                      color: selectedCategory === cat ? "#FFF" : "var(--text-muted)",
+                    }}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={() => {
+                  setNewMenuName("");
+                  setNewMenuPrice(5000);
+                  setNewMenuCategory("Kopi");
+                  setNewMenuDesc("");
+                  setIsMenuModalOpen(true);
+                }}
+                className="btn-primary"
+                style={{ padding: "0.55rem 1.1rem", fontSize: "0.85rem", fontWeight: 800 }}
+              >
+                + Tambah Menu Baru
+              </button>
+            </div>
+          </div>
+
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "0.875rem" }}>
+              <thead>
+                <tr style={{ borderBottom: "1px solid var(--border-subtle)", color: "var(--text-muted)", textTransform: "uppercase", fontSize: "0.75rem" }}>
+                  <th style={{ padding: "0.75rem 1rem" }}>Nama Menu</th>
+                  <th style={{ padding: "0.75rem 1rem" }}>Kategori</th>
+                  <th style={{ padding: "0.75rem 1rem" }}>Harga Jual</th>
+                  <th style={{ padding: "0.75rem 1rem" }}>Deskripsi</th>
+                  <th style={{ padding: "0.75rem 1rem" }}>Status Ketersediaan</th>
+                  <th style={{ padding: "0.75rem 1rem", textAlign: "right" }}>Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredMenuList.map((menu) => (
+                  <tr key={menu.id} style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.05)" }}>
+                    <td style={{ padding: "1rem", fontWeight: 800, color: "#FFF" }}>
+                      {menu.name}
+                    </td>
+
+                    <td style={{ padding: "1rem" }}>
+                      <span
+                        style={{
+                          background: "rgba(255, 255, 255, 0.08)",
+                          padding: "0.2rem 0.55rem",
+                          borderRadius: "4px",
+                          fontSize: "0.75rem",
+                          fontWeight: 700,
+                          color: "#E2E8F0",
+                        }}
+                      >
+                        {menu.category}
+                      </span>
+                    </td>
+
+                    <td style={{ padding: "1rem", fontWeight: 900, color: "var(--brand-orange-light)", fontSize: "0.95rem" }}>
+                      Rp {menu.price.toLocaleString("id-ID")}
+                    </td>
+
+                    <td style={{ padding: "1rem", color: "var(--text-muted)", fontSize: "0.8rem", maxWidth: "260px" }}>
+                      {menu.description}
+                    </td>
+
+                    <td style={{ padding: "1rem" }}>
+                      <button
+                        onClick={() => toggleMenuAvailability(menu.id)}
+                        style={{
+                          background: menu.isAvailable ? "rgba(16, 185, 129, 0.15)" : "rgba(239, 68, 68, 0.15)",
+                          border: menu.isAvailable ? "1px solid #10B981" : "1px solid #EF4444",
+                          color: menu.isAvailable ? "#34D399" : "#FCA5A5",
+                          padding: "0.3rem 0.7rem",
+                          borderRadius: "var(--radius-pill)",
+                          fontSize: "0.75rem",
+                          fontWeight: 800,
+                          cursor: "pointer",
+                        }}
+                      >
+                        {menu.isAvailable ? "● Tersedia (Aktif)" : "○ Habis (Stok Kosong)"}
+                      </button>
+                    </td>
+
+                    <td style={{ padding: "1rem", textAlign: "right" }}>
+                      <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
+                        <button
+                          onClick={() => {
+                            const newPriceStr = prompt(`Ubah harga untuk "${menu.name}" (saat ini Rp ${menu.price}):`, menu.price.toString());
+                            if (newPriceStr) {
+                              const p = parseInt(newPriceStr);
+                              if (p > 0) {
+                                setMenuList((prev) =>
+                                  prev.map((item) => (item.id === menu.id ? { ...item, price: p } : item))
+                                );
+                              }
+                            }
+                          }}
+                          className="btn-secondary"
+                          style={{ padding: "0.35rem 0.65rem", fontSize: "0.75rem" }}
+                        >
+                          Ubah Harga
+                        </button>
+                        <button
+                          onClick={() => handleDeleteMenu(menu.id, menu.name)}
+                          style={{
+                            background: "rgba(239, 68, 68, 0.1)",
+                            border: "1px solid rgba(239, 68, 68, 0.3)",
+                            color: "#FCA5A5",
+                            padding: "0.35rem 0.65rem",
+                            borderRadius: "6px",
+                            fontSize: "0.75rem",
+                            cursor: "pointer",
+                          }}
+                        >
+                          Hapus
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        {/* SECTION 3: MANAJEMEN STAF KASIR & BARISTA (NO OTP/EMAIL) */}
         <section className="glass-panel" style={{ padding: "1.75rem", marginBottom: "2rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
             <div>
@@ -363,13 +688,13 @@ export default function TenantOwnerDashboardPage() {
           </div>
         </section>
 
-        {/* SECTION 3: MANAJEMEN DAFTAR WAITERS & REKONSILIASI KAS LACI */}
+        {/* SECTION 4: MANAJEMEN DAFTAR WAITERS & REKONSILIASI KAS LACI */}
         <section className="glass-panel" style={{ padding: "1.75rem", marginBottom: "2rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
             <div>
               <h2 style={{ fontSize: "1.3rem", fontWeight: 800 }}>Daftar Waiters &amp; Rekonsiliasi Kas Laci</h2>
               <div style={{ fontSize: "0.825rem", color: "var(--text-muted)" }}>
-                Kelola daftar pelayan meja, jam kerja aktif, dan pencocokan uang tunai yang ditagih ke pelanggan.
+                Kelola daftar pelayan meja, jam kerja aktif, dan pencocokan uang tunai yang ditagih ke meja pelanggan.
               </div>
             </div>
 
@@ -441,7 +766,7 @@ export default function TenantOwnerDashboardPage() {
           </div>
         </section>
 
-        {/* SECTION 4: PENGATURAN QRIS TOKO, CETAK QR MEJA & KATALOG MENU */}
+        {/* SECTION 5: PENGATURAN QRIS TOKO & CETAK QR MEJA */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem", marginBottom: "3rem" }}>
           {/* Card 1: QRIS Toko Warkop (100% uang langsung ke Owner) */}
           <div className="glass-panel" style={{ padding: "1.75rem" }}>
@@ -497,7 +822,7 @@ export default function TenantOwnerDashboardPage() {
             </div>
 
             <button
-              onClick={() => alert("Silakan pilih gambar QRIS baru dari perangkat Anda untuk di-upload ke Supabase Storage.")}
+              onClick={() => alert("Silakan pilih gambar QRIS baru dari perangkat Anda untuk di-upload.")}
               className="btn-secondary"
               style={{ width: "100%", fontSize: "0.85rem" }}
             >
@@ -539,7 +864,132 @@ export default function TenantOwnerDashboardPage() {
         </div>
       </main>
 
-      {/* MODAL 1: TAMBAH STAF WARKOP BARU */}
+      {/* MODAL 1: TAMBAH MENU WARKOP BARU */}
+      {isMenuModalOpen && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0, 0, 0, 0.85)",
+            zIndex: 100,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "1rem",
+          }}
+        >
+          <div className="glass-panel" style={{ maxWidth: "480px", width: "100%", padding: "1.75rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
+              <h3 style={{ fontSize: "1.2rem", fontWeight: 800, color: "var(--brand-orange-light)" }}>
+                Tambah Menu Warkop Baru
+              </h3>
+              <button onClick={() => setIsMenuModalOpen(false)} className="btn-secondary" style={{ width: "32px", height: "32px", padding: 0 }}>
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateMenu} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+              <div>
+                <label style={{ display: "block", fontSize: "0.8rem", color: "var(--text-muted)", marginBottom: "0.35rem" }}>
+                  Nama Menu (Contoh: Kopi Tarik Aceh, Es Milo Dinosaurus)
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newMenuName}
+                  onChange={(e) => setNewMenuName(e.target.value)}
+                  placeholder="Ketik nama hidangan..."
+                  style={{
+                    width: "100%",
+                    padding: "0.75rem 1rem",
+                    borderRadius: "6px",
+                    background: "var(--bg-surface-1)",
+                    border: "1px solid var(--border-subtle)",
+                    color: "#FFF",
+                    fontSize: "0.9rem",
+                  }}
+                />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1.2fr", gap: "1rem" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.8rem", color: "var(--text-muted)", marginBottom: "0.35rem" }}>
+                    Kategori
+                  </label>
+                  <select
+                    value={newMenuCategory}
+                    onChange={(e) => setNewMenuCategory(e.target.value as any)}
+                    style={{
+                      width: "100%",
+                      padding: "0.75rem 1rem",
+                      borderRadius: "6px",
+                      background: "var(--bg-surface-1)",
+                      border: "1px solid var(--border-subtle)",
+                      color: "#FFF",
+                      fontSize: "0.9rem",
+                    }}
+                  >
+                    <option value="Kopi">Kopi</option>
+                    <option value="Dingin">Minuman Dingin</option>
+                    <option value="Makanan">Makanan</option>
+                    <option value="Camilan">Camilan</option>
+                    <option value="Lainnya">Lainnya</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: "block", fontSize: "0.8rem", color: "var(--text-muted)", marginBottom: "0.35rem" }}>
+                    Harga Jual (Rp)
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    value={newMenuPrice}
+                    onChange={(e) => setNewMenuPrice(parseInt(e.target.value) || 0)}
+                    style={{
+                      width: "100%",
+                      padding: "0.75rem 1rem",
+                      borderRadius: "6px",
+                      background: "var(--bg-surface-1)",
+                      border: "1px solid var(--border-subtle)",
+                      color: "var(--brand-orange-light)",
+                      fontSize: "0.95rem",
+                      fontWeight: 800,
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.8rem", color: "var(--text-muted)", marginBottom: "0.35rem" }}>
+                  Deskripsi / Keterangan Singkat
+                </label>
+                <textarea
+                  rows={2}
+                  value={newMenuDesc}
+                  onChange={(e) => setNewMenuDesc(e.target.value)}
+                  placeholder="Keterangan rasa, topping, atau takaran..."
+                  style={{
+                    width: "100%",
+                    padding: "0.75rem 1rem",
+                    borderRadius: "6px",
+                    background: "var(--bg-surface-1)",
+                    border: "1px solid var(--border-subtle)",
+                    color: "#FFF",
+                    fontSize: "0.85rem",
+                  }}
+                />
+              </div>
+
+              <button type="submit" className="btn-primary" style={{ width: "100%", marginTop: "0.5rem" }}>
+                ✓ Simpan ke Katalog Menu
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: TAMBAH STAF WARKOP BARU */}
       {isStaffModalOpen && (
         <div
           style={{
@@ -636,7 +1086,7 @@ export default function TenantOwnerDashboardPage() {
         </div>
       )}
 
-      {/* MODAL 2: TAMBAH WAITERS BARU */}
+      {/* MODAL 3: TAMBAH WAITERS BARU */}
       {isWaiterModalOpen && (
         <div
           style={{
@@ -710,6 +1160,90 @@ export default function TenantOwnerDashboardPage() {
                 Simpan Waiters ke Roster
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 4: QRIS PEMBAYARAN SAAS PUSAT (SETOR SEWA) */}
+      {isCentralPaymentModalOpen && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0, 0, 0, 0.85)",
+            zIndex: 100,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "1rem",
+          }}
+        >
+          <div className="glass-panel" style={{ maxWidth: "480px", width: "100%", padding: "2rem", border: "2px solid #F59E0B" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
+              <h3 style={{ fontSize: "1.25rem", fontWeight: 800, color: "#FBBF24" }}>
+                Setor Biaya Sewa SaaS Platform OKESIH
+              </h3>
+              <button onClick={() => setIsCentralPaymentModalOpen(false)} className="btn-secondary" style={{ width: "32px", height: "32px", padding: 0 }}>
+                ✕
+              </button>
+            </div>
+
+            <div style={{ textAlign: "center", marginBottom: "1.25rem" }}>
+              <div
+                style={{
+                  width: "160px",
+                  height: "160px",
+                  background: "#FFF",
+                  borderRadius: "10px",
+                  margin: "0 auto 1rem",
+                  padding: "8px",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <div style={{ color: "#000", fontSize: "10px", fontWeight: 900 }}>QRIS RESMI OKESIH PUSAT</div>
+                <div style={{ width: "105px", height: "105px", background: "#000", borderRadius: "4px", margin: "4px auto" }} />
+                <div style={{ color: "#555", fontSize: "8px" }}>NMID: ID1029384756520</div>
+              </div>
+
+              <div style={{ fontSize: "0.9rem", color: "#94A3B8" }}>
+                Total Transfer Wajib (Termasuk Kode Unik):
+              </div>
+              <div style={{ fontSize: "1.8rem", fontWeight: 900, color: "#FBBF24", marginTop: "2px" }}>
+                Rp 6.345
+              </div>
+              <div style={{ fontSize: "0.75rem", color: "#34D399", marginTop: "3px" }}>
+                *Wajib transfer tepat hingga 3 digit terakhir (kode #{uniqueCode}) agar diverifikasi otomatis oleh OCR AI.
+              </div>
+            </div>
+
+            <div
+              style={{
+                padding: "0.85rem",
+                borderRadius: "8px",
+                background: "rgba(255, 255, 255, 0.05)",
+                fontSize: "0.8rem",
+                color: "#E2E8F0",
+                marginBottom: "1.25rem",
+                lineHeight: 1.6,
+              }}
+            >
+              <div><strong>Rekening Pusat:</strong> BCA 8001928374</div>
+              <div><strong>Atas Nama:</strong> PT OKESIH KARYA DIGITAL</div>
+            </div>
+
+            <button
+              onClick={() => {
+                alert("Silakan unggah foto/screenshot bukti transfer m-banking Anda untuk diverifikasi OCR otomatis.");
+                setIsCentralPaymentModalOpen(false);
+              }}
+              className="btn-primary"
+              style={{ width: "100%", background: "linear-gradient(135deg, #F59E0B, #D97706)", fontWeight: 800 }}
+            >
+              📷 Upload Bukti Transfer Setoran
+            </button>
           </div>
         </div>
       )}
