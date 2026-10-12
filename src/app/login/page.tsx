@@ -176,12 +176,9 @@ export default function LoginPage() {
               }}
             />
           </Link>
-          <h1 style={{ fontSize: "1.5rem", fontWeight: 900, letterSpacing: "-0.02em", marginBottom: "0.35rem" }}>
+          <h1 style={{ fontSize: "1.5rem", fontWeight: 900, letterSpacing: "-0.02em", marginBottom: "0" }}>
             Portal Operasional OKESIH
           </h1>
-          <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", lineHeight: 1.5 }}>
-            Masuk dengan kredensial Super Admin, Owner, Kasir, atau Tim Dapur.
-          </p>
         </div>
 
         {/* Form Login */}
@@ -363,26 +360,6 @@ export default function LoginPage() {
             )}
           </button>
         </form>
-
-        {/* Security Shield Note */}
-        <div
-          style={{
-            marginTop: "1.5rem",
-            paddingTop: "1.25rem",
-            borderTop: "1px solid rgba(255, 255, 255, 0.06)",
-            display: "flex",
-            alignItems: "flex-start",
-            gap: "0.5rem",
-            fontSize: "0.75rem",
-            color: "var(--text-dim)",
-            lineHeight: 1.5,
-          }}
-        >
-          <span>🛡️</span>
-          <span>
-            Sistem otomatis mendeteksi peran Anda dan mengarahkan langsung ke dashboard resmi yang berwenang.
-          </span>
-        </div>
       </div>
     </main>
   );

@@ -1236,7 +1236,7 @@ export default function HomePage() {
                 lineHeight: 1.65,
               }}
             >
-              Sudah memiliki akun resmi sebagai Super Admin, Owner Kafe, Kasir, atau Tim Dapur?
+              Sudah memiliki akun resmi?
               Masuk melalui portal terenkripsi untuk mengelola transaksi, memantau omzet, dan memperbarui menu secara real-time.
             </p>
 
@@ -1353,12 +1353,9 @@ export default function HomePage() {
                 >
                   🔐
                 </div>
-                <h3 style={{ fontSize: "1.45rem", fontWeight: 900, letterSpacing: "-0.02em", marginBottom: "0.35rem" }}>
+                <h3 style={{ fontSize: "1.45rem", fontWeight: 900, letterSpacing: "-0.02em", marginBottom: "0" }}>
                   Masuk ke Sistem OKESIH
                 </h3>
-                <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", lineHeight: 1.5 }}>
-                  Portal akses operasional terpadu Super Admin, Owner, Kasir, dan Dapur.
-                </p>
               </div>
 
               {/* Form Input */}
@@ -1540,26 +1537,6 @@ export default function HomePage() {
                   )}
                 </button>
               </form>
-
-              {/* Security Shield Note */}
-              <div
-                style={{
-                  marginTop: "1.5rem",
-                  paddingTop: "1.25rem",
-                  borderTop: "1px solid rgba(255, 255, 255, 0.06)",
-                  display: "flex",
-                  alignItems: "flex-start",
-                  gap: "0.5rem",
-                  fontSize: "0.75rem",
-                  color: "var(--text-dim)",
-                  lineHeight: 1.5,
-                }}
-              >
-                <span>🛡️</span>
-                <span>
-                  Sistem otomatis mendeteksi peran (Super Admin, Owner, Kasir, Dapur) dan mengarahkan langsung ke dashboard resmi yang berwenang.
-                </span>
-              </div>
             </div>
           </div>
         )}
