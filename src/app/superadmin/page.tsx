@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuthGuard, logoutUser } from "@/lib/auth-helpers";
 
 interface MarketingAgent {
   id: string;
   name: string;
   phone: string;
+  email?: string;
   area: string;
   referralCode: string;
   commissionPerReceipt: number;
@@ -18,7 +19,8 @@ interface MarketingAgent {
   totalReceiptsGenerated: number;
   totalCommissionEarned: number;
   commissionPaid: number;
-  status: "ACTIVE" | "INACTIVE";
+  status: "ACTIVE" | "PENDING" | "INACTIVE";
+  experienceNotes?: string;
 }
 
 interface TenantWarkop {
@@ -79,6 +81,84 @@ export default function SuperAdminDashboardPage() {
       status: "ACTIVE",
     },
   ]);
+
+  // Marketing Filter & Search State
+  const [marketingFilterStatus, setMarketingFilterStatus] = useState<"ALL" | "PENDING" | "ACTIVE" | "INACTIVE">("ALL");
+  const [marketingSearchQuery, setMarketingSearchQuery] = useState<string>("");
+
+  const loadMarketingPartners = async () => {
+    try {
+      const res = await fetch("/api/superadmin/marketing");
+      const json = await res.json();
+      if (json.data && Array.isArray(json.data) && json.data.length > 0) {
+        interface RawMarketingPartner {
+          id: string;
+          full_name: string;
+          phone: string;
+          email?: string;
+          city_area: string;
+          referral_code: string;
+          commission_rate: number;
+          bank_name: string;
+          bank_account_number: string;
+          bank_account_name: string;
+          total_tenants_acquired?: number;
+          total_receipts_generated?: number;
+          total_commission_earned?: number;
+          commission_paid?: number;
+          status: "ACTIVE" | "PENDING" | "INACTIVE";
+          experience_notes?: string;
+        }
+        const mapped: MarketingAgent[] = json.data.map((row: RawMarketingPartner) => ({
+          id: row.id,
+          name: row.full_name,
+          phone: row.phone,
+          email: row.email,
+          area: row.city_area,
+          referralCode: row.referral_code,
+          commissionPerReceipt: Number(row.commission_rate) || 15,
+          bankName: row.bank_name,
+          accountNumber: row.bank_account_number,
+          accountName: row.bank_account_name,
+          totalTenantsAcquired: row.total_tenants_acquired || 0,
+          totalReceiptsGenerated: row.total_receipts_generated || 0,
+          totalCommissionEarned: Number(row.total_commission_earned) || 0,
+          commissionPaid: Number(row.commission_paid) || 0,
+          status: row.status,
+          experienceNotes: row.experience_notes,
+        }));
+        setMarketingList(mapped);
+      }
+    } catch (e) {
+      console.error("Gagal memuat marketing partners:", e);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "marketing") {
+      loadMarketingPartners();
+    }
+  }, [activeTab]);
+
+  const handleUpdateMarketingStatus = async (id: string, newStatus: "ACTIVE" | "INACTIVE") => {
+    try {
+      const res = await fetch("/api/superadmin/marketing", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, status: newStatus }),
+      });
+      if (res.ok) {
+        setMarketingList((prev) =>
+          prev.map((m) => (m.id === id ? { ...m, status: newStatus } : m))
+        );
+        alert(`✓ Status Marketing berhasil diubah menjadi ${newStatus}!`);
+      } else {
+        alert("Gagal mengubah status di server.");
+      }
+    } catch {
+      alert("Terjadi kesalahan jaringan.");
+    }
+  };
 
   // State Tenant Warkop
   const [tenants, setTenants] = useState<TenantWarkop[]>([
@@ -874,31 +954,113 @@ export default function SuperAdminDashboardPage() {
               <div>
                 <h2 style={{ fontSize: "1.3rem", fontWeight: 800 }}>Manajemen Marketing Lapangan &amp; Bagi Hasil Komisi</h2>
                 <div style={{ fontSize: "0.825rem", color: "#94A3B8" }}>
-                  Daftarkan tim sales akuisisi warkop, tetapkan komisi bagi hasil per struk transaksi, dan kelola rekonsiliasi pencairan.
+                  Kelola pendaftar mitra marketing dari landing page, setujui aktivasi per wilayah, dan tetapkan komisi bagi hasil per struk transaksi.
                 </div>
               </div>
 
-              <button
-                onClick={() => {
-                  const codeSuffix = Math.floor(Math.random() * 89) + 10;
-                  setNewMarketingName("");
-                  setNewMarketingPhone("");
-                  setNewMarketingArea("");
-                  setNewMarketingCode(`MKT-${codeSuffix}`);
-                  setNewMarketingAccountNo("");
-                  setNewMarketingCommRate(defaultCommissionRate);
-                  setIsMarketingModalOpen(true);
-                }}
-                className="btn-primary"
-                style={{
-                  background: "linear-gradient(135deg, #10B981, #059669)",
-                  padding: "0.55rem 1.1rem",
-                  fontSize: "0.85rem",
-                  fontWeight: 800,
-                }}
-              >
-                + Daftarkan Marketing Lapangan
-              </button>
+              <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+                <button
+                  onClick={loadMarketingPartners}
+                  className="btn-secondary"
+                  style={{ padding: "0.55rem 0.95rem", fontSize: "0.85rem", fontWeight: 700 }}
+                >
+                  🔄 Refresh Data
+                </button>
+
+                <button
+                  onClick={() => {
+                    const codeSuffix = Math.floor(Math.random() * 89) + 10;
+                    setNewMarketingName("");
+                    setNewMarketingPhone("");
+                    setNewMarketingArea("");
+                    setNewMarketingCode(`MKT-${codeSuffix}`);
+                    setNewMarketingAccountNo("");
+                    setNewMarketingCommRate(defaultCommissionRate);
+                    setIsMarketingModalOpen(true);
+                  }}
+                  className="btn-primary"
+                  style={{
+                    background: "linear-gradient(135deg, #10B981, #059669)",
+                    padding: "0.55rem 1.1rem",
+                    fontSize: "0.85rem",
+                    fontWeight: 800,
+                  }}
+                >
+                  + Daftarkan Marketing Lapangan
+                </button>
+              </div>
+            </div>
+
+            {/* Filter & Pemetaan Wilayah Bar */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: "1rem",
+                padding: "0.85rem 1.15rem",
+                borderRadius: "10px",
+                background: "rgba(255, 255, 255, 0.03)",
+                border: "1px solid rgba(255, 255, 255, 0.06)",
+                marginBottom: "1.25rem",
+              }}
+            >
+              {/* Filter Status Pills */}
+              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
+                <span style={{ fontSize: "0.8rem", color: "#94A3B8", fontWeight: 700 }}>Status:</span>
+                {[
+                  { key: "ALL", label: `Semua (${marketingList.length})` },
+                  { key: "PENDING", label: `⏳ Pendaftar Baru (${marketingList.filter((m) => m.status === "PENDING").length})` },
+                  { key: "ACTIVE", label: `● Aktif (${marketingList.filter((m) => m.status === "ACTIVE").length})` },
+                  { key: "INACTIVE", label: `✕ Nonaktif (${marketingList.filter((m) => m.status === "INACTIVE").length})` },
+                ].map((tab) => (
+                  <button
+                    key={tab.key}
+                    onClick={() => setMarketingFilterStatus(tab.key as any)}
+                    style={{
+                      padding: "0.35rem 0.75rem",
+                      borderRadius: "6px",
+                      fontSize: "0.75rem",
+                      fontWeight: 800,
+                      cursor: "pointer",
+                      border: "none",
+                      background:
+                        marketingFilterStatus === tab.key
+                          ? tab.key === "PENDING"
+                            ? "#F59E0B"
+                            : tab.key === "ACTIVE"
+                            ? "#10B981"
+                            : "#0EA5E9"
+                          : "rgba(255, 255, 255, 0.06)",
+                      color: marketingFilterStatus === tab.key ? "#FFF" : "#94A3B8",
+                      transition: "all 0.2s ease",
+                    }}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Search & Map Wilayah Input */}
+              <div style={{ minWidth: "260px" }}>
+                <input
+                  type="text"
+                  placeholder="🔍 Cari Kota / Wilayah / Nama..."
+                  value={marketingSearchQuery}
+                  onChange={(e) => setMarketingSearchQuery(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "0.45rem 0.85rem",
+                    borderRadius: "6px",
+                    background: "#0F172A",
+                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                    color: "#FFF",
+                    fontSize: "0.8rem",
+                    outline: "none",
+                  }}
+                />
+              </div>
             </div>
 
             <div style={{ overflowX: "auto" }}>
@@ -906,104 +1068,223 @@ export default function SuperAdminDashboardPage() {
                 <thead>
                   <tr style={{ borderBottom: "1px solid rgba(16, 185, 129, 0.2)", color: "#34D399", fontSize: "0.75rem", textTransform: "uppercase" }}>
                     <th style={{ padding: "0.85rem 1rem" }}>Nama Marketing &amp; Kode</th>
-                    <th style={{ padding: "0.85rem 1rem" }}>No. WhatsApp &amp; Wilayah</th>
-                    <th style={{ padding: "0.85rem 1rem" }}>Tarif Komisi / Struk</th>
-                    <th style={{ padding: "0.85rem 1rem" }}>Warkop Diakuisisi</th>
+                    <th style={{ padding: "0.85rem 1rem" }}>No. WhatsApp &amp; Wilayah Pemetaan</th>
+                    <th style={{ padding: "0.85rem 1rem" }}>Status Akun</th>
+                    <th style={{ padding: "0.85rem 1rem" }}>Tarif Komisi</th>
+                    <th style={{ padding: "0.85rem 1rem" }}>Tenant Diakuisisi</th>
                     <th style={{ padding: "0.85rem 1rem" }}>Struk Dihasilkan</th>
                     <th style={{ padding: "0.85rem 1rem" }}>Total Komisi Berhak</th>
-                    <th style={{ padding: "0.85rem 1rem" }}>Sudah Dicairkan</th>
                     <th style={{ padding: "0.85rem 1rem" }}>Rekening Pencairan</th>
-                    <th style={{ padding: "0.85rem 1rem", textAlign: "right" }}>Aksi</th>
+                    <th style={{ padding: "0.85rem 1rem", textAlign: "right" }}>Aksi Manajemen</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {marketingList.map((m) => {
-                    const sisaKomisi = m.totalCommissionEarned - m.commissionPaid;
-                    return (
-                      <tr key={m.id} style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.05)" }}>
-                        <td style={{ padding: "1rem" }}>
-                          <div style={{ fontWeight: 800, color: "#FFF" }}>{m.name}</div>
-                          <span
-                            style={{
-                              background: "rgba(16, 185, 129, 0.15)",
-                              border: "1px solid rgba(16, 185, 129, 0.4)",
-                              color: "#34D399",
-                              padding: "0.15rem 0.5rem",
-                              borderRadius: "4px",
-                              fontWeight: 800,
-                              fontSize: "0.7rem",
-                              display: "inline-block",
-                              marginTop: "3px",
-                            }}
-                          >
-                            {m.referralCode}
-                          </span>
-                        </td>
+                  {marketingList
+                    .filter((m) => {
+                      const matchStatus = marketingFilterStatus === "ALL" || m.status === marketingFilterStatus;
+                      const q = marketingSearchQuery.toLowerCase();
+                      const matchQuery =
+                        !q ||
+                        m.name.toLowerCase().includes(q) ||
+                        m.area.toLowerCase().includes(q) ||
+                        m.referralCode.toLowerCase().includes(q);
+                      return matchStatus && matchQuery;
+                    })
+                    .map((m) => {
+                      const sisaKomisi = m.totalCommissionEarned - m.commissionPaid;
+                      return (
+                        <tr key={m.id} style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.05)" }}>
+                          <td style={{ padding: "1rem" }}>
+                            <div style={{ fontWeight: 800, color: "#FFF" }}>{m.name}</div>
+                            <span
+                              style={{
+                                background: "rgba(16, 185, 129, 0.15)",
+                                border: "1px solid rgba(16, 185, 129, 0.4)",
+                                color: "#34D399",
+                                padding: "0.15rem 0.5rem",
+                                borderRadius: "4px",
+                                fontWeight: 800,
+                                fontSize: "0.7rem",
+                                display: "inline-block",
+                                marginTop: "3px",
+                              }}
+                            >
+                              {m.referralCode}
+                            </span>
+                            {m.experienceNotes && (
+                              <div style={{ fontSize: "0.72rem", color: "#94A3B8", marginTop: "4px" }}>
+                                💡 {m.experienceNotes}
+                              </div>
+                            )}
+                          </td>
 
-                        <td style={{ padding: "1rem" }}>
-                          <div style={{ color: "#E2E8F0" }}>{m.phone}</div>
-                          <div style={{ fontSize: "0.75rem", color: "#94A3B8" }}>📍 {m.area}</div>
-                        </td>
-
-                        <td style={{ padding: "1rem" }}>
-                          <span style={{ fontWeight: 800, color: "#FBBF24" }}>
-                            Rp {m.commissionPerReceipt} / struk
-                          </span>
-                        </td>
-
-                        <td style={{ padding: "1rem" }}>
-                          <span style={{ fontWeight: 800, color: "#38BDF8" }}>
-                            {m.totalTenantsAcquired} Tenant
-                          </span>
-                        </td>
-
-                        <td style={{ padding: "1rem" }}>
-                          <div style={{ fontWeight: 800 }}>{m.totalReceiptsGenerated} Struk</div>
-                        </td>
-
-                        <td style={{ padding: "1rem" }}>
-                          <div style={{ fontWeight: 900, color: "#34D399" }}>
-                            Rp {m.totalCommissionEarned.toLocaleString("id-ID")}
-                          </div>
-                        </td>
-
-                        <td style={{ padding: "1rem" }}>
-                          <div style={{ color: "#94A3B8" }}>
-                            Rp {m.commissionPaid.toLocaleString("id-ID")}
-                          </div>
-                          {sisaKomisi > 0 && (
-                            <div style={{ fontSize: "0.75rem", color: "#F87171", fontWeight: 700 }}>
-                              Sisa: Rp {sisaKomisi.toLocaleString("id-ID")}
+                          <td style={{ padding: "1rem" }}>
+                            <div style={{ color: "#E2E8F0" }}>{m.phone}</div>
+                            <div style={{ fontSize: "0.75rem", color: "#38BDF8", fontWeight: 700, marginTop: "2px" }}>
+                              📍 {m.area}
                             </div>
-                          )}
-                        </td>
+                          </td>
 
-                        <td style={{ padding: "1rem" }}>
-                          <div style={{ fontWeight: 700, fontSize: "0.8rem" }}>
-                            {m.bankName} - {m.accountNumber}
-                          </div>
-                          <div style={{ fontSize: "0.72rem", color: "#64748B" }}>a/n {m.accountName}</div>
-                        </td>
+                          <td style={{ padding: "1rem" }}>
+                            {m.status === "PENDING" && (
+                              <span
+                                style={{
+                                  background: "rgba(245, 158, 11, 0.15)",
+                                  border: "1px solid #F59E0B",
+                                  color: "#FBBF24",
+                                  padding: "0.2rem 0.55rem",
+                                  borderRadius: "var(--radius-pill)",
+                                  fontSize: "0.7rem",
+                                  fontWeight: 800,
+                                }}
+                              >
+                                ⏳ Pendaftar Baru
+                              </span>
+                            )}
+                            {m.status === "ACTIVE" && (
+                              <span
+                                style={{
+                                  background: "rgba(16, 185, 129, 0.15)",
+                                  border: "1px solid #10B981",
+                                  color: "#34D399",
+                                  padding: "0.2rem 0.55rem",
+                                  borderRadius: "var(--radius-pill)",
+                                  fontSize: "0.7rem",
+                                  fontWeight: 800,
+                                }}
+                              >
+                                ● Aktif
+                              </span>
+                            )}
+                            {m.status === "INACTIVE" && (
+                              <span
+                                style={{
+                                  background: "rgba(239, 68, 68, 0.15)",
+                                  border: "1px solid #EF4444",
+                                  color: "#FCA5A5",
+                                  padding: "0.2rem 0.55rem",
+                                  borderRadius: "var(--radius-pill)",
+                                  fontSize: "0.7rem",
+                                  fontWeight: 800,
+                                }}
+                              >
+                                ✕ Nonaktif
+                              </span>
+                            )}
+                          </td>
 
-                        <td style={{ padding: "1rem", textAlign: "right" }}>
-                          <button
-                            onClick={() => {
-                              alert(`Pencairan komisi untuk ${m.name} sebesar Rp ${sisaKomisi.toLocaleString("id-ID")} telah diproses ke ${m.bankName} ${m.accountNumber}`);
-                              setMarketingList((prev) =>
-                                prev.map((item) =>
-                                  item.id === m.id ? { ...item, commissionPaid: item.totalCommissionEarned } : item
-                                )
-                              );
-                            }}
-                            className="btn-secondary"
-                            style={{ padding: "0.4rem 0.75rem", fontSize: "0.75rem" }}
-                          >
-                            Cairkan Komisi
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                          <td style={{ padding: "1rem" }}>
+                            <span style={{ fontWeight: 800, color: "#FBBF24" }}>
+                              Rp {m.commissionPerReceipt} / struk
+                            </span>
+                          </td>
+
+                          <td style={{ padding: "1rem" }}>
+                            <span style={{ fontWeight: 800, color: "#38BDF8" }}>
+                              {m.totalTenantsAcquired} Tenant
+                            </span>
+                          </td>
+
+                          <td style={{ padding: "1rem" }}>
+                            <div style={{ fontWeight: 800 }}>{m.totalReceiptsGenerated} Struk</div>
+                          </td>
+
+                          <td style={{ padding: "1rem" }}>
+                            <div style={{ fontWeight: 900, color: "#34D399" }}>
+                              Rp {m.totalCommissionEarned.toLocaleString("id-ID")}
+                            </div>
+                            <div style={{ fontSize: "0.72rem", color: "#64748B" }}>
+                              Dicairkan: Rp {m.commissionPaid.toLocaleString("id-ID")}
+                            </div>
+                            {sisaKomisi > 0 && (
+                              <div style={{ fontSize: "0.75rem", color: "#F87171", fontWeight: 700 }}>
+                                Sisa: Rp {sisaKomisi.toLocaleString("id-ID")}
+                              </div>
+                            )}
+                          </td>
+
+                          <td style={{ padding: "1rem" }}>
+                            <div style={{ fontWeight: 700, fontSize: "0.8rem" }}>
+                              {m.bankName} - {m.accountNumber}
+                            </div>
+                            <div style={{ fontSize: "0.72rem", color: "#64748B" }}>a/n {m.accountName}</div>
+                          </td>
+
+                          <td style={{ padding: "1rem", textAlign: "right" }}>
+                            <div style={{ display: "flex", gap: "0.4rem", justifyContent: "flex-end" }}>
+                              {m.status === "PENDING" ? (
+                                <>
+                                  <button
+                                    onClick={() => handleUpdateMarketingStatus(m.id, "ACTIVE")}
+                                    className="btn-primary"
+                                    style={{
+                                      background: "linear-gradient(135deg, #10B981, #059669)",
+                                      padding: "0.35rem 0.75rem",
+                                      fontSize: "0.75rem",
+                                      fontWeight: 800,
+                                    }}
+                                  >
+                                    ✓ Setujui
+                                  </button>
+                                  <button
+                                    onClick={() => handleUpdateMarketingStatus(m.id, "INACTIVE")}
+                                    className="btn-secondary"
+                                    style={{
+                                      padding: "0.35rem 0.65rem",
+                                      fontSize: "0.75rem",
+                                      color: "#F87171",
+                                    }}
+                                  >
+                                    ✕ Tolak
+                                  </button>
+                                </>
+                              ) : (
+                                <>
+                                  <button
+                                    onClick={() => {
+                                      alert(`Pencairan komisi untuk ${m.name} sebesar Rp ${sisaKomisi.toLocaleString("id-ID")} telah diproses ke ${m.bankName} ${m.accountNumber}`);
+                                      setMarketingList((prev) =>
+                                        prev.map((item) =>
+                                          item.id === m.id ? { ...item, commissionPaid: item.totalCommissionEarned } : item
+                                        )
+                                      );
+                                    }}
+                                    disabled={sisaKomisi <= 0}
+                                    className="btn-secondary"
+                                    style={{
+                                      padding: "0.4rem 0.75rem",
+                                      fontSize: "0.75rem",
+                                      opacity: sisaKomisi <= 0 ? 0.5 : 1,
+                                    }}
+                                  >
+                                    Cairkan Komisi
+                                  </button>
+                                  {m.status === "ACTIVE" ? (
+                                    <button
+                                      onClick={() => handleUpdateMarketingStatus(m.id, "INACTIVE")}
+                                      className="btn-secondary"
+                                      style={{ padding: "0.4rem 0.55rem", fontSize: "0.75rem", color: "#94A3B8" }}
+                                      title="Nonaktifkan Kemitraan"
+                                    >
+                                      Suspend
+                                    </button>
+                                  ) : (
+                                    <button
+                                      onClick={() => handleUpdateMarketingStatus(m.id, "ACTIVE")}
+                                      className="btn-secondary"
+                                      style={{ padding: "0.4rem 0.55rem", fontSize: "0.75rem", color: "#34D399" }}
+                                      title="Aktifkan Kembali"
+                                    >
+                                      Aktifkan
+                                    </button>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                 </tbody>
               </table>
             </div>
