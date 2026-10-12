@@ -229,9 +229,9 @@ export default function HomePage() {
             <a href="#tarif" style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: 600, textDecoration: "none" }}>
               Biaya Sewa
             </a>
-            <a href="#rekrutmen-marketing" style={{ color: "#34D399", fontSize: "0.85rem", fontWeight: 700, textDecoration: "none" }}>
+            <Link href="/marketing" style={{ color: "#34D399", fontSize: "0.85rem", fontWeight: 700, textDecoration: "none" }}>
               💼 Mitra Marketing
-            </a>
+            </Link>
             <a href="#faq" style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: 600, textDecoration: "none" }}>
               FAQ
             </a>
@@ -240,7 +240,7 @@ export default function HomePage() {
           {/* Action Buttons & Hamburger Toggle */}
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
             <Link
-              href="/marketing/daftar"
+              href="/marketing"
               className="marketing-pill-btn desktop-only-btn"
             >
               <span>💼</span>
@@ -325,8 +325,8 @@ export default function HomePage() {
               <span>🏷️ Biaya Sewa Rp 50</span>
               <span>→</span>
             </a>
-            <a
-              href="#rekrutmen-marketing"
+            <Link
+              href="/marketing"
               className="mobile-nav-link"
               onClick={() => setIsMobileMenuOpen(false)}
               style={{
@@ -336,9 +336,9 @@ export default function HomePage() {
                 fontWeight: 800,
               }}
             >
-              <span>💼 Karir Mitra Marketing (Rp 15/Struk)</span>
+              <span>💼 Program Mitra Marketing (Rp 15/Struk)</span>
               <span>→</span>
-            </a>
+            </Link>
             <a
               href="#faq"
               className="mobile-nav-link"
@@ -876,42 +876,32 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* SECTION: PROGRAM KEMITRAAN & REKRUTMEN MARKETING LAPANGAN */}
+        {/* BANNER AJAKAN: PROGRAM KEMITRAAN MARKETING RESMI (AKSES HALAMAN KHUSUS) */}
         <section
           id="rekrutmen-marketing"
           className="section-container"
           style={{
-            padding: "4.5rem 2rem",
-            maxWidth: "1160px",
+            padding: "3.5rem 1.5rem",
+            maxWidth: "1080px",
             margin: "0 auto",
             width: "100%",
-            position: "relative",
           }}
         >
-          {/* Ambient Glow Khusus Section Marketing (Hijau Zamrud & Emas - Terisolasi) */}
           <div
+            className="glass-panel-glow mobile-compact-panel"
             style={{
-              position: "absolute",
-              inset: 0,
-              overflow: "hidden",
-              pointerEvents: "none",
-              zIndex: 0,
+              padding: "3.5rem 2.5rem",
+              borderRadius: "24px",
+              border: "1px solid rgba(16, 185, 129, 0.4)",
+              background: "linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(13, 13, 14, 0.98) 100%)",
+              boxShadow: "0 18px 50px rgba(0, 0, 0, 0.7), 0 0 35px rgba(16, 185, 129, 0.15)",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              textAlign: "center",
+              gap: "1.25rem",
             }}
           >
-            <div
-              className="organic-shape"
-              style={{
-                width: "480px",
-                height: "480px",
-                top: "10%",
-                left: "-100px",
-                background: "radial-gradient(circle, #10B981 0%, rgba(16, 185, 129, 0) 70%)",
-                opacity: 0.12,
-              }}
-            />
-          </div>
-
-          <div style={{ textAlign: "center", marginBottom: "3rem" }}>
             <div
               style={{
                 display: "inline-flex",
@@ -922,9 +912,8 @@ export default function HomePage() {
                 backgroundColor: "rgba(16, 185, 129, 0.15)",
                 border: "1px solid rgba(16, 185, 129, 0.4)",
                 color: "#34D399",
-                fontSize: "0.825rem",
+                fontSize: "0.8rem",
                 fontWeight: 800,
-                marginBottom: "1rem",
                 textTransform: "uppercase",
                 letterSpacing: "0.06em",
               }}
@@ -934,11 +923,12 @@ export default function HomePage() {
 
             <h2
               style={{
-                fontSize: "clamp(2rem, 4vw, 2.75rem)",
+                fontSize: "clamp(1.75rem, 3.5vw, 2.4rem)",
                 fontWeight: 900,
-                letterSpacing: "-0.03em",
-                marginBottom: "1rem",
-                lineHeight: 1.2,
+                letterSpacing: "-0.025em",
+                lineHeight: 1.25,
+                color: "#FFF",
+                maxWidth: "780px",
               }}
             >
               Raih Komisi Pasif Harian Bersama{" "}
@@ -955,142 +945,34 @@ export default function HomePage() {
 
             <p
               style={{
-                fontSize: "1.05rem",
+                fontSize: "0.95rem",
                 color: "var(--text-muted)",
-                maxWidth: "780px",
-                margin: "0 auto",
+                maxWidth: "680px",
                 lineHeight: 1.6,
+                margin: "0 auto",
               }}
             >
               Daftarkan warkop, kafe, resto, dan pedagang kuliner di wilayah Anda. Nikmati komisi bagi hasil otomatis{" "}
-              <strong style={{ color: "#34D399" }}>Rp 15 per struk transaksi</strong> seumur hidup yang dicairkan langsung ke rekening Anda!
-            </p>
-          </div>
-
-          {/* Grid Keuntungan Menjadi Mitra */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-              gap: "1.25rem",
-              marginBottom: "3rem",
-            }}
-          >
-            <div className="glass-panel mobile-compact-panel" style={{ padding: "1.5rem", border: "1px solid rgba(16, 185, 129, 0.25)" }}>
-              <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>📈</div>
-              <h3 style={{ fontSize: "1.1rem", fontWeight: 800, marginBottom: "0.4rem", color: "#34D399" }}>
-                Komisi Pasif Berulang
-              </h3>
-              <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", lineHeight: 1.55 }}>
-                10 tenant aktif mencetak rata-rata 150 struk/hari = Rp 22.500/hari atau sekitar <strong>Rp 675.000/bulan</strong> uang mengalir otomatis tanpa Anda harus jaga toko.
-              </p>
-            </div>
-
-            <div className="glass-panel mobile-compact-panel" style={{ padding: "1.5rem", border: "1px solid rgba(16, 185, 129, 0.25)" }}>
-              <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>🗺️</div>
-              <h3 style={{ fontSize: "1.1rem", fontWeight: 800, marginBottom: "0.4rem", color: "#34D399" }}>
-                Pemetaan Wilayah &amp; Referral
-              </h3>
-              <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", lineHeight: 1.55 }}>
-                Dapatkan kode referral eksklusif terdaftar resmi di Okesih.com. Warkop yang mendaftar lewat Anda terkunci aman di bawah akun kemitraan Anda.
-              </p>
-            </div>
-
-            <div className="glass-panel mobile-compact-panel" style={{ padding: "1.5rem", border: "1px solid rgba(16, 185, 129, 0.25)" }}>
-              <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>⏱️</div>
-              <h3 style={{ fontSize: "1.1rem", fontWeight: 800, marginBottom: "0.4rem", color: "#34D399" }}>
-                100% Bebas &amp; Fleksibel
-              </h3>
-              <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", lineHeight: 1.55 }}>
-                Tanpa jam kerja kaku ataupun target kantor yang menekan. Bisa dijalankan paruh waktu (sambilan) maupun fokus penuh waktu.
-              </p>
-            </div>
-
-            <div className="glass-panel mobile-compact-panel" style={{ padding: "1.5rem", border: "1px solid rgba(16, 185, 129, 0.25)" }}>
-              <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>💳</div>
-              <h3 style={{ fontSize: "1.1rem", fontWeight: 800, marginBottom: "0.4rem", color: "#34D399" }}>
-                Pencairan Langsung
-              </h3>
-              <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", lineHeight: 1.55 }}>
-                Rekapitulasi struk transparan. Dana komisi ditransfer cepat ke rekening bank (BCA, Mandiri, BRI, BNI) atau e-wallet (Dana, GoPay) pilihan Anda.
-              </p>
-            </div>
-          </div>
-
-          {/* Card Ajakan & Tombol Akses Formulir Pendaftaran */}
-          <div
-            className="glass-panel-glow mobile-compact-panel"
-            style={{
-              padding: "3rem 2.25rem",
-              borderRadius: "20px",
-              border: "1px solid rgba(16, 185, 129, 0.4)",
-              background: "linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(13, 13, 14, 0.98) 100%)",
-              boxShadow: "0 14px 45px rgba(0, 0, 0, 0.6), 0 0 35px rgba(16, 185, 129, 0.15)",
-              maxWidth: "860px",
-              margin: "0 auto",
-              textAlign: "center",
-            }}
-          >
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "0.5rem",
-                padding: "0.4rem 1.15rem",
-                borderRadius: "var(--radius-pill)",
-                backgroundColor: "rgba(16, 185, 129, 0.15)",
-                border: "1px solid rgba(16, 185, 129, 0.4)",
-                color: "#34D399",
-                fontSize: "0.8rem",
-                fontWeight: 800,
-                marginBottom: "1.25rem",
-                textTransform: "uppercase",
-                letterSpacing: "0.06em",
-              }}
-            >
-              🚀 BERGABUNG SEKARANG JUGA
-            </div>
-
-            <h3
-              style={{
-                fontSize: "clamp(1.4rem, 2.5vw, 1.85rem)",
-                fontWeight: 900,
-                marginBottom: "0.75rem",
-                color: "#FFF",
-                letterSpacing: "-0.01em",
-              }}
-            >
-              Siap Menghasilkan Pendapatan Pasif Tanpa Batas?
-            </h3>
-            <p
-              style={{
-                fontSize: "0.95rem",
-                color: "var(--text-muted)",
-                maxWidth: "600px",
-                margin: "0 auto 2rem",
-                lineHeight: 1.6,
-              }}
-            >
-              Pendaftaran 100% gratis tanpa dipungut biaya apapun. Buka formulir pendaftaran untuk mendapatkan kode referral unik dan bergabung dengan jaringan kemitraan resmi OKESIH.
+              <strong style={{ color: "#34D399" }}>Rp 15 per struk transaksi</strong> seumur hidup yang dicairkan langsung ke rekening bank atau e-wallet Anda.
             </p>
 
             <div
               style={{
                 display: "flex",
-                justifyContent: "center",
                 alignItems: "center",
-                flexWrap: "wrap",
+                justifyContent: "center",
                 gap: "1rem",
-                marginBottom: "1.75rem",
+                flexWrap: "wrap",
+                marginTop: "0.75rem",
               }}
             >
               <Link
-                href="/marketing/daftar"
+                href="/marketing"
                 className="btn-primary"
                 style={{
                   background: "linear-gradient(135deg, #10B981, #059669)",
                   padding: "1rem 2.25rem",
-                  fontSize: "1rem",
+                  fontSize: "0.95rem",
                   fontWeight: 900,
                   borderRadius: "14px",
                   display: "inline-flex",
@@ -1099,29 +981,47 @@ export default function HomePage() {
                   boxShadow: "0 6px 24px rgba(16, 185, 129, 0.4)",
                   textDecoration: "none",
                   color: "#FFF",
-                  transition: "all 0.2s ease",
                 }}
               >
-                <span>📝</span>
-                <span>Buka Formulir Pendaftaran Mitra Marketing</span>
+                <span>Pelajari Detail Program &amp; Simulasi Komisi</span>
                 <span>→</span>
+              </Link>
+
+              <Link
+                href="/marketing/daftar"
+                style={{
+                  padding: "1rem 1.75rem",
+                  fontSize: "0.9rem",
+                  fontWeight: 700,
+                  borderRadius: "14px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  textDecoration: "none",
+                  color: "#E2E8F0",
+                  background: "rgba(255, 255, 255, 0.05)",
+                  border: "1px solid rgba(255, 255, 255, 0.12)",
+                }}
+              >
+                <span>📝 Buka Formulir Pendaftaran</span>
               </Link>
             </div>
 
             <div
               style={{
+                marginTop: "0.75rem",
                 display: "flex",
                 justifyContent: "center",
                 alignItems: "center",
                 gap: "1.5rem",
                 flexWrap: "wrap",
-                fontSize: "0.8rem",
+                fontSize: "0.78rem",
                 color: "var(--text-dim)",
               }}
             >
               <span>✓ 100% Gratis &amp; Tanpa Modal</span>
               <span>✓ Kode Referral Resmi Okesih.com</span>
-              <span>✓ Notifikasi WhatsApp Langsung</span>
+              <span>✓ Rekap Struk Otomatis</span>
             </div>
           </div>
         </section>
@@ -1646,6 +1546,7 @@ export default function HomePage() {
               <a href="#solusi" style={{ color: "var(--text-muted)", textDecoration: "none" }}>Solusi Usaha</a>
               <a href="#fitur" style={{ color: "var(--text-muted)", textDecoration: "none" }}>Fitur Modul</a>
               <a href="#tarif" style={{ color: "var(--text-muted)", textDecoration: "none" }}>Skema Sewa</a>
+              <Link href="/marketing" style={{ color: "#34D399", textDecoration: "none", fontWeight: 700 }}>Mitra Marketing</Link>
               <a href="#faq" style={{ color: "var(--text-muted)", textDecoration: "none" }}>Bantuan FAQ</a>
             </div>
 
