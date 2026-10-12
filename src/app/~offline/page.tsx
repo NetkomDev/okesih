@@ -29,7 +29,7 @@ export default function OfflineFallbackPage() {
         }}
       >
         <div style={{ display: "flex", justifyContent: "center", marginBottom: "1.25rem" }}>
-          <img src="/logo.svg" alt="OKESIH Logo" width={48} height={48} style={{ objectFit: "contain" }} />
+          <img src="/logo.svg?v=2" alt="OKESIH Logo" width={48} height={48} style={{ objectFit: "contain" }} />
         </div>
 
         <h1

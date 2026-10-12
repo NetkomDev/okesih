@@ -144,7 +144,7 @@ export default function MarketingRegisterPage() {
           <Link href="/" style={{ textDecoration: "none", color: "inherit" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
               <img
-                src="/logo.svg"
+                src="/logo.svg?v=2"
                 alt="Logo OKESIH.COM"
                 width={40}
                 height={40}

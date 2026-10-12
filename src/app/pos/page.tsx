@@ -253,7 +253,7 @@ export default function PosModulePage() {
         <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
           <Link href="/" style={{ fontSize: "1.2rem", fontWeight: 800, display: "flex", alignItems: "center", gap: "0.5rem", textDecoration: "none", color: "inherit" }}>
             <img
-              src="/logo.svg"
+              src="/logo.svg?v=2"
               alt="Logo OKESIH.COM"
               width={36}
               height={36}

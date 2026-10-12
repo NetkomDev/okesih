@@ -88,7 +88,7 @@ export default function KdsModulePage() {
         <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
           <Link href="/" style={{ fontSize: "1.25rem", fontWeight: 900, display: "flex", alignItems: "center", gap: "0.5rem", textDecoration: "none", color: "inherit" }}>
             <img
-              src="/logo.svg"
+              src="/logo.svg?v=2"
               alt="Logo OKESIH.COM"
               width={34}
               height={34}

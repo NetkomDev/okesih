@@ -144,7 +144,7 @@ export default function CustomerMenuPage({
               </button>
             </div>
             <Link href="/" style={{ fontSize: "0.8rem", color: "var(--text-dim)", display: "flex", alignItems: "center", gap: "0.35rem", textDecoration: "none" }}>
-              <img src="/logo.svg" alt="OKESIH Logo" width={18} height={18} style={{ objectFit: "contain" }} />
+              <img src="/logo.svg?v=2" alt="OKESIH Logo" width={18} height={18} style={{ objectFit: "contain" }} />
               <span>OKESIH</span>
             </Link>
           </div>

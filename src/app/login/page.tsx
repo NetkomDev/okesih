@@ -162,7 +162,7 @@ export default function LoginPage() {
         <div style={{ textAlign: "center", marginBottom: "1.75rem" }}>
           <Link href="/" style={{ textDecoration: "none", display: "inline-block" }}>
             <img
-              src="/logo.svg"
+              src="/logo.svg?v=2"
               alt="Logo OKESIH.COM"
               width={72}
               height={72}

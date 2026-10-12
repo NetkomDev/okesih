@@ -189,7 +189,7 @@ export default function HomePage() {
           {/* Logo & Brand */}
           <Link href="/" style={{ display: "flex", alignItems: "center", gap: "0.85rem", textDecoration: "none", color: "inherit" }}>
             <img
-              src="/logo.svg"
+              src="/logo.svg?v=2"
               alt="Logo OKESIH.COM"
               width={46}
               height={46}
@@ -1549,7 +1549,7 @@ export default function HomePage() {
           >
             <div style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
               <img
-                src="/logo.svg"
+                src="/logo.svg?v=2"
                 alt="Logo OKESIH.COM"
                 width={42}
                 height={42}

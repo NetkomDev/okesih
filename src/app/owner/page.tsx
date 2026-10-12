@@ -276,7 +276,7 @@ export default function TenantOwnerDashboardPage() {
       >
         <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
           <img
-            src="/logo.svg"
+            src="/logo.svg?v=2"
             alt="Logo OKESIH.COM"
             width={46}
             height={46}

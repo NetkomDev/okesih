@@ -78,12 +78,9 @@ export const metadata: Metadata = {
     title: "OKESIH",
   },
   icons: {
-    icon: [
-      { url: "/favicon.svg", type: "image/svg+xml" },
-      { url: "/logo.svg", type: "image/svg+xml" },
-    ],
-    shortcut: "/favicon.svg",
-    apple: "/logo.svg",
+    icon: [{ url: "/favicon.svg?v=2", type: "image/svg+xml" }],
+    shortcut: "/favicon.svg?v=2",
+    apple: "/logo.svg?v=2",
   },
 };
 
@@ -103,8 +100,8 @@ export default function RootLayout({
   return (
     <html lang="id" suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable}`}>
       <head>
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-        <link rel="apple-touch-icon" href="/logo.svg" />
+        <link rel="icon" href="/favicon.svg?v=2" type="image/svg+xml" />
+        <link rel="apple-touch-icon" href="/logo.svg?v=2" />
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var s=localStorage.getItem("okesih-theme");var p=s||(window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark");document.documentElement.setAttribute("data-theme",p);}catch(e){}})();`,

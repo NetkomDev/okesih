@@ -91,7 +91,7 @@ export default function TvQueuePage() {
         <div style={{ display: "flex", alignItems: "center", gap: "1.25rem" }}>
           <Link href="/" style={{ fontSize: "1.75rem", fontWeight: 900, display: "flex", alignItems: "center", gap: "0.75rem", textDecoration: "none", color: "inherit" }}>
             <img
-              src="/logo.svg"
+              src="/logo.svg?v=2"
               alt="Logo OKESIH.COM"
               width={48}
               height={48}
