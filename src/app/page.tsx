@@ -992,7 +992,7 @@ export default function HomePage() {
                 Pemetaan Wilayah &amp; Referral
               </h3>
               <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", lineHeight: 1.55 }}>
-                Dapatkan kode referral eksklusif terdaftar resmi di Super Admin HQ. Warkop yang mendaftar lewat Anda terkunci aman di bawah akun kemitraan Anda.
+                Dapatkan kode referral eksklusif terdaftar resmi di Okesih.com. Warkop yang mendaftar lewat Anda terkunci aman di bawah akun kemitraan Anda.
               </p>
             </div>
 
@@ -1120,7 +1120,7 @@ export default function HomePage() {
               }}
             >
               <span>✓ 100% Gratis &amp; Tanpa Modal</span>
-              <span>✓ Kode Referral Resmi HQ</span>
+              <span>✓ Kode Referral Resmi Okesih.com</span>
               <span>✓ Notifikasi WhatsApp Langsung</span>
             </div>
           </div>

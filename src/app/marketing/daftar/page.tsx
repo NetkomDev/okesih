@@ -210,7 +210,7 @@ export default function MarketingRegisterPage() {
           </h1>
 
           <p style={{ fontSize: "0.925rem", color: "var(--text-muted)", maxWidth: "600px", margin: "0 auto", lineHeight: 1.6 }}>
-            Dapatkan kode referral eksklusif terdaftar resmi di Super Admin HQ. Nikmati bagi hasil otomatis{" "}
+            Dapatkan kode referral eksklusif terdaftar resmi di Okesih.com. Nikmati bagi hasil otomatis{" "}
             <strong style={{ color: "#34D399" }}>Rp 15 per struk transaksi</strong> seumur hidup untuk setiap warkop/resto yang Anda daftarkan!
           </p>
         </div>
@@ -272,7 +272,7 @@ export default function MarketingRegisterPage() {
                   textDecoration: "none",
                 }}
               >
-                <span>💬 Konfirmasi via WhatsApp HQ Sekarang</span>
+                <span>💬 Konfirmasi via WhatsApp Okesih.com Sekarang</span>
                 <span>→</span>
               </a>
             </div>
