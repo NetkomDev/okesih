@@ -20,60 +20,6 @@ export default function HomePage() {
   // Mobile Menu State
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Marketing Registration Form State
-  const [mktFullName, setMktFullName] = useState("");
-  const [mktPhone, setMktPhone] = useState("");
-  const [mktEmail, setMktEmail] = useState("");
-  const [mktCityArea, setMktCityArea] = useState("");
-  const [mktBankName, setMktBankName] = useState("BCA");
-  const [mktBankAccountNo, setMktBankAccountNo] = useState("");
-  const [mktBankAccountName, setMktBankAccountName] = useState("");
-  const [mktNotes, setMktNotes] = useState("");
-  const [mktSubmitting, setMktSubmitting] = useState(false);
-  const [mktSuccess, setMktSuccess] = useState<{ referralCode: string; fullName: string; cityArea: string } | null>(null);
-  const [mktError, setMktError] = useState("");
-
-  const handleMarketingSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setMktSubmitting(true);
-    setMktError("");
-    setMktSuccess(null);
-
-    try {
-      const res = await fetch("/api/marketing/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fullName: mktFullName,
-          phone: mktPhone,
-          email: mktEmail,
-          cityArea: mktCityArea,
-          bankName: mktBankName,
-          bankAccountNumber: mktBankAccountNo,
-          bankAccountName: mktBankAccountName,
-          experienceNotes: mktNotes,
-        }),
-      });
-
-      const result = await res.json();
-      if (!res.ok) {
-        throw new Error(result.error || "Gagal memproses pendaftaran.");
-      }
-
-      setMktSuccess(result.data);
-      setMktFullName("");
-      setMktPhone("");
-      setMktEmail("");
-      setMktCityArea("");
-      setMktBankAccountNo("");
-      setMktBankAccountName("");
-      setMktNotes("");
-    } catch (err: unknown) {
-      setMktError(err instanceof Error ? err.message : "Terjadi kesalahan sistem saat mengirim pendaftaran.");
-    } finally {
-      setMktSubmitting(false);
-    }
-  };
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -293,13 +239,13 @@ export default function HomePage() {
 
           {/* Action Buttons & Hamburger Toggle */}
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-            <a
-              href="#rekrutmen-marketing"
+            <Link
+              href="/marketing/daftar"
               className="marketing-pill-btn desktop-only-btn"
             >
               <span>💼</span>
               <span>Jadi Mitra Marketing</span>
-            </a>
+            </Link>
 
             <button
               type="button"
@@ -1071,341 +1017,112 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Form Pendaftaran Online Mitra Marketing */}
+          {/* Card Ajakan & Tombol Akses Formulir Pendaftaran */}
           <div
             className="glass-panel-glow mobile-compact-panel"
             style={{
-              padding: "2.75rem 2.25rem",
-              borderRadius: "16px",
-              border: "1px solid rgba(16, 185, 129, 0.45)",
-              background: "linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(13, 13, 14, 0.96) 100%)",
-              boxShadow: "0 10px 40px rgba(16, 185, 129, 0.15)",
+              padding: "3rem 2.25rem",
+              borderRadius: "20px",
+              border: "1px solid rgba(16, 185, 129, 0.4)",
+              background: "linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(13, 13, 14, 0.98) 100%)",
+              boxShadow: "0 14px 45px rgba(0, 0, 0, 0.6), 0 0 35px rgba(16, 185, 129, 0.15)",
               maxWidth: "860px",
               margin: "0 auto",
+              textAlign: "center",
             }}
           >
-            <div style={{ textAlign: "center", marginBottom: "2rem" }}>
-              <div style={{ fontSize: "2.2rem", marginBottom: "0.5rem" }}>📝</div>
-              <h3 style={{ fontSize: "1.5rem", fontWeight: 900 }}>
-                Formulir Pendaftaran Mitra Marketing Lapangan
-              </h3>
-              <p style={{ fontSize: "0.875rem", color: "var(--text-muted)", maxWidth: "560px", margin: "0 auto" }}>
-                Isi data diri Anda di bawah ini secara lengkap. Sistem akan menerbitkan kode referral unik dan mengirimkan notifikasi ke Super Admin untuk aktivasi.
-              </p>
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.5rem",
+                padding: "0.4rem 1.15rem",
+                borderRadius: "var(--radius-pill)",
+                backgroundColor: "rgba(16, 185, 129, 0.15)",
+                border: "1px solid rgba(16, 185, 129, 0.4)",
+                color: "#34D399",
+                fontSize: "0.8rem",
+                fontWeight: 800,
+                marginBottom: "1.25rem",
+                textTransform: "uppercase",
+                letterSpacing: "0.06em",
+              }}
+            >
+              🚀 BERGABUNG SEKARANG JUGA
             </div>
 
-            {/* Success Box */}
-            {mktSuccess && (
-              <div
-                style={{
-                  background: "rgba(16, 185, 129, 0.15)",
-                  border: "2px solid #10B981",
-                  borderRadius: "12px",
-                  padding: "1.5rem",
-                  marginBottom: "2rem",
-                  textAlign: "center",
-                }}
-              >
-                <div style={{ fontSize: "2.5rem", marginBottom: "0.5rem" }}>🎉</div>
-                <h4 style={{ fontSize: "1.25rem", fontWeight: 900, color: "#34D399", marginBottom: "0.5rem" }}>
-                  Pendaftaran Berhasil Diterima!
-                </h4>
-                <p style={{ fontSize: "0.9rem", color: "#E2E8F0", marginBottom: "1rem", lineHeight: 1.5 }}>
-                  Selamat bergabung, <strong>{mktSuccess.fullName}</strong>! Kode Referral resmi Anda adalah:
-                </p>
-                <div
-                  style={{
-                    display: "inline-block",
-                    padding: "0.5rem 1.5rem",
-                    borderRadius: "8px",
-                    background: "rgba(16, 185, 129, 0.25)",
-                    border: "1px dashed #34D399",
-                    fontSize: "1.35rem",
-                    fontWeight: 900,
-                    color: "#FFF",
-                    letterSpacing: "0.05em",
-                    marginBottom: "1rem",
-                  }}
-                >
-                  {mktSuccess.referralCode}
-                </div>
-                <div style={{ fontSize: "0.825rem", color: "#94A3B8", marginBottom: "1.25rem" }}>
-                  Wilayah Pemetaan: <strong>{mktSuccess.cityArea}</strong> • Status: <strong>Menunggu Verifikasi Admin</strong>
-                </div>
-                <div>
-                  <a
-                    href={`https://wa.me/6281234567890?text=Halo%20Super%20Admin%20OKESIH,%20saya%20sudah%20mendaftar%20Mitra%20Marketing%20dengan%20Nama:%20${encodeURIComponent(mktSuccess.fullName)}%20dan%20Kode%20Referral:%20${encodeURIComponent(mktSuccess.referralCode)}%20untuk%20wilayah%20${encodeURIComponent(mktSuccess.cityArea)}.%20Mohon%20bantuan%20aktivasinya.`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn-primary"
-                    style={{
-                      background: "linear-gradient(135deg, #10B981, #059669)",
-                      padding: "0.75rem 1.5rem",
-                      fontSize: "0.9rem",
-                      fontWeight: 800,
-                      textDecoration: "none",
-                      boxShadow: "0 4px 14px rgba(16, 185, 129, 0.4)",
-                      display: "inline-flex",
-                    }}
-                  >
-                    💬 Konfirmasi Cepat ke WhatsApp HQ Super Admin →
-                  </a>
-                </div>
-              </div>
-            )}
+            <h3
+              style={{
+                fontSize: "clamp(1.4rem, 2.5vw, 1.85rem)",
+                fontWeight: 900,
+                marginBottom: "0.75rem",
+                color: "#FFF",
+                letterSpacing: "-0.01em",
+              }}
+            >
+              Siap Menghasilkan Pendapatan Pasif Tanpa Batas?
+            </h3>
+            <p
+              style={{
+                fontSize: "0.95rem",
+                color: "var(--text-muted)",
+                maxWidth: "600px",
+                margin: "0 auto 2rem",
+                lineHeight: 1.6,
+              }}
+            >
+              Pendaftaran 100% gratis tanpa dipungut biaya apapun. Buka formulir pendaftaran untuk mendapatkan kode referral unik dan bergabung dengan jaringan kemitraan resmi OKESIH.
+            </p>
 
-            {/* Error Message */}
-            {mktError && (
-              <div
-                style={{
-                  background: "rgba(239, 68, 68, 0.15)",
-                  border: "1px solid #EF4444",
-                  color: "#FCA5A5",
-                  padding: "0.75rem 1rem",
-                  borderRadius: "8px",
-                  fontSize: "0.85rem",
-                  fontWeight: 600,
-                  marginBottom: "1.5rem",
-                }}
-              >
-                ⚠️ {mktError}
-              </div>
-            )}
-
-            <form onSubmit={handleMarketingSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "1rem" }}>
-                <div>
-                  <label style={{ fontSize: "0.825rem", fontWeight: 700, color: "#E2E8F0", display: "block", marginBottom: "0.35rem" }}>
-                    Nama Lengkap <span style={{ color: "#EF4444" }}>*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={mktFullName}
-                    onChange={(e) => setMktFullName(e.target.value)}
-                    placeholder="Contoh: Rian Ardiansyah"
-                    style={{
-                      width: "100%",
-                      padding: "0.85rem 1rem",
-                      borderRadius: "8px",
-                      background: "var(--bg-surface-1)",
-                      border: "1px solid var(--border-subtle)",
-                      color: "#FFF",
-                      outline: "none",
-                    }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ fontSize: "0.825rem", fontWeight: 700, color: "#E2E8F0", display: "block", marginBottom: "0.35rem" }}>
-                    Nomor WhatsApp / HP <span style={{ color: "#EF4444" }}>*</span>
-                  </label>
-                  <input
-                    type="tel"
-                    required
-                    value={mktPhone}
-                    onChange={(e) => setMktPhone(e.target.value)}
-                    placeholder="Contoh: 081234567890"
-                    style={{
-                      width: "100%",
-                      padding: "0.85rem 1rem",
-                      borderRadius: "8px",
-                      background: "var(--bg-surface-1)",
-                      border: "1px solid var(--border-subtle)",
-                      color: "#FFF",
-                      outline: "none",
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "1rem" }}>
-                <div>
-                  <label style={{ fontSize: "0.825rem", fontWeight: 700, color: "#E2E8F0", display: "block", marginBottom: "0.35rem" }}>
-                    Kota / Wilayah Jangkauan <span style={{ color: "#EF4444" }}>*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={mktCityArea}
-                    onChange={(e) => setMktCityArea(e.target.value)}
-                    placeholder="Contoh: Surabaya & Sidoarjo / Jakarta Selatan"
-                    style={{
-                      width: "100%",
-                      padding: "0.85rem 1rem",
-                      borderRadius: "8px",
-                      background: "var(--bg-surface-1)",
-                      border: "1px solid var(--border-subtle)",
-                      color: "#FFF",
-                      outline: "none",
-                    }}
-                  />
-                  <span style={{ fontSize: "0.725rem", color: "var(--text-dim)", marginTop: "2px", display: "block" }}>
-                    Digunakan Super Admin untuk memetakan distribusi materi stiker &amp; tenant.
-                  </span>
-                </div>
-
-                <div>
-                  <label style={{ fontSize: "0.825rem", fontWeight: 700, color: "#E2E8F0", display: "block", marginBottom: "0.35rem" }}>
-                    Email (Opsional)
-                  </label>
-                  <input
-                    type="email"
-                    value={mktEmail}
-                    onChange={(e) => setMktEmail(e.target.value)}
-                    placeholder="nama@email.com"
-                    style={{
-                      width: "100%",
-                      padding: "0.85rem 1rem",
-                      borderRadius: "8px",
-                      background: "var(--bg-surface-1)",
-                      border: "1px solid var(--border-subtle)",
-                      color: "#FFF",
-                      outline: "none",
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* Data Rekening Pencairan Komisi */}
-              <div
-                style={{
-                  padding: "1.25rem",
-                  borderRadius: "10px",
-                  background: "rgba(255, 255, 255, 0.02)",
-                  border: "1px solid rgba(255, 255, 255, 0.08)",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "1rem",
-                }}
-              >
-                <div style={{ fontSize: "0.85rem", fontWeight: 800, color: "#34D399" }}>
-                  🏦 Rekening Bank / E-Wallet Pencairan Komisi
-                </div>
-
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem" }}>
-                  <div>
-                    <label style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-muted)", display: "block", marginBottom: "0.35rem" }}>
-                      Nama Bank / E-Wallet <span style={{ color: "#EF4444" }}>*</span>
-                    </label>
-                    <select
-                      value={mktBankName}
-                      onChange={(e) => setMktBankName(e.target.value)}
-                      style={{
-                        width: "100%",
-                        padding: "0.85rem 1rem",
-                        borderRadius: "8px",
-                        background: "var(--bg-surface-1)",
-                        border: "1px solid var(--border-subtle)",
-                        color: "#FFF",
-                        outline: "none",
-                      }}
-                    >
-                      <option value="BCA">BCA (Bank Central Asia)</option>
-                      <option value="BRI">BRI (Bank Rakyat Indonesia)</option>
-                      <option value="Mandiri">Bank Mandiri</option>
-                      <option value="BNI">BNI (Bank Negara Indonesia)</option>
-                      <option value="BSI">BSI (Bank Syariah Indonesia)</option>
-                      <option value="CIMB">CIMB Niaga</option>
-                      <option value="Bank Jago">Bank Jago</option>
-                      <option value="SeaBank">SeaBank</option>
-                      <option value="Dana">DANA</option>
-                      <option value="GoPay">GoPay</option>
-                      <option value="ShopeePay">ShopeePay</option>
-                      <option value="OVO">OVO</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-muted)", display: "block", marginBottom: "0.35rem" }}>
-                      Nomor Rekening / HP E-Wallet <span style={{ color: "#EF4444" }}>*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={mktBankAccountNo}
-                      onChange={(e) => setMktBankAccountNo(e.target.value)}
-                      placeholder="Nomor rekening Anda..."
-                      style={{
-                        width: "100%",
-                        padding: "0.85rem 1rem",
-                        borderRadius: "8px",
-                        background: "var(--bg-surface-1)",
-                        border: "1px solid var(--border-subtle)",
-                        color: "#FFF",
-                        outline: "none",
-                      }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-muted)", display: "block", marginBottom: "0.35rem" }}>
-                      Nama Pemilik Rekening <span style={{ color: "#EF4444" }}>*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={mktBankAccountName}
-                      onChange={(e) => setMktBankAccountName(e.target.value)}
-                      placeholder="Nama sesuai buku tabungan..."
-                      style={{
-                        width: "100%",
-                        padding: "0.85rem 1rem",
-                        borderRadius: "8px",
-                        background: "var(--bg-surface-1)",
-                        border: "1px solid var(--border-subtle)",
-                        color: "#FFF",
-                        outline: "none",
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label style={{ fontSize: "0.825rem", fontWeight: 700, color: "#E2E8F0", display: "block", marginBottom: "0.35rem" }}>
-                  Catatan Pengalaman / Target Usaha di Area Anda (Opsional)
-                </label>
-                <textarea
-                  rows={2}
-                  value={mktNotes}
-                  onChange={(e) => setMktNotes(e.target.value)}
-                  placeholder="Misal: Sudah memiliki kenalan 8 warkop &amp; 3 kafe di kawasan kampus..."
-                  style={{
-                    width: "100%",
-                    padding: "0.85rem 1rem",
-                    borderRadius: "8px",
-                    background: "var(--bg-surface-1)",
-                    border: "1px solid var(--border-subtle)",
-                    color: "#FFF",
-                    outline: "none",
-                    fontFamily: "inherit",
-                    resize: "vertical",
-                  }}
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={mktSubmitting}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: "1rem",
+                marginBottom: "1.75rem",
+              }}
+            >
+              <Link
+                href="/marketing/daftar"
                 className="btn-primary"
                 style={{
-                  width: "100%",
-                  padding: "1rem",
+                  background: "linear-gradient(135deg, #10B981, #059669)",
+                  padding: "1rem 2.25rem",
                   fontSize: "1rem",
                   fontWeight: 900,
-                  background: "linear-gradient(135deg, #10B981, #059669)",
-                  boxShadow: "0 6px 20px rgba(16, 185, 129, 0.35)",
-                  cursor: mktSubmitting ? "not-allowed" : "pointer",
+                  borderRadius: "14px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.6rem",
+                  boxShadow: "0 6px 24px rgba(16, 185, 129, 0.4)",
+                  textDecoration: "none",
+                  color: "#FFF",
+                  transition: "all 0.2s ease",
                 }}
               >
-                {mktSubmitting ? "Memproses Pendaftaran..." : "🚀 Kirim Pendaftaran Mitra Marketing Sekarang"}
-              </button>
+                <span>📝</span>
+                <span>Buka Formulir Pendaftaran Mitra Marketing</span>
+                <span>→</span>
+              </Link>
+            </div>
 
-              <div style={{ textAlign: "center", fontSize: "0.75rem", color: "var(--text-dim)" }}>
-                Pendaftaran 100% Gratis tanpa dipungut biaya apapun. Tim Super Admin OKESIH akan memvalidasi data Anda maksimal 1x24 jam kerja.
-              </div>
-            </form>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                gap: "1.5rem",
+                flexWrap: "wrap",
+                fontSize: "0.8rem",
+                color: "var(--text-dim)",
+              }}
+            >
+              <span>✓ 100% Gratis &amp; Tanpa Modal</span>
+              <span>✓ Kode Referral Resmi HQ</span>
+              <span>✓ Notifikasi WhatsApp Langsung</span>
+            </div>
           </div>
         </section>
 
@@ -1802,7 +1519,8 @@ export default function HomePage() {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      aria-label={showPassword ? "Sembunyikan Password" : "Lihat Password"}
+                      aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
+                      title={showPassword ? "Sembunyikan password" : "Tampilkan password"}
                       style={{
                         position: "absolute",
                         right: "0.75rem",
@@ -1810,13 +1528,34 @@ export default function HomePage() {
                         transform: "translateY(-50%)",
                         background: "none",
                         border: "none",
-                        color: "var(--text-dim)",
-                        fontSize: "1rem",
+                        color: "#94A3B8",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "0.35rem",
                         cursor: "pointer",
-                        padding: "0.25rem",
+                        padding: "0.25rem 0.4rem",
+                        fontSize: "0.75rem",
+                        fontWeight: 700,
+                        borderRadius: "6px",
                       }}
                     >
-                      {showPassword ? "👁️" : "🙈"}
+                      {showPassword ? (
+                        <>
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                            <line x1="1" y1="1" x2="23" y2="23" />
+                          </svg>
+                          <span>Tutup</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                            <circle cx="12" cy="12" r="3" />
+                          </svg>
+                          <span>Lihat</span>
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
