@@ -1912,3 +1912,147 @@ button {
   .owner-table-wrap { margin-inline: -16px; }
   .owner-panel { padding: 18px 16px; }
 }
+
+/* Owner multi-page balance and navigation cards */
+.owner-shell .theme-toggle-btn {
+  width: 38px !important;
+  height: 38px !important;
+  flex: 0 0 38px;
+  padding: 0 !important;
+  border-radius: 10px !important;
+  background: var(--ow-surface-raised) !important;
+  border: 1px solid var(--ow-border) !important;
+  color: var(--ow-text) !important;
+  box-shadow: none !important;
+}
+
+.owner-metrics article > strong {
+  margin-top: 2px;
+  line-height: 1.1;
+}
+
+.owner-metrics article > p:last-child {
+  margin-top: auto;
+  min-height: 18px;
+  display: flex;
+  align-items: flex-end;
+}
+
+.owner-metrics .metric-payment {
+  justify-content: flex-start;
+}
+
+.owner-metrics .metric-payment b:first-of-type {
+  margin-top: 3px;
+}
+
+.owner-metrics .metric-payment b {
+  min-height: 23px;
+  align-items: center;
+}
+
+.owner-quick-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(170px, 1fr));
+  gap: 14px;
+  margin-top: 22px;
+}
+
+.owner-quick-grid > a {
+  min-height: 92px;
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 18px;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid var(--ow-border);
+  background: var(--ow-surface);
+  color: var(--ow-text);
+  text-decoration: none;
+  box-shadow: var(--ow-shadow);
+  transition: transform 0.16s ease, border-color 0.16s ease;
+}
+
+.owner-quick-grid > a:hover {
+  transform: translateY(-2px);
+  border-color: rgba(244, 81, 44, 0.35);
+}
+
+.owner-quick-grid > a > span {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  background: var(--ow-accent-soft);
+  color: var(--ow-accent);
+  font-size: 20px;
+}
+
+.owner-quick-grid b { display: block; font-size: 13px; }
+.owner-quick-grid small { display: block; margin-top: 4px; color: var(--ow-muted); font-size: 11px; }
+.owner-quick-grid em { color: var(--ow-muted); font-style: normal; font-size: 18px; }
+
+.owner-page-panel {
+  min-height: calc(100vh - 142px);
+  margin-bottom: 0 !important;
+}
+
+.owner-page-panel > .owner-section-heading {
+  min-height: 66px;
+}
+
+.owner-settings-grid.owner-page-panel {
+  align-items: stretch;
+}
+
+.owner-settings-grid.owner-page-panel > .owner-panel {
+  min-height: calc(100vh - 142px);
+  display: flex;
+  flex-direction: column;
+}
+
+.owner-settings-grid.owner-page-panel > .owner-panel > .btn-primary:last-child {
+  margin-top: auto;
+  min-height: 44px;
+}
+
+.owner-settings-grid .owner-table-chips:empty::after {
+  content: "Belum ada meja. Tambahkan nomor atau nama meja di atas.";
+  width: 100%;
+  min-height: 74px;
+  display: grid;
+  place-items: center;
+  padding: 12px;
+  border: 1px dashed var(--ow-border);
+  border-radius: 10px;
+  color: var(--ow-muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.owner-small-card {
+  min-height: 164px;
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  align-content: start;
+}
+
+.owner-small-card .link-button {
+  justify-self: start;
+  align-self: end;
+  padding-left: 0;
+}
+
+@media (max-width: 1100px) {
+  .owner-quick-grid { grid-template-columns: repeat(2, minmax(180px, 1fr)); }
+}
+
+@media (max-width: 720px) {
+  .owner-actions .theme-toggle-btn { display: inline-flex !important; }
+  .owner-actions { gap: 7px; }
+  .owner-quick-grid { grid-template-columns: 1fr; }
+  .owner-page-panel { min-height: auto; }
+  .owner-settings-grid.owner-page-panel > .owner-panel { min-height: 520px; }
+}

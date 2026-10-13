@@ -104,7 +104,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/logo.svg?v=2" />
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var s=localStorage.getItem("okesih-theme");var p=s||(window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark");document.documentElement.setAttribute("data-theme",p);}catch(e){}})();`,
+            __html: `(function(){try{var s=localStorage.getItem("okesih-theme");var p=s||"light";document.documentElement.setAttribute("data-theme",p);}catch(e){document.documentElement.setAttribute("data-theme","light");}})();`,
           }}
         />
       </head>

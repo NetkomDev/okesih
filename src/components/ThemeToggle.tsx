@@ -8,9 +8,10 @@ interface ThemeToggleProps {
 }
 
 export default function ThemeToggle({ className = "", showText = false }: ThemeToggleProps) {
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [theme, setTheme] = useState<"dark" | "light">("light");
   const [mounted, setMounted] = useState(false);
 
+  /* eslint-disable react-hooks/set-state-in-effect -- theme state is hydrated from the DOM/localStorage after mount */
   useEffect(() => {
     setMounted(true);
     const currentTheme = document.documentElement.getAttribute("data-theme") as "dark" | "light";
@@ -22,8 +23,7 @@ export default function ThemeToggle({ className = "", showText = false }: ThemeT
         setTheme(savedTheme);
         document.documentElement.setAttribute("data-theme", savedTheme);
       } else {
-        const prefersLight = window.matchMedia("(prefers-color-scheme: light)").matches;
-        const initial = prefersLight ? "light" : "dark";
+        const initial = "light";
         setTheme(initial);
         document.documentElement.setAttribute("data-theme", initial);
       }
@@ -41,6 +41,7 @@ export default function ThemeToggle({ className = "", showText = false }: ThemeT
       window.removeEventListener("storage", handleStorageOrCustom);
     };
   }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const toggleTheme = () => {
     const nextTheme = theme === "dark" ? "light" : "dark";
@@ -70,7 +71,7 @@ export default function ThemeToggle({ className = "", showText = false }: ThemeT
           cursor: "pointer",
         }}
       >
-        <span style={{ opacity: 0.5 }}>🌙</span>
+        <span style={{ opacity: 0.5 }}>☀️</span>
       </button>
     );
   }
