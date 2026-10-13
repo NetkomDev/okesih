@@ -18,13 +18,57 @@ function categoryIcon(category: string) {
   return "✦";
 }
 
+function ToscaBatikOrnament() {
+  return (
+    <div className="batik-tosca-badge" aria-label="Ornamen Batik Nusantara OKESIH">
+      <svg className="batik-tosca-svg" viewBox="0 0 176 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="toscaCardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#042f2e" />
+            <stop offset="45%" stopColor="#0f766e" />
+            <stop offset="100%" stopColor="#14b8a6" />
+          </linearGradient>
+          <linearGradient id="toscaGlowLine" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#2dd4bf" stopOpacity="0.75" />
+            <stop offset="50%" stopColor="#99f6e4" stopOpacity="1" />
+            <stop offset="100%" stopColor="#2dd4bf" stopOpacity="0.75" />
+          </linearGradient>
+          <pattern id="kawungPattern" x="0" y="0" width="16" height="16" patternUnits="userSpaceOnUse">
+            <circle cx="8" cy="8" r="1.3" fill="#99f6e4" opacity="0.65" />
+            <path d="M8,0 C4.5,3 4.5,13 8,16 C11.5,13 11.5,3 8,0 Z" fill="none" stroke="#5eead4" strokeWidth="0.7" opacity="0.45" />
+            <path d="M0,8 C3,4.5 13,4.5 16,8 C13,11.5 3,11.5 0,8 Z" fill="none" stroke="#5eead4" strokeWidth="0.7" opacity="0.45" />
+            <circle cx="0" cy="0" r="1.4" fill="#2dd4bf" opacity="0.45" />
+            <circle cx="16" cy="0" r="1.4" fill="#2dd4bf" opacity="0.45" />
+            <circle cx="0" cy="16" r="1.4" fill="#2dd4bf" opacity="0.45" />
+            <circle cx="16" cy="16" r="1.4" fill="#2dd4bf" opacity="0.45" />
+          </pattern>
+        </defs>
+        <rect x="1" y="1" width="174" height="48" rx="14" fill="url(#toscaCardGrad)" stroke="url(#toscaGlowLine)" strokeWidth="1.2" />
+        <rect x="2" y="2" width="172" height="46" rx="13" fill="url(#kawungPattern)" />
+        <g transform="translate(24, 25)">
+          <circle cx="0" cy="0" r="12" fill="#042f2e" stroke="#5eead4" strokeWidth="1.2" />
+          <path d="M0,-10 C-3,-4 -3,4 0,10 C3,4 3,-4 0,-10 Z" fill="#2dd4bf" opacity="0.95" />
+          <path d="M-10,0 C-4,-3 4,-3 10,0 C4,3 -4,3 -10,0 Z" fill="#2dd4bf" opacity="0.95" />
+          <circle cx="0" cy="0" r="3" fill="#f0fdfa" />
+        </g>
+        <text x="45" y="22" fill="#99f6e4" fontSize="9" fontWeight="900" letterSpacing="0.14em">BATIK NUSANTARA</text>
+        <text x="45" y="36" fill="#ffffff" fontSize="11.5" fontWeight="800" letterSpacing="0.03em">Cita Rasa Warkop</text>
+        <g transform="translate(155, 25)">
+          <circle cx="0" cy="0" r="6" fill="#0f766e" stroke="#99f6e4" strokeWidth="0.8" opacity="0.8" />
+          <path d="M0,-5 C-1.5,-2 -1.5,2 0,5 C1.5,2 1.5,-2 0,-5 Z" fill="#5eead4" opacity="0.8" />
+          <path d="M-5,0 C-2,-1.5 2,-1.5 5,0 C2,1.5 -2,1.5 -5,0 Z" fill="#5eead4" opacity="0.8" />
+        </g>
+      </svg>
+    </div>
+  );
+}
+
 export default function CustomerMenuPage({ params, searchParams }: { params: Promise<{ warkopId: string }>; searchParams: Promise<{ tableId?: string; table?: string }> }) {
   const { warkopId } = use(params);
   const query = use(searchParams);
   const [payload, setPayload] = useState<MenuPayload | null>(null);
   const [tableId, setTableId] = useState(query.tableId || "");
   const [tableNumber, setTableNumber] = useState(query.table || "");
-  const [browseMode, setBrowseMode] = useState(false);
   const [cart, setCart] = useState<Record<string, CartItem>>({});
   const [paymentMethod, setPaymentMethod] = useState<"QRIS" | "CASH">("QRIS");
   const [proofImage, setProofImage] = useState<string | null>(null);
@@ -108,7 +152,7 @@ export default function CustomerMenuPage({ params, searchParams }: { params: Pro
   };
 
   const submitOrder = async () => {
-    if (!tableId) return setError("Identitas meja tidak valid. Silakan scan ulang QR Code yang terpasang di meja.");
+    if (!tableId) return setError("Silakan scan QR Code yang terpasang di meja Anda untuk mengirim pesanan.");
     if (paymentMethod === "QRIS" && !proofImage) return setError("Unggah bukti pembayaran QRIS terlebih dahulu.");
     setBusy(true); setError("");
     try {
@@ -124,17 +168,6 @@ export default function CustomerMenuPage({ params, searchParams }: { params: Pro
   };
 
   if (!payload) return <div className="customer-loading"><Image src="/logo.svg?v=2" width={64} height={64} alt="OKESIH"/><b>{error || "Menyiapkan menu..."}</b></div>;
-  if (!tableId && !browseMode) return (
-    <main className="customer-invalid-table">
-      <Image src={payload.profile.logo_url || "/logo.svg?v=2"} width={68} height={68} alt={payload.profile.nama}/>
-      <span>QR MEJA TIDAK VALID</span>
-      <h1>Scan QR Code di meja Anda</h1>
-      <p>Setiap QR Code terhubung langsung ke satu meja. Silakan scan ulang stiker QR yang terpasang pada meja agar pesanan terkirim ke lokasi yang tepat.</p>
-      <button type="button" className="btn-secondary" style={{ marginTop: "16px", padding: "10px 18px", borderRadius: "10px", fontWeight: 700, cursor: "pointer" }} onClick={() => setBrowseMode(true)}>
-        Lihat Katalog Menu Saja
-      </button>
-    </main>
-  );
   if (order) return <main className="customer-order-status"><Image src="/logo.svg?v=2" width={64} height={64} alt="OKESIH"/><span>ANTREAN</span><strong>#{String(order.queueNumber).padStart(3, "0")}</strong><h1>{orderStatus === "AWAITING_CONFIRMATION" ? "Menunggu konfirmasi kasir" : orderStatus === "COOKING" ? "Pesanan sedang disiapkan" : orderStatus === "READY" ? "Pesanan siap diantar" : orderStatus === "DONE" ? "Pesanan selesai" : "Pesanan tidak dapat diproses"}</h1><p>Meja {tableNumber} · {paymentMethod === "CASH" ? "Bayar tunai saat pesanan diantar" : "QRIS sedang diverifikasi"}</p><b>Rp {Number(order.total).toLocaleString("id-ID")}</b><button className="btn-secondary" onClick={() => { setOrder(null); setCart({}); setProofImage(null); }}>Pesan Tambahan</button></main>;
 
   return <div className="customer-menu-page">
@@ -145,16 +178,23 @@ export default function CustomerMenuPage({ params, searchParams }: { params: Pro
       </div>
       <p>Pesan santai dari meja. Kami siapkan untuk Anda.</p>
       {tableId ? (
-        <div className="customer-table-picker" aria-label={`Pesanan untuk meja ${tableNumber}`}>
-          <span>Lokasi terdeteksi</span>
-          <b>Meja {tableNumber}</b>
+        <div className="customer-table-picker customer-table-picker-batik" aria-label={`Pesanan untuk meja ${tableNumber}`}>
+          <div className="batik-table-rosette" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none">
+              <circle cx="12" cy="12" r="10.5" fill="#042f2e" stroke="#5eead4" strokeWidth="1" />
+              <path d="M12,3 C9.5,7 9.5,17 12,21 C14.5,17 14.5,7 12,3 Z" fill="#2dd4bf" opacity="0.95" />
+              <path d="M3,12 C7,9.5 17,9.5 21,12 C17,14.5 7,14.5 3,12 Z" fill="#2dd4bf" opacity="0.95" />
+              <circle cx="12" cy="12" r="2.8" fill="#ffffff" />
+            </svg>
+          </div>
+          <div className="batik-table-copy">
+            <small>LOKASI MEJA</small>
+            <b>Meja {tableNumber}</b>
+          </div>
           <i aria-hidden="true">✓</i>
         </div>
       ) : (
-        <div className="customer-table-picker" style={{ borderColor: "#fed7aa", background: "#fffaf5" }}>
-          <span style={{ color: "#c2410c" }}>Status</span>
-          <b style={{ color: "#ea580c" }}>Scan QR Meja untuk Pesan</b>
-        </div>
+        <ToscaBatikOrnament />
       )}
     </header>
     {error && <div className="customer-error">{error}<button onClick={() => setError("")}>×</button></div>}
