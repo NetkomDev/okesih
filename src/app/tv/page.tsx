@@ -13,6 +13,25 @@ export default function TvQueuePage() {
   // Durasi menghilangnya antrean siap diambil (dalam detik, diatur oleh Super Admin Pusat)
   const [autoDismissSeconds, setAutoDismissSeconds] = useState<number>(60);
 
+  useEffect(() => {
+    let active = true;
+    const syncPlatformSettings = () => {
+      fetch("/api/platform-settings", { cache: "no-store" })
+        .then((response) => response.ok ? response.json() : Promise.reject())
+        .then((payload) => {
+          if (active) setAutoDismissSeconds(payload.data.queueDismissSeconds);
+        })
+        .catch(() => undefined);
+    };
+
+    syncPlatformSettings();
+    const interval = window.setInterval(syncPlatformSettings, 60_000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, []);
+
   // Daftar antrean yang sedang diracik barista
   const inProgressQueue = [
     { ticketNumber: 13, tableNumber: "02" },

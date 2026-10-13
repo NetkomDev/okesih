@@ -1,17 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ThemeToggle from "@/components/ThemeToggle";
 
 export default function MarketingProgramPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [tenantCount, setTenantCount] = useState<number>(20);
   const [avgReceipts, setAvgReceipts] = useState<number>(120);
+  const [commissionPerReceipt, setCommissionPerReceipt] = useState<number>(15);
+
+  useEffect(() => {
+    fetch("/api/platform-settings", { cache: "no-store" })
+      .then((response) => response.ok ? response.json() : Promise.reject())
+      .then((payload) => setCommissionPerReceipt(payload.data.defaultMarketingCommission))
+      .catch(() => undefined);
+  }, []);
 
   // Perhitungan Simulasi
   const dailyReceiptsTotal = tenantCount * avgReceipts;
-  const dailyCommission = dailyReceiptsTotal * 15;
+  const dailyCommission = dailyReceiptsTotal * commissionPerReceipt;
   const monthlyCommission = dailyCommission * 30;
 
   const faqs = [
@@ -20,8 +28,8 @@ export default function MarketingProgramPage() {
       a: "Sama sekali tidak dipungut biaya (100% GRATIS). Anda tidak perlu modal awal, tidak perlu membeli paket keagenan, dan tidak ada potongan pendaftaran apapun.",
     },
     {
-      q: "Bagaimana sistem menghitung komisi Rp 15 per struk?",
-      a: "Setiap warkop, kafe, atau resto yang mendaftar menggunakan Kode Referral Anda akan terkunci di bawah akun kemitraan Anda. Setiap kali kasir atau pelanggan mencetak struk pesanan (baik dari kasir POS maupun menu QR self-order), sistem otomatis mengalokasikan Rp 15 ke saldo komisi Anda.",
+      q: `Bagaimana sistem menghitung komisi Rp ${commissionPerReceipt.toLocaleString("id-ID")} per struk?`,
+      a: `Setiap warkop, kafe, atau resto yang mendaftar menggunakan Kode Referral Anda akan terkunci di bawah akun kemitraan Anda. Setiap kali kasir atau pelanggan mencetak struk pesanan, sistem otomatis mengalokasikan Rp ${commissionPerReceipt.toLocaleString("id-ID")} ke saldo komisi Anda.`,
     },
     {
       q: "Kapan dan bagaimana komisi dicairkan?",
@@ -248,7 +256,7 @@ export default function MarketingProgramPage() {
           }}
         >
           Daftarkan warkop, kafe, resto, dan usaha kuliner di wilayah Anda. Nikmati bagi hasil pasif otomatis{" "}
-          <strong style={{ color: "#34D399" }}>Rp 15 per struk transaksi</strong> seumur hidup yang dicairkan langsung ke rekening bank atau e-wallet Anda!
+          <strong style={{ color: "#34D399" }}>Rp {commissionPerReceipt.toLocaleString("id-ID")} per struk transaksi</strong> seumur hidup yang dicairkan langsung ke rekening bank atau e-wallet Anda!
         </p>
 
         {/* CTA Button Group */}
@@ -318,7 +326,7 @@ export default function MarketingProgramPage() {
           }}
         >
           <div>
-            <div style={{ fontSize: "1.75rem", fontWeight: 900, color: "#34D399" }}>Rp 15 / Struk</div>
+            <div style={{ fontSize: "1.75rem", fontWeight: 900, color: "#34D399" }}>Rp {commissionPerReceipt.toLocaleString("id-ID")} / Struk</div>
             <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "0.25rem" }}>
               Bagi Hasil Otomatis Real-Time
             </div>
@@ -580,7 +588,7 @@ export default function MarketingProgramPage() {
                 Rp {monthlyCommission.toLocaleString("id-ID")}
               </div>
               <div style={{ fontSize: "0.825rem", color: "var(--text-muted)", lineHeight: 1.5 }}>
-                Berasal dari <strong>{dailyReceiptsTotal.toLocaleString("id-ID")} struk/hari</strong> × Rp 15 ={" "}
+                Berasal dari <strong>{dailyReceiptsTotal.toLocaleString("id-ID")} struk/hari</strong> × Rp {commissionPerReceipt.toLocaleString("id-ID")} ={" "}
                 <span style={{ color: "#FBBF24" }}>Rp {dailyCommission.toLocaleString("id-ID")}/hari</span>.
               </div>
               <div
@@ -745,7 +753,7 @@ export default function MarketingProgramPage() {
               Nikmati Komisi Pasif Harian
             </h3>
             <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", lineHeight: 1.6 }}>
-              Setiap struk yang keluar otomatis menghasilkan Rp 15 bagi Anda. Pantau komisi dan terima pencairan rutin langsung ke rekening Anda.
+              Setiap struk yang keluar otomatis menghasilkan Rp {commissionPerReceipt.toLocaleString("id-ID")} bagi Anda. Pantau komisi dan terima pencairan rutin langsung ke rekening Anda.
             </p>
           </div>
         </div>

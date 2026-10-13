@@ -37,6 +37,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# Supabase CLI local linkage/cache
+supabase/.temp/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
@@ -50,4 +53,3 @@ public/sw.js.map
 public/workbox-*.js
 public/workbox-*.js.map
 public/swe-worker-*.js
-

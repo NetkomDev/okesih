@@ -40,6 +40,13 @@ export async function POST(request: Request) {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    const { data: settings } = await supabase
+      .from("platform_settings")
+      .select("default_marketing_commission")
+      .eq("id", "global")
+      .maybeSingle();
+    const defaultCommission = Number(settings?.default_marketing_commission) || 15;
+
     const { data, error } = await supabase
       .from("marketing_partners")
       .insert([
@@ -54,7 +61,7 @@ export async function POST(request: Request) {
           bank_account_name: bankAccountName.trim(),
           experience_notes: experienceNotes ? experienceNotes.trim() : null,
           status: "PENDING",
-          commission_rate: 15.00,
+          commission_rate: defaultCommission,
         },
       ])
       .select()

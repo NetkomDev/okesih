@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuthGuard, logoutUser } from "@/lib/auth-helpers";
 
 interface MenuItem {
@@ -37,6 +37,16 @@ export default function TenantOwnerDashboardPage() {
   const [warkopName, setWarkopName] = useState<string>("Warkop Giras Nusantara");
   const [qrisMerchantName, setQrisMerchantName] = useState<string>("WARKOP GIRAS NUSANTARA (BCA)");
   const [uniqueCode] = useState<number>(145);
+  const [saasFeePerReceipt, setSaasFeePerReceipt] = useState<number>(50);
+  const todayReceiptCount = 124;
+  const totalSaasBill = todayReceiptCount * saasFeePerReceipt + uniqueCode;
+
+  useEffect(() => {
+    fetch("/api/platform-settings", { cache: "no-store" })
+      .then((response) => response.ok ? response.json() : Promise.reject())
+      .then((payload) => setSaasFeePerReceipt(payload.data.saasFeePerReceipt))
+      .catch(() => undefined);
+  }, []);
 
   // KATALOG MENU WARKOP (DIBUAT & DIKELOLA SENDIRI OLEH OWNER TENANT)
   const [menuList, setMenuList] = useState<MenuItem[]>([
@@ -342,7 +352,7 @@ export default function TenantOwnerDashboardPage() {
                 Ringkasan Penjualan Warkop Hari Ini
               </h1>
               <p style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>
-                Pantau omzet tunai vs QRIS, kas di laci kasir, dan pembayaran sewa OKESIH (@ Rp 50/struk).
+                Pantau omzet tunai vs QRIS, kas di laci kasir, dan pembayaran sewa OKESIH (@ Rp {saasFeePerReceipt.toLocaleString("id-ID")}/struk).
               </p>
             </div>
             <Link
@@ -387,7 +397,7 @@ export default function TenantOwnerDashboardPage() {
                 📱 QRIS: <strong style={{ color: "#60A5FA" }}>Rp 630.000</strong>
               </div>
               <div style={{ fontSize: "0.72rem", color: "var(--text-dim)", marginTop: "0.4rem" }}>
-                Total 124 struk transaksi bon
+                Total {todayReceiptCount} struk transaksi bon
               </div>
             </div>
 
@@ -416,7 +426,7 @@ export default function TenantOwnerDashboardPage() {
                 SEWA SAAS OKESIH (124 STRUK)
               </div>
               <div style={{ fontSize: "1.8rem", fontWeight: 900, color: "#FBBF24" }}>
-                Rp 6.345
+                Rp {totalSaasBill.toLocaleString("id-ID")}
               </div>
               <div style={{ fontSize: "0.72rem", color: "var(--text-dim)", marginTop: "0.3rem" }}>
                 (Rp 6.200 pokok + Kode Unik #{uniqueCode})

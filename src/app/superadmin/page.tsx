@@ -346,6 +346,58 @@ export default function SuperAdminDashboardPage() {
   const [globalDismissDuration, setGlobalDismissDuration] = useState<number>(60);
   const [saasFeePerReceipt, setSaasFeePerReceipt] = useState<number>(50);
   const [defaultCommissionRate, setDefaultCommissionRate] = useState<number>(15);
+  const [isSettingsLoading, setIsSettingsLoading] = useState<boolean>(true);
+  const [isSettingsSaving, setIsSettingsSaving] = useState<boolean>(false);
+  const [settingsUpdatedAt, setSettingsUpdatedAt] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const loadPlatformSettings = async () => {
+      try {
+        const response = await fetch("/api/platform-settings", { cache: "no-store" });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || "Gagal memuat parameter global.");
+        if (active) {
+          setGlobalDismissDuration(payload.data.queueDismissSeconds);
+          setSaasFeePerReceipt(payload.data.saasFeePerReceipt);
+          setDefaultCommissionRate(payload.data.defaultMarketingCommission);
+          setSettingsUpdatedAt(payload.data.updatedAt);
+        }
+      } catch (error) {
+        if (active) showToast("Parameter Belum Dimuat", error instanceof Error ? error.message : "Terjadi kesalahan jaringan.", "error");
+      } finally {
+        if (active) setIsSettingsLoading(false);
+      }
+    };
+    loadPlatformSettings();
+    return () => { active = false; };
+  }, []);
+
+  const handleSavePlatformSettings = async () => {
+    setIsSettingsSaving(true);
+    try {
+      const response = await fetch("/api/platform-settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          queueDismissSeconds: globalDismissDuration,
+          saasFeePerReceipt,
+          defaultMarketingCommission: defaultCommissionRate,
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Parameter global gagal disimpan.");
+      setGlobalDismissDuration(payload.data.queueDismissSeconds);
+      setSaasFeePerReceipt(payload.data.saasFeePerReceipt);
+      setDefaultCommissionRate(payload.data.defaultMarketingCommission);
+      setSettingsUpdatedAt(payload.data.updatedAt);
+      showToast("Parameter Global Tersimpan", "TV antrean, dashboard owner, dan halaman marketing kini menggunakan konfigurasi terbaru.", "success");
+    } catch (error) {
+      showToast("Gagal Menyimpan", error instanceof Error ? error.message : "Terjadi kesalahan jaringan.", "error");
+    } finally {
+      setIsSettingsSaving(false);
+    }
+  };
 
   // State QRIS Pembayaran SaaS Platform (Pusat)
   const [centralQrisMerchant, setCentralQrisMerchant] = useState<string>("OKESIH SAAS PUSAT (BANK CENTRAL ASIA)");
@@ -1850,7 +1902,7 @@ export default function SuperAdminDashboardPage() {
 
         {/* TAB CONTENT 4: PARAMETER MASTER GLOBAL */}
         {activeTab === "platform_config" && (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
+          <div className="superadmin-settings-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
             {/* Auto-Dismiss TV */}
             <div
               className="glass-panel"
@@ -1872,10 +1924,8 @@ export default function SuperAdminDashboardPage() {
                 {[30, 45, 60, 90, 120].map((sec) => (
                   <button
                     key={sec}
-                    onClick={() => {
-                      setGlobalDismissDuration(sec);
-                      showToast("Durasi TV Disimpan", `Durasi antrean TV diatur ke ${sec} detik secara global.`, "success");
-                    }}
+                    onClick={() => setGlobalDismissDuration(sec)}
+                    disabled={isSettingsLoading || isSettingsSaving}
                     style={{
                       padding: "0.5rem 0.85rem",
                       borderRadius: "6px",
@@ -1893,7 +1943,7 @@ export default function SuperAdminDashboardPage() {
               </div>
 
               <div style={{ fontSize: "0.75rem", color: isDark ? "#34D399" : "#059669", fontWeight: 600 }}>
-                ✓ Durasi aktif saat ini: {globalDismissDuration} detik (Berlaku untuk seluruh warkop)
+                Durasi yang akan diterapkan: {globalDismissDuration} detik untuk seluruh layar TV
               </div>
             </div>
 
@@ -1918,8 +1968,10 @@ export default function SuperAdminDashboardPage() {
                 <span style={{ fontSize: "1.1rem", fontWeight: 800, color: isDark ? "#94A3B8" : "#64748B" }}>Rp</span>
                 <input
                   type="number"
+                  min={0}
+                  max={100000}
                   value={saasFeePerReceipt}
-                  onChange={(e) => setSaasFeePerReceipt(parseInt(e.target.value) || 50)}
+                  onChange={(e) => setSaasFeePerReceipt(Number(e.target.value))}
                   style={{
                     background: isDark ? "rgba(15, 23, 42, 0.8)" : "#F8FAFC",
                     border: isDark ? "1px solid rgba(245, 158, 11, 0.4)" : "1px solid rgba(0, 0, 0, 0.15)",
@@ -1939,8 +1991,10 @@ export default function SuperAdminDashboardPage() {
                 <span style={{ fontSize: "1rem", fontWeight: 800, color: isDark ? "#C084FC" : "#7C3AED" }}>Rp</span>
                 <input
                   type="number"
+                  min={0}
+                  max={saasFeePerReceipt}
                   value={defaultCommissionRate}
-                  onChange={(e) => setDefaultCommissionRate(parseInt(e.target.value) || 15)}
+                  onChange={(e) => setDefaultCommissionRate(Number(e.target.value))}
                   style={{
                     background: isDark ? "rgba(15, 23, 42, 0.8)" : "#F8FAFC",
                     border: isDark ? "1px solid rgba(168, 85, 247, 0.4)" : "1px solid rgba(0, 0, 0, 0.15)",
@@ -1953,6 +2007,23 @@ export default function SuperAdminDashboardPage() {
                   }}
                 />
                 <span style={{ fontSize: "0.8rem", color: isDark ? "#94A3B8" : "#64748B" }}>/ struk</span>
+              </div>
+
+              <div style={{ paddingTop: "1rem", borderTop: isDark ? "1px solid rgba(255,255,255,.1)" : "1px solid rgba(15,23,42,.1)" }}>
+                <button
+                  type="button"
+                  onClick={handleSavePlatformSettings}
+                  disabled={isSettingsLoading || isSettingsSaving}
+                  className="btn-primary"
+                  style={{ width: "100%", opacity: isSettingsLoading || isSettingsSaving ? 0.65 : 1 }}
+                >
+                  {isSettingsSaving ? "Menyimpan parameter..." : isSettingsLoading ? "Memuat parameter..." : "Simpan & Terapkan Secara Global"}
+                </button>
+                <div style={{ marginTop: ".65rem", fontSize: ".72rem", color: isDark ? "#94A3B8" : "#64748B", textAlign: "center" }}>
+                  {settingsUpdatedAt
+                    ? `Terakhir disimpan ${new Date(settingsUpdatedAt).toLocaleString("id-ID")}`
+                    : "Perubahan baru aktif setelah tombol simpan ditekan."}
+                </div>
               </div>
             </div>
           </div>

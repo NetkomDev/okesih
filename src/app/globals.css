@@ -131,6 +131,7 @@
 .superadmin-main tbody tr { transition: background-color 0.18s ease; }
 .superadmin-main tbody tr:hover { background: rgba(249, 115, 22, 0.035); }
 .superadmin-main input, .superadmin-main select { min-height: 42px; border-radius: 10px !important; }
+.superadmin-settings-grid > .glass-panel { transform: none; border-color: var(--sa-border) !important; background: var(--sa-panel) !important; }
 
 @media (max-width: 1180px) {
   .superadmin-kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
@@ -146,6 +147,7 @@
   .superadmin-tabs { top: 0; margin-inline: -0.25rem !important; }
   .superadmin-page-heading { align-items: flex-start !important; gap: 0.75rem; flex-direction: column; }
   .superadmin-main > section.glass-panel { padding: 1rem !important; }
+  .superadmin-settings-grid { grid-template-columns: 1fr !important; }
 }
 
 @media (max-width: 540px) {
@@ -891,4 +893,3 @@ button {
   transform: translateY(-1px);
   filter: brightness(1.1);
 }
-
