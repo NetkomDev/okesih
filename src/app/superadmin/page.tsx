@@ -627,7 +627,7 @@ export default function SuperAdminDashboardPage() {
 
   return (
     <div
-      className="superadmin-shell"
+      className={`superadmin-shell ${sidebarCollapsed ? "is-collapsed" : ""}`}
       style={{
         minHeight: "100vh",
         backgroundColor: isDark ? "#06090E" : "#F8FAFC",
@@ -760,7 +760,7 @@ export default function SuperAdminDashboardPage() {
               className={`superadmin-sidebar-item ${activeTab === "overview" ? "is-active" : ""}`}
               title="Overview & Finansial"
             >
-              <div className="superadmin-sidebar-item-icon" style={{ background: activeTab === "overview" ? "rgba(14, 165, 233, 0.2)" : "rgba(148, 163, 184, 0.1)", color: "#0284C7" }}>
+              <div className="superadmin-sidebar-item-icon">
                 📊
               </div>
               {(!sidebarCollapsed || (autoHideEnabled && isHovered)) && (
@@ -778,7 +778,7 @@ export default function SuperAdminDashboardPage() {
               className={`superadmin-sidebar-item ${activeTab === "tenants" ? "is-active" : ""}`}
               title="Daftar Tenant Warkop"
             >
-              <div className="superadmin-sidebar-item-icon" style={{ background: activeTab === "tenants" ? "rgba(249, 115, 22, 0.2)" : "rgba(148, 163, 184, 0.1)", color: "#F97316" }}>
+              <div className="superadmin-sidebar-item-icon">
                 🏢
               </div>
               {(!sidebarCollapsed || (autoHideEnabled && isHovered)) && (
@@ -799,7 +799,7 @@ export default function SuperAdminDashboardPage() {
               className={`superadmin-sidebar-item ${activeTab === "marketing" ? "is-active" : ""}`}
               title="Marketing Lapangan"
             >
-              <div className="superadmin-sidebar-item-icon" style={{ background: activeTab === "marketing" ? "rgba(16, 185, 129, 0.2)" : "rgba(148, 163, 184, 0.1)", color: "#10B981" }}>
+              <div className="superadmin-sidebar-item-icon">
                 🤝
               </div>
               {(!sidebarCollapsed || (autoHideEnabled && isHovered)) && (
@@ -822,7 +822,7 @@ export default function SuperAdminDashboardPage() {
               className={`superadmin-sidebar-item ${activeTab === "qris_billing" ? "is-active" : ""}`}
               title="Billing QRIS SaaS"
             >
-              <div className="superadmin-sidebar-item-icon" style={{ background: activeTab === "qris_billing" ? "rgba(245, 158, 11, 0.2)" : "rgba(148, 163, 184, 0.1)", color: "#D97706" }}>
+              <div className="superadmin-sidebar-item-icon">
                 💳
               </div>
               {(!sidebarCollapsed || (autoHideEnabled && isHovered)) && (
@@ -840,7 +840,7 @@ export default function SuperAdminDashboardPage() {
               className={`superadmin-sidebar-item ${activeTab === "platform_config" ? "is-active" : ""}`}
               title="Parameter Master Global"
             >
-              <div className="superadmin-sidebar-item-icon" style={{ background: activeTab === "platform_config" ? "rgba(168, 85, 247, 0.2)" : "rgba(148, 163, 184, 0.1)", color: "#7C3AED" }}>
+              <div className="superadmin-sidebar-item-icon">
                 ⚙️
               </div>
               {(!sidebarCollapsed || (autoHideEnabled && isHovered)) && (
@@ -932,7 +932,27 @@ export default function SuperAdminDashboardPage() {
                 </span>
               </>
             ) : (
-              <span style={{ margin: "auto", fontSize: "0.9rem" }} title="Auto-Hide Mode">👁️</span>
+              <div
+                style={{
+                  margin: "auto",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: "28px",
+                  height: "28px",
+                  borderRadius: "6px",
+                  background: autoHideEnabled ? "rgba(16, 185, 129, 0.15)" : "transparent",
+                  color: autoHideEnabled ? "#10B981" : isDark ? "#94A3B8" : "#64748B",
+                  transition: "all 0.18s ease",
+                }}
+                title={autoHideEnabled ? "Mode Auto-Hide: Aktif" : "Mode Auto-Hide: Nonaktif (Klik untuk aktifkan)"}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                  <line x1="9" y1="3" x2="9" y2="21" />
+                  <path d="M14 9l3 3-3 3" />
+                </svg>
+              </div>
             )}
           </div>
 
@@ -1101,7 +1121,7 @@ export default function SuperAdminDashboardPage() {
         </header>
 
         {/* Main Container */}
-        <main className="superadmin-main" style={{ maxWidth: "1400px", margin: "1.25rem auto 3rem", padding: "0 1.25rem", width: "100%" }}>
+        <main className="superadmin-main">
           {/* RESUME FINANSIAL & EKOSISTEM SAAS GLOBAL */}
           {activeTab === "overview" && (
             <section className="superadmin-overview" style={{ marginBottom: "2rem" }}>
