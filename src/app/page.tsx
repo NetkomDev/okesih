@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -28,17 +29,17 @@ export default function HomePage() {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const err = params.get("error");
-      if (err === "login_required") {
-        setLoginError("Sesi login diperlukan untuk mengakses dashboard tersebut.");
-        setIsLoginModalOpen(true);
-      } else if (err === "unauthorized") {
-        setLoginError("Akses Ditolak: Anda tidak memiliki izin untuk halaman tersebut.");
-        setIsLoginModalOpen(true);
-      }
+      const shouldOpenLogin = err === "login_required" || err === "unauthorized" || window.location.hash === "#login";
+      if (!shouldOpenLogin) return;
 
-      if (window.location.hash === "#login") {
+      queueMicrotask(() => {
+        if (err === "login_required") {
+          setLoginError("Sesi login diperlukan untuk mengakses dashboard tersebut.");
+        } else if (err === "unauthorized") {
+          setLoginError("Akses Ditolak: Anda tidak memiliki izin untuk halaman tersebut.");
+        }
         setIsLoginModalOpen(true);
-      }
+      });
     }
   }, []);
 
@@ -431,133 +432,45 @@ export default function HomePage() {
         )}
 
         {/* HERO SECTION */}
-        <section
-          className="hero-container"
-          style={{
-            padding: "4rem 2rem 2.5rem",
-            maxWidth: "1200px",
-            margin: "0 auto",
-            width: "100%",
-            textAlign: "center",
-            position: "relative",
-            zIndex: 5,
-          }}
-        >
-          {/* Badge */}
-          <div
-            className="hero-badge"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "0.5rem",
-              padding: "0.4rem 1.1rem",
-              borderRadius: "var(--radius-pill)",
-              backgroundColor: "var(--brand-orange-subtle)",
-              border: "1px solid rgba(255, 69, 0, 0.35)",
-              color: "var(--brand-orange-light)",
-              fontSize: "0.825rem",
-              fontWeight: 800,
-              marginBottom: "1.5rem",
-              textTransform: "uppercase",
-              letterSpacing: "0.06em",
-              maxWidth: "100%",
-            }}
-          >
-            ⚡ Solusi POS, Self-Order &amp; Antrean untuk Segala Usaha Penjualan
+        <section className="hero-container hero-split">
+          <div className="hero-copy">
+            <div className="hero-badge">
+              ⚡ Solusi POS, Self-Order &amp; Antrean untuk Segala Usaha Penjualan
+            </div>
+
+            <h1 className="hero-heading">
+              Kelola Pesanan Kilat, <span>Operasional Bebas Hambatan.</span>
+            </h1>
+
+            <p className="hero-subtitle">
+              Ekosistem kasir modern terintegrasi: POS offline-first, KDS dapur, QR meja, dan antrean TV. Cukup pakai gadget yang ada, tanpa mesin mahal, mulai Rp 100/transaksi.
+            </p>
+
+            <div className="hero-cta-group">
+              <Link href="/menu/giras-nusantara?table=01" target="_blank" className="btn-primary">
+                📱 Coba Demo QR Menu
+              </Link>
+              <button type="button" onClick={() => setIsLoginModalOpen(true)} className="btn-secondary">
+                🔑 Masuk Portal Operasional
+              </button>
+            </div>
+
+            <div className="hero-trust-row" aria-label="Keunggulan utama">
+              <span>✓ Offline-first</span>
+              <span>✓ Tanpa mesin mahal</span>
+              <span>✓ Mulai Rp 100/transaksi</span>
+            </div>
           </div>
 
-          {/* Heading */}
-          <h1
-            className="hero-heading"
-            style={{
-              fontSize: "clamp(2.3rem, 5.5vw, 4rem)",
-              fontWeight: 900,
-              lineHeight: 1.12,
-              letterSpacing: "-0.035em",
-              maxWidth: "960px",
-              margin: "0 auto 1.5rem",
-            }}
-          >
-            Pesanan Mengalir Cepat,{" "}
-            <span
-              style={{
-                background: "linear-gradient(135deg, #FF6A00 0%, #FF4500 50%, #FFA07A 100%)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-              }}
-            >
-              Usaha Kuliner Bebas Macet.
-            </span>
-          </h1>
-
-          {/* Subtitle */}
-          <p
-            className="hero-subtitle"
-            style={{
-              fontSize: "1.15rem",
-              lineHeight: 1.65,
-              color: "var(--text-muted)",
-              maxWidth: "820px",
-              margin: "0 auto 2.5rem",
-            }}
-          >
-            Sistem Kasir (POS) Offline-First, Kitchen Display System (KDS), QR Menu Meja, dan Layar Antrean TV Otomatis.
-            Fleksibel untuk <strong>Warkop, Kafe, Rumah Makan, Kedai Kopi, hingga Food Court</strong>.
-            Cukup pakai HP &amp; Smart TV yang sudah Anda miliki tanpa biaya alat mahal, sewa flat hanya{" "}
-            <strong style={{ color: "var(--text-pure-white)" }}>Rp {saasFeePerReceipt.toLocaleString("id-ID")} per transaksi</strong>.
-          </p>
-
-          {/* CTA Group */}
-          <div className="hero-cta-group" style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap", marginBottom: "3rem" }}>
-            <Link
-              href="/menu/giras-nusantara?table=01"
-              target="_blank"
-              className="btn-primary"
-              style={{ padding: "0.85rem 1.6rem", fontSize: "0.95rem", fontWeight: 800 }}
-            >
-              📱 Coba Demo QR Menu Meja Pelanggan
-            </Link>
-            <button
-              type="button"
-              onClick={() => setIsLoginModalOpen(true)}
-              className="btn-secondary"
-              style={{
-                padding: "0.85rem 1.6rem",
-                fontSize: "0.95rem",
-                fontWeight: 800,
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "0.5rem",
-              }}
-            >
-              <span>🔑 Masuk ke Portal Operasional</span>
-            </button>
-          </div>
-
-          {/* Value Props Strip */}
-          <div
-            className="value-props-container"
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              gap: "2rem",
-              flexWrap: "wrap",
-              padding: "1rem 1.5rem",
-              background: "rgba(255, 255, 255, 0.03)",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
-              borderRadius: "12px",
-              maxWidth: "900px",
-              margin: "0 auto",
-              fontSize: "0.85rem",
-              color: "var(--text-pure-white)",
-              fontWeight: 600,
-            }}
-          >
-            <div>✓ 100% Uang Penjualan Langsung ke Rekening Anda</div>
-            <div>✓ Offline-First (Tetap Jalan Saat Internet Mati)</div>
-            <div>✓ Tanpa Beli Mesin Kasir Jutaan Rupiah</div>
-            <div>✓ Sewa Hemat Rp {saasFeePerReceipt.toLocaleString("id-ID")}/Struk</div>
+          <div className="hero-visual" aria-label="Tablet kasir OKESIH di kafe modern">
+            <Image
+              src="/images/hero-pos-cafe-v2.png"
+              alt="Tablet kasir modern dengan aplikasi POS, printer struk, dan es kopi di meja kasir sebuah kafe"
+              fill
+              priority
+              sizes="(max-width: 900px) 100vw, 58vw"
+              className="hero-visual-image"
+            />
           </div>
         </section>
 
