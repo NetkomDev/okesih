@@ -91,6 +91,10 @@ export async function logoutUser(): Promise<void> {
  */
 export function useAuthGuard(allowedRoles: UserRole[]) {
   const router = useRouter();
+  // Callers commonly pass an inline array (for example `["OWNER"]`). Using
+  // that array directly as an effect dependency restarts the guard on every
+  // render and can leave client-side navigation permanently loading.
+  const allowedRolesKey = allowedRoles.join("|");
   const [isAuthorized, setIsAuthorized] = useState<boolean>(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [currentRole, setCurrentRole] = useState<UserRole | null>(null);
@@ -101,6 +105,7 @@ export function useAuthGuard(allowedRoles: UserRole[]) {
 
     const verifyRole = async () => {
       try {
+        const permittedRoles = allowedRolesKey.split("|") as UserRole[];
         const supabase = createClient();
         // Guard antarmuka cukup membaca sesi lokal yang sudah diverifikasi saat login.
         // Otorisasi sensitif tetap diverifikasi ulang oleh setiap API Route di server.
@@ -116,7 +121,7 @@ export function useAuthGuard(allowedRoles: UserRole[]) {
 
         const role = extractUserRole(user);
 
-        if (!role || !allowedRoles.includes(role)) {
+        if (!role || !permittedRoles.includes(role)) {
           if (isMounted) {
             // Arahkan ke dashboard yang menjadi haknya jika mencoba masuk ke halaman lain
             if (role === "SUPERADMIN") {
@@ -152,7 +157,7 @@ export function useAuthGuard(allowedRoles: UserRole[]) {
     return () => {
       isMounted = false;
     };
-  }, [router, allowedRoles]);
+  }, [router, allowedRolesKey]);
 
   return { isAuthorized, currentUser, currentRole, loading };
 }
