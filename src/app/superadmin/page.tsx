@@ -708,16 +708,14 @@ export default function SuperAdminDashboardPage() {
             title={sidebarCollapsed ? "Klik untuk memperluas sidebar" : undefined}
           >
             <img src="/logo.svg?v=2" alt="OKESIH Logo" />
-            {(!sidebarCollapsed || (autoHideEnabled && isHovered)) && (
-              <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
-                <div style={{ fontSize: "1.05rem", fontWeight: 900, letterSpacing: "-0.02em", color: isDark ? "#FFFFFF" : "#0F172A", lineHeight: 1.1 }}>
-                  OKESIH<span style={{ color: "#0284C7" }}> HQ</span>
-                </div>
-                <div style={{ fontSize: "0.68rem", color: isDark ? "#7DD3FC" : "#0284C7", fontWeight: 800, letterSpacing: "0.04em" }}>
-                  COMMAND CENTER
-                </div>
+            <div className="superadmin-sidebar-brand-text" style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+              <div style={{ fontSize: "1.05rem", fontWeight: 900, letterSpacing: "-0.02em", color: isDark ? "#FFFFFF" : "#0F172A", lineHeight: 1.1 }}>
+                OKESIH<span style={{ color: "#0284C7" }}> HQ</span>
               </div>
-            )}
+              <div style={{ fontSize: "0.68rem", color: isDark ? "#7DD3FC" : "#0284C7", fontWeight: 800, letterSpacing: "0.04em" }}>
+                COMMAND CENTER
+              </div>
+            </div>
           </div>
 
           <button
@@ -748,9 +746,7 @@ export default function SuperAdminDashboardPage() {
 
         {/* Sidebar Navigation Items */}
         <div className="superadmin-sidebar-content">
-          {(!sidebarCollapsed || (autoHideEnabled && isHovered)) && (
-            <div className="superadmin-sidebar-section-title">PLATFORM SAAS & OPERASIONAL</div>
-          )}
+          <div className="superadmin-sidebar-section-title">PLATFORM SAAS &amp; OPERASIONAL</div>
 
           <nav className="superadmin-sidebar-menu">
             {/* 1. Overview */}
@@ -763,12 +759,10 @@ export default function SuperAdminDashboardPage() {
               <div className="superadmin-sidebar-item-icon">
                 📊
               </div>
-              {(!sidebarCollapsed || (autoHideEnabled && isHovered)) && (
-                <div className="superadmin-sidebar-item-info">
-                  <strong>Overview &amp; Finansial</strong>
-                  <span>Metrik Global &amp; Wilayah</span>
-                </div>
-              )}
+              <div className="superadmin-sidebar-item-info">
+                <strong>Overview &amp; Finansial</strong>
+                <span>Metrik Global &amp; Wilayah</span>
+              </div>
             </button>
 
             {/* 2. Tenant Warkop */}
@@ -781,15 +775,11 @@ export default function SuperAdminDashboardPage() {
               <div className="superadmin-sidebar-item-icon">
                 🏢
               </div>
-              {(!sidebarCollapsed || (autoHideEnabled && isHovered)) && (
-                <>
-                  <div className="superadmin-sidebar-item-info">
-                    <strong>Daftar Tenant Warkop</strong>
-                    <span>Rentang Kode Unik &amp; Akun</span>
-                  </div>
-                  <span className="superadmin-sidebar-item-badge">{tenants.length}</span>
-                </>
-              )}
+              <div className="superadmin-sidebar-item-info">
+                <strong>Daftar Tenant Warkop</strong>
+                <span>Rentang Kode Unik &amp; Akun</span>
+              </div>
+              <span className="superadmin-sidebar-item-badge">{tenants.length}</span>
             </button>
 
             {/* 3. Marketing */}
@@ -802,17 +792,13 @@ export default function SuperAdminDashboardPage() {
               <div className="superadmin-sidebar-item-icon">
                 🤝
               </div>
-              {(!sidebarCollapsed || (autoHideEnabled && isHovered)) && (
-                <>
-                  <div className="superadmin-sidebar-item-info">
-                    <strong>Mitra Marketing</strong>
-                    <span>Referral &amp; Bagi Hasil</span>
-                  </div>
-                  <span className="superadmin-sidebar-item-badge" style={{ background: "rgba(16, 185, 129, 0.14)", color: "#10B981" }}>
-                    {marketingList.length}
-                  </span>
-                </>
-              )}
+              <div className="superadmin-sidebar-item-info">
+                <strong>Mitra Marketing</strong>
+                <span>Referral &amp; Bagi Hasil</span>
+              </div>
+              <span className="superadmin-sidebar-item-badge" style={{ background: "rgba(16, 185, 129, 0.14)", color: "#10B981" }}>
+                {marketingList.length}
+              </span>
             </button>
 
             {/* 4. QRIS Billing */}
@@ -825,12 +811,10 @@ export default function SuperAdminDashboardPage() {
               <div className="superadmin-sidebar-item-icon">
                 💳
               </div>
-              {(!sidebarCollapsed || (autoHideEnabled && isHovered)) && (
-                <div className="superadmin-sidebar-item-info">
-                  <strong>Billing &amp; QRIS SaaS</strong>
-                  <span>Rekening Pusat &amp; Biaya</span>
-                </div>
-              )}
+              <div className="superadmin-sidebar-item-info">
+                <strong>Billing &amp; QRIS SaaS</strong>
+                <span>Rekening Pusat &amp; Biaya</span>
+              </div>
             </button>
 
             {/* 5. Parameter Master */}
@@ -843,121 +827,92 @@ export default function SuperAdminDashboardPage() {
               <div className="superadmin-sidebar-item-icon">
                 ⚙️
               </div>
-              {(!sidebarCollapsed || (autoHideEnabled && isHovered)) && (
-                <div className="superadmin-sidebar-item-info">
-                  <strong>Parameter Master</strong>
-                  <span>Tarif SaaS &amp; Kuota</span>
-                </div>
-              )}
+              <div className="superadmin-sidebar-item-info">
+                <strong>Parameter Master</strong>
+                <span>Tarif SaaS &amp; Kuota</span>
+              </div>
             </button>
           </nav>
 
           {/* Quick Actions in Sidebar */}
-          {(!sidebarCollapsed || (autoHideEnabled && isHovered)) && (
-            <div style={{ marginTop: "0.5rem" }}>
-              <div className="superadmin-sidebar-section-title" style={{ marginBottom: "0.5rem" }}>TINDAKAN CEPAT</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-                <button
-                  type="button"
-                  onClick={handleOpenRegisterModal}
-                  className="btn-primary"
-                  style={{
-                    padding: "0.55rem 0.75rem",
-                    fontSize: "0.78rem",
-                    fontWeight: 800,
-                    background: "linear-gradient(135deg, #0EA5E9, #0284C7)",
-                    borderRadius: "8px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "0.4rem",
-                  }}
-                >
-                  <span>+</span> Daftarkan Warkop
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const codeSuffix = Math.floor(Math.random() * 89) + 10;
-                    setNewMarketingName("");
-                    setNewMarketingPhone("");
-                    setNewMarketingArea("");
-                    setNewMarketingCode(`MKT-${codeSuffix}`);
-                    setNewMarketingAccountNo("");
-                    setNewMarketingCommRate(defaultCommissionRate);
-                    setIsMarketingModalOpen(true);
-                  }}
-                  className="btn-primary"
-                  style={{
-                    padding: "0.55rem 0.75rem",
-                    fontSize: "0.78rem",
-                    fontWeight: 800,
-                    background: "linear-gradient(135deg, #10B981, #059669)",
-                    borderRadius: "8px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "0.4rem",
-                  }}
-                >
-                  <span>+</span> Daftarkan Marketing
-                </button>
-              </div>
+          <div className="superadmin-sidebar-quick-actions" style={{ marginTop: "0.5rem" }}>
+            <div className="superadmin-sidebar-section-title" style={{ marginBottom: "0.5rem" }}>TINDAKAN CEPAT</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+              <button
+                type="button"
+                onClick={handleOpenRegisterModal}
+                className="btn-primary"
+                style={{
+                  padding: "0.55rem 0.75rem",
+                  fontSize: "0.78rem",
+                  fontWeight: 800,
+                  background: "linear-gradient(135deg, #0EA5E9, #0284C7)",
+                  borderRadius: "8px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "0.4rem",
+                }}
+              >
+                <span>+</span> Daftarkan Warkop
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const codeSuffix = Math.floor(Math.random() * 89) + 10;
+                  setNewMarketingName("");
+                  setNewMarketingPhone("");
+                  setNewMarketingArea("");
+                  setNewMarketingCode(`MKT-${codeSuffix}`);
+                  setNewMarketingAccountNo("");
+                  setNewMarketingCommRate(defaultCommissionRate);
+                  setIsMarketingModalOpen(true);
+                }}
+                className="btn-primary"
+                style={{
+                  padding: "0.55rem 0.75rem",
+                  fontSize: "0.78rem",
+                  fontWeight: 800,
+                  background: "linear-gradient(135deg, #10B981, #059669)",
+                  borderRadius: "8px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "0.4rem",
+                }}
+              >
+                <span>+</span> Daftarkan Marketing
+              </button>
             </div>
-          )}
+          </div>
         </div>
 
         {/* Sidebar Footer */}
         <div className="superadmin-sidebar-footer">
-          {/* Auto-Hide Toggle Switch */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "0.35rem 0.5rem",
-              borderRadius: "8px",
-              background: isDark ? "rgba(148, 163, 184, 0.08)" : "rgba(0, 0, 0, 0.04)",
-              fontSize: "0.72rem",
-              cursor: "pointer",
-            }}
-            onClick={toggleAutoHide}
-            title="Bila aktif, sidebar otomatis melipat dan melayang saat mouse mendekat"
-          >
-            {(!sidebarCollapsed || (autoHideEnabled && isHovered)) ? (
-              <>
-                <span style={{ color: isDark ? "#94A3B8" : "#64748B", fontWeight: 700 }}>Auto-Hide (Hover Peek)</span>
-                <span style={{ fontWeight: 800, color: autoHideEnabled ? "#10B981" : isDark ? "#64748B" : "#94A3B8" }}>
-                  {autoHideEnabled ? "ON" : "OFF"}
-                </span>
-              </>
-            ) : (
-              <div
-                style={{
-                  margin: "auto",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: "28px",
-                  height: "28px",
-                  borderRadius: "6px",
-                  background: autoHideEnabled ? "rgba(16, 185, 129, 0.15)" : "transparent",
-                  color: autoHideEnabled ? "#10B981" : isDark ? "#94A3B8" : "#64748B",
-                  transition: "all 0.18s ease",
-                }}
-                title={autoHideEnabled ? "Mode Auto-Hide: Aktif" : "Mode Auto-Hide: Nonaktif (Klik untuk aktifkan)"}
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                  <line x1="9" y1="3" x2="9" y2="21" />
-                  <path d="M14 9l3 3-3 3" />
-                </svg>
-              </div>
-            )}
-          </div>
+          {/* Expanded Footer Details */}
+          <div className="superadmin-sidebar-expanded-footer">
+            {/* Auto-Hide Toggle Switch */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "0.35rem 0.5rem",
+                borderRadius: "8px",
+                background: isDark ? "rgba(148, 163, 184, 0.08)" : "rgba(0, 0, 0, 0.04)",
+                fontSize: "0.72rem",
+                cursor: "pointer",
+              }}
+              onClick={toggleAutoHide}
+              title="Bila aktif, sidebar otomatis melipat dan melayang saat mouse mendekat"
+            >
+              <span style={{ color: isDark ? "#94A3B8" : "#64748B", fontWeight: 700 }}>Auto-Hide (Hover Peek)</span>
+              <span style={{ fontWeight: 800, color: autoHideEnabled ? "#10B981" : isDark ? "#64748B" : "#94A3B8" }}>
+                {autoHideEnabled ? "ON" : "OFF"}
+              </span>
+            </div>
 
-          {/* Admin User Card */}
-          {(!sidebarCollapsed || (autoHideEnabled && isHovered)) ? (
+            {/* Admin User Card */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: "0.2rem" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                 <div style={{ width: "30px", height: "30px", borderRadius: "50%", background: "linear-gradient(135deg, #0284C7, #0EA5E9)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: "0.75rem" }}>
@@ -977,49 +932,52 @@ export default function SuperAdminDashboardPage() {
                 Logout
               </button>
             </div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", alignItems: "center", width: "100%" }}>
-              <button
-                type="button"
-                onClick={toggleSidebar}
-                style={{
-                  background: isDark ? "rgba(148, 163, 184, 0.12)" : "rgba(0, 0, 0, 0.06)",
-                  border: isDark ? "1px solid rgba(148, 163, 184, 0.2)" : "1px solid rgba(0, 0, 0, 0.12)",
-                  borderRadius: "8px",
-                  color: isDark ? "#F8FAFC" : "#0F172A",
-                  fontSize: "1.1rem",
-                  width: "36px",
-                  height: "36px",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontWeight: 900,
-                  transition: "all 0.18s ease",
-                }}
-                title="Perluas Sidebar"
-              >
-                »
-              </button>
-              <button
-                type="button"
-                onClick={logoutUser}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  color: "#EF4444",
-                  fontSize: "1.15rem",
-                  padding: "0.25rem",
-                  cursor: "pointer",
-                  display: "flex",
-                  justifyContent: "center",
-                }}
-                title="Logout"
-              >
-                🚪
-              </button>
-            </div>
-          )}
+          </div>
+
+          {/* Mini Collapsed Footer Controls */}
+          <div className="superadmin-sidebar-collapsed-footer">
+            <button
+              type="button"
+              onClick={toggleSidebar}
+              style={{
+                background: isDark ? "rgba(148, 163, 184, 0.12)" : "rgba(0, 0, 0, 0.06)",
+                border: isDark ? "1px solid rgba(148, 163, 184, 0.2)" : "1px solid rgba(0, 0, 0, 0.12)",
+                borderRadius: "8px",
+                color: isDark ? "#F8FAFC" : "#0F172A",
+                width: "36px",
+                height: "36px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "all 0.18s ease",
+              }}
+              title="Perluas Sidebar"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                <line x1="9" y1="3" x2="9" y2="21" />
+                <polyline points="14 9 17 12 14 15" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={logoutUser}
+              style={{
+                background: "transparent",
+                border: "none",
+                color: "#EF4444",
+                fontSize: "1.15rem",
+                padding: "0.25rem",
+                cursor: "pointer",
+                display: "flex",
+                justifyContent: "center",
+              }}
+              title="Logout"
+            >
+              🚪
+            </button>
+          </div>
         </div>
       </aside>
 

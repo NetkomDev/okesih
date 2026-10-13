@@ -93,7 +93,7 @@
   z-index: 90;
   display: flex;
   flex-direction: column;
-  width: 264px;
+  width: 270px;
   background: rgba(8, 14, 24, 0.96);
   border-right: 1px solid var(--sa-border);
   backdrop-filter: blur(20px);
@@ -125,8 +125,20 @@
   cursor: pointer;
 }
 
+.superadmin-sidebar.is-collapsed .superadmin-sidebar-brand-text {
+  display: none !important;
+}
+
 .superadmin-sidebar.is-collapsed .superadmin-sidebar-toggle-btn {
-  display: none;
+  display: none !important;
+}
+
+.superadmin-sidebar.is-collapsed .superadmin-sidebar-section-title {
+  display: none !important;
+}
+
+.superadmin-sidebar.is-collapsed .superadmin-sidebar-quick-actions {
+  display: none !important;
 }
 
 .superadmin-sidebar.is-collapsed .superadmin-sidebar-item {
@@ -174,14 +186,258 @@
   transform: scale(1.1);
 }
 
-/* Auto-hide / Floating peek saat kursor mendekat jika mode auto-hide aktif */
-@media (min-width: 1025px) {
-  .superadmin-sidebar.is-collapsed.is-autohide:hover,
-  .superadmin-sidebar.is-collapsed.is-peek {
-    width: 264px !important;
-    box-shadow: 12px 0 40px rgba(0, 0, 0, 0.45) !important;
-    z-index: 100 !important;
-  }
+.superadmin-sidebar.is-collapsed .superadmin-sidebar-item-info,
+.superadmin-sidebar.is-collapsed .superadmin-sidebar-item-badge {
+  display: none !important;
+}
+
+.superadmin-sidebar.is-collapsed .superadmin-sidebar-expanded-footer {
+  display: none !important;
+}
+
+.superadmin-sidebar.is-collapsed .superadmin-sidebar-collapsed-footer {
+  display: flex !important;
+}
+
+/* =========================================================================
+   SIDEBAR SHOW / EXPANDED / HOVER PEEK STATE
+   Dipicu saat:
+   - Sidebar tidak collapsed (.is-expanded)
+   - Sedang peek via React (.is-peek)
+   - Sedang di-hover saat mode autohide (.is-autohide:hover)
+   - Sedang dibuka di mobile (.is-mobile-open)
+   ========================================================================= */
+.superadmin-sidebar.is-expanded,
+.superadmin-sidebar.is-collapsed.is-peek,
+.superadmin-sidebar.is-collapsed.is-autohide:hover,
+.superadmin-sidebar.is-mobile-open {
+  width: 272px !important;
+  box-shadow: 12px 0 40px rgba(0, 0, 0, 0.45) !important;
+  z-index: 100 !important;
+}
+
+[data-theme="light"] .superadmin-sidebar.is-expanded,
+[data-theme="light"] .superadmin-sidebar.is-collapsed.is-peek,
+[data-theme="light"] .superadmin-sidebar.is-collapsed.is-autohide:hover,
+[data-theme="light"] .superadmin-sidebar.is-mobile-open {
+  box-shadow: 8px 0 32px rgba(15, 23, 42, 0.12) !important;
+}
+
+/* Header saat Show */
+.superadmin-sidebar.is-expanded .superadmin-sidebar-header,
+.superadmin-sidebar.is-collapsed.is-peek .superadmin-sidebar-header,
+.superadmin-sidebar.is-collapsed.is-autohide:hover .superadmin-sidebar-header,
+.superadmin-sidebar.is-mobile-open .superadmin-sidebar-header {
+  padding: 0 0.95rem !important;
+  justify-content: space-between !important;
+}
+
+.superadmin-sidebar.is-expanded .superadmin-sidebar-brand,
+.superadmin-sidebar.is-collapsed.is-peek .superadmin-sidebar-brand,
+.superadmin-sidebar.is-collapsed.is-autohide:hover .superadmin-sidebar-brand,
+.superadmin-sidebar.is-mobile-open .superadmin-sidebar-brand {
+  margin: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.75rem !important;
+}
+
+.superadmin-sidebar.is-expanded .superadmin-sidebar-brand-text,
+.superadmin-sidebar.is-collapsed.is-peek .superadmin-sidebar-brand-text,
+.superadmin-sidebar.is-collapsed.is-autohide:hover .superadmin-sidebar-brand-text,
+.superadmin-sidebar.is-mobile-open .superadmin-sidebar-brand-text {
+  display: flex !important;
+  flex-direction: column !important;
+  min-width: 0 !important;
+}
+
+.superadmin-sidebar.is-expanded .superadmin-sidebar-toggle-btn,
+.superadmin-sidebar.is-collapsed.is-peek .superadmin-sidebar-toggle-btn,
+.superadmin-sidebar.is-collapsed.is-autohide:hover .superadmin-sidebar-toggle-btn,
+.superadmin-sidebar.is-mobile-open .superadmin-sidebar-toggle-btn {
+  display: inline-flex !important;
+}
+
+.superadmin-sidebar.is-expanded .superadmin-sidebar-section-title,
+.superadmin-sidebar.is-collapsed.is-peek .superadmin-sidebar-section-title,
+.superadmin-sidebar.is-collapsed.is-autohide:hover .superadmin-sidebar-section-title,
+.superadmin-sidebar.is-mobile-open .superadmin-sidebar-section-title {
+  display: block !important;
+}
+
+.superadmin-sidebar.is-expanded .superadmin-sidebar-quick-actions,
+.superadmin-sidebar.is-collapsed.is-peek .superadmin-sidebar-quick-actions,
+.superadmin-sidebar.is-collapsed.is-autohide:hover .superadmin-sidebar-quick-actions,
+.superadmin-sidebar.is-mobile-open .superadmin-sidebar-quick-actions {
+  display: block !important;
+}
+
+/* MENU ITEM SAAT SHOW: Full Width, Judul Menu Jelas & Rapi */
+.superadmin-sidebar.is-expanded .superadmin-sidebar-item,
+.superadmin-sidebar.is-collapsed.is-peek .superadmin-sidebar-item,
+.superadmin-sidebar.is-collapsed.is-autohide:hover .superadmin-sidebar-item,
+.superadmin-sidebar.is-mobile-open .superadmin-sidebar-item {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: 48px !important;
+  padding: 0.6rem 0.75rem !important;
+  margin: 0 0 0.35rem 0 !important;
+  gap: 0.65rem !important;
+  border-radius: 10px !important;
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  cursor: pointer !important;
+}
+
+.superadmin-sidebar.is-expanded .superadmin-sidebar-item:hover,
+.superadmin-sidebar.is-collapsed.is-peek .superadmin-sidebar-item:hover,
+.superadmin-sidebar.is-collapsed.is-autohide:hover .superadmin-sidebar-item:hover,
+.superadmin-sidebar.is-mobile-open .superadmin-sidebar-item:hover {
+  background: rgba(148, 163, 184, 0.08) !important;
+}
+
+.superadmin-sidebar.is-expanded .superadmin-sidebar-item.is-active,
+.superadmin-sidebar.is-collapsed.is-peek .superadmin-sidebar-item.is-active,
+.superadmin-sidebar.is-collapsed.is-autohide:hover .superadmin-sidebar-item.is-active,
+.superadmin-sidebar.is-mobile-open .superadmin-sidebar-item.is-active {
+  background: rgba(249, 115, 22, 0.12) !important;
+  color: #F97316 !important;
+  border: 1px solid rgba(249, 115, 22, 0.28) !important;
+  border-left: 3.5px solid #F97316 !important;
+  box-shadow: none !important;
+}
+
+[data-theme="light"] .superadmin-sidebar.is-expanded .superadmin-sidebar-item.is-active,
+[data-theme="light"] .superadmin-sidebar.is-collapsed.is-peek .superadmin-sidebar-item.is-active,
+[data-theme="light"] .superadmin-sidebar.is-collapsed.is-autohide:hover .superadmin-sidebar-item.is-active,
+[data-theme="light"] .superadmin-sidebar.is-mobile-open .superadmin-sidebar-item.is-active {
+  background: rgba(249, 115, 22, 0.09) !important;
+  color: #EA580C !important;
+  border: 1px solid rgba(249, 115, 22, 0.22) !important;
+  border-left: 3.5px solid #EA580C !important;
+}
+
+/* Icon Menu Item saat Show */
+.superadmin-sidebar.is-expanded .superadmin-sidebar-item-icon,
+.superadmin-sidebar.is-collapsed.is-peek .superadmin-sidebar-item-icon,
+.superadmin-sidebar.is-collapsed.is-autohide:hover .superadmin-sidebar-item-icon,
+.superadmin-sidebar.is-mobile-open .superadmin-sidebar-item-icon {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 28px !important;
+  height: 28px !important;
+  font-size: 1.15rem !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  flex-shrink: 0 !important;
+  transform: none !important;
+}
+
+/* JUDUL & DESKRIPSI MENU SAAT SHOW: Wajib Tampil Jelas & Menawan */
+.superadmin-sidebar.is-expanded .superadmin-sidebar-item-info,
+.superadmin-sidebar.is-collapsed.is-peek .superadmin-sidebar-item-info,
+.superadmin-sidebar.is-collapsed.is-autohide:hover .superadmin-sidebar-item-info,
+.superadmin-sidebar.is-mobile-open .superadmin-sidebar-item-info {
+  display: flex !important;
+  flex-direction: column !important;
+  min-width: 0 !important;
+  flex: 1 !important;
+  overflow: hidden !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.superadmin-sidebar.is-expanded .superadmin-sidebar-item-info strong,
+.superadmin-sidebar.is-collapsed.is-peek .superadmin-sidebar-item-info strong,
+.superadmin-sidebar.is-collapsed.is-autohide:hover .superadmin-sidebar-item-info strong,
+.superadmin-sidebar.is-mobile-open .superadmin-sidebar-item-info strong {
+  display: block !important;
+  font-size: 0.815rem !important;
+  font-weight: 800 !important;
+  color: #F8FAFC !important;
+  line-height: 1.2 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  letter-spacing: -0.01em;
+}
+
+[data-theme="light"] .superadmin-sidebar.is-expanded .superadmin-sidebar-item-info strong,
+[data-theme="light"] .superadmin-sidebar.is-collapsed.is-peek .superadmin-sidebar-item-info strong,
+[data-theme="light"] .superadmin-sidebar.is-collapsed.is-autohide:hover .superadmin-sidebar-item-info strong,
+[data-theme="light"] .superadmin-sidebar.is-mobile-open .superadmin-sidebar-item-info strong {
+  color: #0F172A !important;
+}
+
+.superadmin-sidebar.is-expanded .superadmin-sidebar-item.is-active .superadmin-sidebar-item-info strong,
+.superadmin-sidebar.is-collapsed.is-peek .superadmin-sidebar-item.is-active .superadmin-sidebar-item-info strong,
+.superadmin-sidebar.is-collapsed.is-autohide:hover .superadmin-sidebar-item.is-active .superadmin-sidebar-item-info strong,
+.superadmin-sidebar.is-mobile-open .superadmin-sidebar-item.is-active .superadmin-sidebar-item-info strong {
+  color: #F97316 !important;
+}
+
+.superadmin-sidebar.is-expanded .superadmin-sidebar-item-info span,
+.superadmin-sidebar.is-collapsed.is-peek .superadmin-sidebar-item-info span,
+.superadmin-sidebar.is-collapsed.is-autohide:hover .superadmin-sidebar-item-info span,
+.superadmin-sidebar.is-mobile-open .superadmin-sidebar-item-info span {
+  display: block !important;
+  font-size: 0.69rem !important;
+  color: #94A3B8 !important;
+  font-weight: 600 !important;
+  line-height: 1.2 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  margin-top: 1px !important;
+}
+
+[data-theme="light"] .superadmin-sidebar.is-expanded .superadmin-sidebar-item-info span,
+[data-theme="light"] .superadmin-sidebar.is-collapsed.is-peek .superadmin-sidebar-item-info span,
+[data-theme="light"] .superadmin-sidebar.is-collapsed.is-autohide:hover .superadmin-sidebar-item-info span,
+[data-theme="light"] .superadmin-sidebar.is-mobile-open .superadmin-sidebar-item-info span {
+  color: #64748B !important;
+}
+
+/* Badge Menu Item saat Show */
+.superadmin-sidebar.is-expanded .superadmin-sidebar-item-badge,
+.superadmin-sidebar.is-collapsed.is-peek .superadmin-sidebar-item-badge,
+.superadmin-sidebar.is-collapsed.is-autohide:hover .superadmin-sidebar-item-badge,
+.superadmin-sidebar.is-mobile-open .superadmin-sidebar-item-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin-left: auto !important;
+  font-size: 0.70rem !important;
+  font-weight: 800 !important;
+  padding: 0.12rem 0.5rem !important;
+  border-radius: 999px !important;
+  background: rgba(249, 115, 22, 0.14) !important;
+  color: #F97316 !important;
+  flex-shrink: 0 !important;
+}
+
+/* Footer saat Show */
+.superadmin-sidebar.is-expanded .superadmin-sidebar-expanded-footer,
+.superadmin-sidebar.is-collapsed.is-peek .superadmin-sidebar-expanded-footer,
+.superadmin-sidebar.is-collapsed.is-autohide:hover .superadmin-sidebar-expanded-footer,
+.superadmin-sidebar.is-mobile-open .superadmin-sidebar-expanded-footer {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.5rem !important;
+  width: 100% !important;
+}
+
+.superadmin-sidebar.is-expanded .superadmin-sidebar-collapsed-footer,
+.superadmin-sidebar.is-collapsed.is-peek .superadmin-sidebar-collapsed-footer,
+.superadmin-sidebar.is-collapsed.is-autohide:hover .superadmin-sidebar-collapsed-footer,
+.superadmin-sidebar.is-mobile-open .superadmin-sidebar-collapsed-footer {
+  display: none !important;
 }
 
 .superadmin-sidebar-header {
@@ -365,9 +621,9 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
-  margin-left: 264px;
-  width: calc(100% - 264px);
-  max-width: calc(100% - 264px);
+  margin-left: 272px;
+  width: calc(100% - 272px);
+  max-width: calc(100% - 272px);
   transition: margin-left 0.28s cubic-bezier(0.16, 1, 0.3, 1), width 0.28s cubic-bezier(0.16, 1, 0.3, 1), max-width 0.28s cubic-bezier(0.16, 1, 0.3, 1);
   min-height: 100vh;
 }
