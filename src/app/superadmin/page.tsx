@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useAuthGuard, logoutUser } from "@/lib/auth-helpers";
+import ThemeToggle from "@/components/ThemeToggle";
 
 interface MarketingAgent {
   id: string;
@@ -40,11 +41,85 @@ interface TenantWarkop {
   joinedDate: string;
 }
 
+interface ToastNotification {
+  id: number;
+  title: string;
+  message: string;
+  type: "success" | "error" | "info";
+}
+
+interface ConfirmModalData {
+  isOpen: boolean;
+  title: string;
+  message: string;
+  confirmText?: string;
+  confirmVariant?: "danger" | "primary" | "success";
+  onConfirm: () => void;
+}
+
+interface NewTenantCredentials {
+  name: string;
+  slug: string;
+  uniqueCodeRange: string;
+  marketingAgentName: string;
+  commissionPerReceipt: number;
+  username: string;
+  password: string;
+}
+
 export default function SuperAdminDashboardPage() {
   const { isAuthorized, loading, currentUser } = useAuthGuard(["SUPERADMIN"]);
 
+  // Dynamic Theme State (Dark / Light)
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const active = (document.documentElement.getAttribute("data-theme") as "dark" | "light") || "dark";
+      setTheme(active);
+
+      const handleThemeChange = () => {
+        const t = (document.documentElement.getAttribute("data-theme") as "dark" | "light") || "dark";
+        setTheme(t);
+      };
+
+      window.addEventListener("theme-change", handleThemeChange);
+      window.addEventListener("storage", handleThemeChange);
+      return () => {
+        window.removeEventListener("theme-change", handleThemeChange);
+        window.removeEventListener("storage", handleThemeChange);
+      };
+    }
+  }, []);
+
+  const isDark = theme === "dark";
+
   // Active Tab View di Super Admin
   const [activeTab, setActiveTab] = useState<"tenants" | "marketing" | "qris_billing" | "platform_config">("tenants");
+
+  // Toast Notification System
+  const [toast, setToast] = useState<ToastNotification | null>(null);
+  const showToast = (title: string, message: string, type: "success" | "error" | "info" = "success") => {
+    setToast({ id: Date.now(), title, message, type });
+  };
+
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
+
+  // Modal Konfirmasi Modern
+  const [confirmModal, setConfirmModal] = useState<ConfirmModalData>({
+    isOpen: false,
+    title: "",
+    message: "",
+    onConfirm: () => {},
+  });
+
+  // Modal Kredensial Owner Tenant Baru
+  const [newTenantCredentials, setNewTenantCredentials] = useState<NewTenantCredentials | null>(null);
 
   // State Marketing Lapangan
   const [marketingList, setMarketingList] = useState<MarketingAgent[]>([
@@ -134,12 +209,6 @@ export default function SuperAdminDashboardPage() {
     }
   };
 
-  useEffect(() => {
-    if (activeTab === "marketing") {
-      loadMarketingPartners();
-    }
-  }, [activeTab]);
-
   const handleUpdateMarketingStatus = async (id: string, newStatus: "ACTIVE" | "INACTIVE") => {
     try {
       const res = await fetch("/api/superadmin/marketing", {
@@ -151,12 +220,16 @@ export default function SuperAdminDashboardPage() {
         setMarketingList((prev) =>
           prev.map((m) => (m.id === id ? { ...m, status: newStatus } : m))
         );
-        alert(`✓ Status Marketing berhasil diubah menjadi ${newStatus}!`);
+        showToast(
+          "Status Marketing Diperbarui",
+          `Status mitra marketing berhasil diubah menjadi ${newStatus}.`,
+          "success"
+        );
       } else {
-        alert("Gagal mengubah status di server.");
+        showToast("Gagal Memperbarui", "Server tidak dapat mengubah status mitra.", "error");
       }
     } catch {
-      alert("Terjadi kesalahan jaringan.");
+      showToast("Koneksi Bermasalah", "Terjadi kesalahan jaringan ke server.", "error");
     }
   };
 
@@ -228,6 +301,47 @@ export default function SuperAdminDashboardPage() {
     },
   ]);
 
+  // Load Tenants dari Supabase API
+  const loadTenants = async () => {
+    try {
+      const res = await fetch("/api/superadmin/tenants");
+      const json = await res.json();
+      if (json.data && Array.isArray(json.data) && json.data.length > 0) {
+        setTenants((prev) => {
+          const existingMap = new Map(prev.map((t) => [t.slug, t]));
+          const updated = json.data.map((item: TenantWarkop) => {
+            const existing = existingMap.get(item.slug);
+            return {
+              ...item,
+              todayTransactions: existing?.todayTransactions || item.todayTransactions || 0,
+              totalSaasBilling: existing?.totalSaasBilling || item.totalSaasBilling || 0,
+              paymentStatus: existing?.paymentStatus || item.paymentStatus || "PAID",
+            };
+          });
+
+          const dbSlugs = new Set(json.data.map((d: TenantWarkop) => d.slug));
+          const leftovers = prev.filter((p) => !dbSlugs.has(p.slug));
+          return [...updated, ...leftovers];
+        });
+      }
+    } catch (e) {
+      console.error("Gagal memuat tenants dari database:", e);
+    }
+  };
+
+  useEffect(() => {
+    loadTenants();
+    loadMarketingPartners();
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "marketing") {
+      loadMarketingPartners();
+    } else if (activeTab === "tenants") {
+      loadTenants();
+    }
+  }, [activeTab]);
+
   // Master Platform Settings (SaaS HQ)
   const [globalDismissDuration, setGlobalDismissDuration] = useState<number>(60);
   const [saasFeePerReceipt, setSaasFeePerReceipt] = useState<number>(50);
@@ -279,11 +393,11 @@ export default function SuperAdminDashboardPage() {
     setIsRegisterModalOpen(true);
   };
 
-  // Simpan Tenant Baru
-  const handleCreateTenant = (e: React.FormEvent) => {
+  // Simpan Tenant Baru (Persistens ke Supabase)
+  const handleCreateTenant = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newWarkopName || !newOwnerName) {
-      alert("Harap isi Nama Warkop dan Nama Owner!");
+    if (!newWarkopName.trim() || !newOwnerName.trim()) {
+      showToast("Form Belum Lengkap", "Harap isi Nama Warkop dan Nama Owner!", "error");
       return;
     }
 
@@ -291,9 +405,9 @@ export default function SuperAdminDashboardPage() {
     const createdSlug = newSlug.trim() || newWarkopName.toLowerCase().replace(/[^a-z0-9]/g, "-");
     const newTenant: TenantWarkop = {
       id: `ten-${Date.now()}`,
-      name: newWarkopName,
+      name: newWarkopName.trim(),
       slug: createdSlug,
-      ownerName: newOwnerName,
+      ownerName: newOwnerName.trim(),
       phone: newPhone || "0812xxxxxxx",
       uniqueCodeRange: newCodeRange,
       marketingAgentId: selectedMarketingId,
@@ -306,9 +420,9 @@ export default function SuperAdminDashboardPage() {
       joinedDate: "Hari Ini",
     };
 
+    // Optimistic UI update
     setTenants((prev) => [newTenant, ...prev]);
 
-    // Update counter marketing jika ada
     if (assignedMarketer) {
       setMarketingList((prev) =>
         prev.map((m) =>
@@ -319,30 +433,55 @@ export default function SuperAdminDashboardPage() {
 
     setIsRegisterModalOpen(false);
 
-    alert(
-      `✓ TENANT BARU BERHASIL DIDAFTARKAN!\n\n` +
-      `Nama Warkop: ${newTenant.name}\n` +
-      `Slug URL: /menu/${newTenant.slug}\n` +
-      `Rentang Kode Unik: ${newTenant.uniqueCodeRange}\n` +
-      `Marketing Pengakuisisi: ${newTenant.marketingAgentName}\n` +
-      `Bagi Hasil Komisi: Rp ${newTenant.commissionPerReceipt} / struk\n\n` +
-      `Kredensial Owner Baru (Bagikan ke Owner):\n` +
-      `Username: ${generatedUsername}\n` +
-      `Password: ${generatedPassword}`
+    // Buka Modal Kredensial untuk admin
+    setNewTenantCredentials({
+      name: newTenant.name,
+      slug: newTenant.slug,
+      uniqueCodeRange: newTenant.uniqueCodeRange,
+      marketingAgentName: newTenant.marketingAgentName || "Direct HQ",
+      commissionPerReceipt: newTenant.commissionPerReceipt,
+      username: generatedUsername,
+      password: generatedPassword,
+    });
+
+    showToast(
+      "Tenant Berhasil Didaftarkan",
+      `${newTenant.name} telah aktif di ekosistem OKESIH.`,
+      "success"
     );
+
+    // Simpan ke Supabase via API Route
+    try {
+      await fetch("/api/superadmin/tenants", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newTenant.name,
+          slug: newTenant.slug,
+          ownerName: newTenant.ownerName,
+          phone: newTenant.phone,
+          uniqueCodeRange: newTenant.uniqueCodeRange,
+          marketingAgentId: selectedMarketingId,
+          commissionPerReceipt: newTenant.commissionPerReceipt,
+          username: generatedUsername,
+        }),
+      });
+    } catch (err) {
+      console.error("Gagal sinkron tenant ke Supabase:", err);
+    }
   };
 
   // Simpan Marketing Lapangan Baru
   const handleCreateMarketing = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMarketingName || !newMarketingCode) {
-      alert("Harap isi Nama Marketing dan Kode Referral!");
+    if (!newMarketingName.trim() || !newMarketingCode.trim()) {
+      showToast("Form Belum Lengkap", "Harap isi Nama Marketing dan Kode Referral!", "error");
       return;
     }
 
     const newMkt: MarketingAgent = {
       id: `mkt-${Date.now()}`,
-      name: newMarketingName,
+      name: newMarketingName.trim(),
       phone: newMarketingPhone || "-",
       area: newMarketingArea || "Nasional",
       referralCode: newMarketingCode.toUpperCase().trim(),
@@ -359,15 +498,49 @@ export default function SuperAdminDashboardPage() {
 
     setMarketingList((prev) => [newMkt, ...prev]);
     setIsMarketingModalOpen(false);
-    alert(`✓ Marketing Lapangan "${newMkt.name}" (${newMkt.referralCode}) berhasil didaftarkan ke ekosistem OKESIH!`);
+    showToast(
+      "Marketing Berhasil Didaftarkan",
+      `Mitra "${newMkt.name}" (${newMkt.referralCode}) berhasil didaftarkan.`,
+      "success"
+    );
   };
 
   const toggleTenantStatus = (id: string) => {
-    setTenants((prev) =>
-      prev.map((t) =>
-        t.id === id ? { ...t, status: t.status === "ACTIVE" ? "SUSPENDED" : "ACTIVE" } : t
-      )
-    );
+    const target = tenants.find((t) => t.id === id);
+    if (!target) return;
+    const isNowActive = target.status !== "ACTIVE";
+    const nextStatus = isNowActive ? "ACTIVE" : "SUSPENDED";
+
+    setConfirmModal({
+      isOpen: true,
+      title: isNowActive ? "Aktifkan Tenant Warkop" : "Suspend Akses Tenant Warkop",
+      message: isNowActive
+        ? `Aktifkan kembali akses operasional untuk "${target.name}"?`
+        : `Tangguhkan (SUSPEND) "${target.name}"? Operasional kasir POS dan QR menu warkop akan dinonaktifkan sementara.`,
+      confirmText: isNowActive ? "Ya, Aktifkan" : "Ya, Suspend",
+      confirmVariant: isNowActive ? "success" : "danger",
+      onConfirm: async () => {
+        setTenants((prev) =>
+          prev.map((t) => (t.id === id ? { ...t, status: nextStatus } : t))
+        );
+        setConfirmModal((c) => ({ ...c, isOpen: false }));
+        showToast(
+          isNowActive ? "Tenant Diaktifkan" : "Tenant Ditangguhkan",
+          `Status ${target.name} sekarang: ${nextStatus}`,
+          isNowActive ? "success" : "info"
+        );
+
+        try {
+          await fetch("/api/superadmin/tenants", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id, is_active: isNowActive }),
+          });
+        } catch (e) {
+          console.error("Gagal update status warkop ke DB:", e);
+        }
+      },
+    });
   };
 
   // Filter Tenant
@@ -401,16 +574,16 @@ export default function SuperAdminDashboardPage() {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: "#06090E",
-          color: "#F0F6FC",
+          backgroundColor: isDark ? "#06090E" : "#F8FAFC",
+          color: isDark ? "#F0F6FC" : "#0F172A",
           gap: "1rem",
         }}
       >
         <div style={{ fontSize: "2.5rem" }}>🛡️</div>
-        <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#38BDF8" }}>
+        <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#0284C7" }}>
           Memverifikasi Otoritas Super Admin Pusat...
         </div>
-        <div style={{ fontSize: "0.85rem", color: "#64748B" }}>
+        <div style={{ fontSize: "0.85rem", color: isDark ? "#64748B" : "#94A3B8" }}>
           Pemeriksaan token peran &amp; hak akses ekosistem OKESIH
         </div>
       </div>
@@ -418,7 +591,66 @@ export default function SuperAdminDashboardPage() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", backgroundColor: "#06090E", color: "#F0F6FC" }}>
+    <div
+      style={{
+        minHeight: "100vh",
+        backgroundColor: isDark ? "#06090E" : "#F8FAFC",
+        color: isDark ? "#F0F6FC" : "#0F172A",
+        transition: "background-color 0.2s ease, color 0.2s ease",
+      }}
+    >
+      {/* Toast Notification Floating Container */}
+      {toast && (
+        <div
+          style={{
+            position: "fixed",
+            top: "1.5rem",
+            right: "1.5rem",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            gap: "0.85rem",
+            padding: "0.85rem 1.25rem",
+            borderRadius: "12px",
+            background: isDark ? "#0F172A" : "#FFFFFF",
+            color: isDark ? "#FFFFFF" : "#0F172A",
+            border:
+              toast.type === "success"
+                ? "1px solid #10B981"
+                : toast.type === "error"
+                ? "1px solid #EF4444"
+                : "1px solid #0EA5E9",
+            boxShadow: isDark
+              ? "0 10px 30px rgba(0, 0, 0, 0.6)"
+              : "0 10px 30px rgba(0, 0, 0, 0.12)",
+            animation: "fadeIn 0.2s ease-out",
+          }}
+        >
+          <span style={{ fontSize: "1.2rem" }}>
+            {toast.type === "success" ? "✅" : toast.type === "error" ? "⚠️" : "ℹ️"}
+          </span>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: "0.875rem" }}>{toast.title}</div>
+            <div style={{ fontSize: "0.8rem", color: isDark ? "#94A3B8" : "#64748B" }}>
+              {toast.message}
+            </div>
+          </div>
+          <button
+            onClick={() => setToast(null)}
+            style={{
+              background: "transparent",
+              border: "none",
+              color: isDark ? "#94A3B8" : "#64748B",
+              cursor: "pointer",
+              fontSize: "1rem",
+              marginLeft: "0.5rem",
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Super Admin Top Navigation */}
       <header
         style={{
@@ -426,12 +658,15 @@ export default function SuperAdminDashboardPage() {
           alignItems: "center",
           justifyContent: "space-between",
           padding: "1rem 2rem",
-          borderBottom: "1px solid rgba(56, 189, 248, 0.2)",
-          background: "linear-gradient(180deg, rgba(8, 20, 36, 0.95) 0%, rgba(6, 9, 14, 0.95) 100%)",
+          borderBottom: isDark ? "1px solid rgba(56, 189, 248, 0.2)" : "1px solid rgba(14, 165, 233, 0.2)",
+          background: isDark
+            ? "linear-gradient(180deg, rgba(8, 20, 36, 0.95) 0%, rgba(6, 9, 14, 0.95) 100%)"
+            : "linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%)",
           position: "sticky",
           top: 0,
           zIndex: 40,
           backdropFilter: "blur(12px)",
+          boxShadow: isDark ? "none" : "0 2px 12px rgba(0, 0, 0, 0.04)",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
@@ -443,18 +678,25 @@ export default function SuperAdminDashboardPage() {
             style={{ width: "46px", height: "46px", objectFit: "contain", display: "block", flexShrink: 0 }}
           />
           <div>
-            <div style={{ fontSize: "1.25rem", fontWeight: 900, letterSpacing: "-0.02em" }}>
-              OKESIH<span style={{ color: "#38BDF8" }}> HQ</span>
+            <div
+              style={{
+                fontSize: "1.25rem",
+                fontWeight: 900,
+                letterSpacing: "-0.02em",
+                color: isDark ? "#FFFFFF" : "#0F172A",
+              }}
+            >
+              OKESIH<span style={{ color: "#0284C7" }}> HQ</span>
             </div>
-            <div style={{ fontSize: "0.75rem", color: "#7DD3FC", fontWeight: 700 }}>
+            <div style={{ fontSize: "0.75rem", color: isDark ? "#7DD3FC" : "#0284C7", fontWeight: 700 }}>
               SUPER ADMIN SAAS COMMAND CENTER
             </div>
           </div>
           <span
             style={{
-              background: "rgba(14, 165, 233, 0.15)",
+              background: isDark ? "rgba(14, 165, 233, 0.15)" : "rgba(14, 165, 233, 0.1)",
               border: "1px solid rgba(14, 165, 233, 0.4)",
-              color: "#38BDF8",
+              color: "#0284C7",
               fontSize: "0.75rem",
               fontWeight: 800,
               padding: "0.25rem 0.65rem",
@@ -465,13 +707,13 @@ export default function SuperAdminDashboardPage() {
           </span>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
           {currentUser && (
             <span
               style={{
                 fontSize: "0.8rem",
-                color: "#7DD3FC",
-                background: "rgba(14, 165, 233, 0.1)",
+                color: isDark ? "#7DD3FC" : "#0369A1",
+                background: isDark ? "rgba(14, 165, 233, 0.1)" : "rgba(14, 165, 233, 0.08)",
                 border: "1px solid rgba(14, 165, 233, 0.3)",
                 padding: "0.35rem 0.75rem",
                 borderRadius: "6px",
@@ -481,6 +723,9 @@ export default function SuperAdminDashboardPage() {
               👤 {currentUser.email || "superadmin"}
             </span>
           )}
+
+          {/* Theme Toggle Button */}
+          <ThemeToggle />
 
           <button
             onClick={handleOpenRegisterModal}
@@ -525,7 +770,7 @@ export default function SuperAdminDashboardPage() {
             style={{
               padding: "0.5rem 0.85rem",
               fontSize: "0.8rem",
-              color: "#F87171",
+              color: "#EF4444",
               borderColor: "rgba(239, 68, 68, 0.4)",
               cursor: "pointer",
             }}
@@ -541,14 +786,21 @@ export default function SuperAdminDashboardPage() {
         <section style={{ marginBottom: "2rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "1rem" }}>
             <div>
-              <h1 style={{ fontSize: "1.6rem", fontWeight: 900, letterSpacing: "-0.02em" }}>
+              <h1
+                style={{
+                  fontSize: "1.6rem",
+                  fontWeight: 900,
+                  letterSpacing: "-0.02em",
+                  color: isDark ? "#FFFFFF" : "#0F172A",
+                }}
+              >
                 Resume Ekosistem Platform SaaS OKESIH
               </h1>
-              <p style={{ fontSize: "0.85rem", color: "#94A3B8" }}>
+              <p style={{ fontSize: "0.85rem", color: isDark ? "#94A3B8" : "#64748B" }}>
                 Monitoring performa seluruh tenant warkop, bagi hasil komisi marketing lapangan, dan net revenue platform.
               </p>
             </div>
-            <span style={{ fontSize: "0.75rem", color: "#64748B" }}>
+            <span style={{ fontSize: "0.75rem", color: isDark ? "#64748B" : "#94A3B8" }}>
               Sinkronisasi: {new Date().toLocaleTimeString("id-ID")}
             </span>
           </div>
@@ -565,17 +817,21 @@ export default function SuperAdminDashboardPage() {
               className="glass-panel"
               style={{
                 padding: "1.5rem",
-                border: "1px solid rgba(14, 165, 233, 0.25)",
-                background: "linear-gradient(135deg, rgba(14, 165, 233, 0.08) 0%, rgba(6, 9, 14, 0.6) 100%)",
+                borderRadius: "14px",
+                border: isDark ? "1px solid rgba(14, 165, 233, 0.25)" : "1px solid rgba(14, 165, 233, 0.2)",
+                background: isDark
+                  ? "linear-gradient(135deg, rgba(14, 165, 233, 0.08) 0%, rgba(6, 9, 14, 0.6) 100%)"
+                  : "#FFFFFF",
+                boxShadow: isDark ? "none" : "0 4px 20px rgba(0, 0, 0, 0.04)",
               }}
             >
-              <div style={{ fontSize: "0.75rem", color: "#94A3B8", fontWeight: 700, marginBottom: "0.35rem" }}>
+              <div style={{ fontSize: "0.75rem", color: isDark ? "#94A3B8" : "#64748B", fontWeight: 700, marginBottom: "0.35rem" }}>
                 TOTAL TENANT WARKOP
               </div>
-              <div style={{ fontSize: "2.1rem", fontWeight: 900, color: "#38BDF8" }}>
-                {totalActiveTenants} <span style={{ fontSize: "0.95rem", color: "#64748B" }}>/ {tenants.length} Warkop</span>
+              <div style={{ fontSize: "2.1rem", fontWeight: 900, color: isDark ? "#38BDF8" : "#0284C7" }}>
+                {totalActiveTenants} <span style={{ fontSize: "0.95rem", color: isDark ? "#64748B" : "#94A3B8" }}>/ {tenants.length} Warkop</span>
               </div>
-              <div style={{ fontSize: "0.75rem", color: "#34D399", marginTop: "0.4rem", fontWeight: 600 }}>
+              <div style={{ fontSize: "0.75rem", color: isDark ? "#34D399" : "#059669", marginTop: "0.4rem", fontWeight: 600 }}>
                 ✓ {totalActiveTenants} Tenant beroperasi aktif
               </div>
             </div>
@@ -585,18 +841,22 @@ export default function SuperAdminDashboardPage() {
               className="glass-panel"
               style={{
                 padding: "1.5rem",
-                border: "1px solid rgba(16, 185, 129, 0.25)",
-                background: "linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(6, 9, 14, 0.6) 100%)",
+                borderRadius: "14px",
+                border: isDark ? "1px solid rgba(16, 185, 129, 0.25)" : "1px solid rgba(16, 185, 129, 0.2)",
+                background: isDark
+                  ? "linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(6, 9, 14, 0.6) 100%)"
+                  : "#FFFFFF",
+                boxShadow: isDark ? "none" : "0 4px 20px rgba(0, 0, 0, 0.04)",
               }}
             >
-              <div style={{ fontSize: "0.75rem", color: "#94A3B8", fontWeight: 700, marginBottom: "0.35rem" }}>
+              <div style={{ fontSize: "0.75rem", color: isDark ? "#94A3B8" : "#64748B", fontWeight: 700, marginBottom: "0.35rem" }}>
                 TOTAL STRUK TRANSAKSI HARI INI
               </div>
-              <div style={{ fontSize: "2.1rem", fontWeight: 900, color: "#10B981" }}>
+              <div style={{ fontSize: "2.1rem", fontWeight: 900, color: isDark ? "#10B981" : "#059669" }}>
                 {totalAllTransactions.toLocaleString("id-ID")}{" "}
-                <span style={{ fontSize: "0.95rem", color: "#64748B" }}>Struk</span>
+                <span style={{ fontSize: "0.95rem", color: isDark ? "#64748B" : "#94A3B8" }}>Struk</span>
               </div>
-              <div style={{ fontSize: "0.75rem", color: "#94A3B8", marginTop: "0.4rem" }}>
+              <div style={{ fontSize: "0.75rem", color: isDark ? "#94A3B8" : "#64748B", marginTop: "0.4rem" }}>
                 Dari seluruh pesanan meja &amp; kasir
               </div>
             </div>
@@ -606,17 +866,21 @@ export default function SuperAdminDashboardPage() {
               className="glass-panel"
               style={{
                 padding: "1.5rem",
-                border: "1px solid rgba(245, 158, 11, 0.25)",
-                background: "linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(6, 9, 14, 0.6) 100%)",
+                borderRadius: "14px",
+                border: isDark ? "1px solid rgba(245, 158, 11, 0.25)" : "1px solid rgba(245, 158, 11, 0.2)",
+                background: isDark
+                  ? "linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(6, 9, 14, 0.6) 100%)"
+                  : "#FFFFFF",
+                boxShadow: isDark ? "none" : "0 4px 20px rgba(0, 0, 0, 0.04)",
               }}
             >
-              <div style={{ fontSize: "0.75rem", color: "#94A3B8", fontWeight: 700, marginBottom: "0.35rem" }}>
+              <div style={{ fontSize: "0.75rem", color: isDark ? "#94A3B8" : "#64748B", fontWeight: 700, marginBottom: "0.35rem" }}>
                 GROSS BILLING SAAS (@ Rp {saasFeePerReceipt})
               </div>
-              <div style={{ fontSize: "2.1rem", fontWeight: 900, color: "#FBBF24" }}>
+              <div style={{ fontSize: "2.1rem", fontWeight: 900, color: isDark ? "#FBBF24" : "#D97706" }}>
                 Rp {totalGrossSaasBilling.toLocaleString("id-ID")}
               </div>
-              <div style={{ fontSize: "0.75rem", color: "#FCD34D", marginTop: "0.4rem", fontWeight: 600 }}>
+              <div style={{ fontSize: "0.75rem", color: isDark ? "#FCD34D" : "#B45309", marginTop: "0.4rem", fontWeight: 600 }}>
                 Total tagihan sewa harian platform
               </div>
             </div>
@@ -626,37 +890,53 @@ export default function SuperAdminDashboardPage() {
               className="glass-panel"
               style={{
                 padding: "1.5rem",
-                border: "1px solid rgba(168, 85, 247, 0.25)",
-                background: "linear-gradient(135deg, rgba(168, 85, 247, 0.08) 0%, rgba(6, 9, 14, 0.6) 100%)",
+                borderRadius: "14px",
+                border: isDark ? "1px solid rgba(168, 85, 247, 0.25)" : "1px solid rgba(168, 85, 247, 0.2)",
+                background: isDark
+                  ? "linear-gradient(135deg, rgba(168, 85, 247, 0.08) 0%, rgba(6, 9, 14, 0.6) 100%)"
+                  : "#FFFFFF",
+                boxShadow: isDark ? "none" : "0 4px 20px rgba(0, 0, 0, 0.04)",
               }}
             >
-              <div style={{ fontSize: "0.75rem", color: "#94A3B8", fontWeight: 700, marginBottom: "0.35rem" }}>
+              <div style={{ fontSize: "0.75rem", color: isDark ? "#94A3B8" : "#64748B", fontWeight: 700, marginBottom: "0.35rem" }}>
                 BAGI HASIL MARKETING LAPANGAN
               </div>
-              <div style={{ fontSize: "2.1rem", fontWeight: 900, color: "#C084FC" }}>
+              <div style={{ fontSize: "2.1rem", fontWeight: 900, color: isDark ? "#C084FC" : "#7C3AED" }}>
                 Rp {totalMarketingCommission.toLocaleString("id-ID")}
               </div>
-              <div style={{ fontSize: "0.75rem", color: "#E9D5FF", marginTop: "0.4rem" }}>
+              <div style={{ fontSize: "0.75rem", color: isDark ? "#E9D5FF" : "#6D28D9", marginTop: "0.4rem" }}>
                 Komisi dari {marketingList.length} mitra sales lapangan
               </div>
             </div>
 
-            {/* Card 5: Net Revenue Platform */}
+            {/* Card 5: Net Revenue Platform (DENGAN KONTRAST KONSISTEN) */}
             <div
               className="glass-panel"
               style={{
                 padding: "1.5rem",
-                border: "1px solid rgba(14, 165, 233, 0.4)",
-                background: "linear-gradient(135deg, rgba(14, 165, 233, 0.15) 0%, rgba(6, 9, 14, 0.7) 100%)",
+                borderRadius: "14px",
+                border: isDark ? "1px solid rgba(14, 165, 233, 0.4)" : "1px solid rgba(14, 165, 233, 0.35)",
+                background: isDark
+                  ? "linear-gradient(135deg, rgba(14, 165, 233, 0.15) 0%, rgba(6, 9, 14, 0.7) 100%)"
+                  : "#FFFFFF",
+                boxShadow: isDark
+                  ? "0 4px 20px rgba(14, 165, 233, 0.15)"
+                  : "0 6px 24px rgba(14, 165, 233, 0.08)",
               }}
             >
-              <div style={{ fontSize: "0.75rem", color: "#38BDF8", fontWeight: 700, marginBottom: "0.35rem" }}>
+              <div style={{ fontSize: "0.75rem", color: isDark ? "#38BDF8" : "#0284C7", fontWeight: 800, marginBottom: "0.35rem" }}>
                 NET PENDAPATAN OKESIH HQ
               </div>
-              <div style={{ fontSize: "2.1rem", fontWeight: 900, color: "#FFF" }}>
+              <div
+                style={{
+                  fontSize: "2.1rem",
+                  fontWeight: 900,
+                  color: isDark ? "#38BDF8" : "#0284C7",
+                }}
+              >
                 Rp {netPlatformRevenue.toLocaleString("id-ID")}
               </div>
-              <div style={{ fontSize: "0.75rem", color: "#7DD3FC", marginTop: "0.4rem", fontWeight: 700 }}>
+              <div style={{ fontSize: "0.75rem", color: isDark ? "#7DD3FC" : "#0369A1", marginTop: "0.4rem", fontWeight: 700 }}>
                 Gross dikurangi komisi marketing
               </div>
             </div>
@@ -669,7 +949,7 @@ export default function SuperAdminDashboardPage() {
             display: "flex",
             gap: "0.5rem",
             marginBottom: "1.75rem",
-            borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
+            borderBottom: isDark ? "1px solid rgba(255, 255, 255, 0.1)" : "1px solid rgba(0, 0, 0, 0.08)",
             paddingBottom: "0.75rem",
             overflowX: "auto",
           }}
@@ -683,8 +963,8 @@ export default function SuperAdminDashboardPage() {
               fontSize: "0.85rem",
               cursor: "pointer",
               transition: "all 0.2s ease",
-              background: activeTab === "tenants" ? "rgba(14, 165, 233, 0.2)" : "transparent",
-              color: activeTab === "tenants" ? "#38BDF8" : "#94A3B8",
+              background: activeTab === "tenants" ? (isDark ? "rgba(14, 165, 233, 0.2)" : "rgba(14, 165, 233, 0.12)") : "transparent",
+              color: activeTab === "tenants" ? "#0284C7" : isDark ? "#94A3B8" : "#64748B",
               border: activeTab === "tenants" ? "1px solid #0EA5E9" : "1px solid transparent",
             }}
           >
@@ -700,8 +980,8 @@ export default function SuperAdminDashboardPage() {
               fontSize: "0.85rem",
               cursor: "pointer",
               transition: "all 0.2s ease",
-              background: activeTab === "marketing" ? "rgba(16, 185, 129, 0.2)" : "transparent",
-              color: activeTab === "marketing" ? "#34D399" : "#94A3B8",
+              background: activeTab === "marketing" ? (isDark ? "rgba(16, 185, 129, 0.2)" : "rgba(16, 185, 129, 0.12)") : "transparent",
+              color: activeTab === "marketing" ? "#059669" : isDark ? "#94A3B8" : "#64748B",
               border: activeTab === "marketing" ? "1px solid #10B981" : "1px solid transparent",
             }}
           >
@@ -717,8 +997,8 @@ export default function SuperAdminDashboardPage() {
               fontSize: "0.85rem",
               cursor: "pointer",
               transition: "all 0.2s ease",
-              background: activeTab === "qris_billing" ? "rgba(245, 158, 11, 0.2)" : "transparent",
-              color: activeTab === "qris_billing" ? "#FBBF24" : "#94A3B8",
+              background: activeTab === "qris_billing" ? (isDark ? "rgba(245, 158, 11, 0.2)" : "rgba(245, 158, 11, 0.12)") : "transparent",
+              color: activeTab === "qris_billing" ? "#D97706" : isDark ? "#94A3B8" : "#64748B",
               border: activeTab === "qris_billing" ? "1px solid #F59E0B" : "1px solid transparent",
             }}
           >
@@ -734,8 +1014,8 @@ export default function SuperAdminDashboardPage() {
               fontSize: "0.85rem",
               cursor: "pointer",
               transition: "all 0.2s ease",
-              background: activeTab === "platform_config" ? "rgba(168, 85, 247, 0.2)" : "transparent",
-              color: activeTab === "platform_config" ? "#C084FC" : "#94A3B8",
+              background: activeTab === "platform_config" ? (isDark ? "rgba(168, 85, 247, 0.2)" : "rgba(168, 85, 247, 0.12)") : "transparent",
+              color: activeTab === "platform_config" ? "#7C3AED" : isDark ? "#94A3B8" : "#64748B",
               border: activeTab === "platform_config" ? "1px solid #A855F7" : "1px solid transparent",
             }}
           >
@@ -749,7 +1029,9 @@ export default function SuperAdminDashboardPage() {
             className="glass-panel"
             style={{
               padding: "1.75rem",
-              border: "1px solid rgba(56, 189, 248, 0.2)",
+              borderRadius: "14px",
+              border: isDark ? "1px solid rgba(56, 189, 248, 0.2)" : "1px solid rgba(14, 165, 233, 0.2)",
+              background: isDark ? undefined : "#FFFFFF",
             }}
           >
             <div
@@ -763,8 +1045,10 @@ export default function SuperAdminDashboardPage() {
               }}
             >
               <div>
-                <h2 style={{ fontSize: "1.3rem", fontWeight: 800 }}>Daftar Klien Tenant Warkop Terdaftar</h2>
-                <div style={{ fontSize: "0.825rem", color: "#94A3B8" }}>
+                <h2 style={{ fontSize: "1.3rem", fontWeight: 800, color: isDark ? "#FFF" : "#0F172A" }}>
+                  Daftar Klien Tenant Warkop Terdaftar
+                </h2>
+                <div style={{ fontSize: "0.825rem", color: isDark ? "#94A3B8" : "#64748B" }}>
                   Kelola status aktivasi, penetapan rentang kode unik pembayaran, serta asosiasi marketing lapangan.
                 </div>
               </div>
@@ -776,12 +1060,12 @@ export default function SuperAdminDashboardPage() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Cari warkop, slug, owner..."
                   style={{
-                    background: "rgba(15, 23, 42, 0.8)",
-                    border: "1px solid rgba(56, 189, 248, 0.3)",
+                    background: isDark ? "rgba(15, 23, 42, 0.8)" : "#F8FAFC",
+                    border: isDark ? "1px solid rgba(56, 189, 248, 0.3)" : "1px solid rgba(0, 0, 0, 0.15)",
                     borderRadius: "8px",
                     padding: "0.55rem 1rem",
                     fontSize: "0.85rem",
-                    color: "#FFF",
+                    color: isDark ? "#FFF" : "#0F172A",
                     width: "280px",
                     outline: "none",
                   }}
@@ -804,7 +1088,15 @@ export default function SuperAdminDashboardPage() {
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "0.875rem" }}>
                 <thead>
-                  <tr style={{ borderBottom: "1px solid rgba(56, 189, 248, 0.2)", color: "#7DD3FC", fontSize: "0.75rem", textTransform: "uppercase" }}>
+                  <tr
+                    style={{
+                      borderBottom: isDark ? "1px solid rgba(56, 189, 248, 0.2)" : "1px solid rgba(14, 165, 233, 0.2)",
+                      color: isDark ? "#7DD3FC" : "#0284C7",
+                      fontSize: "0.75rem",
+                      textTransform: "uppercase",
+                      background: isDark ? "transparent" : "#F8FAFC",
+                    }}
+                  >
                     <th style={{ padding: "0.85rem 1rem" }}>Tenant Warkop &amp; Slug</th>
                     <th style={{ padding: "0.85rem 1rem" }}>Owner &amp; Kontak</th>
                     <th style={{ padding: "0.85rem 1rem" }}>Rentang Kode Unik</th>
@@ -818,25 +1110,30 @@ export default function SuperAdminDashboardPage() {
                 </thead>
                 <tbody>
                   {filteredTenants.map((t) => (
-                    <tr key={t.id} style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.05)" }}>
+                    <tr
+                      key={t.id}
+                      style={{
+                        borderBottom: isDark ? "1px solid rgba(255, 255, 255, 0.05)" : "1px solid rgba(0, 0, 0, 0.05)",
+                      }}
+                    >
                       <td style={{ padding: "1rem" }}>
-                        <div style={{ fontWeight: 800, color: "#FFF" }}>{t.name}</div>
-                        <div style={{ fontSize: "0.75rem", color: "#38BDF8", marginTop: "2px" }}>
+                        <div style={{ fontWeight: 800, color: isDark ? "#FFF" : "#0F172A" }}>{t.name}</div>
+                        <div style={{ fontSize: "0.75rem", color: "#0284C7", marginTop: "2px" }}>
                           🔗 /menu/{t.slug}
                         </div>
                       </td>
 
                       <td style={{ padding: "1rem" }}>
-                        <div style={{ fontWeight: 700, color: "#E2E8F0" }}>{t.ownerName}</div>
-                        <div style={{ fontSize: "0.75rem", color: "#64748B" }}>{t.phone}</div>
+                        <div style={{ fontWeight: 700, color: isDark ? "#E2E8F0" : "#334155" }}>{t.ownerName}</div>
+                        <div style={{ fontSize: "0.75rem", color: isDark ? "#64748B" : "#94A3B8" }}>{t.phone}</div>
                       </td>
 
                       <td style={{ padding: "1rem" }}>
                         <span
                           style={{
-                            background: "rgba(14, 165, 233, 0.1)",
+                            background: isDark ? "rgba(14, 165, 233, 0.1)" : "rgba(14, 165, 233, 0.08)",
                             border: "1px solid rgba(14, 165, 233, 0.3)",
-                            color: "#38BDF8",
+                            color: "#0284C7",
                             padding: "0.2rem 0.55rem",
                             borderRadius: "4px",
                             fontWeight: 800,
@@ -848,13 +1145,13 @@ export default function SuperAdminDashboardPage() {
                       </td>
 
                       <td style={{ padding: "1rem" }}>
-                        <div style={{ fontWeight: 700, color: "#34D399" }}>
+                        <div style={{ fontWeight: 700, color: isDark ? "#34D399" : "#059669" }}>
                           {t.marketingAgentName || "Direct HQ"}
                         </div>
                       </td>
 
                       <td style={{ padding: "1rem" }}>
-                        <span style={{ color: "#C084FC", fontWeight: 800 }}>
+                        <span style={{ color: isDark ? "#C084FC" : "#7C3AED", fontWeight: 800 }}>
                           Rp {t.commissionPerReceipt} / struk
                         </span>
                       </td>
@@ -864,14 +1161,14 @@ export default function SuperAdminDashboardPage() {
                       </td>
 
                       <td style={{ padding: "1rem" }}>
-                        <div style={{ fontWeight: 900, color: "#FBBF24" }}>
+                        <div style={{ fontWeight: 900, color: isDark ? "#FBBF24" : "#D97706" }}>
                           Rp {t.totalSaasBilling.toLocaleString("id-ID")}
                         </div>
                         <span
                           style={{
                             fontSize: "0.7rem",
                             fontWeight: 700,
-                            color: t.paymentStatus === "PAID" ? "#34D399" : t.paymentStatus === "GRACE_PERIOD" ? "#FBBF24" : "#F87171",
+                            color: t.paymentStatus === "PAID" ? (isDark ? "#34D399" : "#059669") : t.paymentStatus === "GRACE_PERIOD" ? (isDark ? "#FBBF24" : "#D97706") : "#EF4444",
                           }}
                         >
                           {t.paymentStatus === "PAID" ? "● Lunas" : t.paymentStatus === "GRACE_PERIOD" ? "● Grace Period" : "● Menunggak"}
@@ -882,7 +1179,7 @@ export default function SuperAdminDashboardPage() {
                         {t.status === "ACTIVE" ? (
                           <span className="badge badge-ready">AKTIF</span>
                         ) : (
-                          <span style={{ background: "rgba(239, 68, 68, 0.2)", border: "1px solid #EF4444", color: "#FCA5A5", padding: "0.25rem 0.6rem", borderRadius: "var(--radius-pill)", fontSize: "0.75rem", fontWeight: 800 }}>
+                          <span style={{ background: "rgba(239, 68, 68, 0.15)", border: "1px solid #EF4444", color: "#EF4444", padding: "0.25rem 0.6rem", borderRadius: "var(--radius-pill)", fontSize: "0.75rem", fontWeight: 800 }}>
                             SUSPEND
                           </span>
                         )}
@@ -901,9 +1198,9 @@ export default function SuperAdminDashboardPage() {
                           <button
                             onClick={() => toggleTenantStatus(t.id)}
                             style={{
-                              background: t.status === "ACTIVE" ? "rgba(239, 68, 68, 0.15)" : "rgba(16, 185, 129, 0.15)",
+                              background: t.status === "ACTIVE" ? "rgba(239, 68, 68, 0.1)" : "rgba(16, 185, 129, 0.1)",
                               border: t.status === "ACTIVE" ? "1px solid #EF4444" : "1px solid #10B981",
-                              color: t.status === "ACTIVE" ? "#FCA5A5" : "#34D399",
+                              color: t.status === "ACTIVE" ? "#EF4444" : "#059669",
                               padding: "0.35rem 0.65rem",
                               borderRadius: "6px",
                               fontSize: "0.75rem",
@@ -929,7 +1226,9 @@ export default function SuperAdminDashboardPage() {
             className="glass-panel"
             style={{
               padding: "1.75rem",
-              border: "1px solid rgba(16, 185, 129, 0.2)",
+              borderRadius: "14px",
+              border: isDark ? "1px solid rgba(16, 185, 129, 0.2)" : "1px solid rgba(16, 185, 129, 0.25)",
+              background: isDark ? undefined : "#FFFFFF",
             }}
           >
             <div
@@ -943,15 +1242,20 @@ export default function SuperAdminDashboardPage() {
               }}
             >
               <div>
-                <h2 style={{ fontSize: "1.3rem", fontWeight: 800 }}>Manajemen Marketing Lapangan &amp; Bagi Hasil Komisi</h2>
-                <div style={{ fontSize: "0.825rem", color: "#94A3B8" }}>
+                <h2 style={{ fontSize: "1.3rem", fontWeight: 800, color: isDark ? "#FFF" : "#0F172A" }}>
+                  Manajemen Marketing Lapangan &amp; Bagi Hasil Komisi
+                </h2>
+                <div style={{ fontSize: "0.825rem", color: isDark ? "#94A3B8" : "#64748B" }}>
                   Kelola pendaftar mitra marketing dari landing page, setujui aktivasi per wilayah, dan tetapkan komisi bagi hasil per struk transaksi.
                 </div>
               </div>
 
               <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
                 <button
-                  onClick={loadMarketingPartners}
+                  onClick={() => {
+                    loadMarketingPartners();
+                    showToast("Data Dimuat Ulang", "Daftar mitra marketing telah diperbarui dari server.", "info");
+                  }}
                   className="btn-secondary"
                   style={{ padding: "0.55rem 0.95rem", fontSize: "0.85rem", fontWeight: 700 }}
                 >
@@ -992,14 +1296,14 @@ export default function SuperAdminDashboardPage() {
                 gap: "1rem",
                 padding: "0.85rem 1.15rem",
                 borderRadius: "10px",
-                background: "rgba(255, 255, 255, 0.03)",
-                border: "1px solid rgba(255, 255, 255, 0.06)",
+                background: isDark ? "rgba(255, 255, 255, 0.03)" : "#F1F5F9",
+                border: isDark ? "1px solid rgba(255, 255, 255, 0.06)" : "1px solid rgba(0, 0, 0, 0.06)",
                 marginBottom: "1.25rem",
               }}
             >
               {/* Filter Status Pills */}
               <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
-                <span style={{ fontSize: "0.8rem", color: "#94A3B8", fontWeight: 700 }}>Status:</span>
+                <span style={{ fontSize: "0.8rem", color: isDark ? "#94A3B8" : "#64748B", fontWeight: 700 }}>Status:</span>
                 {[
                   { key: "ALL", label: `Semua (${marketingList.length})` },
                   { key: "PENDING", label: `⏳ Pendaftar Baru (${marketingList.filter((m) => m.status === "PENDING").length})` },
@@ -1023,8 +1327,10 @@ export default function SuperAdminDashboardPage() {
                             : tab.key === "ACTIVE"
                             ? "#10B981"
                             : "#0EA5E9"
-                          : "rgba(255, 255, 255, 0.06)",
-                      color: marketingFilterStatus === tab.key ? "#FFF" : "#94A3B8",
+                          : isDark
+                          ? "rgba(255, 255, 255, 0.06)"
+                          : "rgba(0, 0, 0, 0.06)",
+                      color: marketingFilterStatus === tab.key ? "#FFF" : isDark ? "#94A3B8" : "#64748B",
                       transition: "all 0.2s ease",
                     }}
                   >
@@ -1044,9 +1350,9 @@ export default function SuperAdminDashboardPage() {
                     width: "100%",
                     padding: "0.45rem 0.85rem",
                     borderRadius: "6px",
-                    background: "#0F172A",
-                    border: "1px solid rgba(255, 255, 255, 0.1)",
-                    color: "#FFF",
+                    background: isDark ? "#0F172A" : "#FFFFFF",
+                    border: isDark ? "1px solid rgba(255, 255, 255, 0.1)" : "1px solid rgba(0, 0, 0, 0.12)",
+                    color: isDark ? "#FFF" : "#0F172A",
                     fontSize: "0.8rem",
                     outline: "none",
                   }}
@@ -1057,7 +1363,15 @@ export default function SuperAdminDashboardPage() {
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "0.875rem" }}>
                 <thead>
-                  <tr style={{ borderBottom: "1px solid rgba(16, 185, 129, 0.2)", color: "#34D399", fontSize: "0.75rem", textTransform: "uppercase" }}>
+                  <tr
+                    style={{
+                      borderBottom: isDark ? "1px solid rgba(16, 185, 129, 0.2)" : "1px solid rgba(16, 185, 129, 0.25)",
+                      color: isDark ? "#34D399" : "#059669",
+                      fontSize: "0.75rem",
+                      textTransform: "uppercase",
+                      background: isDark ? "transparent" : "#F8FAFC",
+                    }}
+                  >
                     <th style={{ padding: "0.85rem 1rem" }}>Nama Marketing &amp; Kode</th>
                     <th style={{ padding: "0.85rem 1rem" }}>No. WhatsApp &amp; Wilayah Pemetaan</th>
                     <th style={{ padding: "0.85rem 1rem" }}>Status Akun</th>
@@ -1084,14 +1398,19 @@ export default function SuperAdminDashboardPage() {
                     .map((m) => {
                       const sisaKomisi = m.totalCommissionEarned - m.commissionPaid;
                       return (
-                        <tr key={m.id} style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.05)" }}>
+                        <tr
+                          key={m.id}
+                          style={{
+                            borderBottom: isDark ? "1px solid rgba(255, 255, 255, 0.05)" : "1px solid rgba(0, 0, 0, 0.05)",
+                          }}
+                        >
                           <td style={{ padding: "1rem" }}>
-                            <div style={{ fontWeight: 800, color: "#FFF" }}>{m.name}</div>
+                            <div style={{ fontWeight: 800, color: isDark ? "#FFF" : "#0F172A" }}>{m.name}</div>
                             <span
                               style={{
-                                background: "rgba(16, 185, 129, 0.15)",
+                                background: isDark ? "rgba(16, 185, 129, 0.15)" : "rgba(16, 185, 129, 0.1)",
                                 border: "1px solid rgba(16, 185, 129, 0.4)",
-                                color: "#34D399",
+                                color: isDark ? "#34D399" : "#059669",
                                 padding: "0.15rem 0.5rem",
                                 borderRadius: "4px",
                                 fontWeight: 800,
@@ -1103,15 +1422,15 @@ export default function SuperAdminDashboardPage() {
                               {m.referralCode}
                             </span>
                             {m.experienceNotes && (
-                              <div style={{ fontSize: "0.72rem", color: "#94A3B8", marginTop: "4px" }}>
+                              <div style={{ fontSize: "0.72rem", color: isDark ? "#94A3B8" : "#64748B", marginTop: "4px" }}>
                                 💡 {m.experienceNotes}
                               </div>
                             )}
                           </td>
 
                           <td style={{ padding: "1rem" }}>
-                            <div style={{ color: "#E2E8F0" }}>{m.phone}</div>
-                            <div style={{ fontSize: "0.75rem", color: "#38BDF8", fontWeight: 700, marginTop: "2px" }}>
+                            <div style={{ color: isDark ? "#E2E8F0" : "#334155" }}>{m.phone}</div>
+                            <div style={{ fontSize: "0.75rem", color: "#0284C7", fontWeight: 700, marginTop: "2px" }}>
                               📍 {m.area}
                             </div>
                           </td>
@@ -1122,7 +1441,7 @@ export default function SuperAdminDashboardPage() {
                                 style={{
                                   background: "rgba(245, 158, 11, 0.15)",
                                   border: "1px solid #F59E0B",
-                                  color: "#FBBF24",
+                                  color: "#D97706",
                                   padding: "0.2rem 0.55rem",
                                   borderRadius: "var(--radius-pill)",
                                   fontSize: "0.7rem",
@@ -1137,7 +1456,7 @@ export default function SuperAdminDashboardPage() {
                                 style={{
                                   background: "rgba(16, 185, 129, 0.15)",
                                   border: "1px solid #10B981",
-                                  color: "#34D399",
+                                  color: "#059669",
                                   padding: "0.2rem 0.55rem",
                                   borderRadius: "var(--radius-pill)",
                                   fontSize: "0.7rem",
@@ -1152,7 +1471,7 @@ export default function SuperAdminDashboardPage() {
                                 style={{
                                   background: "rgba(239, 68, 68, 0.15)",
                                   border: "1px solid #EF4444",
-                                  color: "#FCA5A5",
+                                  color: "#EF4444",
                                   padding: "0.2rem 0.55rem",
                                   borderRadius: "var(--radius-pill)",
                                   fontSize: "0.7rem",
@@ -1165,13 +1484,13 @@ export default function SuperAdminDashboardPage() {
                           </td>
 
                           <td style={{ padding: "1rem" }}>
-                            <span style={{ fontWeight: 800, color: "#FBBF24" }}>
+                            <span style={{ fontWeight: 800, color: isDark ? "#FBBF24" : "#D97706" }}>
                               Rp {m.commissionPerReceipt} / struk
                             </span>
                           </td>
 
                           <td style={{ padding: "1rem" }}>
-                            <span style={{ fontWeight: 800, color: "#38BDF8" }}>
+                            <span style={{ fontWeight: 800, color: "#0284C7" }}>
                               {m.totalTenantsAcquired} Tenant
                             </span>
                           </td>
@@ -1181,24 +1500,24 @@ export default function SuperAdminDashboardPage() {
                           </td>
 
                           <td style={{ padding: "1rem" }}>
-                            <div style={{ fontWeight: 900, color: "#34D399" }}>
+                            <div style={{ fontWeight: 900, color: isDark ? "#34D399" : "#059669" }}>
                               Rp {m.totalCommissionEarned.toLocaleString("id-ID")}
                             </div>
-                            <div style={{ fontSize: "0.72rem", color: "#64748B" }}>
+                            <div style={{ fontSize: "0.72rem", color: isDark ? "#64748B" : "#94A3B8" }}>
                               Dicairkan: Rp {m.commissionPaid.toLocaleString("id-ID")}
                             </div>
                             {sisaKomisi > 0 && (
-                              <div style={{ fontSize: "0.75rem", color: "#F87171", fontWeight: 700 }}>
+                              <div style={{ fontSize: "0.75rem", color: "#EF4444", fontWeight: 700 }}>
                                 Sisa: Rp {sisaKomisi.toLocaleString("id-ID")}
                               </div>
                             )}
                           </td>
 
                           <td style={{ padding: "1rem" }}>
-                            <div style={{ fontWeight: 700, fontSize: "0.8rem" }}>
+                            <div style={{ fontWeight: 700, fontSize: "0.8rem", color: isDark ? "#FFF" : "#0F172A" }}>
                               {m.bankName} - {m.accountNumber}
                             </div>
-                            <div style={{ fontSize: "0.72rem", color: "#64748B" }}>a/n {m.accountName}</div>
+                            <div style={{ fontSize: "0.72rem", color: isDark ? "#64748B" : "#94A3B8" }}>a/n {m.accountName}</div>
                           </td>
 
                           <td style={{ padding: "1rem", textAlign: "right" }}>
@@ -1223,7 +1542,7 @@ export default function SuperAdminDashboardPage() {
                                     style={{
                                       padding: "0.35rem 0.65rem",
                                       fontSize: "0.75rem",
-                                      color: "#F87171",
+                                      color: "#EF4444",
                                     }}
                                   >
                                     ✕ Tolak
@@ -1233,12 +1552,26 @@ export default function SuperAdminDashboardPage() {
                                 <>
                                   <button
                                     onClick={() => {
-                                      alert(`Pencairan komisi untuk ${m.name} sebesar Rp ${sisaKomisi.toLocaleString("id-ID")} telah diproses ke ${m.bankName} ${m.accountNumber}`);
-                                      setMarketingList((prev) =>
-                                        prev.map((item) =>
-                                          item.id === m.id ? { ...item, commissionPaid: item.totalCommissionEarned } : item
-                                        )
-                                      );
+                                      setConfirmModal({
+                                        isOpen: true,
+                                        title: "Konfirmasi Pencairan Komisi",
+                                        message: `Proses pencairan komisi untuk ${m.name} sebesar Rp ${sisaKomisi.toLocaleString("id-ID")} ke ${m.bankName} ${m.accountNumber} (a/n ${m.accountName})?`,
+                                        confirmText: "Ya, Cairkan Sekarang",
+                                        confirmVariant: "success",
+                                        onConfirm: () => {
+                                          setMarketingList((prev) =>
+                                            prev.map((item) =>
+                                              item.id === m.id ? { ...item, commissionPaid: item.totalCommissionEarned } : item
+                                            )
+                                          );
+                                          setConfirmModal((c) => ({ ...c, isOpen: false }));
+                                          showToast(
+                                            "Pencairan Berhasil Diproses",
+                                            `Komisi Rp ${sisaKomisi.toLocaleString("id-ID")} untuk ${m.name} berhasil dicairkan.`,
+                                            "success"
+                                          );
+                                        },
+                                      });
                                     }}
                                     disabled={sisaKomisi <= 0}
                                     className="btn-secondary"
@@ -1254,7 +1587,7 @@ export default function SuperAdminDashboardPage() {
                                     <button
                                       onClick={() => handleUpdateMarketingStatus(m.id, "INACTIVE")}
                                       className="btn-secondary"
-                                      style={{ padding: "0.4rem 0.55rem", fontSize: "0.75rem", color: "#94A3B8" }}
+                                      style={{ padding: "0.4rem 0.55rem", fontSize: "0.75rem", color: isDark ? "#94A3B8" : "#64748B" }}
                                       title="Nonaktifkan Kemitraan"
                                     >
                                       Suspend
@@ -1263,7 +1596,7 @@ export default function SuperAdminDashboardPage() {
                                     <button
                                       onClick={() => handleUpdateMarketingStatus(m.id, "ACTIVE")}
                                       className="btn-secondary"
-                                      style={{ padding: "0.4rem 0.55rem", fontSize: "0.75rem", color: "#34D399" }}
+                                      style={{ padding: "0.4rem 0.55rem", fontSize: "0.75rem", color: "#059669" }}
                                       title="Aktifkan Kembali"
                                     >
                                       Aktifkan
@@ -1290,14 +1623,16 @@ export default function SuperAdminDashboardPage() {
               className="glass-panel"
               style={{
                 padding: "1.75rem",
-                border: "1px solid rgba(245, 158, 11, 0.25)",
+                borderRadius: "14px",
+                border: isDark ? "1px solid rgba(245, 158, 11, 0.25)" : "1px solid rgba(245, 158, 11, 0.2)",
+                background: isDark ? undefined : "#FFFFFF",
               }}
             >
-              <h2 style={{ fontSize: "1.25rem", fontWeight: 800, color: "#FBBF24", marginBottom: "0.5rem" }}>
+              <h2 style={{ fontSize: "1.25rem", fontWeight: 800, color: isDark ? "#FBBF24" : "#D97706", marginBottom: "0.5rem" }}>
                 💳 Pasang QRIS Pembayaran Sewa SaaS Platform (Pusat OKESIH)
               </h2>
-              <p style={{ fontSize: "0.825rem", color: "#94A3B8", marginBottom: "1.25rem", lineHeight: 1.5 }}>
-                QRIS inilah yang otomatis dimunculkan kepada seluruh Tenant / Owner Warkop saat mereka melakukan penutupan toko/shift untuk menyetorkan biaya sewa Rp 50/struk + nominal kode unik alokasi mereka.
+              <p style={{ fontSize: "0.825rem", color: isDark ? "#94A3B8" : "#64748B", marginBottom: "1.25rem", lineHeight: 1.5 }}>
+                QRIS inilah yang otomatis dimunculkan kepada seluruh Tenant / Owner Warkop saat mereka melakukan penutupan toko/shift untuk menyetorkan biaya sewa Rp {saasFeePerReceipt}/struk + nominal kode unik alokasi mereka.
               </p>
 
               <div style={{ display: "flex", gap: "1.5rem", alignItems: "center", marginBottom: "1.5rem" }}>
@@ -1312,7 +1647,7 @@ export default function SuperAdminDashboardPage() {
                     flexDirection: "column",
                     alignItems: "center",
                     justifyContent: "center",
-                    boxShadow: "0 4px 15px rgba(0, 0, 0, 0.4)",
+                    boxShadow: "0 4px 15px rgba(0, 0, 0, 0.15)",
                   }}
                 >
                   <div style={{ color: "#000", fontSize: "9px", fontWeight: 900, marginBottom: "4px" }}>
@@ -1326,7 +1661,7 @@ export default function SuperAdminDashboardPage() {
 
                 <div style={{ flex: 1 }}>
                   <div style={{ marginBottom: "0.75rem" }}>
-                    <label style={{ display: "block", fontSize: "0.75rem", color: "#94A3B8", fontWeight: 700, marginBottom: "0.25rem" }}>
+                    <label style={{ display: "block", fontSize: "0.75rem", color: isDark ? "#94A3B8" : "#64748B", fontWeight: 700, marginBottom: "0.25rem" }}>
                       Nama Merchant Rekening Pusat
                     </label>
                     <input
@@ -1337,9 +1672,9 @@ export default function SuperAdminDashboardPage() {
                         width: "100%",
                         padding: "0.55rem 0.85rem",
                         borderRadius: "6px",
-                        background: "rgba(15, 23, 42, 0.8)",
-                        border: "1px solid rgba(245, 158, 11, 0.4)",
-                        color: "#FFF",
+                        background: isDark ? "rgba(15, 23, 42, 0.8)" : "#F8FAFC",
+                        border: isDark ? "1px solid rgba(245, 158, 11, 0.4)" : "1px solid rgba(0, 0, 0, 0.15)",
+                        color: isDark ? "#FFF" : "#0F172A",
                         fontSize: "0.85rem",
                       }}
                     />
@@ -1347,7 +1682,7 @@ export default function SuperAdminDashboardPage() {
 
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginBottom: "0.75rem" }}>
                     <div>
-                      <label style={{ display: "block", fontSize: "0.75rem", color: "#94A3B8", fontWeight: 700, marginBottom: "0.25rem" }}>
+                      <label style={{ display: "block", fontSize: "0.75rem", color: isDark ? "#94A3B8" : "#64748B", fontWeight: 700, marginBottom: "0.25rem" }}>
                         Bank Tujuan
                       </label>
                       <input
@@ -1358,15 +1693,15 @@ export default function SuperAdminDashboardPage() {
                           width: "100%",
                           padding: "0.55rem 0.85rem",
                           borderRadius: "6px",
-                          background: "rgba(15, 23, 42, 0.8)",
-                          border: "1px solid rgba(245, 158, 11, 0.4)",
-                          color: "#FFF",
+                          background: isDark ? "rgba(15, 23, 42, 0.8)" : "#F8FAFC",
+                          border: isDark ? "1px solid rgba(245, 158, 11, 0.4)" : "1px solid rgba(0, 0, 0, 0.15)",
+                          color: isDark ? "#FFF" : "#0F172A",
                           fontSize: "0.85rem",
                         }}
                       />
                     </div>
                     <div>
-                      <label style={{ display: "block", fontSize: "0.75rem", color: "#94A3B8", fontWeight: 700, marginBottom: "0.25rem" }}>
+                      <label style={{ display: "block", fontSize: "0.75rem", color: isDark ? "#94A3B8" : "#64748B", fontWeight: 700, marginBottom: "0.25rem" }}>
                         Nomor Rekening
                       </label>
                       <input
@@ -1377,9 +1712,9 @@ export default function SuperAdminDashboardPage() {
                           width: "100%",
                           padding: "0.55rem 0.85rem",
                           borderRadius: "6px",
-                          background: "rgba(15, 23, 42, 0.8)",
-                          border: "1px solid rgba(245, 158, 11, 0.4)",
-                          color: "#FFF",
+                          background: isDark ? "rgba(15, 23, 42, 0.8)" : "#F8FAFC",
+                          border: isDark ? "1px solid rgba(245, 158, 11, 0.4)" : "1px solid rgba(0, 0, 0, 0.15)",
+                          color: isDark ? "#FFF" : "#0F172A",
                           fontSize: "0.85rem",
                         }}
                       />
@@ -1387,7 +1722,7 @@ export default function SuperAdminDashboardPage() {
                   </div>
 
                   <div>
-                    <label style={{ display: "block", fontSize: "0.75rem", color: "#94A3B8", fontWeight: 700, marginBottom: "0.25rem" }}>
+                    <label style={{ display: "block", fontSize: "0.75rem", color: isDark ? "#94A3B8" : "#64748B", fontWeight: 700, marginBottom: "0.25rem" }}>
                       Atas Nama Rekening
                     </label>
                     <input
@@ -1398,9 +1733,9 @@ export default function SuperAdminDashboardPage() {
                         width: "100%",
                         padding: "0.55rem 0.85rem",
                         borderRadius: "6px",
-                        background: "rgba(15, 23, 42, 0.8)",
-                        border: "1px solid rgba(245, 158, 11, 0.4)",
-                        color: "#FFF",
+                        background: isDark ? "rgba(15, 23, 42, 0.8)" : "#F8FAFC",
+                        border: isDark ? "1px solid rgba(245, 158, 11, 0.4)" : "1px solid rgba(0, 0, 0, 0.15)",
+                        color: isDark ? "#FFF" : "#0F172A",
                         fontSize: "0.85rem",
                       }}
                     />
@@ -1410,14 +1745,14 @@ export default function SuperAdminDashboardPage() {
 
               <div style={{ display: "flex", gap: "0.75rem" }}>
                 <button
-                  onClick={() => alert("Silakan unggah gambar QRIS resmi baru dari komputer Anda untuk dipasang ke sistem pusat.")}
+                  onClick={() => showToast("Upload QRIS Pusat", "Pilih file gambar QRIS resmi dari perangkat Anda untuk diunggah.", "info")}
                   className="btn-secondary"
                   style={{ flex: 1, fontSize: "0.85rem" }}
                 >
                   📷 Upload Gambar QRIS Pusat Baru
                 </button>
                 <button
-                  onClick={() => alert("✓ Pengaturan QRIS dan Rekening Pusat OKESIH berhasil disimpan dan aktif secara global!")}
+                  onClick={() => showToast("Konfigurasi Tersimpan", "Pengaturan QRIS dan Rekening Pusat OKESIH berhasil disimpan dan aktif secara global!", "success")}
                   className="btn-primary"
                   style={{
                     flex: 1,
@@ -1436,13 +1771,15 @@ export default function SuperAdminDashboardPage() {
               className="glass-panel"
               style={{
                 padding: "1.75rem",
-                border: "1px solid rgba(56, 189, 248, 0.2)",
+                borderRadius: "14px",
+                border: isDark ? "1px solid rgba(56, 189, 248, 0.2)" : "1px solid rgba(14, 165, 233, 0.2)",
+                background: isDark ? undefined : "#FFFFFF",
               }}
             >
-              <h2 style={{ fontSize: "1.25rem", fontWeight: 800, color: "#38BDF8", marginBottom: "0.5rem" }}>
+              <h2 style={{ fontSize: "1.25rem", fontWeight: 800, color: "#0284C7", marginBottom: "0.5rem" }}>
                 🤖 Log Verifikasi Setoran Sewa (OCR AI)
               </h2>
-              <p style={{ fontSize: "0.825rem", color: "#94A3B8", marginBottom: "1rem" }}>
+              <p style={{ fontSize: "0.825rem", color: isDark ? "#94A3B8" : "#64748B", marginBottom: "1rem" }}>
                 Pemeriksaan bukti transfer bank warkop yang dicocokkan otomatis dengan kode unik alokasi.
               </p>
 
@@ -1451,15 +1788,15 @@ export default function SuperAdminDashboardPage() {
                   style={{
                     padding: "0.85rem",
                     borderRadius: "6px",
-                    background: "rgba(16, 185, 129, 0.1)",
-                    border: "1px solid rgba(16, 185, 129, 0.3)",
+                    background: isDark ? "rgba(16, 185, 129, 0.1)" : "#ECFDF5",
+                    border: isDark ? "1px solid rgba(16, 185, 129, 0.3)" : "1px solid #A7F3D0",
                   }}
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", fontWeight: 800 }}>
-                    <span style={{ color: "#FFF" }}>Warkop Giras Nusantara</span>
-                    <span style={{ color: "#34D399" }}>✓ Valid (Rp 12.545)</span>
+                    <span style={{ color: isDark ? "#FFF" : "#0F172A" }}>Warkop Giras Nusantara</span>
+                    <span style={{ color: "#059669" }}>✓ Valid (Rp 12.545)</span>
                   </div>
-                  <div style={{ fontSize: "0.72rem", color: "#94A3B8", marginTop: "3px" }}>
+                  <div style={{ fontSize: "0.72rem", color: isDark ? "#94A3B8" : "#64748B", marginTop: "3px" }}>
                     Kode Unik 145 klop • BCA Transfer • OCR Confidence: 98%
                   </div>
                 </div>
@@ -1468,15 +1805,15 @@ export default function SuperAdminDashboardPage() {
                   style={{
                     padding: "0.85rem",
                     borderRadius: "6px",
-                    background: "rgba(245, 158, 11, 0.1)",
-                    border: "1px solid rgba(245, 158, 11, 0.3)",
+                    background: isDark ? "rgba(245, 158, 11, 0.1)" : "#FFFBEB",
+                    border: isDark ? "1px solid rgba(245, 158, 11, 0.3)" : "1px solid #FDE68A",
                   }}
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", fontWeight: 800 }}>
-                    <span style={{ color: "#FFF" }}>Warkop Barokah 24 Jam</span>
-                    <span style={{ color: "#FBBF24" }}>⏳ Masa Tenggang (Grace)</span>
+                    <span style={{ color: isDark ? "#FFF" : "#0F172A" }}>Warkop Barokah 24 Jam</span>
+                    <span style={{ color: "#D97706" }}>⏳ Masa Tenggang (Grace)</span>
                   </div>
-                  <div style={{ fontSize: "0.72rem", color: "#94A3B8", marginTop: "3px" }}>
+                  <div style={{ fontSize: "0.72rem", color: isDark ? "#94A3B8" : "#64748B", marginTop: "3px" }}>
                     Batas waktu pembayaran: 23:59 WIB malam ini (Kode Unik: 215)
                   </div>
                 </div>
@@ -1485,15 +1822,15 @@ export default function SuperAdminDashboardPage() {
                   style={{
                     padding: "0.85rem",
                     borderRadius: "6px",
-                    background: "rgba(16, 185, 129, 0.1)",
-                    border: "1px solid rgba(16, 185, 129, 0.3)",
+                    background: isDark ? "rgba(16, 185, 129, 0.1)" : "#ECFDF5",
+                    border: isDark ? "1px solid rgba(16, 185, 129, 0.3)" : "1px solid #A7F3D0",
                   }}
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", fontWeight: 800 }}>
-                    <span style={{ color: "#FFF" }}>Warkop Pojok Stadion</span>
-                    <span style={{ color: "#34D399" }}>✓ Valid (Rp 10.088)</span>
+                    <span style={{ color: isDark ? "#FFF" : "#0F172A" }}>Warkop Pojok Stadion</span>
+                    <span style={{ color: "#059669" }}>✓ Valid (Rp 10.088)</span>
                   </div>
-                  <div style={{ fontSize: "0.72rem", color: "#94A3B8", marginTop: "3px" }}>
+                  <div style={{ fontSize: "0.72rem", color: isDark ? "#94A3B8" : "#64748B", marginTop: "3px" }}>
                     Kode Unik 338 klop • Mandiri Transfer • OCR Confidence: 99%
                   </div>
                 </div>
@@ -1510,13 +1847,15 @@ export default function SuperAdminDashboardPage() {
               className="glass-panel"
               style={{
                 padding: "1.75rem",
-                border: "1px solid rgba(56, 189, 248, 0.2)",
+                borderRadius: "14px",
+                border: isDark ? "1px solid rgba(56, 189, 248, 0.2)" : "1px solid rgba(14, 165, 233, 0.2)",
+                background: isDark ? undefined : "#FFFFFF",
               }}
             >
-              <h3 style={{ fontSize: "1.15rem", fontWeight: 800, color: "#38BDF8", marginBottom: "0.5rem" }}>
+              <h3 style={{ fontSize: "1.15rem", fontWeight: 800, color: "#0284C7", marginBottom: "0.5rem" }}>
                 ⏱️ Parameter Master: Auto-Dismiss Antrean TV
               </h3>
-              <p style={{ fontSize: "0.825rem", color: "#94A3B8", marginBottom: "1.25rem", lineHeight: 1.5 }}>
+              <p style={{ fontSize: "0.825rem", color: isDark ? "#94A3B8" : "#64748B", marginBottom: "1.25rem", lineHeight: 1.5 }}>
                 Berapa lama nomor antrean yang telah berstatus HIJAU (siap diantar) akan bertahan di seluruh Smart TV sebelum otomatis menghilang.
               </p>
 
@@ -1524,16 +1863,19 @@ export default function SuperAdminDashboardPage() {
                 {[30, 45, 60, 90, 120].map((sec) => (
                   <button
                     key={sec}
-                    onClick={() => setGlobalDismissDuration(sec)}
+                    onClick={() => {
+                      setGlobalDismissDuration(sec);
+                      showToast("Durasi TV Disimpan", `Durasi antrean TV diatur ke ${sec} detik secara global.`, "success");
+                    }}
                     style={{
                       padding: "0.5rem 0.85rem",
                       borderRadius: "6px",
                       fontWeight: 800,
                       fontSize: "0.8rem",
                       cursor: "pointer",
-                      background: globalDismissDuration === sec ? "#0EA5E9" : "rgba(15, 23, 42, 0.6)",
-                      color: globalDismissDuration === sec ? "#FFF" : "#94A3B8",
-                      border: globalDismissDuration === sec ? "1px solid #38BDF8" : "1px solid rgba(255, 255, 255, 0.1)",
+                      background: globalDismissDuration === sec ? "#0EA5E9" : isDark ? "rgba(15, 23, 42, 0.6)" : "#F1F5F9",
+                      color: globalDismissDuration === sec ? "#FFF" : isDark ? "#94A3B8" : "#64748B",
+                      border: globalDismissDuration === sec ? "1px solid #38BDF8" : isDark ? "1px solid rgba(255, 255, 255, 0.1)" : "1px solid rgba(0, 0, 0, 0.1)",
                     }}
                   >
                     {sec} Detik
@@ -1541,7 +1883,7 @@ export default function SuperAdminDashboardPage() {
                 ))}
               </div>
 
-              <div style={{ fontSize: "0.75rem", color: "#34D399", fontWeight: 600 }}>
+              <div style={{ fontSize: "0.75rem", color: isDark ? "#34D399" : "#059669", fontWeight: 600 }}>
                 ✓ Durasi aktif saat ini: {globalDismissDuration} detik (Berlaku untuk seluruh warkop)
               </div>
             </div>
@@ -1551,55 +1893,57 @@ export default function SuperAdminDashboardPage() {
               className="glass-panel"
               style={{
                 padding: "1.75rem",
-                border: "1px solid rgba(56, 189, 248, 0.2)",
+                borderRadius: "14px",
+                border: isDark ? "1px solid rgba(56, 189, 248, 0.2)" : "1px solid rgba(14, 165, 233, 0.2)",
+                background: isDark ? undefined : "#FFFFFF",
               }}
             >
-              <h3 style={{ fontSize: "1.15rem", fontWeight: 800, color: "#FBBF24", marginBottom: "0.5rem" }}>
+              <h3 style={{ fontSize: "1.15rem", fontWeight: 800, color: isDark ? "#FBBF24" : "#D97706", marginBottom: "0.5rem" }}>
                 💰 Tarif Sewa Pokok Platform SaaS
               </h3>
-              <p style={{ fontSize: "0.825rem", color: "#94A3B8", marginBottom: "1rem", lineHeight: 1.5 }}>
+              <p style={{ fontSize: "0.825rem", color: isDark ? "#94A3B8" : "#64748B", marginBottom: "1rem", lineHeight: 1.5 }}>
                 Tarif sewa per-struk transaksi yang ditagihkan harian saat warkop tutup toko.
               </p>
 
               <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem" }}>
-                <span style={{ fontSize: "1.1rem", fontWeight: 800, color: "#94A3B8" }}>Rp</span>
+                <span style={{ fontSize: "1.1rem", fontWeight: 800, color: isDark ? "#94A3B8" : "#64748B" }}>Rp</span>
                 <input
                   type="number"
                   value={saasFeePerReceipt}
                   onChange={(e) => setSaasFeePerReceipt(parseInt(e.target.value) || 50)}
                   style={{
-                    background: "rgba(15, 23, 42, 0.8)",
-                    border: "1px solid rgba(245, 158, 11, 0.4)",
+                    background: isDark ? "rgba(15, 23, 42, 0.8)" : "#F8FAFC",
+                    border: isDark ? "1px solid rgba(245, 158, 11, 0.4)" : "1px solid rgba(0, 0, 0, 0.15)",
                     borderRadius: "8px",
                     padding: "0.5rem 0.75rem",
                     fontSize: "1.1rem",
                     fontWeight: 900,
-                    color: "#FBBF24",
+                    color: isDark ? "#FBBF24" : "#D97706",
                     width: "120px",
                   }}
                 />
-                <span style={{ fontSize: "0.85rem", color: "#94A3B8" }}>/ struk bon tercetak</span>
+                <span style={{ fontSize: "0.85rem", color: isDark ? "#94A3B8" : "#64748B" }}>/ struk bon tercetak</span>
               </div>
 
               <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem" }}>
-                <span style={{ fontSize: "0.85rem", color: "#94A3B8" }}>Default Komisi Marketing:</span>
-                <span style={{ fontSize: "1rem", fontWeight: 800, color: "#C084FC" }}>Rp</span>
+                <span style={{ fontSize: "0.85rem", color: isDark ? "#94A3B8" : "#64748B" }}>Default Komisi Marketing:</span>
+                <span style={{ fontSize: "1rem", fontWeight: 800, color: isDark ? "#C084FC" : "#7C3AED" }}>Rp</span>
                 <input
                   type="number"
                   value={defaultCommissionRate}
                   onChange={(e) => setDefaultCommissionRate(parseInt(e.target.value) || 15)}
                   style={{
-                    background: "rgba(15, 23, 42, 0.8)",
-                    border: "1px solid rgba(168, 85, 247, 0.4)",
+                    background: isDark ? "rgba(15, 23, 42, 0.8)" : "#F8FAFC",
+                    border: isDark ? "1px solid rgba(168, 85, 247, 0.4)" : "1px solid rgba(0, 0, 0, 0.15)",
                     borderRadius: "8px",
                     padding: "0.4rem 0.65rem",
                     fontSize: "1rem",
                     fontWeight: 900,
-                    color: "#C084FC",
+                    color: isDark ? "#C084FC" : "#7C3AED",
                     width: "90px",
                   }}
                 />
-                <span style={{ fontSize: "0.8rem", color: "#94A3B8" }}>/ struk</span>
+                <span style={{ fontSize: "0.8rem", color: isDark ? "#94A3B8" : "#64748B" }}>/ struk</span>
               </div>
             </div>
           </div>
@@ -1612,7 +1956,8 @@ export default function SuperAdminDashboardPage() {
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(0, 0, 0, 0.85)",
+            background: "rgba(0, 0, 0, 0.75)",
+            backdropFilter: "blur(4px)",
             zIndex: 100,
             display: "flex",
             alignItems: "center",
@@ -1626,17 +1971,18 @@ export default function SuperAdminDashboardPage() {
               maxWidth: "580px",
               width: "100%",
               padding: "2rem",
-              background: "#090E17",
-              border: "2px solid #0EA5E9",
-              boxShadow: "0 25px 60px rgba(0, 0, 0, 0.95)",
+              background: isDark ? "#090E17" : "#FFFFFF",
+              border: isDark ? "2px solid #0EA5E9" : "2px solid #0284C7",
+              boxShadow: "0 25px 60px rgba(0, 0, 0, 0.3)",
+              borderRadius: "16px",
             }}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
               <div>
-                <h2 style={{ fontSize: "1.35rem", fontWeight: 900, color: "#38BDF8" }}>
+                <h2 style={{ fontSize: "1.35rem", fontWeight: 900, color: "#0284C7" }}>
                   Daftarkan Tenant Warkop Baru
                 </h2>
-                <div style={{ fontSize: "0.8rem", color: "#94A3B8" }}>
+                <div style={{ fontSize: "0.8rem", color: isDark ? "#94A3B8" : "#64748B" }}>
                   Tetapkan alokasi kode unik, marketing lapangan, dan kredensial owner instan
                 </div>
               </div>
@@ -1651,7 +1997,7 @@ export default function SuperAdminDashboardPage() {
 
             <form onSubmit={handleCreateTenant} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
               <div>
-                <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: "#94A3B8", marginBottom: "0.35rem" }}>
+                <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: isDark ? "#94A3B8" : "#475569", marginBottom: "0.35rem" }}>
                   Nama Warkop (Contoh: Warkop Nusantara Jaya)
                 </label>
                 <input
@@ -1667,9 +2013,9 @@ export default function SuperAdminDashboardPage() {
                     width: "100%",
                     padding: "0.75rem 1rem",
                     borderRadius: "8px",
-                    background: "rgba(15, 23, 42, 0.8)",
-                    border: "1px solid rgba(56, 189, 248, 0.3)",
-                    color: "#FFF",
+                    background: isDark ? "rgba(15, 23, 42, 0.8)" : "#F8FAFC",
+                    border: isDark ? "1px solid rgba(56, 189, 248, 0.3)" : "1px solid rgba(0, 0, 0, 0.15)",
+                    color: isDark ? "#FFF" : "#0F172A",
                     fontSize: "0.9rem",
                     outline: "none",
                   }}
@@ -1678,7 +2024,7 @@ export default function SuperAdminDashboardPage() {
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: "#94A3B8", marginBottom: "0.35rem" }}>
+                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: isDark ? "#94A3B8" : "#475569", marginBottom: "0.35rem" }}>
                     Slug URL Katalog Menu
                   </label>
                   <input
@@ -1691,9 +2037,9 @@ export default function SuperAdminDashboardPage() {
                       width: "100%",
                       padding: "0.75rem 1rem",
                       borderRadius: "8px",
-                      background: "rgba(15, 23, 42, 0.8)",
-                      border: "1px solid rgba(56, 189, 248, 0.3)",
-                      color: "#38BDF8",
+                      background: isDark ? "rgba(15, 23, 42, 0.8)" : "#F8FAFC",
+                      border: isDark ? "1px solid rgba(56, 189, 248, 0.3)" : "1px solid rgba(0, 0, 0, 0.15)",
+                      color: "#0284C7",
                       fontSize: "0.85rem",
                       outline: "none",
                     }}
@@ -1701,7 +2047,7 @@ export default function SuperAdminDashboardPage() {
                 </div>
 
                 <div>
-                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: "#94A3B8", marginBottom: "0.35rem" }}>
+                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: isDark ? "#94A3B8" : "#475569", marginBottom: "0.35rem" }}>
                     Tetapkan Rentang Kode Unik
                   </label>
                   <input
@@ -1713,9 +2059,9 @@ export default function SuperAdminDashboardPage() {
                       width: "100%",
                       padding: "0.75rem 1rem",
                       borderRadius: "8px",
-                      background: "rgba(15, 23, 42, 0.8)",
-                      border: "1px solid rgba(56, 189, 248, 0.3)",
-                      color: "#FFF",
+                      background: isDark ? "rgba(15, 23, 42, 0.8)" : "#F8FAFC",
+                      border: isDark ? "1px solid rgba(56, 189, 248, 0.3)" : "1px solid rgba(0, 0, 0, 0.15)",
+                      color: isDark ? "#FFF" : "#0F172A",
                       fontSize: "0.85rem",
                       outline: "none",
                     }}
@@ -1726,7 +2072,7 @@ export default function SuperAdminDashboardPage() {
               {/* Marketing Lapangan & Komisi Bagi Hasil */}
               <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: "1rem" }}>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: "#34D399", marginBottom: "0.35rem" }}>
+                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: isDark ? "#34D399" : "#059669", marginBottom: "0.35rem" }}>
                     Marketing Lapangan yang Mengakuisisi
                   </label>
                   <select
@@ -1736,9 +2082,9 @@ export default function SuperAdminDashboardPage() {
                       width: "100%",
                       padding: "0.75rem 1rem",
                       borderRadius: "8px",
-                      background: "rgba(15, 23, 42, 0.8)",
-                      border: "1px solid rgba(16, 185, 129, 0.4)",
-                      color: "#FFF",
+                      background: isDark ? "rgba(15, 23, 42, 0.8)" : "#F8FAFC",
+                      border: isDark ? "1px solid rgba(16, 185, 129, 0.4)" : "1px solid rgba(16, 185, 129, 0.3)",
+                      color: isDark ? "#FFF" : "#0F172A",
                       fontSize: "0.85rem",
                       outline: "none",
                     }}
@@ -1753,7 +2099,7 @@ export default function SuperAdminDashboardPage() {
                 </div>
 
                 <div>
-                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: "#C084FC", marginBottom: "0.35rem" }}>
+                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: isDark ? "#C084FC" : "#7C3AED", marginBottom: "0.35rem" }}>
                     Komisi Bagi Hasil (Rp/Struk)
                   </label>
                   <input
@@ -1764,9 +2110,9 @@ export default function SuperAdminDashboardPage() {
                       width: "100%",
                       padding: "0.75rem 1rem",
                       borderRadius: "8px",
-                      background: "rgba(15, 23, 42, 0.8)",
-                      border: "1px solid rgba(168, 85, 247, 0.4)",
-                      color: "#C084FC",
+                      background: isDark ? "rgba(15, 23, 42, 0.8)" : "#F8FAFC",
+                      border: isDark ? "1px solid rgba(168, 85, 247, 0.4)" : "1px solid rgba(168, 85, 247, 0.3)",
+                      color: isDark ? "#C084FC" : "#7C3AED",
                       fontWeight: 800,
                       fontSize: "0.85rem",
                       outline: "none",
@@ -1777,7 +2123,7 @@ export default function SuperAdminDashboardPage() {
 
               <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "1rem" }}>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: "#94A3B8", marginBottom: "0.35rem" }}>
+                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: isDark ? "#94A3B8" : "#475569", marginBottom: "0.35rem" }}>
                     Nama Pemilik / Owner Warkop
                   </label>
                   <input
@@ -1790,9 +2136,9 @@ export default function SuperAdminDashboardPage() {
                       width: "100%",
                       padding: "0.75rem 1rem",
                       borderRadius: "8px",
-                      background: "rgba(15, 23, 42, 0.8)",
-                      border: "1px solid rgba(56, 189, 248, 0.3)",
-                      color: "#FFF",
+                      background: isDark ? "rgba(15, 23, 42, 0.8)" : "#F8FAFC",
+                      border: isDark ? "1px solid rgba(56, 189, 248, 0.3)" : "1px solid rgba(0, 0, 0, 0.15)",
+                      color: isDark ? "#FFF" : "#0F172A",
                       fontSize: "0.9rem",
                       outline: "none",
                     }}
@@ -1800,7 +2146,7 @@ export default function SuperAdminDashboardPage() {
                 </div>
 
                 <div>
-                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: "#94A3B8", marginBottom: "0.35rem" }}>
+                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: isDark ? "#94A3B8" : "#475569", marginBottom: "0.35rem" }}>
                     Nomor WhatsApp Owner
                   </label>
                   <input
@@ -1812,9 +2158,9 @@ export default function SuperAdminDashboardPage() {
                       width: "100%",
                       padding: "0.75rem 1rem",
                       borderRadius: "8px",
-                      background: "rgba(15, 23, 42, 0.8)",
-                      border: "1px solid rgba(56, 189, 248, 0.3)",
-                      color: "#FFF",
+                      background: isDark ? "rgba(15, 23, 42, 0.8)" : "#F8FAFC",
+                      border: isDark ? "1px solid rgba(56, 189, 248, 0.3)" : "1px solid rgba(0, 0, 0, 0.15)",
+                      color: isDark ? "#FFF" : "#0F172A",
                       fontSize: "0.9rem",
                       outline: "none",
                     }}
@@ -1822,29 +2168,29 @@ export default function SuperAdminDashboardPage() {
                 </div>
               </div>
 
-              {/* Kredensial Owner Otomatis (No OTP / Email) */}
+              {/* Kredensial Owner Otomatis */}
               <div
                 style={{
-                  background: "rgba(14, 165, 233, 0.1)",
-                  border: "1px dashed rgba(14, 165, 233, 0.4)",
+                  background: isDark ? "rgba(14, 165, 233, 0.1)" : "#F0F9FF",
+                  border: isDark ? "1px dashed rgba(14, 165, 233, 0.4)" : "1px dashed #38BDF8",
                   borderRadius: "8px",
                   padding: "1rem",
                 }}
               >
-                <div style={{ fontSize: "0.75rem", fontWeight: 800, color: "#7DD3FC", marginBottom: "0.5rem" }}>
+                <div style={{ fontSize: "0.75rem", fontWeight: 800, color: "#0284C7", marginBottom: "0.5rem" }}>
                   🔑 Kredensial Login Owner yang Di-generate Sistem:
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", fontSize: "0.85rem" }}>
                   <div>
-                    <span style={{ color: "#94A3B8" }}>Username: </span>
-                    <strong style={{ color: "#FFF" }}>{generatedUsername}</strong>
+                    <span style={{ color: isDark ? "#94A3B8" : "#64748B" }}>Username: </span>
+                    <strong style={{ color: isDark ? "#FFF" : "#0F172A" }}>{generatedUsername}</strong>
                   </div>
                   <div>
-                    <span style={{ color: "#94A3B8" }}>Password: </span>
-                    <strong style={{ color: "#38BDF8" }}>{generatedPassword}</strong>
+                    <span style={{ color: isDark ? "#94A3B8" : "#64748B" }}>Password: </span>
+                    <strong style={{ color: "#0284C7" }}>{generatedPassword}</strong>
                   </div>
                 </div>
-                <div style={{ fontSize: "0.7rem", color: "#94A3B8", marginTop: "0.5rem" }}>
+                <div style={{ fontSize: "0.7rem", color: isDark ? "#94A3B8" : "#64748B", marginTop: "0.5rem" }}>
                   *Owner dapat langsung login menggunakan kredensial ini tanpa verifikasi email ataupun OTP.
                 </div>
               </div>
@@ -1874,7 +2220,8 @@ export default function SuperAdminDashboardPage() {
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(0, 0, 0, 0.85)",
+            background: "rgba(0, 0, 0, 0.75)",
+            backdropFilter: "blur(4px)",
             zIndex: 100,
             display: "flex",
             alignItems: "center",
@@ -1888,17 +2235,18 @@ export default function SuperAdminDashboardPage() {
               maxWidth: "520px",
               width: "100%",
               padding: "2rem",
-              background: "#090E17",
-              border: "2px solid #10B981",
-              boxShadow: "0 25px 60px rgba(0, 0, 0, 0.95)",
+              background: isDark ? "#090E17" : "#FFFFFF",
+              border: isDark ? "2px solid #10B981" : "2px solid #059669",
+              boxShadow: "0 25px 60px rgba(0, 0, 0, 0.3)",
+              borderRadius: "16px",
             }}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
               <div>
-                <h2 style={{ fontSize: "1.35rem", fontWeight: 900, color: "#34D399" }}>
+                <h2 style={{ fontSize: "1.35rem", fontWeight: 900, color: "#059669" }}>
                   Daftarkan Marketing Lapangan
                 </h2>
-                <div style={{ fontSize: "0.8rem", color: "#94A3B8" }}>
+                <div style={{ fontSize: "0.8rem", color: isDark ? "#94A3B8" : "#64748B" }}>
                   Tetapkan wilayah, kode referral, rekening pencairan, dan komisi per struk
                 </div>
               </div>
@@ -1913,7 +2261,7 @@ export default function SuperAdminDashboardPage() {
 
             <form onSubmit={handleCreateMarketing} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
               <div>
-                <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: "#94A3B8", marginBottom: "0.35rem" }}>
+                <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: isDark ? "#94A3B8" : "#475569", marginBottom: "0.35rem" }}>
                   Nama Lengkap Marketing Sales
                 </label>
                 <input
@@ -1926,9 +2274,9 @@ export default function SuperAdminDashboardPage() {
                     width: "100%",
                     padding: "0.75rem 1rem",
                     borderRadius: "8px",
-                    background: "rgba(15, 23, 42, 0.8)",
-                    border: "1px solid rgba(16, 185, 129, 0.4)",
-                    color: "#FFF",
+                    background: isDark ? "rgba(15, 23, 42, 0.8)" : "#F8FAFC",
+                    border: isDark ? "1px solid rgba(16, 185, 129, 0.4)" : "1px solid rgba(0, 0, 0, 0.15)",
+                    color: isDark ? "#FFF" : "#0F172A",
                     fontSize: "0.9rem",
                     outline: "none",
                   }}
@@ -1937,7 +2285,7 @@ export default function SuperAdminDashboardPage() {
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: "#94A3B8", marginBottom: "0.35rem" }}>
+                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: isDark ? "#94A3B8" : "#475569", marginBottom: "0.35rem" }}>
                     Nomor WhatsApp
                   </label>
                   <input
@@ -1950,9 +2298,9 @@ export default function SuperAdminDashboardPage() {
                       width: "100%",
                       padding: "0.75rem 1rem",
                       borderRadius: "8px",
-                      background: "rgba(15, 23, 42, 0.8)",
-                      border: "1px solid rgba(16, 185, 129, 0.4)",
-                      color: "#FFF",
+                      background: isDark ? "rgba(15, 23, 42, 0.8)" : "#F8FAFC",
+                      border: isDark ? "1px solid rgba(16, 185, 129, 0.4)" : "1px solid rgba(0, 0, 0, 0.15)",
+                      color: isDark ? "#FFF" : "#0F172A",
                       fontSize: "0.9rem",
                       outline: "none",
                     }}
@@ -1960,7 +2308,7 @@ export default function SuperAdminDashboardPage() {
                 </div>
 
                 <div>
-                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: "#94A3B8", marginBottom: "0.35rem" }}>
+                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: isDark ? "#94A3B8" : "#475569", marginBottom: "0.35rem" }}>
                     Wilayah / Area Penugasan
                   </label>
                   <input
@@ -1972,9 +2320,9 @@ export default function SuperAdminDashboardPage() {
                       width: "100%",
                       padding: "0.75rem 1rem",
                       borderRadius: "8px",
-                      background: "rgba(15, 23, 42, 0.8)",
-                      border: "1px solid rgba(16, 185, 129, 0.4)",
-                      color: "#FFF",
+                      background: isDark ? "rgba(15, 23, 42, 0.8)" : "#F8FAFC",
+                      border: isDark ? "1px solid rgba(16, 185, 129, 0.4)" : "1px solid rgba(0, 0, 0, 0.15)",
+                      color: isDark ? "#FFF" : "#0F172A",
                       fontSize: "0.9rem",
                       outline: "none",
                     }}
@@ -1984,7 +2332,7 @@ export default function SuperAdminDashboardPage() {
 
               <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "1rem" }}>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: "#94A3B8", marginBottom: "0.35rem" }}>
+                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: isDark ? "#94A3B8" : "#475569", marginBottom: "0.35rem" }}>
                     Kode Referral Unik Marketing
                   </label>
                   <input
@@ -1997,9 +2345,9 @@ export default function SuperAdminDashboardPage() {
                       width: "100%",
                       padding: "0.75rem 1rem",
                       borderRadius: "8px",
-                      background: "rgba(15, 23, 42, 0.8)",
-                      border: "1px solid rgba(16, 185, 129, 0.4)",
-                      color: "#34D399",
+                      background: isDark ? "rgba(15, 23, 42, 0.8)" : "#F8FAFC",
+                      border: isDark ? "1px solid rgba(16, 185, 129, 0.4)" : "1px solid rgba(0, 0, 0, 0.15)",
+                      color: "#059669",
                       fontWeight: 800,
                       fontSize: "0.9rem",
                       outline: "none",
@@ -2008,7 +2356,7 @@ export default function SuperAdminDashboardPage() {
                 </div>
 
                 <div>
-                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: "#94A3B8", marginBottom: "0.35rem" }}>
+                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: isDark ? "#94A3B8" : "#475569", marginBottom: "0.35rem" }}>
                     Komisi (Rp / Struk)
                   </label>
                   <input
@@ -2019,9 +2367,9 @@ export default function SuperAdminDashboardPage() {
                       width: "100%",
                       padding: "0.75rem 1rem",
                       borderRadius: "8px",
-                      background: "rgba(15, 23, 42, 0.8)",
-                      border: "1px solid rgba(16, 185, 129, 0.4)",
-                      color: "#FBBF24",
+                      background: isDark ? "rgba(15, 23, 42, 0.8)" : "#F8FAFC",
+                      border: isDark ? "1px solid rgba(16, 185, 129, 0.4)" : "1px solid rgba(0, 0, 0, 0.15)",
+                      color: isDark ? "#FBBF24" : "#D97706",
                       fontWeight: 800,
                       fontSize: "0.9rem",
                       outline: "none",
@@ -2033,13 +2381,13 @@ export default function SuperAdminDashboardPage() {
               {/* Data Rekening Pencairan Komisi */}
               <div
                 style={{
-                  background: "rgba(16, 185, 129, 0.08)",
-                  border: "1px dashed rgba(16, 185, 129, 0.3)",
+                  background: isDark ? "rgba(16, 185, 129, 0.08)" : "#ECFDF5",
+                  border: isDark ? "1px dashed rgba(16, 185, 129, 0.3)" : "1px dashed #10B981",
                   borderRadius: "8px",
                   padding: "1rem",
                 }}
               >
-                <div style={{ fontSize: "0.75rem", fontWeight: 800, color: "#34D399", marginBottom: "0.5rem" }}>
+                <div style={{ fontSize: "0.75rem", fontWeight: 800, color: "#059669", marginBottom: "0.5rem" }}>
                   🏦 Rekening Bank / E-Wallet Pencairan Komisi:
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1.5fr", gap: "0.75rem", marginBottom: "0.5rem" }}>
@@ -2051,9 +2399,9 @@ export default function SuperAdminDashboardPage() {
                     style={{
                       padding: "0.5rem 0.75rem",
                       borderRadius: "6px",
-                      background: "rgba(15, 23, 42, 0.8)",
-                      border: "1px solid rgba(16, 185, 129, 0.3)",
-                      color: "#FFF",
+                      background: isDark ? "rgba(15, 23, 42, 0.8)" : "#FFFFFF",
+                      border: isDark ? "1px solid rgba(16, 185, 129, 0.3)" : "1px solid rgba(0, 0, 0, 0.12)",
+                      color: isDark ? "#FFF" : "#0F172A",
                       fontSize: "0.85rem",
                     }}
                   />
@@ -2065,9 +2413,9 @@ export default function SuperAdminDashboardPage() {
                     style={{
                       padding: "0.5rem 0.75rem",
                       borderRadius: "6px",
-                      background: "rgba(15, 23, 42, 0.8)",
-                      border: "1px solid rgba(16, 185, 129, 0.3)",
-                      color: "#FFF",
+                      background: isDark ? "rgba(15, 23, 42, 0.8)" : "#FFFFFF",
+                      border: isDark ? "1px solid rgba(16, 185, 129, 0.3)" : "1px solid rgba(0, 0, 0, 0.12)",
+                      color: isDark ? "#FFF" : "#0F172A",
                       fontSize: "0.85rem",
                     }}
                   />
@@ -2081,9 +2429,9 @@ export default function SuperAdminDashboardPage() {
                     width: "100%",
                     padding: "0.5rem 0.75rem",
                     borderRadius: "6px",
-                    background: "rgba(15, 23, 42, 0.8)",
-                    border: "1px solid rgba(16, 185, 129, 0.3)",
-                    color: "#FFF",
+                    background: isDark ? "rgba(15, 23, 42, 0.8)" : "#FFFFFF",
+                    border: isDark ? "1px solid rgba(16, 185, 129, 0.3)" : "1px solid rgba(0, 0, 0, 0.12)",
+                    color: isDark ? "#FFF" : "#0F172A",
                     fontSize: "0.85rem",
                   }}
                 />
@@ -2104,6 +2452,206 @@ export default function SuperAdminDashboardPage() {
                 ✓ SIMPAN MARKETING LAPANGAN
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: KREDENSIAL OWNER INSTAN (SETELAH TENANT DIDAFTARKAN) */}
+      {newTenantCredentials && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0, 0, 0, 0.8)",
+            backdropFilter: "blur(5px)",
+            zIndex: 110,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "1rem",
+          }}
+        >
+          <div
+            className="glass-panel"
+            style={{
+              maxWidth: "520px",
+              width: "100%",
+              padding: "2rem",
+              background: isDark ? "#090E17" : "#FFFFFF",
+              border: isDark ? "2px solid #10B981" : "2px solid #059669",
+              borderRadius: "16px",
+              boxShadow: "0 25px 60px rgba(0, 0, 0, 0.4)",
+            }}
+          >
+            <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
+              <div style={{ fontSize: "2.5rem", marginBottom: "0.5rem" }}>🎉</div>
+              <h2 style={{ fontSize: "1.35rem", fontWeight: 900, color: "#059669" }}>
+                Tenant Berhasil Didaftarkan!
+              </h2>
+              <p style={{ fontSize: "0.85rem", color: isDark ? "#94A3B8" : "#64748B" }}>
+                Warkop siap beroperasi. Bagikan kredensial login resmi ini kepada pemilik warkop.
+              </p>
+            </div>
+
+            <div
+              style={{
+                background: isDark ? "rgba(15, 23, 42, 0.8)" : "#F8FAFC",
+                border: isDark ? "1px solid rgba(255, 255, 255, 0.1)" : "1px solid rgba(0, 0, 0, 0.1)",
+                borderRadius: "12px",
+                padding: "1.25rem",
+                marginBottom: "1.5rem",
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.75rem",
+                fontSize: "0.875rem",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: isDark ? "#94A3B8" : "#64748B" }}>Nama Tenant:</span>
+                <strong style={{ color: isDark ? "#FFF" : "#0F172A" }}>{newTenantCredentials.name}</strong>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: isDark ? "#94A3B8" : "#64748B" }}>Slug URL:</span>
+                <span style={{ color: "#0284C7", fontWeight: 700 }}>/menu/{newTenantCredentials.slug}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: isDark ? "#94A3B8" : "#64748B" }}>Rentang Kode Unik:</span>
+                <span style={{ fontWeight: 800 }}>{newTenantCredentials.uniqueCodeRange}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: isDark ? "#94A3B8" : "#64748B" }}>Mitra Marketing:</span>
+                <span style={{ color: "#059669", fontWeight: 700 }}>{newTenantCredentials.marketingAgentName}</span>
+              </div>
+
+              <div
+                style={{
+                  marginTop: "0.5rem",
+                  paddingTop: "0.85rem",
+                  borderTop: isDark ? "1px dashed rgba(255, 255, 255, 0.15)" : "1px dashed rgba(0, 0, 0, 0.15)",
+                }}
+              >
+                <div style={{ fontSize: "0.75rem", fontWeight: 800, color: "#0284C7", marginBottom: "0.4rem" }}>
+                  KREDENSIAL LOGIN OWNER INSTAN:
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.25rem" }}>
+                  <span style={{ color: isDark ? "#94A3B8" : "#64748B" }}>Username:</span>
+                  <code style={{ background: isDark ? "#06090E" : "#E2E8F0", padding: "0.15rem 0.5rem", borderRadius: "4px", fontWeight: 800 }}>
+                    {newTenantCredentials.username}
+                  </code>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span style={{ color: isDark ? "#94A3B8" : "#64748B" }}>Password:</span>
+                  <code style={{ background: isDark ? "#06090E" : "#E2E8F0", padding: "0.15rem 0.5rem", borderRadius: "4px", color: "#0284C7", fontWeight: 800 }}>
+                    {newTenantCredentials.password}
+                  </code>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: "0.75rem" }}>
+              <button
+                type="button"
+                onClick={() => {
+                  const text = `*KREDENSIAL LOGIN WARKOP OKESIH*\nNama: ${newTenantCredentials.name}\nURL Menu: https://www.okesih.com/menu/${newTenantCredentials.slug}\nKode Unik: ${newTenantCredentials.uniqueCodeRange}\n\n*Username:* ${newTenantCredentials.username}\n*Password:* ${newTenantCredentials.password}\n\nSilakan login di https://www.okesih.com/login`;
+                  navigator.clipboard.writeText(text);
+                  showToast("Kredensial Disalin", "Teks informasi akun berhasil disalin ke clipboard.", "success");
+                }}
+                className="btn-primary"
+                style={{
+                  flex: 1,
+                  background: "linear-gradient(135deg, #10B981, #059669)",
+                  fontSize: "0.85rem",
+                  fontWeight: 800,
+                }}
+              >
+                📋 Salin Kredensial Lengkap
+              </button>
+              <button
+                type="button"
+                onClick={() => setNewTenantCredentials(null)}
+                className="btn-secondary"
+                style={{ padding: "0.6rem 1.25rem", fontSize: "0.85rem", fontWeight: 700 }}
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 4: KONFIRMASI MODERN (PENGGANTI WINDOW.CONFIRM) */}
+      {confirmModal.isOpen && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0, 0, 0, 0.75)",
+            backdropFilter: "blur(4px)",
+            zIndex: 120,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "1rem",
+          }}
+        >
+          <div
+            className="glass-panel"
+            style={{
+              maxWidth: "460px",
+              width: "100%",
+              padding: "1.75rem",
+              background: isDark ? "#090E17" : "#FFFFFF",
+              border: isDark ? "1px solid rgba(255, 255, 255, 0.15)" : "1px solid rgba(0, 0, 0, 0.12)",
+              borderRadius: "16px",
+              boxShadow: "0 20px 50px rgba(0, 0, 0, 0.35)",
+            }}
+          >
+            <h3
+              style={{
+                fontSize: "1.2rem",
+                fontWeight: 900,
+                color: isDark ? "#FFF" : "#0F172A",
+                marginBottom: "0.5rem",
+              }}
+            >
+              {confirmModal.title}
+            </h3>
+            <p
+              style={{
+                fontSize: "0.875rem",
+                color: isDark ? "#94A3B8" : "#64748B",
+                lineHeight: 1.5,
+                marginBottom: "1.5rem",
+              }}
+            >
+              {confirmModal.message}
+            </p>
+            <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                onClick={() => setConfirmModal((c) => ({ ...c, isOpen: false }))}
+                className="btn-secondary"
+                style={{ padding: "0.55rem 1rem", fontSize: "0.85rem", fontWeight: 700 }}
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={confirmModal.onConfirm}
+                className="btn-primary"
+                style={{
+                  padding: "0.55rem 1.15rem",
+                  fontSize: "0.85rem",
+                  fontWeight: 800,
+                  background:
+                    confirmModal.confirmVariant === "danger"
+                      ? "linear-gradient(135deg, #EF4444, #DC2626)"
+                      : "linear-gradient(135deg, #10B981, #059669)",
+                }}
+              >
+                {confirmModal.confirmText || "Konfirmasi"}
+              </button>
+            </div>
           </div>
         </div>
       )}
