@@ -1,0 +1,120 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import { cacheDeviceSnapshot, clearDeviceData, enqueueDeviceOperation, listDeviceOperations, readDeviceSnapshot, removeDeviceOperation } from "@/lib/device-offline";
+
+export type DeviceOrder = {
+  id: string; table_number: string; nomor_antrean: number; total_harga: number; payment_method: "QRIS" | "CASH";
+  payment_proof_url: string | null; status_pesanan: string; waiter_name: string | null; created_at: string; updated_at: string;
+  items: { id: string; nama_menu: string; harga_satuan: number; qty: number; notes: string | null }[];
+};
+
+export type DeviceBootstrap = {
+  serverTime: string;
+  device: { id: string; name: string; type: "POS" | "KDS"; expiresAt: string };
+  profile: { id: string; nama: string; slug: string; is_active: boolean; offline_limit_hours: number; queue_dismiss_seconds: number };
+  menus: { id: string; nama: string; harga: number; kategori: string; desc_menu: string | null; is_available: boolean }[];
+  tables: { id: string; label: string }[];
+  waiters: { id: string; name: string }[];
+  shift: { id: string; opened_at: string; status: string } | null;
+  orders: DeviceOrder[];
+};
+
+type Pairing = { pairingId: string; pollSecret: string; code: string; expiresAt: string };
+
+export function useDeviceApp(type: "POS" | "KDS") {
+  const [data, setData] = useState<DeviceBootstrap | null>(null);
+  const [authorized, setAuthorized] = useState<boolean | null>(null);
+  const [pairing, setPairing] = useState<Pairing | null>(null);
+  const [online, setOnline] = useState(true);
+  const [cachedAt, setCachedAt] = useState<string | null>(null);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [error, setError] = useState("");
+  const syncing = useRef(false);
+
+  const flushQueue = useCallback(async () => {
+    if (syncing.current || !navigator.onLine) return;
+    syncing.current = true;
+    try {
+      const operations = await listDeviceOperations(type);
+      setPendingCount(operations.length);
+      for (const operation of operations) {
+        const response = await fetch(operation.path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(operation.body) });
+        if (response.status === 401) { setAuthorized(false); await clearDeviceData(type); break; }
+        if (!response.ok && response.status >= 500) break;
+        if (!response.ok) {
+          const body = await response.json().catch(() => ({}));
+          setError(body.error || "Satu perubahan offline gagal disinkronkan.");
+        }
+        await removeDeviceOperation(operation.id);
+      }
+      setPendingCount((await listDeviceOperations(type)).length);
+    } finally { syncing.current = false; }
+  }, [type]);
+
+  const refresh = useCallback(async (quiet = false) => {
+    try {
+      const response = await fetch("/api/device/bootstrap", { cache: "no-store" });
+      if (response.status === 401) { setAuthorized(false); setData(null); return; }
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "Data perangkat gagal dimuat.");
+      setAuthorized(true); setData(body); setCachedAt(null); setError("");
+      await cacheDeviceSnapshot(type, body);
+      await flushQueue();
+    } catch (reason) {
+      const cached = await readDeviceSnapshot<DeviceBootstrap>(type);
+      if (cached) { setAuthorized(true); setData(cached.value); setCachedAt(cached.cachedAt); }
+      else if (!quiet) setError(reason instanceof Error ? reason.message : "Data perangkat gagal dimuat.");
+    }
+  }, [flushQueue, type]);
+
+  useEffect(() => {
+    const initialTimer = window.setTimeout(() => { setOnline(navigator.onLine); void refresh(); }, 0);
+    const timer = window.setInterval(() => void refresh(true), 3000);
+    const handleOnline = () => { setOnline(true); void flushQueue(); void refresh(true); };
+    const handleOffline = () => setOnline(false);
+    window.addEventListener("online", handleOnline); window.addEventListener("offline", handleOffline);
+    return () => { window.clearTimeout(initialTimer); window.clearInterval(timer); window.removeEventListener("online", handleOnline); window.removeEventListener("offline", handleOffline); };
+  }, [flushQueue, refresh]);
+
+  useEffect(() => {
+    if (!pairing) return;
+    const timer = window.setInterval(async () => {
+      const response = await fetch("/api/device/pairing", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(pairing) });
+      const body = await response.json();
+      if (body.status === "APPROVED") { window.clearInterval(timer); setPairing(null); await refresh(); }
+      else if (["EXPIRED", "REJECTED"].includes(body.status)) { window.clearInterval(timer); setPairing(null); setError("Kode pairing berakhir. Buat kode baru."); }
+    }, 2500);
+    return () => window.clearInterval(timer);
+  }, [pairing, refresh]);
+
+  const beginPairing = async (deviceName: string) => {
+    setError("");
+    const response = await fetch("/api/device/pairing", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ deviceType: type, deviceName }) });
+    const body = await response.json();
+    if (!response.ok) return setError(body.error || "Kode pairing gagal dibuat.");
+    setPairing(body);
+  };
+
+  const transitionOrder = async (orderId: string, status: "COOKING" | "READY" | "DONE" | "REJECTED") => {
+    const idempotencyKey = crypto.randomUUID();
+    const body = { orderId, status, idempotencyKey };
+    if (!navigator.onLine) {
+      const offlineSince = cachedAt ? new Date(cachedAt).getTime() : Date.now();
+      const offlineLimitMs = Number(data?.profile.offline_limit_hours || 0) * 60 * 60_000;
+      if (!offlineLimitMs || Date.now() - offlineSince > offlineLimitMs) {
+        throw new Error("Batas operasi offline telah habis. Sambungkan internet untuk memperbarui izin perangkat.");
+      }
+      await enqueueDeviceOperation({ id: idempotencyKey, deviceType: type, path: "/api/device/orders", body, createdAt: new Date().toISOString() });
+      setPendingCount((await listDeviceOperations(type)).length);
+      setData((current) => current ? { ...current, orders: current.orders.map((order) => order.id === orderId ? { ...order, status_pesanan: status } : order) } : current);
+      return;
+    }
+    const response = await fetch("/api/device/orders", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || "Status pesanan gagal diperbarui.");
+    await refresh(true);
+  };
+
+  return { data, authorized, pairing, online, cachedAt, pendingCount, error, setError, beginPairing, transitionOrder, refresh };
+}

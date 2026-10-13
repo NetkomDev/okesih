@@ -1,0 +1,18 @@
+import { createAdminClient } from "@/lib/supabase/admin";
+import { sha256 } from "@/lib/device-auth";
+
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const token = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+  if (!token || token.length < 30) return Response.json({ error: "Token pesanan diperlukan." }, { status: 401 });
+  const { id } = await params;
+  const admin = createAdminClient();
+  const { data: order, error } = await admin
+    .from("transactions")
+    .select("id,table_number,nomor_antrean,total_harga,payment_method,status_pesanan,created_at,updated_at")
+    .eq("id", id)
+    .eq("customer_access_token_hash", sha256(token))
+    .maybeSingle();
+  if (error || !order) return Response.json({ error: "Pesanan tidak ditemukan." }, { status: 404 });
+  return Response.json({ order }, { headers: { "Cache-Control": "no-store" } });
+}
+

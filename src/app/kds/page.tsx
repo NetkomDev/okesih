@@ -1,268 +1,37 @@
 "use client";
 
-import Link from "next/link";
+import Image from "next/image";
 import { useState } from "react";
-
-interface KitchenTicket {
-  id: string;
-  ticketNumber: string;
-  tableNumber: string;
-  waiterName: string;
-  paymentMethod: "CASH" | "QRIS";
-  elapsedMinutes: number;
-  status: "NEW" | "COOKING" | "READY";
-  items: { name: string; qty: number; notes?: string }[];
-}
+import DevicePairing from "@/components/DevicePairing";
+import PwaInstallButton from "@/components/PwaInstallButton";
+import { type DeviceOrder, useDeviceApp } from "@/lib/use-device-app";
 
 export default function KdsModulePage() {
-  const [tickets, setTickets] = useState<KitchenTicket[]>([
-    {
-      id: "tk-01",
-      ticketNumber: "#012",
-      tableNumber: "05",
-      waiterName: "Rian",
-      paymentMethod: "QRIS",
-      elapsedMinutes: 8,
-      status: "COOKING",
-      items: [
-        { name: "Indomie Goreng + Telur", qty: 2, notes: "Pedas level 3, sawi banyak" },
-        { name: "Es Teh Manis Jumbo", qty: 2, notes: "Normal" },
-      ],
-    },
-    {
-      id: "tk-02",
-      ticketNumber: "#013",
-      tableNumber: "03",
-      waiterName: "Rian",
-      paymentMethod: "CASH",
-      elapsedMinutes: 3,
-      status: "NEW",
-      items: [
-        { name: "Kopi Hitam Tubruk Giras", qty: 1, notes: "Pahit kental" },
-        { name: "Indomie Kuah Dobel Telur", qty: 1, notes: "Telur 1/2 matang" },
-      ],
-    },
-    {
-      id: "tk-03",
-      ticketNumber: "#014",
-      tableNumber: "08",
-      waiterName: "Dani",
-      paymentMethod: "QRIS",
-      elapsedMinutes: 1,
-      status: "NEW",
-      items: [
-        { name: "Kopi Susu Panas Legendaris", qty: 2, notes: "Gula aren sedikit" },
-      ],
-    },
-  ]);
+  const app = useDeviceApp("KDS");
+  const [busyId, setBusyId] = useState("");
+  if (app.authorized === false) return <DevicePairing type="KDS" pairing={app.pairing} error={app.error} onBegin={app.beginPairing}/>;
+  if (!app.data) return <div className="device-loading"><Image src="/okesih-logo-animated.svg" width={90} height={90} alt="OKESIH"/><b>{app.error || "Menyiapkan Dapur..."}</b></div>;
 
-  const markCooking = (id: string) => {
-    setTickets((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, status: "COOKING" } : t))
-    );
+  const transition = async (order: DeviceOrder, status: "READY" | "DONE") => {
+    setBusyId(order.id); app.setError("");
+    try { await app.transitionOrder(order.id, status); }
+    catch (reason) { app.setError(reason instanceof Error ? reason.message : "Status tiket gagal diperbarui."); }
+    finally { setBusyId(""); }
   };
 
-  const markReady = (id: string, ticketNum: string, tableNum: string, waiterName: string, method: string) => {
-    setTickets((prev) => prev.filter((t) => t.id !== id));
-    alert(
-      `✓ Pesanan ${ticketNum} (Meja #${tableNum}) SELESAI!\n` +
-      `Waiters: ${waiterName}\n` +
-      `Metode: ${method === "CASH" ? "BAYAR TUNAI (Waiters Wajib Tagih)" : "QRIS LUNAS"}\n` +
-      `Status berubah HIJAU di Layar TV dan suara panggilan TTS berbunyi.`
-    );
-  };
-
-  return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "var(--bg-deep-black)" }}>
-      {/* KDS Top Header */}
-      <header
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "1rem 1.75rem",
-          borderBottom: "1px solid var(--border-subtle)",
-          background: "var(--bg-surface-1)",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-          <Link href="/" style={{ fontSize: "1.25rem", fontWeight: 900, display: "flex", alignItems: "center", gap: "0.5rem", textDecoration: "none", color: "inherit" }}>
-            <img
-              src="/logo.svg?v=2"
-              alt="Logo OKESIH.COM"
-              width={34}
-              height={34}
-              style={{ width: "34px", height: "34px", objectFit: "contain", display: "inline-block" }}
-            />
-            <span>
-              🍳 OKESIH <span style={{ color: "#FBBF24" }}>BARISTA &amp; DAPUR (KDS)</span>
-            </span>
-          </Link>
-          <span className="badge badge-ready">● Realtime WebSocket Aktif</span>
-        </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: "1.25rem" }}>
-          <div style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>
-            Tiket Aktif: <strong style={{ color: "#FFF" }}>{tickets.length} Meja</strong>
-          </div>
-          <button className="btn-secondary" style={{ padding: "0.45rem 0.85rem", fontSize: "0.8rem" }}>
-            🔊 Test Audio Dapur
-          </button>
-        </div>
-      </header>
-
-      {/* Ticket Grid */}
-      <main style={{ padding: "1.5rem", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(350px, 1fr))", gap: "1.25rem" }}>
-        {tickets.map((t) => (
-          <div
-            key={t.id}
-            className="glass-panel"
-            style={{
-              padding: "1.25rem",
-              border: t.status === "COOKING" ? "1px solid rgba(245, 158, 11, 0.5)" : "1px solid rgba(59, 130, 246, 0.4)",
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "space-between",
-              boxShadow: t.status === "COOKING" ? "0 4px 20px rgba(245, 158, 11, 0.15)" : "none",
-            }}
-          >
-            <div>
-              {/* Header Tiket: Nomor Tiket & Nomor Meja & Indikator Metode Bayar */}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "flex-start",
-                  marginBottom: "0.875rem",
-                  borderBottom: "1px solid var(--border-subtle)",
-                  paddingBottom: "0.75rem",
-                }}
-              >
-                <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                    <span style={{ fontSize: "1.75rem", fontWeight: 900, color: t.status === "COOKING" ? "#FBBF24" : "#60A5FA" }}>
-                      {t.ticketNumber}
-                    </span>
-                    {/* Badge Nomor Meja yang Sangat Menonjol */}
-                    <span
-                      style={{
-                        background: "rgba(255, 69, 0, 0.2)",
-                        border: "1px solid rgba(255, 69, 0, 0.5)",
-                        color: "var(--brand-orange-light)",
-                        padding: "0.2rem 0.6rem",
-                        borderRadius: "8px",
-                        fontWeight: 900,
-                        fontSize: "0.95rem",
-                      }}
-                    >
-                      📍 MEJA #{t.tableNumber}
-                    </span>
-                  </div>
-                  <div style={{ fontSize: "0.75rem", color: "var(--text-dim)", marginTop: "0.25rem" }}>
-                    Waiters: <strong style={{ color: "#FFF" }}>{t.waiterName}</strong> • {t.elapsedMinutes} mnt lalu
-                  </div>
-                </div>
-
-                <div style={{ textAlign: "right" }}>
-                  <span className={t.status === "COOKING" ? "badge badge-cooking" : "badge badge-new"}>
-                    {t.status === "COOKING" ? "Sedang Diracik" : "Baru Masuk"}
-                  </span>
-
-                  {/* Badge Pembayaran */}
-                  <div style={{ marginTop: "0.35rem" }}>
-                    {t.paymentMethod === "CASH" ? (
-                      <span
-                        style={{
-                          background: "rgba(239, 68, 68, 0.2)",
-                          border: "1px solid #EF4444",
-                          color: "#FCA5A5",
-                          fontSize: "0.7rem",
-                          fontWeight: 800,
-                          padding: "0.15rem 0.45rem",
-                          borderRadius: "4px",
-                        }}
-                      >
-                        💵 BAYAR TUNAI (TAGIH)
-                      </span>
-                    ) : (
-                      <span
-                        style={{
-                          background: "rgba(16, 185, 129, 0.2)",
-                          border: "1px solid #10B981",
-                          color: "#34D399",
-                          fontSize: "0.7rem",
-                          fontWeight: 800,
-                          padding: "0.15rem 0.45rem",
-                          borderRadius: "4px",
-                        }}
-                      >
-                        📱 QRIS LUNAS
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Daftar Menu Dipesan */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginBottom: "1rem" }}>
-                {t.items.map((item, idx) => (
-                  <div key={idx} style={{ display: "flex", flexDirection: "column" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 800, fontSize: "1.05rem" }}>
-                      <span>{item.qty}x {item.name}</span>
-                    </div>
-                    {item.notes && (
-                      <span style={{ fontSize: "0.8rem", color: "var(--brand-orange-light)", fontWeight: 700, marginTop: "0.15rem" }}>
-                        Catatan: {item.notes}
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {/* Instruksi Barista untuk SOP Struk */}
-              <div
-                style={{
-                  background: "var(--bg-surface-2)",
-                  border: "1px dashed var(--border-subtle)",
-                  borderRadius: "6px",
-                  padding: "0.5rem 0.75rem",
-                  fontSize: "0.725rem",
-                  color: "var(--text-muted)",
-                  marginBottom: "1rem",
-                }}
-              >
-                📌 <strong>SOP Dapur:</strong> Letakkan struk fisik thermal di samping nampan hidangan sebelum diserahkan ke Waiters <strong>{t.waiterName}</strong>.
-              </div>
-            </div>
-
-            {/* Tombol Aksi Barista */}
-            <div>
-              {t.status === "NEW" ? (
-                <button
-                  onClick={() => markCooking(t.id)}
-                  className="btn-secondary"
-                  style={{ width: "100%", fontWeight: 700, borderColor: "rgba(59, 130, 246, 0.5)" }}
-                >
-                  Mulai Racik Pesanan Meja #{t.tableNumber} →
-                </button>
-              ) : (
-                <button
-                  onClick={() => markReady(t.id, t.ticketNumber, t.tableNumber, t.waiterName, t.paymentMethod)}
-                  className="btn-primary"
-                  style={{
-                    width: "100%",
-                    background: "linear-gradient(135deg, #10B981, #059669)",
-                    boxShadow: "0 4px 16px rgba(16, 185, 129, 0.35)",
-                    fontWeight: 800,
-                  }}
-                >
-                  ✓ SELESAI (SERAHKAN KE WAITERS {t.waiterName.toUpperCase()})
-                </button>
-              )}
-            </div>
-          </div>
-        ))}
-      </main>
-    </div>
-  );
+  const cooking = app.data.orders.filter((order) => order.status_pesanan === "COOKING");
+  const ready = app.data.orders.filter((order) => order.status_pesanan === "READY");
+  const serverNow = new Date(app.data.serverTime).getTime();
+  return <div className="ops-app kds-app">
+    <header className="ops-header"><div className="ops-brand"><Image src="/logo.svg?v=2" width={42} height={42} alt="OKESIH"/><div><small>OKESIH DAPUR / KDS</small><strong>{app.data.profile.nama}</strong></div></div><div className="ops-actions"><span className={app.online ? "ops-online" : "ops-offline"}>● {app.online ? "Online" : "Offline"}</span>{app.pendingCount > 0 && <span className="ops-sync">{app.pendingCount} antrean sync</span>}<PwaInstallButton compact label="Install KDS"/><button onClick={() => void app.refresh()}>↻ Sinkronkan</button></div></header>
+    {app.cachedAt && <div className="ops-warning">Mode offline · perubahan status akan dikirim saat koneksi kembali.</div>}{app.error && <div className="ops-error">{app.error}<button onClick={() => app.setError("")}>×</button></div>}
+    <main className="kds-board"><section><header><div><small>SEDANG DISIAPKAN</small><h1>{cooking.length} Tiket Aktif</h1></div></header><div className="kds-grid">{cooking.length === 0 && <Empty text="Belum ada pesanan yang perlu disiapkan."/>}{cooking.map((order) => <Ticket key={order.id} now={serverNow} order={order} action="Siap Diantar" busy={busyId === order.id} onAction={() => void transition(order, "READY")}/>)}</div></section><section className="ready-column"><header><div><small>SIAP DIANTAR</small><h2>{ready.length} Tiket</h2></div></header><div className="kds-grid">{ready.length === 0 && <Empty text="Belum ada pesanan siap."/>}{ready.map((order) => <Ticket key={order.id} now={serverNow} order={order} action="Sudah Diambil" busy={busyId === order.id} onAction={() => void transition(order, "DONE")}/>)}</div></section></main>
+  </div>;
 }
+
+function Ticket({ order, action, busy, onAction, now }: { order: DeviceOrder; action: string; busy: boolean; onAction: () => void; now: number }) {
+  const age = Math.max(0, Math.floor((now - new Date(order.created_at).getTime()) / 60_000));
+  return <article className={`kds-ticket ${age >= 15 ? "late" : age >= 8 ? "warn" : ""}`}><header><div><strong>#{String(order.nomor_antrean).padStart(3, "0")}</strong><b>Meja {order.table_number}</b></div><span>{age} menit</span></header><div className="kds-ticket-items">{order.items.map((item) => <div key={item.id}><b>{item.qty}×</b><span>{item.nama_menu}{item.notes && <small>Catatan: {item.notes}</small>}</span></div>)}</div><footer><span className={order.payment_method === "CASH" ? "cash" : "qris"}>{order.payment_method === "CASH" ? "TUNAI — WAJIB TAGIH" : "QRIS LUNAS"}</span><button disabled={busy} onClick={onAction}>{busy ? "Menyimpan..." : action}</button></footer></article>;
+}
+
+function Empty({ text }: { text: string }) { return <div className="ops-empty"><span>✓</span><p>{text}</p></div>; }

@@ -220,6 +220,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: memberError.message }, { status: 500 });
     }
 
+    // Tenant baru harus menyelesaikan penggantian password dan onboarding PWA
+    // pada login pertamanya. Akun owner lama dibackfill sebagai sudah selesai
+    // oleh migrasi 12 agar rilis ini tidak mengunci pengguna yang sudah aktif.
+    const { error: onboardingError } = await supabase.from("owner_onboarding").insert({
+      warkop_id: newWarkop.id,
+      owner_user_id: authData.user.id,
+    });
+    if (onboardingError) {
+      await supabase.auth.admin.deleteUser(authData.user.id);
+      await supabase.from("warkops").delete().eq("id", newWarkop.id);
+      return NextResponse.json(
+        { error: `Onboarding owner gagal disiapkan: ${onboardingError.message}` },
+        { status: 500 }
+      );
+    }
+
     // 3. Antrekan pesan. Worker WhatsApp Web pada perangkat super admin akan
     // mengirimkannya dari nomor +62 856-9448-8510.
     const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://okesih.com").replace(/\/$/, "");

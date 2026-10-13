@@ -7,6 +7,7 @@ import QRCode from "qrcode";
 import { useAuthGuard, logoutUser } from "@/lib/auth-helpers";
 import { createClient } from "@/lib/supabase/client";
 import ThemeToggle from "@/components/ThemeToggle";
+import PwaInstallButton from "@/components/PwaInstallButton";
 
 type MenuItem = { id: string; name: string; price: number; category: string; description: string; isAvailable: boolean };
 type Staff = { id: string; username: string; name: string; role: "KASIR" | "DAPUR"; status: "ACTIVE" | "INACTIVE" };
@@ -15,6 +16,8 @@ type BusinessTable = { id: string; label: string; sort_order: number; is_active:
 type Profile = { id: string; nama: string; slug: string; is_active: boolean; qris_image_url: string | null; qris_merchant_name: string | null };
 type Metrics = { receiptCount: number; cash: number; qris: number; total: number; billing: { tagihan_pokok: number; kode_unik: number; total_tagihan: number; status_bayar: string } | null };
 type DashboardData = { profile: Profile; menus: MenuItem[]; staff: Staff[]; waiters: Waiter[]; tables: BusinessTable[]; metrics: Metrics };
+type DeviceInstallation = { id: string; device_type: "POS" | "KDS"; device_name: string; status: "ACTIVE" | "REVOKED" | "EXPIRED"; paired_at: string; last_seen_at: string; expires_at: string; revoked_at: string | null };
+type OwnerOnboarding = { password_changed_at: string | null; owner_pwa_installed_at: string | null; completed_at: string | null };
 
 const ownerDashboardCache = new Map<string, DashboardData>();
 
@@ -54,6 +57,11 @@ export default function TenantOwnerDashboardPage() {
   const [waiterForm, setWaiterForm] = useState({ name: "", phone: "" });
   const [tableInput, setTableInput] = useState("");
   const [merchantName, setMerchantName] = useState("");
+  const [devices, setDevices] = useState<DeviceInstallation[]>([]);
+  const [onboarding, setOnboarding] = useState<OwnerOnboarding | null>(null);
+  const [onboardingReady, setOnboardingReady] = useState(false);
+  const [pairingCode, setPairingCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const qrisInput = useRef<HTMLInputElement>(null);
 
   const loadDashboard = async () => {
@@ -84,6 +92,26 @@ export default function TenantOwnerDashboardPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadDashboard();
   }, []);
+
+  const loadDeviceCenter = async () => {
+    try {
+      const [devicePayload, onboardingPayload] = await Promise.all([
+        ownerFetch("/api/owner/devices", { cache: "no-store" }),
+        ownerFetch("/api/owner/onboarding", { cache: "no-store" }),
+      ]);
+      setDevices(devicePayload.devices || []);
+      setOnboarding(onboardingPayload.onboarding);
+      setOnboardingReady(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Pusat perangkat gagal dimuat.");
+    }
+  };
+
+  useEffect(() => {
+    if (!isAuthorized) return;
+    const timer = window.setTimeout(() => void loadDeviceCenter(), 0);
+    return () => window.clearTimeout(timer);
+  }, [isAuthorized]);
 
   useEffect(() => {
     if (pathname !== "/owner") return;
@@ -156,6 +184,26 @@ export default function TenantOwnerDashboardPage() {
     popup.document.close();
   };
 
+  const deviceAction = async (body: Record<string, unknown>) => {
+    setBusy(true); setError("");
+    try {
+      await ownerFetch("/api/owner/devices", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      setPairingCode("");
+      await loadDeviceCenter();
+    } catch (err) { setError(err instanceof Error ? err.message : "Perangkat gagal diperbarui."); }
+    finally { setBusy(false); }
+  };
+
+  const onboardingAction = async (body: Record<string, unknown>) => {
+    setBusy(true); setError("");
+    try {
+      const payload = await ownerFetch("/api/owner/onboarding", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      setOnboarding(payload.onboarding);
+      if (body.action === "change_password") setNewPassword("");
+    } catch (err) { setError(err instanceof Error ? err.message : "Onboarding gagal diperbarui."); }
+    finally { setBusy(false); }
+  };
+
   if (loading || !isAuthorized || !data) return (
     <div className="owner-loading" role="status" aria-label="Menyiapkan portal owner OKESIH">
       <div className="owner-loading-brand">
@@ -169,8 +217,8 @@ export default function TenantOwnerDashboardPage() {
   );
 
   const { profile, metrics } = data;
-  const view = pathname.endsWith("/menu") ? "menu" : pathname.endsWith("/staff") ? "staff" : pathname.endsWith("/waiters") ? "waiters" : pathname.endsWith("/qris-tables") ? "qris-tables" : "overview";
-  const navItems = [["▦", "Ringkasan", "/owner", "overview"], ["◫", "Katalog Menu", "/owner/menu", "menu"], ["♟", "Akun Staf", "/owner/staff", "staff"], ["♙", "Waiter", "/owner/waiters", "waiters"], ["▣", "QRIS & Meja", "/owner/qris-tables", "qris-tables"]];
+  const view = pathname.endsWith("/menu") ? "menu" : pathname.endsWith("/staff") ? "staff" : pathname.endsWith("/waiters") ? "waiters" : pathname.endsWith("/qris-tables") ? "qris-tables" : pathname.endsWith("/devices") ? "devices" : "overview";
+  const navItems = [["▦", "Ringkasan", "/owner", "overview"], ["◫", "Katalog Menu", "/owner/menu", "menu"], ["♟", "Akun Staf", "/owner/staff", "staff"], ["♙", "Waiter", "/owner/waiters", "waiters"], ["▣", "QRIS & Meja", "/owner/qris-tables", "qris-tables"], ["⌁", "Perangkat & PWA", "/owner/devices", "devices"]];
 
   return (
     <div className={`owner-shell ${sidebarExpanded ? "sidebar-open" : "sidebar-closed"}`}>
@@ -232,8 +280,21 @@ export default function TenantOwnerDashboardPage() {
               <button className="btn-primary" disabled={!data.tables.length} onClick={() => void printTableStickers()}>🖨️ Cetak Semua Stiker QR Meja</button>
             </article>
           </section>}
+
+          {view === "devices" && <section className="owner-device-page owner-page-panel">
+            <div className="owner-section-heading"><div><h1>Perangkat &amp; PWA</h1><p>Pasangkan tablet Kasir dan layar Dapur tanpa membagikan password Owner.</p></div><PwaInstallButton label="Install Aplikasi Owner" onInstalled={() => void onboardingAction({ action: "pwa_installed" })}/></div>
+            <div className="owner-device-setup">
+              <article className="owner-panel"><span className="device-step">01</span><h2>Buka aplikasi di perangkat tujuan</h2><p>Pada tablet Kasir buka <b>okesih.com/pos</b>. Pada layar dapur buka <b>okesih.com/kds</b>, kemudian pilih Buat Kode Pairing.</p><div className="owner-device-links"><Link href="/pos" target="_blank">Buka Kasir ↗</Link><Link href="/kds" target="_blank">Buka KDS ↗</Link></div></article>
+              <article className="owner-panel"><span className="device-step">02</span><h2>Setujui kode pairing</h2><p>Masukkan enam digit yang tampil pada perangkat. Kode hanya berlaku lima menit dan sekali pakai.</p><div className="owner-pair-form"><input inputMode="numeric" maxLength={6} placeholder="000000" value={pairingCode} onChange={(event) => setPairingCode(event.target.value.replace(/\D/g, ""))}/><button className="btn-primary" disabled={busy || pairingCode.length !== 6} onClick={() => void deviceAction({ action: "approve", code: pairingCode })}>{busy ? "Memproses..." : "Setujui Perangkat"}</button></div></article>
+            </div>
+            <article className="owner-panel owner-device-list"><div className="owner-section-heading"><div><h2>Perangkat Terdaftar</h2><p>Cabut akses segera jika perangkat hilang atau tidak lagi digunakan.</p></div>{devices.some((device) => device.status === "ACTIVE") && <button className="link-button danger" onClick={() => confirm("Cabut seluruh perangkat Kasir dan KDS?") && void deviceAction({ action: "revoke_all" })}>Cabut Semua</button>}</div>
+              {devices.length === 0 ? <EmptyState icon="⌁" title="Belum ada perangkat" text="Buka Kasir atau KDS pada perangkat tujuan untuk memulai pairing."/> : <div className="owner-device-grid">{devices.map((device) => <div key={device.id} className={`owner-device-card ${device.status.toLowerCase()}`}><span>{device.device_type === "POS" ? "▤" : "♨"}</span><div><small>{device.device_type === "POS" ? "KASIR / POS" : "DAPUR / KDS"}</small><b>{device.device_name}</b><p>Terakhir aktif {new Date(device.last_seen_at).toLocaleString("id-ID")}</p><em>{device.status === "ACTIVE" ? "● Aktif" : device.status === "REVOKED" ? "○ Dicabut" : "○ Kedaluwarsa"}</em></div>{device.status === "ACTIVE" && <button className="link-button danger" onClick={() => confirm(`Cabut akses ${device.device_name}?`) && void deviceAction({ action: "revoke", deviceId: device.id })}>Cabut</button>}</div>)}</div>}
+            </article>
+          </section>}
         </main>
       </div>
+
+      {onboardingReady && onboarding && !onboarding.completed_at && <div className="owner-onboarding-backdrop"><section className="owner-onboarding-card"><img src="/logo.svg?v=2" alt="OKESIH"/><small>SELAMAT DATANG DI OKESIH</small><h2>Siapkan akun Owner Anda</h2>{!onboarding.password_changed_at ? <><p>Demi keamanan, ganti password awal yang diberikan Super Admin sebelum menggunakan dashboard.</p><label>Password baru<input type="password" minLength={8} value={newPassword} onChange={(event) => setNewPassword(event.target.value)} placeholder="Minimal 8 karakter"/></label><button className="btn-primary" disabled={busy || newPassword.length < 8} onClick={() => void onboardingAction({ action: "change_password", password: newPassword })}>{busy ? "Menyimpan..." : "Ganti Password & Lanjut"}</button></> : <><p>Pasang Dashboard Owner agar OKESIH dapat dibuka langsung dari layar utama. Browser tetap akan meminta persetujuan Anda.</p><PwaInstallButton label="Install OKESIH Owner" onInstalled={() => void onboardingAction({ action: "pwa_installed" })}/><button className="btn-secondary" disabled={busy} onClick={() => void onboardingAction({ action: "complete" })}>Lanjut ke Dashboard</button></>}{error && <div className="owner-error">{error}</div>}</section></div>}
 
       {menuModal && <Modal title="Tambah Menu" onClose={() => setMenuModal(false)}><form onSubmit={createMenu}><input required placeholder="Nama menu" value={menuForm.name} onChange={(e) => setMenuForm({ ...menuForm, name: e.target.value })}/><input required min="1" type="number" placeholder="Harga" value={menuForm.price} onChange={(e) => setMenuForm({ ...menuForm, price: e.target.value })}/><select value={menuForm.category} onChange={(e) => setMenuForm({ ...menuForm, category: e.target.value })}>{["Kopi", "Dingin", "Makanan", "Camilan", "Lainnya"].map((item) => <option key={item}>{item}</option>)}</select><textarea placeholder="Deskripsi" value={menuForm.description} onChange={(e) => setMenuForm({ ...menuForm, description: e.target.value })}/><button disabled={busy} className="btn-primary">Simpan Menu</button></form></Modal>}
       {staffModal && <Modal title="Tambah Akun Staf" onClose={() => setStaffModal(false)}><form onSubmit={createStaff}><input required placeholder="Username" value={staffForm.username} onChange={(e) => setStaffForm({ ...staffForm, username: e.target.value })}/><input required placeholder="Nama staf" value={staffForm.name} onChange={(e) => setStaffForm({ ...staffForm, name: e.target.value })}/><input required minLength={6} type="password" placeholder="Password minimal 6 karakter" value={staffForm.password} onChange={(e) => setStaffForm({ ...staffForm, password: e.target.value })}/><select value={staffForm.role} onChange={(e) => setStaffForm({ ...staffForm, role: e.target.value })}><option value="KASIR">Kasir POS</option><option value="DAPUR">Barista / Dapur</option></select><button disabled={busy} className="btn-primary">Buat Akun Staf</button></form></Modal>}

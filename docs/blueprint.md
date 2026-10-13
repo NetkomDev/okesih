@@ -1,6 +1,6 @@
 # BLUEPRINT SISTEM APLIKASI WARKOP: OKESIH.COM
 
-**Versi:** 3.0 (Terintegrasi Infrastruktur & Pembaruan UI/UX Visual)
+**Versi:** 4.0 (Multi-PWA, Device Trust, Offline Sync & Zero-Repeated-Login)
 **Repositori Utama:** <https://github.com/NetkomDev/okesih.git>
 
 ## 1. RINGKASAN EKSEKUTIF
@@ -51,7 +51,9 @@ Keseluruhan sistem dibagi menjadi 5 modul UI. Secara struktur di Vercel, ini ber
 3. Admin mengatur *Menu*, *Harga*, batas *Timer Offline* (misal: 4 jam), dan durasi **Auto-Dismiss Antrean TV** (misal: 60 detik).
 4. Pemilik warkop mengunggah QRIS Statis toko mereka dan men-generate akun staf (username dan password kasir/dapur/barista).
 5. Pemilik mencetak QR Code meja bernomor (`/menu/[id_warkop]?table=01`, `table=02`, dst.) dan menempelkannya di setiap meja warkop.
-6. Staf membuka URL POS, KDS, dan TV di perangkat masing-masing, login dengan username + password, lalu menekan "Add to Homescreen" (Install PWA).
+6. Owner menyelesaikan onboarding login pertama, mengganti password awal, lalu memasang PWA Owner melalui prompt instalasi resmi browser.
+7. Tablet Kasir dan layar Dapur/KDS tidak memakai kredensial Owner. Masing-masing perangkat membuka halaman pairing, menampilkan kode sekali pakai, lalu disetujui Owner dari Dashboard.
+8. Setelah pairing disetujui, server menerbitkan kredensial perangkat berhak akses minimum. Perangkat menawarkan instalasi PWA khusus Kasir atau KDS dan dapat dibuka kembali tanpa login berulang selama belum kedaluwarsa atau dicabut Owner.
 
 ### B. Fase Operasional (High-Throughput Pesanan Meja, Dual Pembayaran, & SOP Waiters)
 1. **Pilih Meja & Scan QR:** Pelanggan duduk di meja dan memindai QR Code meja bernomor (`/menu/[id_warkop]?table=05`). Sistem otomatis mengunci nomor meja.
@@ -130,3 +132,127 @@ Tema desain visual OKESIH menggunakan pendekatan **modern, energik, dan minimali
 * **Warna Penyeimbang: Putih Bersih (`#FFFFFF` / `#F8F9FA`)**
 * **Karakter Visual:** Modern digital product feel, bentuk lengkung halus, high-contrast readability untuk tablet & smart TV.
 * **Tone of Voice:** Santai dan akrab (*"Pesanan lagi digarap. Tunggu dipanggil, ya!"*).
+
+## 8. ARSITEKTUR MULTI-PWA KANONIS
+
+OKESIH terdiri dari tiga aplikasi terpasang yang berbeda, bukan satu aplikasi umum dengan shortcut bercampur:
+
+| PWA | Target origin | Fallback path | `id` manifest | Cakupan utama |
+| --- | --- | --- | --- | --- |
+| Owner | `owner.okesih.com` | `/owner` | `/pwa/owner` | Pengaturan, laporan, perangkat, staf |
+| Kasir | `kasir.okesih.com` | `/pos` | `/pwa/pos` | Pesanan, pembayaran, shift, cetak |
+| Dapur/KDS | `dapur.okesih.com` | `/kds` | `/pwa/kds` | Tiket dapur dan perubahan status |
+
+Setiap aplikasi memiliki manifest, nama, ikon, warna, `start_url`, dan `scope` tersendiri. Selama DNS subdomain belum diarahkan ke Vercel, aplikasi tetap dapat dipasang melalui fallback path pada origin utama dengan identitas manifest yang berbeda. Service worker hanya menyimpan app-shell dan aset statis; respons autentikasi, pembayaran, data Owner, dan API tenant tidak boleh masuk cache publik.
+
+Browser selalu memerlukan persetujuan pengguna untuk instalasi. Aplikasi boleh menampilkan modal onboarding dan tombol instalasi, tetapi tidak boleh mengklaim dapat memasang shortcut secara otomatis. Pada browser yang tidak menyediakan `beforeinstallprompt`, UI menampilkan petunjuk instalasi manual sesuai platform.
+
+## 9. ONBOARDING OWNER & PUSAT INSTALASI
+
+Login pertama Owner menjalankan alur berikut:
+
+1. Memastikan kredensial awal valid dan tenant aktif.
+2. Meminta Owner mengganti password awal sebelum tindakan sensitif.
+3. Menampilkan onboarding pemasangan PWA Owner.
+4. Menampilkan checklist: pasang Owner, pairing Kasir, pairing KDS, uji koneksi, dan selesai.
+5. Menyimpan progres di database agar konsisten lintas browser/perangkat; `localStorage` hanya digunakan untuk preferensi UI.
+
+Dashboard Owner memiliki halaman **Perangkat & PWA** dengan fungsi:
+
+* menampilkan instruksi dan tombol instalasi PWA Owner;
+* menyetujui kode pairing POS/KDS;
+* menampilkan nama perangkat, tipe, status, waktu pairing, dan terakhir aktif;
+* mengganti nama perangkat;
+* mencabut satu perangkat atau seluruh perangkat tenant;
+* menandai perangkat kedaluwarsa/tercabut tanpa menghapus audit historis.
+
+Instalasi selalu dilakukan pada perangkat tujuan. Tombol Dashboard tidak dapat memasang aplikasi dari jarak jauh; untuk tablet/TV, Dashboard memberikan URL/QR dan menyetujui kode yang tampil pada perangkat tersebut.
+
+## 10. DEVICE TRUST & PAIRING TANPA LOGIN BERULANG
+
+Perangkat tidak diidentifikasi menggunakan fingerprint, MAC address, serial number, atau ID browser. Identitas perangkat adalah token acak berentropi tinggi yang diterbitkan server setelah pairing disetujui.
+
+### Alur Pairing
+
+1. POS/KDS tanpa sesi perangkat meminta pairing baru.
+2. Server membuat kode pendek sekali pakai dan rahasia polling terpisah; kode berlaku maksimal 5 menit.
+3. Perangkat menampilkan kode kepada Owner.
+4. Owner memasukkan kode pada Dashboard dan memilih tenant/jenis akses yang benar.
+5. Server menandai permintaan disetujui dan menerbitkan token perangkat tepat satu kali.
+6. Browser menyimpan token dalam cookie `HttpOnly`, `Secure`, dan `SameSite`; database hanya menyimpan hash token.
+7. Permintaan berikutnya diverifikasi server, tenant-scoped, role-scoped, tidak dicabut, dan belum kedaluwarsa.
+
+### Batas Izin
+
+* `OWNER`: pengelolaan tenant lengkap melalui sesi Supabase Owner.
+* `POS_DEVICE`: membaca menu/pesanan tenant, mengonfirmasi/menolak pesanan, mengelola shift, dan mencetak struk.
+* `KDS_DEVICE`: membaca tiket yang telah dikonfirmasi dan mengubah status `COOKING`, `READY`, atau `DONE`.
+* Perangkat tidak dapat mengubah staf, QRIS, profil tenant, atau melihat data tenant lain.
+
+Sesi perangkat memiliki kedaluwarsa absolut, rotasi aktivitas, `last_seen_at`, pencabutan langsung, dan audit. Auto-login berarti perangkat terpercaya yang dapat dicabut, bukan sesi permanen tanpa batas. Identitas operator tetap dicatat melalui pemilihan staf/PIN saat membuka shift agar akuntabilitas tidak hilang.
+
+## 11. SKEMA DATA DEVICE, ONBOARDING, AUDIT & IDEMPOTENSI
+
+Tabel tambahan kanonis:
+
+* `owner_onboarding`: `warkop_id`, `owner_user_id`, `password_changed_at`, `owner_pwa_installed_at`, `completed_at`, timestamps.
+* `device_pairing_requests`: `id`, `warkop_id` nullable sebelum persetujuan, `device_type`, `device_name`, `code_hash`, `poll_secret_hash`, `status`, `expires_at`, `approved_by`, `approved_at`, `consumed_at`.
+* `device_installations`: `id`, `warkop_id`, `device_type`, `device_name`, `token_hash`, `status`, `paired_by`, `paired_at`, `last_seen_at`, `expires_at`, `revoked_at`.
+* `operation_idempotency`: `warkop_id`, `device_id`, `idempotency_key`, `operation`, `response`, `created_at`; unik per perangkat dan kunci.
+* `audit_logs`: aktor, tenant, perangkat, tindakan, target, metadata aman, waktu, dan alamat jaringan yang telah diminimalkan.
+
+Token mentah, password, service-role key, dan bukti sensitif tidak boleh masuk audit log. Seluruh tabel mengaktifkan RLS; operasi perangkat berjalan melalui Route Handler tervalidasi, bukan akses tabel anonim.
+
+## 12. KEAMANAN PESANAN PELANGGAN & RLS
+
+Kebijakan publik `SELECT ... USING (true)` pada transaksi dan item dilarang. Pelanggan berinteraksi melalui endpoint publik tervalidasi:
+
+1. Menu publik hanya mengembalikan profil aktif, meja aktif, QRIS publik, serta menu tersedia.
+2. Harga dan total dihitung ulang di server berdasarkan menu tenant; harga dari browser tidak dipercaya.
+3. Setiap pesanan memakai `idempotency_key` untuk mencegah duplikasi akibat retry.
+4. Server menerbitkan token akses pesanan acak; hanya hash disimpan.
+5. Pelanggan hanya dapat melihat status pesanannya sendiri menggunakan token tersebut.
+6. Upload bukti pembayaran dibatasi tipe, ukuran, path tenant, dan tidak memberi akses daftar seluruh bucket.
+7. POS/KDS hanya menerima data tenant yang terikat pada kredensial perangkatnya.
+
+Perubahan pembayaran, penolakan, void, perubahan status, pairing, pencabutan perangkat, dan penutupan shift wajib masuk audit log.
+
+## 13. OFFLINE-FIRST, SINKRONISASI & REALTIME
+
+PWA Kasir menyimpan snapshot menu, tiket aktif, shift aktif, dan antrean operasi lokal di IndexedDB. Setiap mutasi mempunyai UUID idempoten dan status `PENDING`, `SYNCING`, `SYNCED`, atau `FAILED`.
+
+* Saat online, transaksi dan perubahan status dikirim ke server lalu didistribusikan ke layar lain.
+* Saat offline, operasi yang diizinkan masuk antrean lokal dan disinkronkan berurutan setelah koneksi pulih.
+* Server mengembalikan respons lama untuk kunci idempoten yang sudah diproses sehingga retry tidak membuat transaksi ganda.
+* Setelah `offline_limit_hours` terlampaui, mutasi finansial baru dikunci sampai perangkat tersambung dan lease diperbarui.
+* Konflik tidak ditimpa diam-diam; UI menampilkan kegagalan beserta pilihan retry.
+* KDS mengutamakan transport realtime, dengan polling tenant-scoped sebagai fallback saat WebSocket tidak tersedia.
+
+API/auth menggunakan `NetworkOnly`. App-shell/aset versi menggunakan strategi cache aman. Data tenant yang dicache harus dipisahkan berdasarkan tenant/perangkat dan dibersihkan saat sesi dicabut.
+
+## 14. ANDROID TV & SMART TV
+
+PWA KDS dapat dipasang hanya jika browser TV mendukung instalasi. Fallback universal adalah mode browser fullscreen dengan pairing kode. Untuk produksi Android TV yang konsisten, disediakan wrapper APK/AAB tipis menuju KDS web dengan:
+
+* `CATEGORY_LEANBACK_LAUNCHER` dan banner TV;
+* landscape, tampilan jarak jauh, fokus yang terlihat, dan navigasi D-pad;
+* deklarasi tidak memerlukan touchscreen;
+* pencegahan ambient/sleep selama operasional;
+* pairing kode yang sama dengan PWA dan kemampuan pencabutan dari Dashboard Owner.
+
+APK TV adalah kanal distribusi tambahan, bukan tempat menyimpan service-role key atau kredensial tenant statis.
+
+## 15. TAHAP IMPLEMENTASI & KRITERIA SIAP PRODUKSI
+
+Urutan wajib:
+
+1. Tutup RLS publik yang berlebihan dan buat endpoint transaksi tervalidasi.
+2. Tambahkan skema onboarding, pairing, perangkat, audit, dan idempotensi.
+3. Hubungkan menu pelanggan, POS, dan KDS ke data tenant nyata.
+4. Terapkan pairing, auto-login perangkat, rotasi, dan pencabutan.
+5. Pisahkan manifest dan pengalaman instalasi tiga PWA.
+6. Terapkan IndexedDB, retry idempoten, lease offline, dan fallback realtime.
+7. Uji isolasi tenant, role, duplikasi retry, pencabutan, kedaluwarsa, offline/online, dan instalasi.
+8. Deploy migrasi database lebih dahulu, lalu aplikasi Vercel, kemudian lakukan smoke test produksi.
+
+Sistem dinyatakan siap hanya jika tidak ada POS/KDS demo statis, tidak ada transaksi publik yang dapat dibaca lintas pelanggan, perangkat tercabut langsung kehilangan akses, dan semua jalur finansial memiliki idempotensi serta audit.
