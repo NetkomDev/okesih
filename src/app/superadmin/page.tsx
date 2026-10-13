@@ -701,7 +701,12 @@ export default function SuperAdminDashboardPage() {
       >
         {/* Sidebar Header */}
         <div className="superadmin-sidebar-header">
-          <div className="superadmin-sidebar-brand">
+          <div
+            className="superadmin-sidebar-brand"
+            onClick={() => sidebarCollapsed && toggleSidebar()}
+            style={{ cursor: sidebarCollapsed ? "pointer" : "default" }}
+            title={sidebarCollapsed ? "Klik untuk memperluas sidebar" : undefined}
+          >
             <img src="/logo.svg?v=2" alt="OKESIH Logo" />
             {(!sidebarCollapsed || (autoHideEnabled && isHovered)) && (
               <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
@@ -953,13 +958,47 @@ export default function SuperAdminDashboardPage() {
               </button>
             </div>
           ) : (
-            <button
-              onClick={logoutUser}
-              style={{ background: "transparent", border: "none", color: "#EF4444", fontSize: "1.1rem", padding: "0.25rem", cursor: "pointer", display: "flex", justifyContent: "center" }}
-              title="Logout"
-            >
-              🚪
-            </button>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", alignItems: "center", width: "100%" }}>
+              <button
+                type="button"
+                onClick={toggleSidebar}
+                style={{
+                  background: isDark ? "rgba(148, 163, 184, 0.12)" : "rgba(0, 0, 0, 0.06)",
+                  border: isDark ? "1px solid rgba(148, 163, 184, 0.2)" : "1px solid rgba(0, 0, 0, 0.12)",
+                  borderRadius: "8px",
+                  color: isDark ? "#F8FAFC" : "#0F172A",
+                  fontSize: "1.1rem",
+                  width: "36px",
+                  height: "36px",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontWeight: 900,
+                  transition: "all 0.18s ease",
+                }}
+                title="Perluas Sidebar"
+              >
+                »
+              </button>
+              <button
+                type="button"
+                onClick={logoutUser}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "#EF4444",
+                  fontSize: "1.15rem",
+                  padding: "0.25rem",
+                  cursor: "pointer",
+                  display: "flex",
+                  justifyContent: "center",
+                }}
+                title="Logout"
+              >
+                🚪
+              </button>
+            </div>
           )}
         </div>
       </aside>
@@ -969,13 +1008,20 @@ export default function SuperAdminDashboardPage() {
         {/* Topbar */}
         <header className="superadmin-topbar">
           <div style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
-            {/* Mobile Toggle Button */}
+            {/* Toggle Button (Desktop & Mobile) */}
             <button
               type="button"
-              onClick={() => setMobileSidebarOpen(true)}
+              onClick={() => {
+                if (typeof window !== "undefined" && window.innerWidth < 1024) {
+                  setMobileSidebarOpen((prev) => !prev);
+                } else {
+                  toggleSidebar();
+                }
+              }}
               className="superadmin-topbar-toggle"
               style={{ display: "inline-flex" }}
-              aria-label="Buka Menu"
+              title={sidebarCollapsed ? "Perluas Sidebar" : "Lipat Sidebar"}
+              aria-label="Toggle Sidebar"
             >
               ☰
             </button>
@@ -1013,24 +1059,6 @@ export default function SuperAdminDashboardPage() {
           </div>
 
           <div className="superadmin-actions" style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-            {activeTab === "overview" && (
-              <div className="superadmin-period-filter" aria-label="Filter periode analytics">
-                {([
-                  ["today", "Hari ini"], ["week", "Minggu"], ["month", "Bulan"], ["year", "Tahun"],
-                ] as Array<[AnalyticsPeriod, string]>).map(([value, label]) => (
-                  <button
-                    key={value}
-                    type="button"
-                    className={analyticsPeriod === value ? "is-active" : ""}
-                    onClick={() => setAnalyticsPeriod(value)}
-                    disabled={analyticsLoading}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            )}
-
             <ThemeToggle />
 
             <button
@@ -1217,7 +1245,7 @@ export default function SuperAdminDashboardPage() {
 
             {/* Card 5: Net Revenue Platform (DENGAN KONTRAST KONSISTEN) */}
             <div
-              className="glass-panel superadmin-kpi-card superadmin-kpi-card--featured"
+              className="glass-panel superadmin-kpi-card superadmin-kpi-card--net-revenue"
               style={{
                 padding: "1.5rem",
                 borderRadius: "14px",
