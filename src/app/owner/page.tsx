@@ -40,6 +40,7 @@ export default function TenantOwnerDashboardPage() {
   const [busy, setBusy] = useState(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [autoHide, setAutoHide] = useState(true);
+  const [activeSection, setActiveSection] = useState("ringkasan");
   const [menuModal, setMenuModal] = useState(false);
   const [staffModal, setStaffModal] = useState(false);
   const [waiterModal, setWaiterModal] = useState(false);
@@ -66,6 +67,22 @@ export default function TenantOwnerDashboardPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (isAuthorized) void loadDashboard();
   }, [isAuthorized]);
+
+  useEffect(() => {
+    if (!data) return;
+    const sections = ["ringkasan", "menu", "staf", "waiter", "qris"]
+      .map((id) => document.getElementById(id))
+      .filter((section): section is HTMLElement => Boolean(section));
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.filter((entry) => entry.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        if (visible?.target.id) setActiveSection(visible.target.id);
+      },
+      { rootMargin: "-20% 0px -65% 0px", threshold: [0, 0.2, 0.6] }
+    );
+    sections.forEach((section) => observer.observe(section));
+    return () => observer.disconnect();
+  }, [data]);
 
   const mutate = async (work: () => Promise<unknown>) => {
     setBusy(true);
@@ -134,13 +151,13 @@ export default function TenantOwnerDashboardPage() {
   if (loading || !isAuthorized || !data) return <div className="owner-loading"><span>☕</span><strong>{error || "Memuat data usaha owner..."}</strong></div>;
 
   const { profile, metrics } = data;
-  const navItems = [["📊", "Ringkasan", "#ringkasan"], ["🍽️", "Katalog Menu", "#menu"], ["👥", "Akun Staf", "#staf"], ["🧑‍🍳", "Waiter", "#waiter"], ["💳", "QRIS & Meja", "#qris"]];
+  const navItems = [["▦", "Ringkasan", "ringkasan"], ["◫", "Katalog Menu", "menu"], ["♟", "Akun Staf", "staf"], ["♙", "Waiter", "waiter"], ["▣", "QRIS & Meja", "qris"]];
 
   return (
     <div className={`owner-shell ${sidebarExpanded ? "sidebar-open" : "sidebar-closed"}`}>
       <aside className="owner-sidebar" onMouseEnter={() => autoHide && setSidebarExpanded(true)} onMouseLeave={() => autoHide && setSidebarExpanded(false)}>
-        <button className="owner-sidebar-toggle" onClick={() => setSidebarExpanded((value) => !value)} aria-label="Buka atau ciutkan sidebar">☰</button>
-        <nav>{navItems.map(([icon, label, href]) => <a key={href} href={href} title={label}><span>{icon}</span><b>{label}</b></a>)}</nav>
+        <div className="owner-sidebar-head"><span className="owner-sidebar-mark">O</span><b>OWNER SPACE</b><button className="owner-sidebar-toggle" onClick={() => setSidebarExpanded((value) => !value)} aria-label="Buka atau ciutkan sidebar">☰</button></div>
+        <nav>{navItems.map(([icon, label, id]) => <a key={id} href={`#${id}`} title={label} className={activeSection === id ? "active" : ""} aria-current={activeSection === id ? "page" : undefined}><span>{icon}</span><b>{label}</b></a>)}</nav>
         <label className="owner-autohide"><input type="checkbox" checked={autoHide} onChange={(event) => setAutoHide(event.target.checked)} /><span>Auto-hide</span></label>
       </aside>
 
@@ -155,26 +172,26 @@ export default function TenantOwnerDashboardPage() {
           <section id="ringkasan">
             <div className="owner-section-heading"><div><h1>Ringkasan Penjualan Hari Ini</h1><p>Pantau omzet tunai vs QRIS, kas di laci kasir, dan pembayaran sewa OKESIH.</p></div><Link href={`/menu/${profile.slug}?table=${encodeURIComponent(data.tables[0]?.label || "01")}`} target="_blank" className="btn-primary">Preview Menu Pelanggan</Link></div>
             <div className="owner-metrics">
-              <article><small>TOTAL OMZET PENJUALAN</small><strong>{money(metrics.total)}</strong><p>{metrics.receiptCount} transaksi hari ini</p></article>
-              <article><small>RINCIAN PEMBAYARAN</small><b>💵 Tunai: {money(metrics.cash)}</b><b>📱 QRIS: {money(metrics.qris)}</b></article>
-              <article><small>UANG FISIK DI LACI KASIR</small><strong className="green">{money(metrics.cash)}</strong><p>Nilai berdasarkan pembayaran tunai</p></article>
-              <article><small>SEWA SAAS OKESIH</small><strong className="yellow">{money(Number(metrics.billing?.total_tagihan || 0))}</strong><p>{metrics.billing?.status_bayar || "Belum ditagihkan"}</p></article>
+              <article className="metric-revenue"><span className="metric-icon">↗</span><small>TOTAL OMZET PENJUALAN</small><strong>{money(metrics.total)}</strong><p>{metrics.receiptCount} transaksi hari ini</p></article>
+              <article className="metric-payment"><span className="metric-icon">◈</span><small>RINCIAN PEMBAYARAN</small><b>Tunai <em>{money(metrics.cash)}</em></b><b>QRIS <em>{money(metrics.qris)}</em></b></article>
+              <article className="metric-cash"><span className="metric-icon">▤</span><small>UANG FISIK DI LACI KASIR</small><strong className="green">{money(metrics.cash)}</strong><p>Nilai berdasarkan pembayaran tunai</p></article>
+              <article className="metric-billing"><span className="metric-icon">◎</span><small>SEWA SAAS OKESIH</small><strong className="yellow">{money(Number(metrics.billing?.total_tagihan || 0))}</strong><p>{metrics.billing?.status_bayar || "Belum ditagihkan"}</p></article>
             </div>
           </section>
 
           <section id="menu" className="owner-panel">
             <div className="owner-section-heading"><div><h2>Katalog Menu</h2><p>Tersinkronisasi ke menu pelanggan dan kasir.</p></div><button className="btn-primary" onClick={() => setMenuModal(true)}>+ Tambah Menu</button></div>
-            <div className="owner-table-wrap"><table><thead><tr><th>Nama</th><th>Kategori</th><th>Harga</th><th>Deskripsi</th><th>Status</th><th>Aksi</th></tr></thead><tbody>{data.menus.map((menu) => <tr key={menu.id}><td><b>{menu.name}</b></td><td>{menu.category}</td><td>{money(menu.price)}</td><td>{menu.description}</td><td><button className={menu.isAvailable ? "pill active" : "pill"} disabled={busy} onClick={() => void mutate(() => ownerFetch("/api/owner/menus", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: menu.id, isAvailable: !menu.isAvailable }) }))}>{menu.isAvailable ? "● Tersedia" : "○ Habis"}</button></td><td><button className="link-button" onClick={() => { const value = prompt("Harga baru", String(menu.price)); if (value && Number(value) > 0) void mutate(() => ownerFetch("/api/owner/menus", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: menu.id, price: Number(value) }) })); }}>Ubah Harga</button><button className="link-button danger" onClick={() => confirm(`Hapus ${menu.name}?`) && void mutate(() => ownerFetch(`/api/owner/menus?id=${menu.id}`, { method: "DELETE" }))}>Hapus</button></td></tr>)}</tbody></table></div>
+            <div className="owner-table-wrap"><table><thead><tr><th>Nama</th><th>Kategori</th><th>Harga</th><th>Deskripsi</th><th>Status</th><th>Aksi</th></tr></thead><tbody>{data.menus.length === 0 && <tr><td colSpan={6}><EmptyState icon="◫" title="Katalog masih kosong" text="Tambahkan menu pertama agar langsung tampil di kasir dan menu pelanggan." /></td></tr>}{data.menus.map((menu) => <tr key={menu.id}><td><b>{menu.name}</b></td><td><span className="owner-category">{menu.category}</span></td><td><strong>{money(menu.price)}</strong></td><td>{menu.description}</td><td><button className={menu.isAvailable ? "pill active" : "pill"} disabled={busy} onClick={() => void mutate(() => ownerFetch("/api/owner/menus", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: menu.id, isAvailable: !menu.isAvailable }) }))}>{menu.isAvailable ? "● Tersedia" : "○ Habis"}</button></td><td><button className="link-button" onClick={() => { const value = prompt("Harga baru", String(menu.price)); if (value && Number(value) > 0) void mutate(() => ownerFetch("/api/owner/menus", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: menu.id, price: Number(value) }) })); }}>Ubah Harga</button><button className="link-button danger" onClick={() => confirm(`Hapus ${menu.name}?`) && void mutate(() => ownerFetch(`/api/owner/menus?id=${menu.id}`, { method: "DELETE" }))}>Hapus</button></td></tr>)}</tbody></table></div>
           </section>
 
           <section id="staf" className="owner-panel">
             <div className="owner-section-heading"><div><h2>Manajemen Akun Staf (Kasir &amp; Barista, dll.)</h2><p>Akun login staf tersimpan dan terisolasi untuk usaha ini.</p></div><button className="btn-primary" onClick={() => setStaffModal(true)}>+ Tambah Staf</button></div>
-            <div className="owner-table-wrap"><table><thead><tr><th>Username</th><th>Nama</th><th>Peran</th><th>Status</th><th>Aksi</th></tr></thead><tbody>{data.staff.map((staff) => <tr key={staff.id}><td><b>{staff.username}</b></td><td>{staff.name}</td><td>{staff.role}</td><td>{staff.status === "ACTIVE" ? "● Aktif" : "○ Nonaktif"}</td><td><button className="link-button" onClick={() => { const password = prompt(`Password baru untuk ${staff.username} (minimal 6 karakter)`); if (password) void mutate(() => ownerFetch("/api/owner/staff", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: staff.id, password }) })); }}>Reset Password</button><button className="link-button" onClick={() => void mutate(() => ownerFetch("/api/owner/staff", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: staff.id, isActive: staff.status !== "ACTIVE" }) }))}>{staff.status === "ACTIVE" ? "Nonaktifkan" : "Aktifkan"}</button></td></tr>)}</tbody></table></div>
+            <div className="owner-table-wrap"><table><thead><tr><th>Username</th><th>Nama</th><th>Peran</th><th>Status</th><th>Aksi</th></tr></thead><tbody>{data.staff.length === 0 && <tr><td colSpan={5}><EmptyState icon="♟" title="Belum ada akun staf" text="Buat akun kasir atau barista agar akses operasional terpisah dan aman." /></td></tr>}{data.staff.map((staff) => <tr key={staff.id}><td><b>{staff.username}</b></td><td>{staff.name}</td><td><span className="owner-category">{staff.role}</span></td><td><span className={staff.status === "ACTIVE" ? "owner-dot active" : "owner-dot"}>{staff.status === "ACTIVE" ? "● Aktif" : "○ Nonaktif"}</span></td><td><button className="link-button" onClick={() => { const password = prompt(`Password baru untuk ${staff.username} (minimal 6 karakter)`); if (password) void mutate(() => ownerFetch("/api/owner/staff", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: staff.id, password }) })); }}>Reset Password</button><button className="link-button" onClick={() => void mutate(() => ownerFetch("/api/owner/staff", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: staff.id, isActive: staff.status !== "ACTIVE" }) }))}>{staff.status === "ACTIVE" ? "Nonaktifkan" : "Aktifkan"}</button></td></tr>)}</tbody></table></div>
           </section>
 
           <section id="waiter" className="owner-panel">
             <div className="owner-section-heading"><div><h2>Daftar Waiter</h2><p>Kelola pelayan sesuai kondisi nyata usaha.</p></div><button className="btn-primary" onClick={() => setWaiterModal(true)}>+ Tambah Waiter</button></div>
-            <div className="owner-card-grid">{data.waiters.map((waiter) => <article key={waiter.id} className="owner-small-card"><b>{waiter.name}</b><span>{waiter.phone || "Tanpa nomor telepon"}</span><button className="link-button danger" onClick={() => confirm(`Hapus ${waiter.name}?`) && void mutate(() => ownerFetch(`/api/owner/waiters?id=${waiter.id}`, { method: "DELETE" }))}>Hapus</button></article>)}</div>
+            <div className="owner-card-grid">{data.waiters.length === 0 && <EmptyState icon="♙" title="Daftar waiter masih kosong" text="Tambahkan waiter sesuai kondisi aktual usaha Anda." />}{data.waiters.map((waiter) => <article key={waiter.id} className="owner-small-card"><span className="owner-avatar">{waiter.name.slice(0, 1).toUpperCase()}</span><b>{waiter.name}</b><span>{waiter.phone || "Tanpa nomor telepon"}</span><button className="link-button danger" onClick={() => confirm(`Hapus ${waiter.name}?`) && void mutate(() => ownerFetch(`/api/owner/waiters?id=${waiter.id}`, { method: "DELETE" }))}>Hapus</button></article>)}</div>
           </section>
 
           <section id="qris" className="owner-settings-grid">
@@ -205,4 +222,8 @@ export default function TenantOwnerDashboardPage() {
 
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return <div className="owner-modal-backdrop"><div className="owner-modal"><header><h3>{title}</h3><button onClick={onClose}>×</button></header>{children}</div></div>;
+}
+
+function EmptyState({ icon, title, text }: { icon: string; title: string; text: string }) {
+  return <div className="owner-empty"><span>{icon}</span><div><b>{title}</b><p>{text}</p></div></div>;
 }
