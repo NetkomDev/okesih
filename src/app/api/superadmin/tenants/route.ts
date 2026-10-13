@@ -200,6 +200,7 @@ export async function POST(request: Request) {
       email: ownerEmail,
       password: String(password),
       email_confirm: true,
+      app_metadata: { role: "OWNER", warkop_id: newWarkop.id },
       user_metadata: { role: "OWNER", warkop_id: newWarkop.id, warkop_slug: newWarkop.slug },
     });
     if (authError || !authData.user) {
