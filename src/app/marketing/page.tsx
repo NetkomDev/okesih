@@ -9,11 +9,15 @@ export default function MarketingProgramPage() {
   const [tenantCount, setTenantCount] = useState<number>(20);
   const [avgReceipts, setAvgReceipts] = useState<number>(120);
   const [commissionPerReceipt, setCommissionPerReceipt] = useState<number>(15);
+  const [saasFeePerReceipt, setSaasFeePerReceipt] = useState<number>(50);
 
   useEffect(() => {
     fetch("/api/platform-settings", { cache: "no-store" })
       .then((response) => response.ok ? response.json() : Promise.reject())
-      .then((payload) => setCommissionPerReceipt(payload.data.defaultMarketingCommission))
+      .then((payload) => {
+        setCommissionPerReceipt(payload.data.defaultMarketingCommission);
+        setSaasFeePerReceipt(payload.data.saasFeePerReceipt);
+      })
       .catch(() => undefined);
   }, []);
 
@@ -718,7 +722,7 @@ export default function MarketingProgramPage() {
               Ajak Tenant Pasang OKESIH
             </h3>
             <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", lineHeight: 1.6 }}>
-              Kenalkan sistem kasir pintar &amp; self-order QR OKESIH ke warkop/kafe rekanan. Biaya sewa hanya Rp 50/struk yang sangat terjangkau bagi pemilik usaha.
+              Kenalkan sistem kasir pintar &amp; self-order QR OKESIH ke warkop/kafe rekanan. Biaya sewa hanya Rp {saasFeePerReceipt.toLocaleString("id-ID")}/struk yang sangat terjangkau bagi pemilik usaha.
             </p>
           </div>
 

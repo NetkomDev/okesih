@@ -48,6 +48,37 @@ export async function GET(request: Request) {
   }
 }
 
+export async function POST(request: Request) {
+  try {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!url || !key) return NextResponse.json({ error: "Konfigurasi database belum lengkap." }, { status: 500 });
+
+    const body = await request.json();
+    if (!body.name || !body.phone || !body.area || !body.referralCode || !body.accountNumber) {
+      return NextResponse.json({ error: "Nama, kontak, wilayah, kode referral, dan rekening wajib diisi." }, { status: 400 });
+    }
+
+    const supabase = createClient(url, key);
+    const { data, error } = await supabase.from("marketing_partners").insert({
+      full_name: String(body.name).trim(),
+      phone: String(body.phone).trim(),
+      city_area: String(body.area).trim(),
+      referral_code: String(body.referralCode).trim().toUpperCase(),
+      commission_rate: Number(body.commissionPerReceipt) || 0,
+      bank_name: String(body.bankName || "-").trim(),
+      bank_account_number: String(body.accountNumber).trim(),
+      bank_account_name: String(body.accountName || body.name).trim(),
+      status: "ACTIVE",
+    }).select().single();
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ success: true, data });
+  } catch (err: unknown) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Terjadi kesalahan internal." }, { status: 500 });
+  }
+}
+
 export async function PATCH(request: Request) {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;

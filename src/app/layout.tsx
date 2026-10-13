@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     template: "%s | OKESIH POS & Operasional Usaha",
   },
   description:
-    "Software POS Kasir Offline-First, Kitchen Display (KDS), QR Menu Meja, dan Antrean Smart TV untuk Kafe, Rumah Makan, Resto, dan Warkop. Tanpa beli alat mahal, bayar sewa hanya Rp 50 per transaksi.",
+    "Software POS Kasir Offline-First, Kitchen Display (KDS), QR Menu Meja, dan Antrean Smart TV untuk Kafe, Rumah Makan, Resto, dan Warkop dengan tarif per transaksi yang transparan.",
   keywords: [
     "aplikasi kasir",
     "pos kasir warkop",
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "OKESIH - Aplikasi Kasir POS & Self-Order Cerdas untuk Segala Usaha Kuliner",
     description:
-      "Pesanan ngalir cepat, usaha bebas macet! POS Kasir Offline-First, KDS Dapur, QR Menu Meja, dan Antrean TV. Cocok untuk Kafe, Rumah Makan, Resto & Warkop. Hanya Rp 50/struk.",
+      "Pesanan ngalir cepat, usaha bebas macet! POS Kasir Offline-First, KDS Dapur, QR Menu Meja, dan Antrean TV untuk bisnis kuliner.",
     url: "https://okesih.vercel.app",
     siteName: "OKESIH.COM",
     locale: "id_ID",
@@ -54,7 +54,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "OKESIH - Aplikasi Kasir POS & Antrean Cerdas untuk Kafe, Resto & Warkop",
     description:
-      "Tingkatkan kecepatan pesanan dan omzet usaha kuliner Anda dengan POS Offline-First dan QR Menu Meja. Cukup pakai HP sendiri, hanya Rp 50/struk.",
+      "Tingkatkan kecepatan pesanan dan omzet usaha kuliner Anda dengan POS Offline-First dan QR Menu Meja.",
   },
   robots: {
     index: true,

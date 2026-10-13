@@ -34,8 +34,30 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  // Menyegarkan sesi auth
-  await supabase.auth.getUser();
+  // Menyegarkan sesi auth sekaligus mengunci seluruh permukaan Super Admin
+  // di sisi server. Client guard tetap dipertahankan sebagai lapisan UX.
+  const { data: { user } } = await supabase.auth.getUser();
+  const path = request.nextUrl.pathname;
+  const isSuperAdminSurface = path === "/superadmin" || path.startsWith("/api/superadmin/");
+
+  if (isSuperAdminSurface) {
+    const role = String(user?.user_metadata?.role || "").toUpperCase();
+    const isSuperAdmin = role === "SUPERADMIN" || user?.email?.toLowerCase().startsWith("superadmin");
+
+    if (!user || !isSuperAdmin) {
+      if (path.startsWith("/api/")) {
+        return NextResponse.json(
+          { error: "Akses khusus Super Admin." },
+          { status: user ? 403 : 401 }
+        );
+      }
+
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = "/login";
+      redirectUrl.search = `?error=${user ? "unauthorized" : "login_required"}`;
+      return NextResponse.redirect(redirectUrl);
+    }
+  }
 
   return supabaseResponse;
 }

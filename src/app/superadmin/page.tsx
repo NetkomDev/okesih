@@ -86,7 +86,7 @@ interface AnalyticsData {
 }
 
 export default function SuperAdminDashboardPage() {
-  const { isAuthorized, loading, currentUser } = useAuthGuard(["SUPERADMIN"]);
+  const { isAuthorized, loading } = useAuthGuard(["SUPERADMIN"]);
 
   // Dynamic Theme State (Dark / Light)
   const [theme, setTheme] = useState<"dark" | "light">("dark");
@@ -143,40 +143,7 @@ export default function SuperAdminDashboardPage() {
   const [newTenantCredentials, setNewTenantCredentials] = useState<NewTenantCredentials | null>(null);
 
   // State Marketing Lapangan
-  const [marketingList, setMarketingList] = useState<MarketingAgent[]>([
-    {
-      id: "mkt-01",
-      name: "Hendra Pratama",
-      phone: "081234889900",
-      area: "Jakarta Selatan & Depok",
-      referralCode: "MKT-JAKSEL",
-      commissionPerReceipt: 15,
-      bankName: "BCA",
-      accountNumber: "8829102931",
-      accountName: "Hendra Pratama",
-      totalTenantsAcquired: 2,
-      totalReceiptsGenerated: 560,
-      totalCommissionEarned: 8400,
-      commissionPaid: 5000,
-      status: "ACTIVE",
-    },
-    {
-      id: "mkt-02",
-      name: "Bambang Irawan",
-      phone: "085611223344",
-      area: "Surabaya & Sidoarjo",
-      referralCode: "MKT-JATIM01",
-      commissionPerReceipt: 15,
-      bankName: "Mandiri",
-      accountNumber: "142001928374",
-      accountName: "Bambang Irawan",
-      totalTenantsAcquired: 1,
-      totalReceiptsGenerated: 195,
-      totalCommissionEarned: 2925,
-      commissionPaid: 0,
-      status: "ACTIVE",
-    },
-  ]);
+  const [marketingList, setMarketingList] = useState<MarketingAgent[]>([]);
 
   // Marketing Filter & Search State
   const [marketingFilterStatus, setMarketingFilterStatus] = useState<"ALL" | "PENDING" | "ACTIVE" | "INACTIVE">("ALL");
@@ -186,7 +153,7 @@ export default function SuperAdminDashboardPage() {
     try {
       const res = await fetch("/api/superadmin/marketing");
       const json = await res.json();
-      if (json.data && Array.isArray(json.data) && json.data.length > 0) {
+      if (json.data && Array.isArray(json.data)) {
         interface RawMarketingPartner {
           id: string;
           full_name: string;
@@ -255,104 +222,14 @@ export default function SuperAdminDashboardPage() {
   };
 
   // State Tenant Warkop
-  const [tenants, setTenants] = useState<TenantWarkop[]>([
-    {
-      id: "ten-01",
-      name: "Warkop Giras Nusantara",
-      slug: "giras-nusantara",
-      ownerName: "Haji Rusdi",
-      phone: "081234567890",
-      province: "DKI Jakarta",
-      cityRegency: "Jakarta Selatan",
-      uniqueCodeRange: "100 - 199",
-      marketingAgentId: "mkt-01",
-      marketingAgentName: "Hendra Pratama",
-      commissionPerReceipt: 15,
-      todayTransactions: 248,
-      totalSaasBilling: 12400,
-      paymentStatus: "PAID",
-      status: "ACTIVE",
-      joinedDate: "10 Okt 2026",
-    },
-    {
-      id: "ten-02",
-      name: "Warkop Barokah 24 Jam",
-      slug: "barokah-24jam",
-      ownerName: "Bambang Sutrisno",
-      phone: "081987654321",
-      province: "Jawa Timur",
-      cityRegency: "Surabaya",
-      uniqueCodeRange: "200 - 299",
-      marketingAgentId: "mkt-01",
-      marketingAgentName: "Hendra Pratama",
-      commissionPerReceipt: 15,
-      todayTransactions: 312,
-      totalSaasBilling: 15600,
-      paymentStatus: "GRACE_PERIOD",
-      status: "ACTIVE",
-      joinedDate: "05 Okt 2026",
-    },
-    {
-      id: "ten-03",
-      name: "Warkop Pojok Stadion",
-      slug: "pojok-stadion",
-      ownerName: "Dedi Supriyadi",
-      phone: "082133445566",
-      province: "Jawa Barat",
-      cityRegency: "Bandung",
-      uniqueCodeRange: "300 - 399",
-      marketingAgentId: "mkt-02",
-      marketingAgentName: "Bambang Irawan",
-      commissionPerReceipt: 15,
-      todayTransactions: 195,
-      totalSaasBilling: 9750,
-      paymentStatus: "PAID",
-      status: "ACTIVE",
-      joinedDate: "01 Okt 2026",
-    },
-    {
-      id: "ten-04",
-      name: "Kedai Kopi Klotok Senja",
-      slug: "klotok-senja",
-      ownerName: "Rian Prasetyo",
-      phone: "085611223344",
-      province: "DI Yogyakarta",
-      cityRegency: "Sleman",
-      uniqueCodeRange: "400 - 499",
-      marketingAgentId: "direct",
-      marketingAgentName: "Direct HQ (Tanpa Marketing)",
-      commissionPerReceipt: 0,
-      todayTransactions: 0,
-      totalSaasBilling: 0,
-      paymentStatus: "UNPAID",
-      status: "SUSPENDED",
-      joinedDate: "28 Sep 2026",
-    },
-  ]);
+  const [tenants, setTenants] = useState<TenantWarkop[]>([]);
 
   // Load Tenants dari Supabase API
   const loadTenants = async () => {
     try {
       const res = await fetch("/api/superadmin/tenants");
       const json = await res.json();
-      if (json.data && Array.isArray(json.data) && json.data.length > 0) {
-        setTenants((prev) => {
-          const existingMap = new Map(prev.map((t) => [t.slug, t]));
-          const updated = json.data.map((item: TenantWarkop) => {
-            const existing = existingMap.get(item.slug);
-            return {
-              ...item,
-              todayTransactions: existing?.todayTransactions || item.todayTransactions || 0,
-              totalSaasBilling: existing?.totalSaasBilling || item.totalSaasBilling || 0,
-              paymentStatus: existing?.paymentStatus || item.paymentStatus || "PAID",
-            };
-          });
-
-          const dbSlugs = new Set(json.data.map((d: TenantWarkop) => d.slug));
-          const leftovers = prev.filter((p) => !dbSlugs.has(p.slug));
-          return [...updated, ...leftovers];
-        });
-      }
+      if (json.data && Array.isArray(json.data)) setTenants(json.data);
     } catch (e) {
       console.error("Gagal memuat tenants dari database:", e);
     }
@@ -539,28 +416,9 @@ export default function SuperAdminDashboardPage() {
       );
     }
 
-    setIsRegisterModalOpen(false);
-
-    // Buka Modal Kredensial untuk admin
-    setNewTenantCredentials({
-      name: newTenant.name,
-      slug: newTenant.slug,
-      uniqueCodeRange: newTenant.uniqueCodeRange,
-      marketingAgentName: newTenant.marketingAgentName || "Direct HQ",
-      commissionPerReceipt: newTenant.commissionPerReceipt,
-      username: generatedUsername,
-      password: generatedPassword,
-    });
-
-    showToast(
-      "Tenant Berhasil Didaftarkan",
-      `${newTenant.name} telah aktif di ekosistem OKESIH.`,
-      "success"
-    );
-
     // Simpan ke Supabase via API Route
     try {
-      await fetch("/api/superadmin/tenants", {
+      const response = await fetch("/api/superadmin/tenants", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -574,15 +432,33 @@ export default function SuperAdminDashboardPage() {
           marketingAgentId: selectedMarketingId,
           commissionPerReceipt: newTenant.commissionPerReceipt,
           username: generatedUsername,
+          password: generatedPassword,
         }),
       });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Tenant gagal disimpan.");
+      await loadTenants();
+      setIsRegisterModalOpen(false);
+      setNewTenantCredentials({
+        name: newTenant.name,
+        slug: newTenant.slug,
+        uniqueCodeRange: newTenant.uniqueCodeRange,
+        marketingAgentName: newTenant.marketingAgentName || "Direct HQ",
+        commissionPerReceipt: newTenant.commissionPerReceipt,
+        username: generatedUsername,
+        password: generatedPassword,
+      });
+      showToast("Tenant Berhasil Didaftarkan", `${newTenant.name} telah aktif di ekosistem OKESIH.`, "success");
     } catch (err) {
       console.error("Gagal sinkron tenant ke Supabase:", err);
+      setTenants((prev) => prev.filter((tenant) => tenant.id !== newTenant.id));
+      setNewTenantCredentials(null);
+      showToast("Tenant Gagal Disimpan", err instanceof Error ? err.message : "Terjadi kesalahan jaringan.", "error");
     }
   };
 
   // Simpan Marketing Lapangan Baru
-  const handleCreateMarketing = (e: React.FormEvent) => {
+  const handleCreateMarketing = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMarketingName.trim() || !newMarketingCode.trim()) {
       showToast("Form Belum Lengkap", "Harap isi Nama Marketing dan Kode Referral!", "error");
@@ -606,13 +482,20 @@ export default function SuperAdminDashboardPage() {
       status: "ACTIVE",
     };
 
-    setMarketingList((prev) => [newMkt, ...prev]);
-    setIsMarketingModalOpen(false);
-    showToast(
-      "Marketing Berhasil Didaftarkan",
-      `Mitra "${newMkt.name}" (${newMkt.referralCode}) berhasil didaftarkan.`,
-      "success"
-    );
+    try {
+      const response = await fetch("/api/superadmin/marketing", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newMkt),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Gagal menyimpan marketing.");
+      await loadMarketingPartners();
+      setIsMarketingModalOpen(false);
+      showToast("Marketing Berhasil Didaftarkan", `Mitra "${newMkt.name}" (${newMkt.referralCode}) berhasil didaftarkan.`, "success");
+    } catch (error) {
+      showToast("Gagal Menyimpan", error instanceof Error ? error.message : "Terjadi kesalahan jaringan.", "error");
+    }
   };
 
   const toggleTenantStatus = (id: string) => {
@@ -805,42 +688,12 @@ export default function SuperAdminDashboardPage() {
               OKESIH<span style={{ color: "#0284C7" }}> HQ</span>
             </div>
             <div style={{ fontSize: "0.75rem", color: isDark ? "#7DD3FC" : "#0284C7", fontWeight: 700 }}>
-              SUPER ADMIN SAAS COMMAND CENTER
+              COMMAND CENTER
             </div>
           </div>
-          <span
-            className="superadmin-mode-badge"
-            style={{
-              background: isDark ? "rgba(14, 165, 233, 0.15)" : "rgba(14, 165, 233, 0.1)",
-              border: "1px solid rgba(14, 165, 233, 0.4)",
-              color: "#0284C7",
-              fontSize: "0.75rem",
-              fontWeight: 800,
-              padding: "0.25rem 0.65rem",
-              borderRadius: "var(--radius-pill)",
-            }}
-          >
-            ● Mode Pusat / Multi-Tenant SaaS
-          </span>
         </div>
 
         <div className="superadmin-actions" style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
-          {currentUser && (
-            <span
-              style={{
-                fontSize: "0.8rem",
-                color: isDark ? "#7DD3FC" : "#0369A1",
-                background: isDark ? "rgba(14, 165, 233, 0.1)" : "rgba(14, 165, 233, 0.08)",
-                border: "1px solid rgba(14, 165, 233, 0.3)",
-                padding: "0.35rem 0.75rem",
-                borderRadius: "6px",
-                fontWeight: 700,
-              }}
-            >
-              👤 {currentUser.email || "superadmin"}
-            </span>
-          )}
-
           {/* Theme Toggle Button */}
           <ThemeToggle />
 

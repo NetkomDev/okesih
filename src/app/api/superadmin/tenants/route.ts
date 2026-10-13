@@ -49,11 +49,29 @@ export async function GET() {
       }
     });
 
-    // Format data ke format TenantWarkop dashboard
-    const formattedTenants = (warkops || []).map((w) => {
+    const todayWita = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Makassar", year: "numeric", month: "2-digit", day: "2-digit",
+    }).format(new Date());
+    const startTodayUtc = new Date(`${todayWita}T00:00:00+08:00`).toISOString();
+    const endTodayUtc = new Date(`${todayWita}T23:59:59.999+08:00`).toISOString();
+
+    // Format data sekaligus mengambil angka operasional riil per tenant.
+    const formattedTenants = await Promise.all((warkops || []).map(async (w) => {
       const start = w.unique_code_range_start || 100;
       const end = w.unique_code_range_end || 199;
       const mktInfo = w.marketing_agent_id ? marketingMap.get(w.marketing_agent_id) : null;
+      const [{ count: todayTransactions }, { data: billing }] = await Promise.all([
+        supabase.from("transactions").select("id", { count: "exact", head: true })
+          .eq("warkop_id", w.id)
+          .gte("created_at", startTodayUtc)
+          .lte("created_at", endTodayUtc)
+          .not("status_pesanan", "in", "(VOID,REJECTED)"),
+        supabase.from("saas_billings")
+          .select("tagihan_pokok, status_bayar")
+          .eq("warkop_id", w.id)
+          .eq("tanggal", todayWita)
+          .maybeSingle(),
+      ]);
 
       return {
         id: w.id,
@@ -67,9 +85,9 @@ export async function GET() {
         marketingAgentId: w.marketing_agent_id || "direct",
         marketingAgentName: mktInfo ? `${mktInfo.name} (${mktInfo.code})` : "Direct HQ (Tanpa Marketing)",
         commissionPerReceipt: Number(w.marketing_commission_per_receipt) || 0,
-        todayTransactions: 0, // Akan diakumulasi dari transaksi shift riil
-        totalSaasBilling: 0,
-        paymentStatus: "PAID",
+        todayTransactions: todayTransactions || 0,
+        totalSaasBilling: Number(billing?.tagihan_pokok) || 0,
+        paymentStatus: billing?.status_bayar === "PAID" ? "PAID" : billing ? "UNPAID" : "UNPAID",
         status: w.is_active ? "ACTIVE" : "SUSPENDED",
         joinedDate: new Date(w.created_at).toLocaleDateString("id-ID", {
           day: "numeric",
@@ -77,7 +95,7 @@ export async function GET() {
           year: "numeric",
         }),
       };
-    });
+    }));
 
     return NextResponse.json({ data: formattedTenants });
   } catch (err: unknown) {
@@ -112,11 +130,12 @@ export async function POST(request: Request) {
       marketingAgentId,
       commissionPerReceipt,
       username,
+      password,
     } = body;
 
-    if (!name || !slug || !province || !cityRegency) {
+    if (!name || !slug || !province || !cityRegency || !username || !password) {
       return NextResponse.json(
-        { error: "Nama warkop, slug, provinsi, dan kota/kabupaten wajib diisi." },
+        { error: "Data tenant, wilayah, dan kredensial owner wajib diisi." },
         { status: 400 }
       );
     }
@@ -156,13 +175,31 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: warkopErr.message }, { status: 500 });
     }
 
-    // 2. Insert owner ke warkop_members
+    // 2. Buat akun Auth owner yang benar-benar bisa dipakai login.
     const finalOwnerUsername = username || `owner_${slug.replace(/[^a-z0-9]/g, "").slice(0, 8)}`;
-    await supabase.from("warkop_members").insert({
+    const ownerEmail = `${finalOwnerUsername.toLowerCase()}@okesih.local`;
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email: ownerEmail,
+      password: String(password),
+      email_confirm: true,
+      user_metadata: { role: "OWNER", warkop_id: newWarkop.id, warkop_slug: newWarkop.slug },
+    });
+    if (authError || !authData.user) {
+      await supabase.from("warkops").delete().eq("id", newWarkop.id);
+      return NextResponse.json({ error: authError?.message || "Akun owner gagal dibuat." }, { status: 500 });
+    }
+
+    const { error: memberError } = await supabase.from("warkop_members").insert({
       warkop_id: newWarkop.id,
+      user_id: authData.user.id,
       username: finalOwnerUsername,
       role: "OWNER",
     });
+    if (memberError) {
+      await supabase.auth.admin.deleteUser(authData.user.id);
+      await supabase.from("warkops").delete().eq("id", newWarkop.id);
+      return NextResponse.json({ error: memberError.message }, { status: 500 });
+    }
 
     // 3. Update counter akuisisi marketing jika diasosiasikan
     if (marketingAgentId && marketingAgentId !== "direct") {

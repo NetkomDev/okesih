@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ThemeToggle from "@/components/ThemeToggle";
 
 export default function MarketingRegisterPage() {
@@ -16,6 +16,14 @@ export default function MarketingRegisterPage() {
   const [mktSubmitting, setMktSubmitting] = useState(false);
   const [mktSuccess, setMktSuccess] = useState<{ referralCode: string; fullName: string; cityArea: string } | null>(null);
   const [mktError, setMktError] = useState("");
+  const [commissionPerReceipt, setCommissionPerReceipt] = useState<number>(15);
+
+  useEffect(() => {
+    fetch("/api/platform-settings", { cache: "no-store" })
+      .then((response) => response.ok ? response.json() : Promise.reject())
+      .then((payload) => setCommissionPerReceipt(payload.data.defaultMarketingCommission))
+      .catch(() => undefined);
+  }, []);
 
   const handleMarketingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -208,7 +216,7 @@ export default function MarketingRegisterPage() {
 
           <p style={{ fontSize: "0.925rem", color: "var(--text-muted)", maxWidth: "600px", margin: "0 auto", lineHeight: 1.6 }}>
             Dapatkan kode referral eksklusif terdaftar resmi di Okesih.com. Nikmati bagi hasil otomatis{" "}
-            <strong style={{ color: "#34D399" }}>Rp 15 per struk transaksi</strong> seumur hidup untuk setiap warkop/resto yang Anda daftarkan!
+            <strong style={{ color: "#34D399" }}>Rp {commissionPerReceipt.toLocaleString("id-ID")} per struk transaksi</strong> seumur hidup untuk setiap warkop/resto yang Anda daftarkan!
           </p>
         </div>
 

@@ -15,6 +15,8 @@ export default function HomePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState("");
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [saasFeePerReceipt, setSaasFeePerReceipt] = useState<number>(50);
+  const [marketingCommission, setMarketingCommission] = useState<number>(15);
 
   // FAQ Accordion State
   const [openFaq, setOpenFaq] = useState<number | null>(0);
@@ -38,6 +40,16 @@ export default function HomePage() {
         setIsLoginModalOpen(true);
       }
     }
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/platform-settings", { cache: "no-store" })
+      .then((response) => response.ok ? response.json() : Promise.reject())
+      .then((payload) => {
+        setSaasFeePerReceipt(payload.data.saasFeePerReceipt);
+        setMarketingCommission(payload.data.defaultMarketingCommission);
+      })
+      .catch(() => undefined);
   }, []);
 
   useEffect(() => {
@@ -106,9 +118,9 @@ export default function HomePage() {
       "Platform sistem kasir POS Offline-First, Kitchen Display (KDS), QR Menu Meja, dan Antrean TV cerdas untuk kafe, resto, rumah makan, dan warkop.",
     "offers": {
       "@type": "Offer",
-      "price": "50",
+      "price": String(saasFeePerReceipt),
       "priceCurrency": "IDR",
-      "description": "Biaya sewa platform flat Rp 50 per transaksi tercetak tanpa biaya bulanan jutaan.",
+      "description": `Biaya sewa platform flat Rp ${saasFeePerReceipt.toLocaleString("id-ID")} per transaksi tercetak tanpa biaya bulanan jutaan.`,
     },
     "aggregateRating": {
       "@type": "AggregateRating",
@@ -339,7 +351,7 @@ export default function HomePage() {
               className="mobile-nav-link"
               onClick={() => setIsMobileMenuOpen(false)}
             >
-              <span>🏷️ Biaya Sewa Rp 50</span>
+              <span>🏷️ Biaya Sewa Rp {saasFeePerReceipt.toLocaleString("id-ID")}</span>
               <span>→</span>
             </a>
             <Link
@@ -353,7 +365,7 @@ export default function HomePage() {
                 fontWeight: 800,
               }}
             >
-              <span>💼 Program Mitra Marketing (Rp 15/Struk)</span>
+              <span>💼 Program Mitra Marketing (Rp {marketingCommission.toLocaleString("id-ID")}/Struk)</span>
               <span>→</span>
             </Link>
             <a
@@ -492,7 +504,7 @@ export default function HomePage() {
             Sistem Kasir (POS) Offline-First, Kitchen Display System (KDS), QR Menu Meja, dan Layar Antrean TV Otomatis.
             Fleksibel untuk <strong>Warkop, Kafe, Rumah Makan, Kedai Kopi, hingga Food Court</strong>.
             Cukup pakai HP &amp; Smart TV yang sudah Anda miliki tanpa biaya alat mahal, sewa flat hanya{" "}
-            <strong style={{ color: "var(--text-pure-white)" }}>Rp 50 per transaksi</strong>.
+            <strong style={{ color: "var(--text-pure-white)" }}>Rp {saasFeePerReceipt.toLocaleString("id-ID")} per transaksi</strong>.
           </p>
 
           {/* CTA Group */}
@@ -545,7 +557,7 @@ export default function HomePage() {
             <div>✓ 100% Uang Penjualan Langsung ke Rekening Anda</div>
             <div>✓ Offline-First (Tetap Jalan Saat Internet Mati)</div>
             <div>✓ Tanpa Beli Mesin Kasir Jutaan Rupiah</div>
-            <div>✓ Sewa Hemat Rp 50/Struk</div>
+            <div>✓ Sewa Hemat Rp {saasFeePerReceipt.toLocaleString("id-ID")}/Struk</div>
           </div>
         </section>
 
@@ -877,7 +889,7 @@ export default function HomePage() {
               SKEMA HARGA PALING ADIL DI INDONESIA
             </div>
             <h2 style={{ fontSize: "2.3rem", fontWeight: 900, letterSpacing: "-0.02em", marginBottom: "1rem" }}>
-              Hanya <span style={{ color: "var(--brand-orange-light)" }}>Rp 50</span> per Struk Bon Transaksi
+              Hanya <span style={{ color: "var(--brand-orange-light)" }}>Rp {saasFeePerReceipt.toLocaleString("id-ID")}</span> per Struk Bon Transaksi
             </h2>
             <p style={{ fontSize: "1rem", color: "var(--text-muted)", maxWidth: "600px", margin: "0 auto 2rem", lineHeight: 1.6 }}>
               Tidak ada biaya langganan bulanan ratusan ribu rupiah. Jika toko sedang libur atau sepi, Anda tidak akan rugi sepeser pun!
@@ -909,7 +921,7 @@ export default function HomePage() {
                 <div style={{ color: "#34D399", fontWeight: 800, marginBottom: "0.5rem" }}>✓ Platform OKESIH.COM</div>
                 <div style={{ fontSize: "0.825rem", color: "var(--text-pure-white)", lineHeight: 1.6 }}>
                   • Biaya perangkat awal Rp 0 (pakai HP sendiri)<br />
-                  • Bayar hanya Rp 50 per transaksi tercetak<br />
+                  • Bayar hanya Rp {saasFeePerReceipt.toLocaleString("id-ID")} per transaksi tercetak<br />
                   • 100 struk sehari hanya bayar sewa Rp 5.000<br />
                   • 100% uang QRIS langsung ke rekening Anda
                 </div>
@@ -999,7 +1011,7 @@ export default function HomePage() {
               }}
             >
               Daftarkan warkop, kafe, resto, dan pedagang kuliner di wilayah Anda. Nikmati komisi bagi hasil otomatis{" "}
-              <strong style={{ color: "#34D399" }}>Rp 15 per struk transaksi</strong> seumur hidup yang dicairkan langsung ke rekening bank atau e-wallet Anda.
+              <strong style={{ color: "#34D399" }}>Rp {marketingCommission.toLocaleString("id-ID")} per struk transaksi</strong> seumur hidup yang dicairkan langsung ke rekening bank atau e-wallet Anda.
             </p>
 
             <div
@@ -1109,8 +1121,8 @@ export default function HomePage() {
                 a: "Pendaftaran tenant warkop/usaha baru dikelola oleh tim Super Admin atau Mitra Marketing Lapangan kami. Setelah didaftarkan, Owner langsung menerima kredensial akun login instan dan dapat langsung mengatur menu serta mencetak stiker QR meja.",
               },
               {
-                q: "Bagaimana cara kerja pembayaran sewa Rp 50 per transaksi?",
-                a: "Setiap kali Anda menutup shift/toko di penghujung hari, sistem menghitung total struk tercetak hari itu (misalnya 100 struk = Rp 5.000 + nominal kode unik alokasi Anda). Owner cukup mentransfer ke QRIS Pusat dan bukti transfer otomatis diverifikasi oleh sistem AI OCR.",
+                q: `Bagaimana cara kerja pembayaran sewa Rp ${saasFeePerReceipt.toLocaleString("id-ID")} per transaksi?`,
+                a: `Setiap kali Anda menutup shift/toko di penghujung hari, sistem menghitung total struk tercetak hari itu berdasarkan tarif aktif Rp ${saasFeePerReceipt.toLocaleString("id-ID")} per struk, lalu menambahkan nominal kode unik tenant.`,
               },
             ].map((faq, idx) => (
               <div
