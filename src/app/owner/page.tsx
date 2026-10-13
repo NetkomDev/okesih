@@ -16,6 +16,8 @@ type Profile = { id: string; nama: string; slug: string; is_active: boolean; qri
 type Metrics = { receiptCount: number; cash: number; qris: number; total: number; billing: { tagihan_pokok: number; kode_unik: number; total_tagihan: number; status_bayar: string } | null };
 type DashboardData = { profile: Profile; menus: MenuItem[]; staff: Staff[]; waiters: Waiter[]; tables: BusinessTable[]; metrics: Metrics };
 
+const ownerDashboardCache = new Map<string, DashboardData>();
+
 async function ownerFetch(path: string, init?: RequestInit) {
   const supabase = createClient();
   const { data } = await supabase.auth.getSession();
@@ -57,7 +59,19 @@ export default function TenantOwnerDashboardPage() {
   const loadDashboard = async () => {
     try {
       setError("");
+      const supabase = createClient();
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData.session?.user.id;
+      if (!userId) throw new Error("Sesi login owner berakhir. Silakan login kembali.");
+
+      const cached = ownerDashboardCache.get(userId);
+      if (cached) {
+        setData(cached);
+        setMerchantName(cached.profile.qris_merchant_name || cached.profile.nama);
+      }
+
       const payload = await ownerFetch("/api/owner/dashboard", { cache: "no-store" });
+      ownerDashboardCache.set(userId, payload.data);
       setData(payload.data);
       setMerchantName(payload.data.profile.qris_merchant_name || payload.data.profile.nama);
     } catch (err) {
@@ -66,10 +80,10 @@ export default function TenantOwnerDashboardPage() {
   };
 
   useEffect(() => {
-    // Initial remote synchronization after the auth guard resolves.
+    // Start data synchronization in parallel with the local auth guard.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (isAuthorized) void loadDashboard();
-  }, [isAuthorized]);
+    void loadDashboard();
+  }, []);
 
   useEffect(() => {
     if (pathname !== "/owner") return;
@@ -142,7 +156,17 @@ export default function TenantOwnerDashboardPage() {
     popup.document.close();
   };
 
-  if (loading || !isAuthorized || !data) return <div className="owner-loading"><span>☕</span><strong>{error || "Memuat data usaha owner..."}</strong></div>;
+  if (loading || !isAuthorized || !data) return (
+    <div className="owner-loading" role="status" aria-label="Menyiapkan portal owner OKESIH">
+      <div className="owner-loading-brand">
+        <span className="owner-loading-halo" />
+        <img src="/okesih-logo-animated.svg" alt="OKESIH.COM" />
+        <div className="owner-loading-wordmark"><b>OKESIH</b><small>.COM</small></div>
+        <div className="owner-loading-progress"><i /></div>
+        {error && <button onClick={() => void loadDashboard()}>Coba Lagi</button>}
+      </div>
+    </div>
+  );
 
   const { profile, metrics } = data;
   const view = pathname.endsWith("/menu") ? "menu" : pathname.endsWith("/staff") ? "staff" : pathname.endsWith("/waiters") ? "waiters" : pathname.endsWith("/qris-tables") ? "qris-tables" : "overview";

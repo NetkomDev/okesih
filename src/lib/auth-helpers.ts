@@ -102,7 +102,10 @@ export function useAuthGuard(allowedRoles: UserRole[]) {
     const verifyRole = async () => {
       try {
         const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
+        // Guard antarmuka cukup membaca sesi lokal yang sudah diverifikasi saat login.
+        // Otorisasi sensitif tetap diverifikasi ulang oleh setiap API Route di server.
+        const { data: { session } } = await supabase.auth.getSession();
+        const user = session?.user ?? null;
 
         if (!user) {
           if (isMounted) {

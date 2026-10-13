@@ -2056,3 +2056,121 @@ button {
   .owner-page-panel { min-height: auto; }
   .owner-settings-grid.owner-page-panel > .owner-panel { min-height: 520px; }
 }
+
+/* Lightweight owner boot screen */
+.owner-loading {
+  position: relative;
+  overflow: hidden;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 50% 46%, rgba(244, 81, 44, 0.08), transparent 18rem),
+    #f7f9fc;
+  color: #172033;
+}
+
+[data-theme="dark"] .owner-loading {
+  background:
+    radial-gradient(circle at 50% 46%, rgba(244, 81, 44, 0.12), transparent 19rem),
+    #090e16;
+  color: #f8fafc;
+}
+
+.owner-loading-brand {
+  position: relative;
+  width: 190px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  isolation: isolate;
+}
+
+.owner-loading-brand > img {
+  position: relative;
+  z-index: 2;
+  width: 82px;
+  height: 82px;
+  object-fit: contain;
+  filter: drop-shadow(0 14px 24px rgba(244, 81, 44, 0.2));
+  animation: owner-logo-float 1.8s ease-in-out infinite;
+}
+
+.owner-loading-halo {
+  position: absolute;
+  top: -10px;
+  width: 104px;
+  height: 104px;
+  border-radius: 50%;
+  border: 1px solid rgba(244, 81, 44, 0.18);
+  box-shadow: 0 0 0 12px rgba(244, 81, 44, 0.04);
+  animation: owner-halo 1.8s ease-out infinite;
+}
+
+.owner-loading-wordmark {
+  margin-top: 13px;
+  display: flex;
+  align-items: baseline;
+  letter-spacing: 0.13em;
+}
+
+.owner-loading-wordmark b {
+  color: inherit !important;
+  font-size: 18px;
+  font-weight: 950;
+}
+
+.owner-loading-wordmark small {
+  color: #f4512c;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.owner-loading-progress {
+  width: 126px;
+  height: 3px;
+  margin-top: 15px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: rgba(100, 116, 139, 0.14);
+}
+
+.owner-loading-progress i {
+  display: block;
+  width: 44%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #ff6a3d, #e63f20);
+  animation: owner-progress 1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.owner-loading-brand button {
+  margin-top: 16px;
+  border: 1px solid rgba(244, 81, 44, 0.25);
+  border-radius: 9px;
+  padding: 8px 14px;
+  background: rgba(244, 81, 44, 0.08);
+  color: #e63f20;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+@keyframes owner-logo-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+@keyframes owner-halo {
+  0% { opacity: 0.8; transform: scale(0.86); }
+  70%, 100% { opacity: 0; transform: scale(1.24); }
+}
+
+@keyframes owner-progress {
+  0% { transform: translateX(-120%); }
+  100% { transform: translateX(300%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .owner-loading-brand > img,
+  .owner-loading-halo,
+  .owner-loading-progress i { animation: none; }
+  .owner-loading-progress i { width: 100%; opacity: 0.5; }
+}
