@@ -61,6 +61,8 @@ export async function GET() {
         slug: w.slug,
         ownerName: ownerMap.get(w.id) || "Owner Warkop",
         phone: "0812xxxxxxx",
+        province: w.province || "Belum diatur",
+        cityRegency: w.city_regency || "Belum diatur",
         uniqueCodeRange: `${start} - ${end}`,
         marketingAgentId: w.marketing_agent_id || "direct",
         marketingAgentName: mktInfo ? `${mktInfo.name} (${mktInfo.code})` : "Direct HQ (Tanpa Marketing)",
@@ -104,15 +106,17 @@ export async function POST(request: Request) {
       slug,
       ownerName,
       phone,
+      province,
+      cityRegency,
       uniqueCodeRange,
       marketingAgentId,
       commissionPerReceipt,
       username,
     } = body;
 
-    if (!name || !slug) {
+    if (!name || !slug || !province || !cityRegency) {
       return NextResponse.json(
-        { error: "Nama warkop dan slug wajib diisi." },
+        { error: "Nama warkop, slug, provinsi, dan kota/kabupaten wajib diisi." },
         { status: 400 }
       );
     }
@@ -136,6 +140,8 @@ export async function POST(request: Request) {
       .insert({
         nama: name.trim(),
         slug: slug.trim().toLowerCase(),
+        province: province.trim(),
+        city_regency: cityRegency.trim(),
         unique_code_range_start: rangeStart,
         unique_code_range_end: rangeEnd,
         marketing_agent_id: marketingAgentId === "direct" ? null : marketingAgentId,
@@ -185,6 +191,8 @@ export async function POST(request: Request) {
         slug: newWarkop.slug,
         ownerName: ownerName || finalOwnerUsername,
         phone: phone || "-",
+        province: newWarkop.province,
+        cityRegency: newWarkop.city_regency,
         uniqueCodeRange: `${rangeStart} - ${rangeEnd}`,
         marketingAgentId: newWarkop.marketing_agent_id || "direct",
         commissionPerReceipt: Number(newWarkop.marketing_commission_per_receipt) || 0,

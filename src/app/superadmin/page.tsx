@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useAuthGuard, logoutUser } from "@/lib/auth-helpers";
 import ThemeToggle from "@/components/ThemeToggle";
+import { INDONESIA_PROVINCES } from "@/lib/indonesia-regions";
 
 interface MarketingAgent {
   id: string;
@@ -30,6 +31,8 @@ interface TenantWarkop {
   slug: string;
   ownerName: string;
   phone: string;
+  province: string;
+  cityRegency: string;
   uniqueCodeRange: string;
   marketingAgentId?: string;
   marketingAgentName?: string;
@@ -67,6 +70,21 @@ interface NewTenantCredentials {
   password: string;
 }
 
+type AnalyticsPeriod = "today" | "week" | "month" | "year";
+
+interface AnalyticsData {
+  activeTenants: number;
+  newTenants: number;
+  receipts: number;
+  grossBilling: number;
+  marketingCommission: number;
+  netRevenue: number;
+  startAt: string;
+  endAt: string;
+  regions: Array<{ province: string; total: number; active: number }>;
+  series: Array<{ day: string; receipts: number; gross: number; commission: number }>;
+}
+
 export default function SuperAdminDashboardPage() {
   const { isAuthorized, loading, currentUser } = useAuthGuard(["SUPERADMIN"]);
 
@@ -96,6 +114,9 @@ export default function SuperAdminDashboardPage() {
 
   // Active Tab View di Super Admin
   const [activeTab, setActiveTab] = useState<"tenants" | "marketing" | "qris_billing" | "platform_config">("tenants");
+  const [analyticsPeriod, setAnalyticsPeriod] = useState<AnalyticsPeriod>("today");
+  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState<boolean>(false);
 
   // Toast Notification System
   const [toast, setToast] = useState<ToastNotification | null>(null);
@@ -241,6 +262,8 @@ export default function SuperAdminDashboardPage() {
       slug: "giras-nusantara",
       ownerName: "Haji Rusdi",
       phone: "081234567890",
+      province: "DKI Jakarta",
+      cityRegency: "Jakarta Selatan",
       uniqueCodeRange: "100 - 199",
       marketingAgentId: "mkt-01",
       marketingAgentName: "Hendra Pratama",
@@ -257,6 +280,8 @@ export default function SuperAdminDashboardPage() {
       slug: "barokah-24jam",
       ownerName: "Bambang Sutrisno",
       phone: "081987654321",
+      province: "Jawa Timur",
+      cityRegency: "Surabaya",
       uniqueCodeRange: "200 - 299",
       marketingAgentId: "mkt-01",
       marketingAgentName: "Hendra Pratama",
@@ -273,6 +298,8 @@ export default function SuperAdminDashboardPage() {
       slug: "pojok-stadion",
       ownerName: "Dedi Supriyadi",
       phone: "082133445566",
+      province: "Jawa Barat",
+      cityRegency: "Bandung",
       uniqueCodeRange: "300 - 399",
       marketingAgentId: "mkt-02",
       marketingAgentName: "Bambang Irawan",
@@ -289,6 +316,8 @@ export default function SuperAdminDashboardPage() {
       slug: "klotok-senja",
       ownerName: "Rian Prasetyo",
       phone: "085611223344",
+      province: "DI Yogyakarta",
+      cityRegency: "Sleman",
       uniqueCodeRange: "400 - 499",
       marketingAgentId: "direct",
       marketingAgentName: "Direct HQ (Tanpa Marketing)",
@@ -341,6 +370,26 @@ export default function SuperAdminDashboardPage() {
       loadTenants();
     }
   }, [activeTab]);
+
+  useEffect(() => {
+    if (!isAuthorized) return;
+    let active = true;
+    const loadAnalytics = async () => {
+      setAnalyticsLoading(true);
+      try {
+        const response = await fetch(`/api/superadmin/analytics?period=${analyticsPeriod}`, { cache: "no-store" });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || "Gagal memuat riwayat pencapaian.");
+        if (active) setAnalytics(payload.data);
+      } catch (error) {
+        if (active) showToast("Analytics Tidak Tersedia", error instanceof Error ? error.message : "Terjadi kesalahan jaringan.", "error");
+      } finally {
+        if (active) setAnalyticsLoading(false);
+      }
+    };
+    loadAnalytics();
+    return () => { active = false; };
+  }, [analyticsPeriod, isAuthorized]);
 
   // Master Platform Settings (SaaS HQ)
   const [globalDismissDuration, setGlobalDismissDuration] = useState<number>(60);
@@ -411,6 +460,8 @@ export default function SuperAdminDashboardPage() {
   const [newSlug, setNewSlug] = useState<string>("");
   const [newOwnerName, setNewOwnerName] = useState<string>("");
   const [newPhone, setNewPhone] = useState<string>("");
+  const [newProvince, setNewProvince] = useState<string>("");
+  const [newCityRegency, setNewCityRegency] = useState<string>("");
   const [newCodeRange, setNewCodeRange] = useState<string>("500 - 599");
   const [selectedMarketingId, setSelectedMarketingId] = useState<string>("mkt-01");
   const [tenantCommissionRate, setTenantCommissionRate] = useState<number>(15);
@@ -430,6 +481,7 @@ export default function SuperAdminDashboardPage() {
 
   // Search Query
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [tenantRegionFilter, setTenantRegionFilter] = useState<string>("ALL");
 
   // Buka Modal Registrasi Tenant
   const handleOpenRegisterModal = () => {
@@ -438,6 +490,8 @@ export default function SuperAdminDashboardPage() {
     setNewSlug("");
     setNewOwnerName("");
     setNewPhone("");
+    setNewProvince("");
+    setNewCityRegency("");
     setNewCodeRange(`${(tenants.length + 1) * 100} - ${(tenants.length + 1) * 100 + 99}`);
     setTenantCommissionRate(defaultCommissionRate);
     setGeneratedUsername(`owner_${randomSuffix}`);
@@ -448,8 +502,8 @@ export default function SuperAdminDashboardPage() {
   // Simpan Tenant Baru (Persistens ke Supabase)
   const handleCreateTenant = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newWarkopName.trim() || !newOwnerName.trim()) {
-      showToast("Form Belum Lengkap", "Harap isi Nama Warkop dan Nama Owner!", "error");
+    if (!newWarkopName.trim() || !newOwnerName.trim() || !newProvince || !newCityRegency.trim()) {
+      showToast("Form Belum Lengkap", "Nama warkop, owner, provinsi, dan kota/kabupaten wajib diisi.", "error");
       return;
     }
 
@@ -461,6 +515,8 @@ export default function SuperAdminDashboardPage() {
       slug: createdSlug,
       ownerName: newOwnerName.trim(),
       phone: newPhone || "0812xxxxxxx",
+      province: newProvince,
+      cityRegency: newCityRegency.trim(),
       uniqueCodeRange: newCodeRange,
       marketingAgentId: selectedMarketingId,
       marketingAgentName: assignedMarketer ? assignedMarketer.name : "Direct HQ",
@@ -512,6 +568,8 @@ export default function SuperAdminDashboardPage() {
           slug: newTenant.slug,
           ownerName: newTenant.ownerName,
           phone: newTenant.phone,
+          province: newTenant.province,
+          cityRegency: newTenant.cityRegency,
           uniqueCodeRange: newTenant.uniqueCodeRange,
           marketingAgentId: selectedMarketingId,
           commissionPerReceipt: newTenant.commissionPerReceipt,
@@ -598,24 +656,28 @@ export default function SuperAdminDashboardPage() {
   // Filter Tenant
   const filteredTenants = tenants.filter(
     (t) =>
-      t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.slug.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.ownerName.toLowerCase().includes(searchQuery.toLowerCase())
+      (tenantRegionFilter === "ALL" || t.province === tenantRegionFilter) &&
+      (t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        t.slug.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        t.ownerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        t.province.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        t.cityRegency.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   // Global Financial Metrics
-  const totalActiveTenants = tenants.filter((t) => t.status === "ACTIVE").length;
-  const totalAllTransactions = tenants.reduce((sum, t) => sum + t.todayTransactions, 0);
-  const totalGrossSaasBilling = tenants.reduce((sum, t) => sum + t.totalSaasBilling, 0);
+  const totalActiveTenants = analytics?.activeTenants ?? tenants.filter((t) => t.status === "ACTIVE").length;
+  const totalAllTransactions = analytics?.receipts ?? tenants.reduce((sum, t) => sum + t.todayTransactions, 0);
+  const totalGrossSaasBilling = analytics?.grossBilling ?? tenants.reduce((sum, t) => sum + t.totalSaasBilling, 0);
 
   // Total Komisi Marketing yang dialokasikan dari transaksi hari ini
-  const totalMarketingCommission = tenants.reduce(
+  const totalMarketingCommission = analytics?.marketingCommission ?? tenants.reduce(
     (sum, t) => sum + t.todayTransactions * t.commissionPerReceipt,
     0
   );
 
   // Net Revenue Platform SaaS Pusat (Gross - Komisi Marketing)
-  const netPlatformRevenue = totalGrossSaasBilling - totalMarketingCommission;
+  const netPlatformRevenue = analytics?.netRevenue ?? totalGrossSaasBilling - totalMarketingCommission;
+  const periodLabel = { today: "Hari ini", week: "Minggu ini", month: "Bulan ini", year: "Tahun ini" }[analyticsPeriod];
 
   if (loading || !isAuthorized) {
     return (
@@ -855,9 +917,21 @@ export default function SuperAdminDashboardPage() {
                 Monitoring performa seluruh tenant warkop, bagi hasil komisi marketing lapangan, dan net revenue platform.
               </p>
             </div>
-            <span style={{ fontSize: "0.75rem", color: isDark ? "#64748B" : "#94A3B8" }}>
-              Sinkronisasi: {new Date().toLocaleTimeString("id-ID")}
-            </span>
+            <div className="superadmin-period-filter" aria-label="Filter periode analytics">
+              {([
+                ["today", "Hari ini"], ["week", "Minggu"], ["month", "Bulan"], ["year", "Tahun"],
+              ] as Array<[AnalyticsPeriod, string]>).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={analyticsPeriod === value ? "is-active" : ""}
+                  onClick={() => setAnalyticsPeriod(value)}
+                  disabled={analyticsLoading}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div
@@ -882,13 +956,13 @@ export default function SuperAdminDashboardPage() {
               }}
             >
               <div style={{ fontSize: "0.75rem", color: isDark ? "#94A3B8" : "#64748B", fontWeight: 700, marginBottom: "0.35rem" }}>
-                TOTAL TENANT WARKOP
+                TENANT AKTIF
               </div>
               <div style={{ fontSize: "2.1rem", fontWeight: 900, color: isDark ? "#38BDF8" : "#0284C7" }}>
                 {totalActiveTenants} <span style={{ fontSize: "0.95rem", color: isDark ? "#64748B" : "#94A3B8" }}>/ {tenants.length} Warkop</span>
               </div>
               <div style={{ fontSize: "0.75rem", color: isDark ? "#34D399" : "#059669", marginTop: "0.4rem", fontWeight: 600 }}>
-                ✓ {totalActiveTenants} Tenant beroperasi aktif
+                + {analytics?.newTenants ?? 0} tenant baru • {periodLabel}
               </div>
             </div>
 
@@ -906,7 +980,7 @@ export default function SuperAdminDashboardPage() {
               }}
             >
               <div style={{ fontSize: "0.75rem", color: isDark ? "#94A3B8" : "#64748B", fontWeight: 700, marginBottom: "0.35rem" }}>
-                TOTAL STRUK TRANSAKSI HARI INI
+                TOTAL STRUK • {periodLabel.toUpperCase()}
               </div>
               <div style={{ fontSize: "2.1rem", fontWeight: 900, color: isDark ? "#10B981" : "#059669" }}>
                 {totalAllTransactions.toLocaleString("id-ID")}{" "}
@@ -931,7 +1005,7 @@ export default function SuperAdminDashboardPage() {
               }}
             >
               <div style={{ fontSize: "0.75rem", color: isDark ? "#94A3B8" : "#64748B", fontWeight: 700, marginBottom: "0.35rem" }}>
-                GROSS BILLING SAAS (@ Rp {saasFeePerReceipt})
+                GROSS BILLING • {periodLabel.toUpperCase()}
               </div>
               <div style={{ fontSize: "2.1rem", fontWeight: 900, color: isDark ? "#FBBF24" : "#D97706" }}>
                 Rp {totalGrossSaasBilling.toLocaleString("id-ID")}
@@ -955,7 +1029,7 @@ export default function SuperAdminDashboardPage() {
               }}
             >
               <div style={{ fontSize: "0.75rem", color: isDark ? "#94A3B8" : "#64748B", fontWeight: 700, marginBottom: "0.35rem" }}>
-                BAGI HASIL MARKETING LAPANGAN
+                BAGI HASIL MARKETING • {periodLabel.toUpperCase()}
               </div>
               <div style={{ fontSize: "2.1rem", fontWeight: 900, color: isDark ? "#C084FC" : "#7C3AED" }}>
                 Rp {totalMarketingCommission.toLocaleString("id-ID")}
@@ -994,6 +1068,55 @@ export default function SuperAdminDashboardPage() {
               </div>
               <div style={{ fontSize: "0.75rem", color: isDark ? "#7DD3FC" : "#0369A1", marginTop: "0.4rem", fontWeight: 700 }}>
                 Gross dikurangi komisi marketing
+              </div>
+            </div>
+          </div>
+
+          <div className="superadmin-insights-grid">
+            <div className="superadmin-insight-card">
+              <div className="superadmin-insight-heading">
+                <div>
+                  <strong>Riwayat Pencapaian</strong>
+                  <span>Rincian harian untuk {periodLabel.toLowerCase()}</span>
+                </div>
+                {analyticsLoading && <span className="superadmin-loading-label">Memuat…</span>}
+              </div>
+              <div className="superadmin-history-list">
+                {(analytics?.series || []).slice(-8).reverse().map((item) => (
+                  <div className="superadmin-history-row" key={item.day}>
+                    <time>{new Date(`${item.day}T00:00:00`).toLocaleDateString("id-ID", { day: "2-digit", month: "short" })}</time>
+                    <span><strong>{Number(item.receipts).toLocaleString("id-ID")}</strong> struk</span>
+                    <span>Gross <strong>Rp {Number(item.gross).toLocaleString("id-ID")}</strong></span>
+                    <span>Komisi <strong>Rp {Number(item.commission).toLocaleString("id-ID")}</strong></span>
+                  </div>
+                ))}
+                {!analyticsLoading && !(analytics?.series || []).length && (
+                  <div className="superadmin-empty-state">Belum ada transaksi pada periode ini.</div>
+                )}
+              </div>
+            </div>
+
+            <div className="superadmin-insight-card">
+              <div className="superadmin-insight-heading">
+                <div>
+                  <strong>Sebaran Tenant per Wilayah</strong>
+                  <span>Total tenant berdasarkan provinsi</span>
+                </div>
+              </div>
+              <div className="superadmin-region-list">
+                {(analytics?.regions || []).map((region) => {
+                  const max = Math.max(...(analytics?.regions || []).map((item) => Number(item.total)), 1);
+                  return (
+                    <div className="superadmin-region-row" key={region.province}>
+                      <div><strong>{region.province}</strong><span>{region.active} aktif</span></div>
+                      <div className="superadmin-region-track"><i style={{ width: `${(Number(region.total) / max) * 100}%` }} /></div>
+                      <b>{region.total}</b>
+                    </div>
+                  );
+                })}
+                {!analyticsLoading && !(analytics?.regions || []).length && (
+                  <div className="superadmin-empty-state">Wilayah tenant belum tersedia.</div>
+                )}
               </div>
             </div>
           </div>
@@ -1114,7 +1237,22 @@ export default function SuperAdminDashboardPage() {
                 </div>
               </div>
 
-              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+                <select
+                  value={tenantRegionFilter}
+                  onChange={(e) => setTenantRegionFilter(e.target.value)}
+                  aria-label="Filter tenant berdasarkan provinsi"
+                  style={{
+                    background: isDark ? "rgba(15, 23, 42, 0.8)" : "#F8FAFC",
+                    border: isDark ? "1px solid rgba(56, 189, 248, 0.3)" : "1px solid rgba(0, 0, 0, 0.15)",
+                    padding: "0.55rem 0.75rem", color: isDark ? "#FFF" : "#0F172A", minWidth: "170px",
+                  }}
+                >
+                  <option value="ALL">Semua wilayah</option>
+                  {Array.from(new Set(tenants.map((tenant) => tenant.province))).sort().map((province) => (
+                    <option key={province} value={province}>{province}</option>
+                  ))}
+                </select>
                 <input
                   type="text"
                   value={searchQuery}
@@ -1181,6 +1319,9 @@ export default function SuperAdminDashboardPage() {
                         <div style={{ fontWeight: 800, color: isDark ? "#FFF" : "#0F172A" }}>{t.name}</div>
                         <div style={{ fontSize: "0.75rem", color: "#0284C7", marginTop: "2px" }}>
                           🔗 /menu/{t.slug}
+                        </div>
+                        <div style={{ fontSize: "0.7rem", color: isDark ? "#94A3B8" : "#64748B", marginTop: "4px" }}>
+                          📍 {t.cityRegency}, {t.province}
                         </div>
                       </td>
 
@@ -2055,6 +2196,8 @@ export default function SuperAdminDashboardPage() {
               border: isDark ? "2px solid #0EA5E9" : "2px solid #0284C7",
               boxShadow: "0 25px 60px rgba(0, 0, 0, 0.3)",
               borderRadius: "16px",
+              maxHeight: "calc(100vh - 2rem)",
+              overflowY: "auto",
             }}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
@@ -2100,6 +2243,46 @@ export default function SuperAdminDashboardPage() {
                     outline: "none",
                   }}
                 />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: isDark ? "#94A3B8" : "#475569", marginBottom: "0.35rem" }}>
+                    Provinsi / Wilayah
+                  </label>
+                  <select
+                    required
+                    value={newProvince}
+                    onChange={(e) => setNewProvince(e.target.value)}
+                    style={{
+                      width: "100%", padding: "0.75rem 1rem", borderRadius: "8px",
+                      background: isDark ? "rgba(15, 23, 42, 0.8)" : "#F8FAFC",
+                      border: isDark ? "1px solid rgba(56, 189, 248, 0.3)" : "1px solid rgba(0, 0, 0, 0.15)",
+                      color: isDark ? "#FFF" : "#0F172A", fontSize: "0.9rem",
+                    }}
+                  >
+                    <option value="">Pilih provinsi</option>
+                    {INDONESIA_PROVINCES.map((province) => <option key={province} value={province}>{province}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: isDark ? "#94A3B8" : "#475569", marginBottom: "0.35rem" }}>
+                    Kota / Kabupaten
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={newCityRegency}
+                    onChange={(e) => setNewCityRegency(e.target.value)}
+                    placeholder="Contoh: Kota Makassar"
+                    style={{
+                      width: "100%", padding: "0.75rem 1rem", borderRadius: "8px",
+                      background: isDark ? "rgba(15, 23, 42, 0.8)" : "#F8FAFC",
+                      border: isDark ? "1px solid rgba(56, 189, 248, 0.3)" : "1px solid rgba(0, 0, 0, 0.15)",
+                      color: isDark ? "#FFF" : "#0F172A", fontSize: "0.9rem",
+                    }}
+                  />
+                </div>
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
