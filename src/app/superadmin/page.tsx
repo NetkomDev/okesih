@@ -113,10 +113,48 @@ export default function SuperAdminDashboardPage() {
   const isDark = theme === "dark";
 
   // Active Tab View di Super Admin
-  const [activeTab, setActiveTab] = useState<"tenants" | "marketing" | "qris_billing" | "platform_config">("tenants");
+  const [activeTab, setActiveTab] = useState<"overview" | "tenants" | "marketing" | "qris_billing" | "platform_config">("overview");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState<boolean>(false);
+  const [autoHideEnabled, setAutoHideEnabled] = useState<boolean>(false);
+  const [isHovered, setIsHovered] = useState<boolean>(false);
   const [analyticsPeriod, setAnalyticsPeriod] = useState<AnalyticsPeriod>("today");
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [analyticsLoading, setAnalyticsLoading] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = window.localStorage.getItem("okesih-superadmin-sidebar");
+      if (saved === "collapsed") setSidebarCollapsed(true);
+      const savedAutoHide = window.localStorage.getItem("okesih-superadmin-autohide");
+      if (savedAutoHide === "1") setAutoHideEnabled(true);
+    }
+  }, []);
+
+  const toggleSidebar = () => {
+    setSidebarCollapsed((current) => {
+      const next = !current;
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem("okesih-superadmin-sidebar", next ? "collapsed" : "expanded");
+      }
+      return next;
+    });
+  };
+
+  const toggleAutoHide = () => {
+    setAutoHideEnabled((cur) => {
+      const next = !cur;
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem("okesih-superadmin-autohide", next ? "1" : "0");
+      }
+      return next;
+    });
+  };
+
+  const openDashboardView = (view: typeof activeTab) => {
+    setActiveTab(view);
+    setMobileSidebarOpen(false);
+  };
 
   // Toast Notification System
   const [toast, setToast] = useState<ToastNotification | null>(null);
@@ -649,111 +687,396 @@ export default function SuperAdminDashboardPage() {
         </div>
       )}
 
-      {/* Super Admin Top Navigation */}
-      <header
-        className="superadmin-header"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "1rem 2rem",
-          borderBottom: isDark ? "1px solid rgba(56, 189, 248, 0.2)" : "1px solid rgba(14, 165, 233, 0.2)",
-          background: isDark
-            ? "linear-gradient(180deg, rgba(8, 20, 36, 0.95) 0%, rgba(6, 9, 14, 0.95) 100%)"
-            : "linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%)",
-          position: "sticky",
-          top: 0,
-          zIndex: 40,
-          backdropFilter: "blur(12px)",
-          boxShadow: isDark ? "none" : "0 2px 12px rgba(0, 0, 0, 0.04)",
-        }}
+      {/* Super Admin Backdrop for Mobile */}
+      <div
+        className={`superadmin-sidebar-backdrop ${mobileSidebarOpen ? "is-visible" : ""}`}
+        onClick={() => setMobileSidebarOpen(false)}
+      />
+
+      {/* Collapsible & Auto-Hide Sidebar */}
+      <aside
+        className={`superadmin-sidebar ${sidebarCollapsed ? "is-collapsed" : "is-expanded"} ${mobileSidebarOpen ? "is-mobile-open" : ""} ${autoHideEnabled ? "is-autohide" : ""} ${isHovered && sidebarCollapsed ? "is-peek" : ""}`}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
       >
-        <div className="superadmin-brand" style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-          <img
-            src="/logo.svg?v=2"
-            alt="Logo OKESIH.COM"
-            width={46}
-            height={46}
-            style={{ width: "46px", height: "46px", objectFit: "contain", display: "block", flexShrink: 0 }}
-          />
-          <div>
-            <div
+        {/* Sidebar Header */}
+        <div className="superadmin-sidebar-header">
+          <div className="superadmin-sidebar-brand">
+            <img src="/logo.svg?v=2" alt="OKESIH Logo" />
+            {(!sidebarCollapsed || (autoHideEnabled && isHovered)) && (
+              <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+                <div style={{ fontSize: "1.05rem", fontWeight: 900, letterSpacing: "-0.02em", color: isDark ? "#FFFFFF" : "#0F172A", lineHeight: 1.1 }}>
+                  OKESIH<span style={{ color: "#0284C7" }}> HQ</span>
+                </div>
+                <div style={{ fontSize: "0.68rem", color: isDark ? "#7DD3FC" : "#0284C7", fontWeight: 800, letterSpacing: "0.04em" }}>
+                  COMMAND CENTER
+                </div>
+              </div>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={toggleSidebar}
+            className="superadmin-sidebar-toggle-btn"
+            title={sidebarCollapsed ? "Perluas Sidebar" : "Lipat Sidebar (Collapse)"}
+            aria-label="Toggle Sidebar"
+          >
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
               style={{
-                fontSize: "1.25rem",
-                fontWeight: 900,
-                letterSpacing: "-0.02em",
-                color: isDark ? "#FFFFFF" : "#0F172A",
+                transform: sidebarCollapsed ? "rotate(180deg)" : "rotate(0deg)",
+                transition: "transform 0.25s ease",
               }}
             >
-              OKESIH<span style={{ color: "#0284C7" }}> HQ</span>
-            </div>
-            <div style={{ fontSize: "0.75rem", color: isDark ? "#7DD3FC" : "#0284C7", fontWeight: 700 }}>
-              COMMAND CENTER
-            </div>
-          </div>
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+          </button>
         </div>
 
-        <div className="superadmin-actions" style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
-          {/* Theme Toggle Button */}
-          <ThemeToggle />
+        {/* Sidebar Navigation Items */}
+        <div className="superadmin-sidebar-content">
+          {(!sidebarCollapsed || (autoHideEnabled && isHovered)) && (
+            <div className="superadmin-sidebar-section-title">PLATFORM SAAS & OPERASIONAL</div>
+          )}
 
-          <button
-            onClick={handleOpenRegisterModal}
-            className="btn-primary"
-            style={{
-              background: "linear-gradient(135deg, #0EA5E9, #0284C7)",
-              boxShadow: "0 4px 14px rgba(14, 165, 233, 0.35)",
-              padding: "0.55rem 1.1rem",
-              fontSize: "0.85rem",
-              fontWeight: 800,
-            }}
-          >
-            + Daftarkan Tenant Warkop
-          </button>
+          <nav className="superadmin-sidebar-menu">
+            {/* 1. Overview */}
+            <button
+              type="button"
+              onClick={() => openDashboardView("overview")}
+              className={`superadmin-sidebar-item ${activeTab === "overview" ? "is-active" : ""}`}
+              title="Overview & Finansial"
+            >
+              <div className="superadmin-sidebar-item-icon" style={{ background: activeTab === "overview" ? "rgba(14, 165, 233, 0.2)" : "rgba(148, 163, 184, 0.1)", color: "#0284C7" }}>
+                📊
+              </div>
+              {(!sidebarCollapsed || (autoHideEnabled && isHovered)) && (
+                <div className="superadmin-sidebar-item-info">
+                  <strong>Overview &amp; Finansial</strong>
+                  <span>Metrik Global &amp; Wilayah</span>
+                </div>
+              )}
+            </button>
 
-          <button
-            onClick={() => {
-              const codeSuffix = Math.floor(Math.random() * 89) + 10;
-              setNewMarketingName("");
-              setNewMarketingPhone("");
-              setNewMarketingArea("");
-              setNewMarketingCode(`MKT-${codeSuffix}`);
-              setNewMarketingAccountNo("");
-              setNewMarketingCommRate(defaultCommissionRate);
-              setIsMarketingModalOpen(true);
-            }}
-            className="btn-primary"
-            style={{
-              background: "linear-gradient(135deg, #10B981, #059669)",
-              boxShadow: "0 4px 14px rgba(16, 185, 129, 0.35)",
-              padding: "0.55rem 1.1rem",
-              fontSize: "0.85rem",
-              fontWeight: 800,
-            }}
-          >
-            + Daftarkan Marketing
-          </button>
+            {/* 2. Tenant Warkop */}
+            <button
+              type="button"
+              onClick={() => openDashboardView("tenants")}
+              className={`superadmin-sidebar-item ${activeTab === "tenants" ? "is-active" : ""}`}
+              title="Daftar Tenant Warkop"
+            >
+              <div className="superadmin-sidebar-item-icon" style={{ background: activeTab === "tenants" ? "rgba(249, 115, 22, 0.2)" : "rgba(148, 163, 184, 0.1)", color: "#F97316" }}>
+                🏢
+              </div>
+              {(!sidebarCollapsed || (autoHideEnabled && isHovered)) && (
+                <>
+                  <div className="superadmin-sidebar-item-info">
+                    <strong>Daftar Tenant Warkop</strong>
+                    <span>Rentang Kode Unik &amp; Akun</span>
+                  </div>
+                  <span className="superadmin-sidebar-item-badge">{tenants.length}</span>
+                </>
+              )}
+            </button>
 
-          <button
-            onClick={logoutUser}
-            className="btn-secondary"
+            {/* 3. Marketing */}
+            <button
+              type="button"
+              onClick={() => openDashboardView("marketing")}
+              className={`superadmin-sidebar-item ${activeTab === "marketing" ? "is-active" : ""}`}
+              title="Marketing Lapangan"
+            >
+              <div className="superadmin-sidebar-item-icon" style={{ background: activeTab === "marketing" ? "rgba(16, 185, 129, 0.2)" : "rgba(148, 163, 184, 0.1)", color: "#10B981" }}>
+                🤝
+              </div>
+              {(!sidebarCollapsed || (autoHideEnabled && isHovered)) && (
+                <>
+                  <div className="superadmin-sidebar-item-info">
+                    <strong>Mitra Marketing</strong>
+                    <span>Referral &amp; Bagi Hasil</span>
+                  </div>
+                  <span className="superadmin-sidebar-item-badge" style={{ background: "rgba(16, 185, 129, 0.14)", color: "#10B981" }}>
+                    {marketingList.length}
+                  </span>
+                </>
+              )}
+            </button>
+
+            {/* 4. QRIS Billing */}
+            <button
+              type="button"
+              onClick={() => openDashboardView("qris_billing")}
+              className={`superadmin-sidebar-item ${activeTab === "qris_billing" ? "is-active" : ""}`}
+              title="Billing QRIS SaaS"
+            >
+              <div className="superadmin-sidebar-item-icon" style={{ background: activeTab === "qris_billing" ? "rgba(245, 158, 11, 0.2)" : "rgba(148, 163, 184, 0.1)", color: "#D97706" }}>
+                💳
+              </div>
+              {(!sidebarCollapsed || (autoHideEnabled && isHovered)) && (
+                <div className="superadmin-sidebar-item-info">
+                  <strong>Billing &amp; QRIS SaaS</strong>
+                  <span>Rekening Pusat &amp; Biaya</span>
+                </div>
+              )}
+            </button>
+
+            {/* 5. Parameter Master */}
+            <button
+              type="button"
+              onClick={() => openDashboardView("platform_config")}
+              className={`superadmin-sidebar-item ${activeTab === "platform_config" ? "is-active" : ""}`}
+              title="Parameter Master Global"
+            >
+              <div className="superadmin-sidebar-item-icon" style={{ background: activeTab === "platform_config" ? "rgba(168, 85, 247, 0.2)" : "rgba(148, 163, 184, 0.1)", color: "#7C3AED" }}>
+                ⚙️
+              </div>
+              {(!sidebarCollapsed || (autoHideEnabled && isHovered)) && (
+                <div className="superadmin-sidebar-item-info">
+                  <strong>Parameter Master</strong>
+                  <span>Tarif SaaS &amp; Kuota</span>
+                </div>
+              )}
+            </button>
+          </nav>
+
+          {/* Quick Actions in Sidebar */}
+          {(!sidebarCollapsed || (autoHideEnabled && isHovered)) && (
+            <div style={{ marginTop: "0.5rem" }}>
+              <div className="superadmin-sidebar-section-title" style={{ marginBottom: "0.5rem" }}>TINDAKAN CEPAT</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+                <button
+                  type="button"
+                  onClick={handleOpenRegisterModal}
+                  className="btn-primary"
+                  style={{
+                    padding: "0.55rem 0.75rem",
+                    fontSize: "0.78rem",
+                    fontWeight: 800,
+                    background: "linear-gradient(135deg, #0EA5E9, #0284C7)",
+                    borderRadius: "8px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "0.4rem",
+                  }}
+                >
+                  <span>+</span> Daftarkan Warkop
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const codeSuffix = Math.floor(Math.random() * 89) + 10;
+                    setNewMarketingName("");
+                    setNewMarketingPhone("");
+                    setNewMarketingArea("");
+                    setNewMarketingCode(`MKT-${codeSuffix}`);
+                    setNewMarketingAccountNo("");
+                    setNewMarketingCommRate(defaultCommissionRate);
+                    setIsMarketingModalOpen(true);
+                  }}
+                  className="btn-primary"
+                  style={{
+                    padding: "0.55rem 0.75rem",
+                    fontSize: "0.78rem",
+                    fontWeight: 800,
+                    background: "linear-gradient(135deg, #10B981, #059669)",
+                    borderRadius: "8px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "0.4rem",
+                  }}
+                >
+                  <span>+</span> Daftarkan Marketing
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Sidebar Footer */}
+        <div className="superadmin-sidebar-footer">
+          {/* Auto-Hide Toggle Switch */}
+          <div
             style={{
-              padding: "0.5rem 0.85rem",
-              fontSize: "0.8rem",
-              color: "#EF4444",
-              borderColor: "rgba(239, 68, 68, 0.4)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "0.35rem 0.5rem",
+              borderRadius: "8px",
+              background: isDark ? "rgba(148, 163, 184, 0.08)" : "rgba(0, 0, 0, 0.04)",
+              fontSize: "0.72rem",
               cursor: "pointer",
             }}
+            onClick={toggleAutoHide}
+            title="Bila aktif, sidebar otomatis melipat dan melayang saat mouse mendekat"
           >
-            Logout
-          </button>
-        </div>
-      </header>
+            {(!sidebarCollapsed || (autoHideEnabled && isHovered)) ? (
+              <>
+                <span style={{ color: isDark ? "#94A3B8" : "#64748B", fontWeight: 700 }}>Auto-Hide (Hover Peek)</span>
+                <span style={{ fontWeight: 800, color: autoHideEnabled ? "#10B981" : isDark ? "#64748B" : "#94A3B8" }}>
+                  {autoHideEnabled ? "ON" : "OFF"}
+                </span>
+              </>
+            ) : (
+              <span style={{ margin: "auto", fontSize: "0.9rem" }} title="Auto-Hide Mode">👁️</span>
+            )}
+          </div>
 
-      {/* Main Container */}
-      <main className="superadmin-main" style={{ maxWidth: "1320px", margin: "1.5rem auto 3rem", padding: "0 1.5rem" }}>
-        {/* RESUME FINANSIAL & EKOSISTEM SAAS GLOBAL */}
-        <section className="superadmin-overview" style={{ marginBottom: "2rem" }}>
+          {/* Admin User Card */}
+          {(!sidebarCollapsed || (autoHideEnabled && isHovered)) ? (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: "0.2rem" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <div style={{ width: "30px", height: "30px", borderRadius: "50%", background: "linear-gradient(135deg, #0284C7, #0EA5E9)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: "0.75rem" }}>
+                  HQ
+                </div>
+                <div>
+                  <div style={{ fontSize: "0.78rem", fontWeight: 800, color: isDark ? "#fff" : "#0F172A", lineHeight: 1.1 }}>Super Admin</div>
+                  <div style={{ fontSize: "0.68rem", color: "#10B981", fontWeight: 700 }}>🟢 Online</div>
+                </div>
+              </div>
+              <button
+                onClick={logoutUser}
+                className="btn-secondary"
+                style={{ padding: "0.35rem 0.65rem", fontSize: "0.72rem", color: "#EF4444", borderColor: "rgba(239, 68, 68, 0.4)", borderRadius: "6px" }}
+                title="Keluar dari sesi Super Admin"
+              >
+                Logout
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={logoutUser}
+              style={{ background: "transparent", border: "none", color: "#EF4444", fontSize: "1.1rem", padding: "0.25rem", cursor: "pointer", display: "flex", justifyContent: "center" }}
+              title="Logout"
+            >
+              🚪
+            </button>
+          )}
+        </div>
+      </aside>
+
+      {/* Main Workspace Area */}
+      <div className="superadmin-workspace">
+        {/* Topbar */}
+        <header className="superadmin-topbar">
+          <div style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
+            {/* Mobile Toggle Button */}
+            <button
+              type="button"
+              onClick={() => setMobileSidebarOpen(true)}
+              className="superadmin-topbar-toggle"
+              style={{ display: "inline-flex" }}
+              aria-label="Buka Menu"
+            >
+              ☰
+            </button>
+
+            {/* Breadcrumb */}
+            <div className="superadmin-breadcrumb">
+              <span style={{ color: isDark ? "#64748B" : "#94A3B8", fontWeight: 700 }}>OKESIH HQ</span>
+              <span style={{ color: isDark ? "#475569" : "#CBD5E1" }}>/</span>
+              <span style={{ color: isDark ? "#F8FAFC" : "#0F172A", fontWeight: 800 }}>
+                {activeTab === "overview" && "Overview & Finansial"}
+                {activeTab === "tenants" && "Daftar Tenant Warkop"}
+                {activeTab === "marketing" && "Mitra Marketing Lapangan"}
+                {activeTab === "qris_billing" && "Billing & QRIS SaaS"}
+                {activeTab === "platform_config" && "Parameter Master Global"}
+              </span>
+            </div>
+
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.4rem",
+                padding: "0.2rem 0.6rem",
+                borderRadius: "999px",
+                background: isDark ? "rgba(16, 185, 129, 0.12)" : "rgba(16, 185, 129, 0.1)",
+                border: "1px solid rgba(16, 185, 129, 0.25)",
+                fontSize: "0.7rem",
+                fontWeight: 800,
+                color: "#10B981",
+              }}
+            >
+              <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#10B981", display: "inline-block", boxShadow: "0 0 8px #10B981" }} />
+              HQ Server Online
+            </div>
+          </div>
+
+          <div className="superadmin-actions" style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+            {activeTab === "overview" && (
+              <div className="superadmin-period-filter" aria-label="Filter periode analytics">
+                {([
+                  ["today", "Hari ini"], ["week", "Minggu"], ["month", "Bulan"], ["year", "Tahun"],
+                ] as Array<[AnalyticsPeriod, string]>).map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    className={analyticsPeriod === value ? "is-active" : ""}
+                    onClick={() => setAnalyticsPeriod(value)}
+                    disabled={analyticsLoading}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <ThemeToggle />
+
+            <button
+              onClick={handleOpenRegisterModal}
+              className="btn-primary"
+              style={{
+                background: "linear-gradient(135deg, #0EA5E9, #0284C7)",
+                padding: "0.45rem 0.95rem",
+                fontSize: "0.8rem",
+                fontWeight: 800,
+                borderRadius: "8px",
+              }}
+            >
+              + Tenant
+            </button>
+
+            <button
+              onClick={() => {
+                const codeSuffix = Math.floor(Math.random() * 89) + 10;
+                setNewMarketingName("");
+                setNewMarketingPhone("");
+                setNewMarketingArea("");
+                setNewMarketingCode(`MKT-${codeSuffix}`);
+                setNewMarketingAccountNo("");
+                setNewMarketingCommRate(defaultCommissionRate);
+                setIsMarketingModalOpen(true);
+              }}
+              className="btn-primary"
+              style={{
+                background: "linear-gradient(135deg, #10B981, #059669)",
+                padding: "0.45rem 0.95rem",
+                fontSize: "0.8rem",
+                fontWeight: 800,
+                borderRadius: "8px",
+              }}
+            >
+              + Marketing
+            </button>
+          </div>
+        </header>
+
+        {/* Main Container */}
+        <main className="superadmin-main" style={{ maxWidth: "1400px", margin: "1.25rem auto 3rem", padding: "0 1.25rem", width: "100%" }}>
+          {/* RESUME FINANSIAL & EKOSISTEM SAAS GLOBAL */}
+          {activeTab === "overview" && (
+            <section className="superadmin-overview" style={{ marginBottom: "2rem" }}>
           <div className="superadmin-page-heading" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "1rem" }}>
             <div>
               <h1
@@ -973,92 +1296,102 @@ export default function SuperAdminDashboardPage() {
               </div>
             </div>
           </div>
-        </section>
 
-        {/* TAB NAVIGATION VIEW */}
-        <div
-          className="superadmin-tabs"
-          style={{
-            display: "flex",
-            gap: "0.5rem",
-            marginBottom: "1.75rem",
-            borderBottom: isDark ? "1px solid rgba(255, 255, 255, 0.1)" : "1px solid rgba(0, 0, 0, 0.08)",
-            paddingBottom: "0.75rem",
-            overflowX: "auto",
-          }}
-        >
-          <button
-            className={`superadmin-tab ${activeTab === "tenants" ? "is-active" : ""}`}
-            onClick={() => setActiveTab("tenants")}
-            style={{
-              padding: "0.6rem 1.25rem",
-              borderRadius: "8px",
-              fontWeight: 800,
-              fontSize: "0.85rem",
-              cursor: "pointer",
-              transition: "all 0.2s ease",
-              background: activeTab === "tenants" ? (isDark ? "rgba(14, 165, 233, 0.2)" : "rgba(14, 165, 233, 0.12)") : "transparent",
-              color: activeTab === "tenants" ? "#0284C7" : isDark ? "#94A3B8" : "#64748B",
-              border: activeTab === "tenants" ? "1px solid #0EA5E9" : "1px solid transparent",
-            }}
-          >
-            🏢 Daftar Tenant &amp; Kode Unik ({tenants.length})
-          </button>
+              {/* Quick Action Shortcuts inside Overview */}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+                  gap: "1rem",
+                  marginTop: "1.25rem",
+                }}
+              >
+                <div
+                  onClick={() => openDashboardView("tenants")}
+                  className="glass-panel"
+                  style={{
+                    padding: "1.25rem",
+                    borderRadius: "14px",
+                    border: isDark ? "1px solid rgba(14, 165, 233, 0.25)" : "1px solid rgba(14, 165, 233, 0.2)",
+                    background: isDark
+                      ? "linear-gradient(135deg, rgba(14, 165, 233, 0.08) 0%, rgba(6, 9, 14, 0.6) 100%)"
+                      : "#FFFFFF",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    transition: "transform 0.18s ease, border-color 0.18s ease",
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: "0.95rem", fontWeight: 800, color: isDark ? "#FFFFFF" : "#0F172A" }}>
+                      🏢 Kelola Tenant Warkop
+                    </div>
+                    <div style={{ fontSize: "0.78rem", color: isDark ? "#94A3B8" : "#64748B", marginTop: "0.2rem" }}>
+                      {tenants.length} warkop terdaftar • Alokasi kode unik POS
+                    </div>
+                  </div>
+                  <span style={{ fontSize: "1.2rem", color: "#0284C7" }}>→</span>
+                </div>
 
-          <button
-            className={`superadmin-tab ${activeTab === "marketing" ? "is-active" : ""}`}
-            onClick={() => setActiveTab("marketing")}
-            style={{
-              padding: "0.6rem 1.25rem",
-              borderRadius: "8px",
-              fontWeight: 800,
-              fontSize: "0.85rem",
-              cursor: "pointer",
-              transition: "all 0.2s ease",
-              background: activeTab === "marketing" ? (isDark ? "rgba(16, 185, 129, 0.2)" : "rgba(16, 185, 129, 0.12)") : "transparent",
-              color: activeTab === "marketing" ? "#059669" : isDark ? "#94A3B8" : "#64748B",
-              border: activeTab === "marketing" ? "1px solid #10B981" : "1px solid transparent",
-            }}
-          >
-            🤝 Marketing Lapangan &amp; Bagi Hasil ({marketingList.length})
-          </button>
+                <div
+                  onClick={() => openDashboardView("marketing")}
+                  className="glass-panel"
+                  style={{
+                    padding: "1.25rem",
+                    borderRadius: "14px",
+                    border: isDark ? "1px solid rgba(16, 185, 129, 0.25)" : "1px solid rgba(16, 185, 129, 0.2)",
+                    background: isDark
+                      ? "linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(6, 9, 14, 0.6) 100%)"
+                      : "#FFFFFF",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    transition: "transform 0.18s ease, border-color 0.18s ease",
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: "0.95rem", fontWeight: 800, color: isDark ? "#FFFFFF" : "#0F172A" }}>
+                      🤝 Mitra Marketing Lapangan
+                    </div>
+                    <div style={{ fontSize: "0.78rem", color: isDark ? "#94A3B8" : "#64748B", marginTop: "0.2rem" }}>
+                      {marketingList.length} mitra agen • Komisi &amp; Pencairan
+                    </div>
+                  </div>
+                  <span style={{ fontSize: "1.2rem", color: "#10B981" }}>→</span>
+                </div>
 
-          <button
-            className={`superadmin-tab ${activeTab === "qris_billing" ? "is-active" : ""}`}
-            onClick={() => setActiveTab("qris_billing")}
-            style={{
-              padding: "0.6rem 1.25rem",
-              borderRadius: "8px",
-              fontWeight: 800,
-              fontSize: "0.85rem",
-              cursor: "pointer",
-              transition: "all 0.2s ease",
-              background: activeTab === "qris_billing" ? (isDark ? "rgba(245, 158, 11, 0.2)" : "rgba(245, 158, 11, 0.12)") : "transparent",
-              color: activeTab === "qris_billing" ? "#D97706" : isDark ? "#94A3B8" : "#64748B",
-              border: activeTab === "qris_billing" ? "1px solid #F59E0B" : "1px solid transparent",
-            }}
-          >
-            💳 QRIS Pembayaran SaaS Platform
-          </button>
-
-          <button
-            className={`superadmin-tab ${activeTab === "platform_config" ? "is-active" : ""}`}
-            onClick={() => setActiveTab("platform_config")}
-            style={{
-              padding: "0.6rem 1.25rem",
-              borderRadius: "8px",
-              fontWeight: 800,
-              fontSize: "0.85rem",
-              cursor: "pointer",
-              transition: "all 0.2s ease",
-              background: activeTab === "platform_config" ? (isDark ? "rgba(168, 85, 247, 0.2)" : "rgba(168, 85, 247, 0.12)") : "transparent",
-              color: activeTab === "platform_config" ? "#7C3AED" : isDark ? "#94A3B8" : "#64748B",
-              border: activeTab === "platform_config" ? "1px solid #A855F7" : "1px solid transparent",
-            }}
-          >
-            ⚙️ Parameter Master Global
-          </button>
-        </div>
+                <div
+                  onClick={() => openDashboardView("qris_billing")}
+                  className="glass-panel"
+                  style={{
+                    padding: "1.25rem",
+                    borderRadius: "14px",
+                    border: isDark ? "1px solid rgba(245, 158, 11, 0.25)" : "1px solid rgba(245, 158, 11, 0.2)",
+                    background: isDark
+                      ? "linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(6, 9, 14, 0.6) 100%)"
+                      : "#FFFFFF",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    transition: "transform 0.18s ease, border-color 0.18s ease",
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: "0.95rem", fontWeight: 800, color: isDark ? "#FFFFFF" : "#0F172A" }}>
+                      💳 QRIS &amp; Billing SaaS Platform
+                    </div>
+                    <div style={{ fontSize: "0.78rem", color: isDark ? "#94A3B8" : "#64748B", marginTop: "0.2rem" }}>
+                      Biaya SaaS Rp 100/struk • Verifikasi mutasi
+                    </div>
+                  </div>
+                  <span style={{ fontSize: "1.2rem", color: "#D97706" }}>→</span>
+                </div>
+              </div>
+            </section>
+          )}
 
         {/* TAB CONTENT 1: DAFTAR TENANT WARKOP & ALOKASI KODE UNIK */}
         {activeTab === "tenants" && (
@@ -2023,8 +2356,9 @@ export default function SuperAdminDashboardPage() {
           </div>
         )}
       </main>
+    </div>
 
-      {/* MODAL 1: DAFTARKAN TENANT WARKOP BARU */}
+    {/* MODAL 1: DAFTARKAN TENANT WARKOP BARU */}
       {isRegisterModalOpen && (
         <div
           style={{
