@@ -463,7 +463,7 @@ export default function HomePage() {
                   <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
                 </svg>
               </span>
-              <p><strong>Dipercaya:</strong> telah digunakan lebih dari 1000 pelaku usaha F&amp;B di seluruh Indonesia</p>
+              <p>Telah digunakan dan dipercaya lebih dari <strong>1000</strong> pelaku usaha F&amp;B di seluruh Indonesia.</p>
             </div>
 
             <div className="hero-trust-row" aria-label="Keunggulan utama">
