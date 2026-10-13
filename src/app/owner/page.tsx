@@ -13,7 +13,7 @@ type MenuItem = { id: string; name: string; price: number; category: string; des
 type Staff = { id: string; username: string; name: string; role: "KASIR" | "DAPUR"; status: "ACTIVE" | "INACTIVE" };
 type Waiter = { id: string; name: string; phone: string | null; is_active: boolean };
 type BusinessTable = { id: string; label: string; sort_order: number; is_active: boolean };
-type Profile = { id: string; nama: string; slug: string; is_active: boolean; qris_image_url: string | null; qris_merchant_name: string | null };
+type Profile = { id: string; nama: string; slug: string; is_active: boolean; logo_url: string | null; qris_image_url: string | null; qris_merchant_name: string | null };
 type Metrics = { receiptCount: number; cash: number; qris: number; total: number; billing: { tagihan_pokok: number; kode_unik: number; total_tagihan: number; status_bayar: string } | null };
 type DashboardData = { profile: Profile; menus: MenuItem[]; staff: Staff[]; waiters: Waiter[]; tables: BusinessTable[]; metrics: Metrics };
 type DeviceInstallation = { id: string; device_type: "POS" | "KDS"; device_name: string; status: "ACTIVE" | "REVOKED" | "EXPIRED"; paired_at: string; last_seen_at: string; expires_at: string; revoked_at: string | null };
@@ -63,6 +63,7 @@ export default function TenantOwnerDashboardPage() {
   const [pairingCode, setPairingCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const qrisInput = useRef<HTMLInputElement>(null);
+  const logoInput = useRef<HTMLInputElement>(null);
 
   const loadDashboard = async () => {
     try {
@@ -172,6 +173,16 @@ export default function TenantOwnerDashboardPage() {
     });
   };
 
+  const uploadLogo = (file?: File) => {
+    if (!file) return;
+    void mutate(async () => {
+      const form = new FormData();
+      form.set("file", file);
+      await ownerFetch("/api/owner/branding", { method: "POST", body: form });
+      if (logoInput.current) logoInput.current.value = "";
+    });
+  };
+
   const printTableStickers = async () => {
     if (!data?.tables.length) return setError("Tambahkan meja terlebih dahulu.");
     const cards = await Promise.all(data.tables.map(async (table) => {
@@ -230,7 +241,7 @@ export default function TenantOwnerDashboardPage() {
 
       <div className="owner-content">
         <header className="owner-topbar">
-          <div className="owner-brand"><img src="/logo.svg?v=2" alt="OKESIH"/><div><strong>{profile.nama}</strong><small>PORTAL OWNER BISNIS</small></div><span className="owner-status">● {profile.is_active ? "Buka & Beroperasi" : "Tidak Aktif"}</span></div>
+          <div className="owner-brand"><img src={profile.logo_url || "/logo.svg?v=2"} alt={profile.logo_url ? `Logo ${profile.nama}` : "OKESIH"}/><div><strong>{profile.nama}</strong><small>PORTAL OWNER BISNIS</small></div><span className="owner-status">● {profile.is_active ? "Buka & Beroperasi" : "Tidak Aktif"}</span></div>
           <div className="owner-actions"><ThemeToggle/><Link href="/pos" className="btn-secondary">Layar Kasir</Link><Link href="/kds" className="btn-secondary">Layar Dapur</Link><button onClick={logoutUser} className="btn-secondary">Logout</button></div>
         </header>
 
@@ -265,6 +276,14 @@ export default function TenantOwnerDashboardPage() {
           </section>}
 
           {view === "qris-tables" && <section id="qris" className="owner-settings-grid owner-page-panel">
+            <article className="owner-panel owner-branding-panel">
+              <h2>Identitas &amp; Logo Usaha</h2><p>Logo aktif otomatis tampil pada menu pelanggan, layar Kasir, dan layar Dapur. Jika belum diunggah, sistem menggunakan logo OKESIH.</p>
+              <div className="owner-logo-preview"><img src={profile.logo_url || "/logo.svg?v=2"} alt={profile.logo_url ? `Logo ${profile.nama}` : "Logo OKESIH"}/></div>
+              <input ref={logoInput} hidden type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => uploadLogo(event.target.files?.[0])}/>
+              <div className="owner-branding-actions"><button disabled={busy} className="btn-primary" onClick={() => logoInput.current?.click()}>{busy ? "Menyimpan..." : profile.logo_url ? "Ganti Logo Usaha" : "Upload Logo Usaha"}</button>{profile.logo_url && <button disabled={busy} className="btn-secondary" onClick={() => confirm("Hapus logo usaha dan gunakan logo OKESIH?") && void mutate(() => ownerFetch("/api/owner/branding", { method: "DELETE" }))}>Gunakan Logo OKESIH</button>}</div>
+              <small>PNG, JPG, atau WebP · Maksimal 2 MB · Disarankan rasio 1:1.</small>
+            </article>
+
             <article className="owner-panel">
               <h2>QRIS Statis Toko</h2><p>Satu gambar aktif per tenant. Gambar baru otomatis menggantikan gambar lama tanpa duplikasi.</p>
               {profile.qris_image_url ? <img className="owner-qris-preview" src={profile.qris_image_url} alt={`QRIS ${profile.nama}`}/> : <div className="owner-qris-placeholder">Belum ada QRIS</div>}

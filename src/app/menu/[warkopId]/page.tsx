@@ -4,7 +4,7 @@ import Image from "next/image";
 import { use, useEffect, useMemo, useState } from "react";
 
 type Menu = { id: string; nama: string; harga: number; kategori: string; desc_menu: string | null };
-type MenuPayload = { profile: { nama: string; slug: string; qris_image_url: string | null; qris_merchant_name: string | null }; menus: Menu[]; tables: string[] };
+type MenuPayload = { profile: { nama: string; slug: string; logo_url: string | null; qris_image_url: string | null; qris_merchant_name: string | null }; menus: Menu[]; tables: string[] };
 type CartItem = { menu: Menu; qty: number; notes: string };
 type OrderResult = { id: string; queueNumber: number; total: number };
 
@@ -105,7 +105,7 @@ export default function CustomerMenuPage({ params, searchParams }: { params: Pro
   return <div className="customer-menu-page">
     <header className="customer-menu-head">
       <div className="customer-brand-row">
-        <Image src="/logo.svg?v=2" width={40} height={40} alt="OKESIH" />
+        {payload.profile.logo_url ? <img className="customer-business-logo" src={payload.profile.logo_url} alt={`Logo ${payload.profile.nama}`} /> : <Image src="/logo.svg?v=2" width={40} height={40} alt="OKESIH" />}
         <div><small>MENU DIGITAL</small><h1>{payload.profile.nama}</h1></div>
       </div>
       <p>Pesan santai dari meja. Kami siapkan untuk Anda.</p>

@@ -12,7 +12,7 @@ export type DeviceOrder = {
 export type DeviceBootstrap = {
   serverTime: string;
   device: { id: string; name: string; type: "POS" | "KDS"; expiresAt: string };
-  profile: { id: string; nama: string; slug: string; is_active: boolean; offline_limit_hours: number; queue_dismiss_seconds: number };
+  profile: { id: string; nama: string; slug: string; is_active: boolean; logo_url: string | null; offline_limit_hours: number; queue_dismiss_seconds: number };
   menus: { id: string; nama: string; harga: number; kategori: string; desc_menu: string | null; is_available: boolean }[];
   tables: { id: string; label: string }[];
   waiters: { id: string; name: string }[];

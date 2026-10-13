@@ -5,7 +5,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
   const admin = createAdminClient();
   const { data: profile, error } = await admin
     .from("warkops")
-    .select("id,nama,slug,is_active,qris_image_url,qris_merchant_name")
+    .select("id,nama,slug,is_active,logo_url,qris_image_url,qris_merchant_name")
     .eq("slug", slug)
     .eq("is_active", true)
     .maybeSingle();
@@ -21,4 +21,3 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
     headers: { "Cache-Control": "public, max-age=30, stale-while-revalidate=60" },
   });
 }
-
