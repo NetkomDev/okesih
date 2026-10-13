@@ -1498,8 +1498,8 @@ export default function SuperAdminDashboardPage() {
               </div>
             </div>
 
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "0.875rem" }}>
+            <div className="superadmin-table-container">
+              <table style={{ width: "100%", minWidth: "1050px", borderCollapse: "collapse", textAlign: "left", fontSize: "0.875rem" }}>
                 <thead>
                   <tr
                     style={{
@@ -1510,15 +1510,13 @@ export default function SuperAdminDashboardPage() {
                       background: isDark ? "transparent" : "#F8FAFC",
                     }}
                   >
-                    <th style={{ padding: "0.85rem 1rem" }}>Tenant Warkop &amp; Slug</th>
-                    <th style={{ padding: "0.85rem 1rem" }}>Owner &amp; Kontak</th>
-                    <th style={{ padding: "0.85rem 1rem" }}>Rentang Kode Unik</th>
-                    <th style={{ padding: "0.85rem 1rem" }}>Marketing Akuisisi</th>
-                    <th style={{ padding: "0.85rem 1rem" }}>Komisi Sales</th>
-                    <th style={{ padding: "0.85rem 1rem" }}>Struk Hari Ini</th>
-                    <th style={{ padding: "0.85rem 1rem" }}>Tagihan Sewa</th>
-                    <th style={{ padding: "0.85rem 1rem" }}>Status</th>
-                    <th style={{ padding: "0.85rem 1rem", textAlign: "right" }}>Aksi Pusat</th>
+                    <th style={{ padding: "0.85rem 1rem", whiteSpace: "nowrap" }}>Tenant Warkop &amp; Slug</th>
+                    <th style={{ padding: "0.85rem 1rem", whiteSpace: "nowrap" }}>Owner &amp; Kontak</th>
+                    <th style={{ padding: "0.85rem 1rem", whiteSpace: "nowrap" }}>Kode Unik POS</th>
+                    <th style={{ padding: "0.85rem 1rem", whiteSpace: "nowrap" }}>Mitra Marketing</th>
+                    <th style={{ padding: "0.85rem 1rem", whiteSpace: "nowrap" }}>Struk &amp; Tagihan</th>
+                    <th style={{ padding: "0.85rem 1rem", whiteSpace: "nowrap" }}>Status</th>
+                    <th style={{ padding: "0.85rem 1rem", textAlign: "right", whiteSpace: "nowrap" }}>Aksi Pusat</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1539,12 +1537,12 @@ export default function SuperAdminDashboardPage() {
                         </div>
                       </td>
 
-                      <td style={{ padding: "1rem" }}>
+                      <td style={{ padding: "1rem", whiteSpace: "nowrap" }}>
                         <div style={{ fontWeight: 700, color: isDark ? "#E2E8F0" : "#334155" }}>{t.ownerName}</div>
                         <div style={{ fontSize: "0.75rem", color: isDark ? "#64748B" : "#94A3B8" }}>{t.phone}</div>
                       </td>
 
-                      <td style={{ padding: "1rem" }}>
+                      <td style={{ padding: "1rem", whiteSpace: "nowrap" }}>
                         <span
                           style={{
                             background: isDark ? "rgba(14, 165, 233, 0.1)" : "rgba(14, 165, 233, 0.08)",
@@ -1560,48 +1558,46 @@ export default function SuperAdminDashboardPage() {
                         </span>
                       </td>
 
-                      <td style={{ padding: "1rem" }}>
+                      <td style={{ padding: "1rem", whiteSpace: "nowrap" }}>
                         <div style={{ fontWeight: 700, color: isDark ? "#34D399" : "#059669" }}>
                           {t.marketingAgentName || "Direct HQ"}
                         </div>
-                      </td>
-
-                      <td style={{ padding: "1rem" }}>
-                        <span style={{ color: isDark ? "#C084FC" : "#7C3AED", fontWeight: 800 }}>
+                        <div style={{ fontSize: "0.72rem", color: isDark ? "#C084FC" : "#7C3AED", fontWeight: 700, marginTop: "2px" }}>
                           Rp {t.commissionPerReceipt} / struk
-                        </span>
+                        </div>
                       </td>
 
-                      <td style={{ padding: "1rem" }}>
-                        <div style={{ fontWeight: 800 }}>{t.todayTransactions} Struk</div>
-                      </td>
-
-                      <td style={{ padding: "1rem" }}>
-                        <div style={{ fontWeight: 900, color: isDark ? "#FBBF24" : "#D97706" }}>
+                      <td style={{ padding: "1rem", whiteSpace: "nowrap" }}>
+                        <div style={{ fontWeight: 800, color: isDark ? "#FFF" : "#0F172A" }}>
+                          {t.todayTransactions} Struk
+                        </div>
+                        <div style={{ fontSize: "0.75rem", color: isDark ? "#FBBF24" : "#D97706", fontWeight: 800, marginTop: "2px" }}>
                           Rp {t.totalSaasBilling.toLocaleString("id-ID")}
                         </div>
-                        <span
-                          style={{
-                            fontSize: "0.7rem",
-                            fontWeight: 700,
-                            color: t.paymentStatus === "PAID" ? (isDark ? "#34D399" : "#059669") : t.paymentStatus === "GRACE_PERIOD" ? (isDark ? "#FBBF24" : "#D97706") : "#EF4444",
-                          }}
-                        >
-                          {t.paymentStatus === "PAID" ? "● Lunas" : t.paymentStatus === "GRACE_PERIOD" ? "● Grace Period" : "● Menunggak"}
-                        </span>
                       </td>
 
-                      <td style={{ padding: "1rem" }}>
-                        {t.status === "ACTIVE" ? (
-                          <span className="badge badge-ready">AKTIF</span>
-                        ) : (
-                          <span style={{ background: "rgba(239, 68, 68, 0.15)", border: "1px solid #EF4444", color: "#EF4444", padding: "0.25rem 0.6rem", borderRadius: "var(--radius-pill)", fontSize: "0.75rem", fontWeight: 800 }}>
-                            SUSPEND
+                      <td style={{ padding: "1rem", whiteSpace: "nowrap" }}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
+                          <span
+                            style={{
+                              fontSize: "0.7rem",
+                              fontWeight: 700,
+                              color: t.paymentStatus === "PAID" ? (isDark ? "#34D399" : "#059669") : t.paymentStatus === "GRACE_PERIOD" ? (isDark ? "#FBBF24" : "#D97706") : "#EF4444",
+                            }}
+                          >
+                            {t.paymentStatus === "PAID" ? "● Lunas" : t.paymentStatus === "GRACE_PERIOD" ? "● Grace Period" : "● Menunggak"}
                           </span>
-                        )}
+                          {t.status === "ACTIVE" ? (
+                            <span className="badge badge-ready" style={{ width: "fit-content" }}>AKTIF</span>
+                          ) : (
+                            <span style={{ background: "rgba(239, 68, 68, 0.15)", border: "1px solid #EF4444", color: "#EF4444", padding: "0.15rem 0.5rem", borderRadius: "var(--radius-pill)", fontSize: "0.7rem", fontWeight: 800, width: "fit-content" }}>
+                              SUSPEND
+                            </span>
+                          )}
+                        </div>
                       </td>
 
-                      <td style={{ padding: "1rem", textAlign: "right" }}>
+                      <td style={{ padding: "1rem", textAlign: "right", whiteSpace: "nowrap" }}>
                         <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
                           <Link
                             href={`/menu/${t.slug}?table=01`}
@@ -1776,8 +1772,8 @@ export default function SuperAdminDashboardPage() {
               </div>
             </div>
 
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "0.875rem" }}>
+            <div className="superadmin-table-container">
+              <table style={{ width: "100%", minWidth: "1150px", borderCollapse: "collapse", textAlign: "left", fontSize: "0.875rem" }}>
                 <thead>
                   <tr
                     style={{
@@ -1788,15 +1784,14 @@ export default function SuperAdminDashboardPage() {
                       background: isDark ? "transparent" : "#F8FAFC",
                     }}
                   >
-                    <th style={{ padding: "0.85rem 1rem" }}>Nama Marketing &amp; Kode</th>
-                    <th style={{ padding: "0.85rem 1rem" }}>No. WhatsApp &amp; Wilayah Pemetaan</th>
-                    <th style={{ padding: "0.85rem 1rem" }}>Status Akun</th>
-                    <th style={{ padding: "0.85rem 1rem" }}>Tarif Komisi</th>
-                    <th style={{ padding: "0.85rem 1rem" }}>Tenant Diakuisisi</th>
-                    <th style={{ padding: "0.85rem 1rem" }}>Struk Dihasilkan</th>
-                    <th style={{ padding: "0.85rem 1rem" }}>Total Komisi Berhak</th>
-                    <th style={{ padding: "0.85rem 1rem" }}>Rekening Pencairan</th>
-                    <th style={{ padding: "0.85rem 1rem", textAlign: "right" }}>Aksi Manajemen</th>
+                    <th style={{ padding: "0.85rem 1rem", whiteSpace: "nowrap" }}>Nama Marketing &amp; Kode</th>
+                    <th style={{ padding: "0.85rem 1rem", whiteSpace: "nowrap" }}>No. WA &amp; Wilayah</th>
+                    <th style={{ padding: "0.85rem 1rem", whiteSpace: "nowrap" }}>Status Akun</th>
+                    <th style={{ padding: "0.85rem 1rem", whiteSpace: "nowrap" }}>Tarif Komisi</th>
+                    <th style={{ padding: "0.85rem 1rem", whiteSpace: "nowrap" }}>Performa Sales</th>
+                    <th style={{ padding: "0.85rem 1rem", whiteSpace: "nowrap" }}>Total Komisi Berhak</th>
+                    <th style={{ padding: "0.85rem 1rem", whiteSpace: "nowrap" }}>Rekening Pencairan</th>
+                    <th style={{ padding: "0.85rem 1rem", textAlign: "right", whiteSpace: "nowrap" }}>Aksi Manajemen</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1899,23 +1894,22 @@ export default function SuperAdminDashboardPage() {
                             )}
                           </td>
 
-                          <td style={{ padding: "1rem" }}>
+                          <td style={{ padding: "1rem", whiteSpace: "nowrap" }}>
                             <span style={{ fontWeight: 800, color: isDark ? "#FBBF24" : "#D97706" }}>
                               Rp {m.commissionPerReceipt} / struk
                             </span>
                           </td>
 
-                          <td style={{ padding: "1rem" }}>
-                            <span style={{ fontWeight: 800, color: "#0284C7" }}>
+                          <td style={{ padding: "1rem", whiteSpace: "nowrap" }}>
+                            <div style={{ fontWeight: 800, color: "#0284C7" }}>
                               {m.totalTenantsAcquired} Tenant
-                            </span>
+                            </div>
+                            <div style={{ fontSize: "0.75rem", color: isDark ? "#94A3B8" : "#64748B", fontWeight: 700, marginTop: "2px" }}>
+                              📊 {m.totalReceiptsGenerated} Struk
+                            </div>
                           </td>
 
-                          <td style={{ padding: "1rem" }}>
-                            <div style={{ fontWeight: 800 }}>{m.totalReceiptsGenerated} Struk</div>
-                          </td>
-
-                          <td style={{ padding: "1rem" }}>
+                          <td style={{ padding: "1rem", whiteSpace: "nowrap" }}>
                             <div style={{ fontWeight: 900, color: isDark ? "#34D399" : "#059669" }}>
                               Rp {m.totalCommissionEarned.toLocaleString("id-ID")}
                             </div>
@@ -1929,14 +1923,14 @@ export default function SuperAdminDashboardPage() {
                             )}
                           </td>
 
-                          <td style={{ padding: "1rem" }}>
+                          <td style={{ padding: "1rem", whiteSpace: "nowrap" }}>
                             <div style={{ fontWeight: 700, fontSize: "0.8rem", color: isDark ? "#FFF" : "#0F172A" }}>
-                              {m.bankName} - {m.accountNumber}
+                              💳 {m.bankName} - {m.accountNumber}
                             </div>
                             <div style={{ fontSize: "0.72rem", color: isDark ? "#64748B" : "#94A3B8" }}>a/n {m.accountName}</div>
                           </td>
 
-                          <td style={{ padding: "1rem", textAlign: "right" }}>
+                          <td style={{ padding: "1rem", textAlign: "right", whiteSpace: "nowrap" }}>
                             <div style={{ display: "flex", gap: "0.4rem", justifyContent: "flex-end" }}>
                               {m.status === "PENDING" ? (
                                 <>
@@ -2033,7 +2027,7 @@ export default function SuperAdminDashboardPage() {
 
         {/* TAB CONTENT 3: QRIS PEMBAYARAN SAAS PLATFORM (PUSAT) */}
         {activeTab === "qris_billing" && (
-          <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "1.5rem" }}>
+          <div className="superadmin-billing-grid">
             {/* Card Pasang QRIS Pusat */}
             <section
               className="glass-panel"
