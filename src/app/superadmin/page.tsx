@@ -592,6 +592,7 @@ export default function SuperAdminDashboardPage() {
 
   return (
     <div
+      className="superadmin-shell"
       style={{
         minHeight: "100vh",
         backgroundColor: isDark ? "#06090E" : "#F8FAFC",
@@ -653,6 +654,7 @@ export default function SuperAdminDashboardPage() {
 
       {/* Super Admin Top Navigation */}
       <header
+        className="superadmin-header"
         style={{
           display: "flex",
           alignItems: "center",
@@ -669,7 +671,7 @@ export default function SuperAdminDashboardPage() {
           boxShadow: isDark ? "none" : "0 2px 12px rgba(0, 0, 0, 0.04)",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+        <div className="superadmin-brand" style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
           <img
             src="/logo.svg?v=2"
             alt="Logo OKESIH.COM"
@@ -693,6 +695,7 @@ export default function SuperAdminDashboardPage() {
             </div>
           </div>
           <span
+            className="superadmin-mode-badge"
             style={{
               background: isDark ? "rgba(14, 165, 233, 0.15)" : "rgba(14, 165, 233, 0.1)",
               border: "1px solid rgba(14, 165, 233, 0.4)",
@@ -707,7 +710,7 @@ export default function SuperAdminDashboardPage() {
           </span>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
+        <div className="superadmin-actions" style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
           {currentUser && (
             <span
               style={{
@@ -781,10 +784,10 @@ export default function SuperAdminDashboardPage() {
       </header>
 
       {/* Main Container */}
-      <main style={{ maxWidth: "1320px", margin: "1.5rem auto 3rem", padding: "0 1.5rem" }}>
+      <main className="superadmin-main" style={{ maxWidth: "1320px", margin: "1.5rem auto 3rem", padding: "0 1.5rem" }}>
         {/* RESUME FINANSIAL & EKOSISTEM SAAS GLOBAL */}
-        <section style={{ marginBottom: "2rem" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "1rem" }}>
+        <section className="superadmin-overview" style={{ marginBottom: "2rem" }}>
+          <div className="superadmin-page-heading" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "1rem" }}>
             <div>
               <h1
                 style={{
@@ -806,6 +809,7 @@ export default function SuperAdminDashboardPage() {
           </div>
 
           <div
+            className="superadmin-kpi-grid"
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))",
@@ -814,7 +818,7 @@ export default function SuperAdminDashboardPage() {
           >
             {/* Card 1: Total Tenant Aktif */}
             <div
-              className="glass-panel"
+              className="glass-panel superadmin-kpi-card"
               style={{
                 padding: "1.5rem",
                 borderRadius: "14px",
@@ -838,7 +842,7 @@ export default function SuperAdminDashboardPage() {
 
             {/* Card 2: Total Struk Ekosistem */}
             <div
-              className="glass-panel"
+              className="glass-panel superadmin-kpi-card"
               style={{
                 padding: "1.5rem",
                 borderRadius: "14px",
@@ -863,7 +867,7 @@ export default function SuperAdminDashboardPage() {
 
             {/* Card 3: Gross Billing Platform */}
             <div
-              className="glass-panel"
+              className="glass-panel superadmin-kpi-card"
               style={{
                 padding: "1.5rem",
                 borderRadius: "14px",
@@ -887,7 +891,7 @@ export default function SuperAdminDashboardPage() {
 
             {/* Card 4: Bagi Hasil Komisi Marketing */}
             <div
-              className="glass-panel"
+              className="glass-panel superadmin-kpi-card"
               style={{
                 padding: "1.5rem",
                 borderRadius: "14px",
@@ -911,7 +915,7 @@ export default function SuperAdminDashboardPage() {
 
             {/* Card 5: Net Revenue Platform (DENGAN KONTRAST KONSISTEN) */}
             <div
-              className="glass-panel"
+              className="glass-panel superadmin-kpi-card superadmin-kpi-card--featured"
               style={{
                 padding: "1.5rem",
                 borderRadius: "14px",
@@ -945,6 +949,7 @@ export default function SuperAdminDashboardPage() {
 
         {/* TAB NAVIGATION VIEW */}
         <div
+          className="superadmin-tabs"
           style={{
             display: "flex",
             gap: "0.5rem",
@@ -955,6 +960,7 @@ export default function SuperAdminDashboardPage() {
           }}
         >
           <button
+            className={`superadmin-tab ${activeTab === "tenants" ? "is-active" : ""}`}
             onClick={() => setActiveTab("tenants")}
             style={{
               padding: "0.6rem 1.25rem",
@@ -972,6 +978,7 @@ export default function SuperAdminDashboardPage() {
           </button>
 
           <button
+            className={`superadmin-tab ${activeTab === "marketing" ? "is-active" : ""}`}
             onClick={() => setActiveTab("marketing")}
             style={{
               padding: "0.6rem 1.25rem",
@@ -989,6 +996,7 @@ export default function SuperAdminDashboardPage() {
           </button>
 
           <button
+            className={`superadmin-tab ${activeTab === "qris_billing" ? "is-active" : ""}`}
             onClick={() => setActiveTab("qris_billing")}
             style={{
               padding: "0.6rem 1.25rem",
@@ -1006,6 +1014,7 @@ export default function SuperAdminDashboardPage() {
           </button>
 
           <button
+            className={`superadmin-tab ${activeTab === "platform_config" ? "is-active" : ""}`}
             onClick={() => setActiveTab("platform_config")}
             style={{
               padding: "0.6rem 1.25rem",

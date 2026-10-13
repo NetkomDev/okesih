@@ -40,6 +40,122 @@
   --shadow-glow: 0 0 30px var(--brand-orange-glow);
 }
 
+/* Super Admin Command Center
+   A calm, dense operations workspace that keeps the OKESIH orange accent while
+   using navy as the neutral platform color. Scoped to avoid changing other apps. */
+.superadmin-shell {
+  --sa-accent: #f97316;
+  --sa-accent-strong: #ea580c;
+  --sa-blue: #2563eb;
+  --sa-border: rgba(148, 163, 184, 0.15);
+  --sa-panel: rgba(15, 23, 42, 0.72);
+  background:
+    radial-gradient(circle at 18% -12%, rgba(37, 99, 235, 0.14), transparent 30rem),
+    radial-gradient(circle at 88% 0%, rgba(249, 115, 22, 0.08), transparent 26rem),
+    #070b12 !important;
+}
+
+[data-theme="light"] .superadmin-shell {
+  --sa-border: rgba(15, 23, 42, 0.09);
+  --sa-panel: rgba(255, 255, 255, 0.92);
+  background:
+    radial-gradient(circle at 12% -10%, rgba(37, 99, 235, 0.08), transparent 28rem),
+    #f5f7fb !important;
+}
+
+.superadmin-header {
+  min-height: 76px;
+  padding: 0.8rem max(1.25rem, calc((100vw - 1440px) / 2)) !important;
+  border-bottom: 1px solid var(--sa-border) !important;
+  background: rgba(7, 11, 18, 0.86) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12) !important;
+}
+
+[data-theme="light"] .superadmin-header { background: rgba(255, 255, 255, 0.88) !important; }
+.superadmin-brand img { padding: 5px; border-radius: 12px; background: #fff; box-shadow: 0 5px 18px rgba(15, 23, 42, 0.14); }
+.superadmin-mode-badge { color: #fb923c !important; border-color: rgba(249, 115, 22, 0.3) !important; background: rgba(249, 115, 22, 0.09) !important; }
+.superadmin-actions .btn-primary { border-radius: 10px !important; box-shadow: none !important; }
+.superadmin-actions .btn-primary:first-of-type { background: linear-gradient(135deg, var(--sa-accent), var(--sa-accent-strong)) !important; }
+.superadmin-actions .btn-primary:nth-of-type(2) { background: transparent !important; color: var(--text-pure-white) !important; border: 1px solid var(--sa-border) !important; }
+
+.superadmin-main { max-width: 1440px !important; margin-top: 0 !important; padding-top: 2rem !important; }
+.superadmin-page-heading h1 { font-size: clamp(1.55rem, 2.3vw, 2.25rem) !important; letter-spacing: -0.04em !important; }
+.superadmin-page-heading p { max-width: 720px; margin-top: 0.45rem; line-height: 1.6; }
+
+.superadmin-kpi-grid { grid-template-columns: repeat(5, minmax(0, 1fr)) !important; gap: 0.9rem !important; }
+.superadmin-kpi-card {
+  min-height: 156px;
+  padding: 1.3rem !important;
+  border: 1px solid var(--sa-border) !important;
+  border-radius: 16px !important;
+  background: var(--sa-panel) !important;
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.12) !important;
+  overflow: hidden;
+  position: relative;
+}
+.superadmin-kpi-card::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 3px; background: var(--sa-accent); opacity: 0.8; }
+.superadmin-kpi-card:hover { transform: translateY(-2px); border-color: rgba(249, 115, 22, 0.28) !important; }
+.superadmin-kpi-card > div:nth-child(2) { margin-top: 0.85rem; font-size: clamp(1.45rem, 2vw, 1.9rem) !important; color: var(--text-pure-white) !important; letter-spacing: -0.04em; }
+.superadmin-kpi-card--featured { background: linear-gradient(145deg, rgba(234, 88, 12, 0.95), rgba(194, 65, 12, 0.94)) !important; }
+.superadmin-kpi-card--featured::before { display: none; }
+.superadmin-kpi-card--featured > div { color: #fff !important; }
+
+.superadmin-tabs {
+  position: sticky;
+  top: 76px;
+  z-index: 30;
+  gap: 0.35rem !important;
+  margin: 0 0 1.25rem !important;
+  padding: 0.4rem !important;
+  border: 1px solid var(--sa-border) !important;
+  border-radius: 14px;
+  background: rgba(7, 11, 18, 0.88);
+  backdrop-filter: blur(16px);
+}
+[data-theme="light"] .superadmin-tabs { background: rgba(255, 255, 255, 0.9); }
+.superadmin-tab { white-space: nowrap; padding: 0.7rem 1rem !important; border: 0 !important; border-radius: 10px !important; background: transparent !important; color: var(--text-muted) !important; }
+.superadmin-tab:hover { background: rgba(148, 163, 184, 0.08) !important; color: var(--text-pure-white) !important; }
+.superadmin-tab.is-active { background: rgba(249, 115, 22, 0.13) !important; color: #fb923c !important; box-shadow: inset 0 0 0 1px rgba(249, 115, 22, 0.22); }
+
+.superadmin-main > section.glass-panel {
+  padding: 1.5rem !important;
+  border: 1px solid var(--sa-border) !important;
+  border-radius: 18px !important;
+  background: var(--sa-panel) !important;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.12);
+}
+.superadmin-main > section.glass-panel:hover { transform: none; }
+.superadmin-main table { min-width: 1040px; }
+.superadmin-main thead tr { background: rgba(148, 163, 184, 0.06) !important; border-bottom: 1px solid var(--sa-border) !important; }
+.superadmin-main th { font-size: 0.69rem; letter-spacing: 0.055em !important; text-transform: uppercase; color: var(--text-dim) !important; white-space: nowrap; }
+.superadmin-main tbody tr { transition: background-color 0.18s ease; }
+.superadmin-main tbody tr:hover { background: rgba(249, 115, 22, 0.035); }
+.superadmin-main input, .superadmin-main select { min-height: 42px; border-radius: 10px !important; }
+
+@media (max-width: 1180px) {
+  .superadmin-kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+  .superadmin-actions > span, .superadmin-mode-badge { display: none; }
+}
+
+@media (max-width: 820px) {
+  .superadmin-header { align-items: flex-start !important; gap: 0.75rem; flex-direction: column; position: relative !important; }
+  .superadmin-actions { width: 100%; overflow-x: auto; padding-bottom: 0.15rem; }
+  .superadmin-actions button { white-space: nowrap; }
+  .superadmin-main { padding: 1.25rem 1rem 3rem !important; }
+  .superadmin-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .superadmin-tabs { top: 0; margin-inline: -0.25rem !important; }
+  .superadmin-page-heading { align-items: flex-start !important; gap: 0.75rem; flex-direction: column; }
+  .superadmin-main > section.glass-panel { padding: 1rem !important; }
+}
+
+@media (max-width: 540px) {
+  .superadmin-brand img { width: 40px !important; height: 40px !important; }
+  .superadmin-brand > div > div:first-child { font-size: 1.05rem !important; }
+  .superadmin-kpi-grid { grid-template-columns: 1fr !important; }
+  .superadmin-kpi-card { min-height: 132px; }
+  .superadmin-actions .btn-primary:nth-of-type(2), .superadmin-actions .btn-secondary:last-child { display: none; }
+}
+
 /* ==========================================================================
    TEMA WARNA TERANG (LIGHT MODE)
    ========================================================================== */
@@ -775,5 +891,4 @@ button {
   transform: translateY(-1px);
   filter: brightness(1.1);
 }
-
 
