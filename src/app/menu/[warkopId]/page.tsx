@@ -4,7 +4,8 @@ import Image from "next/image";
 import { use, useEffect, useMemo, useState } from "react";
 
 type Menu = { id: string; nama: string; harga: number; kategori: string; desc_menu: string | null };
-type MenuPayload = { profile: { nama: string; slug: string; logo_url: string | null; qris_image_url: string | null; qris_merchant_name: string | null }; menus: Menu[]; tables: string[] };
+type BusinessTable = { id: string; label: string };
+type MenuPayload = { profile: { nama: string; slug: string; logo_url: string | null; qris_image_url: string | null; qris_merchant_name: string | null }; menus: Menu[]; tables: BusinessTable[] };
 type CartItem = { menu: Menu; qty: number; notes: string };
 type OrderResult = { id: string; queueNumber: number; total: number };
 
@@ -17,11 +18,13 @@ function categoryIcon(category: string) {
   return "✦";
 }
 
-export default function CustomerMenuPage({ params, searchParams }: { params: Promise<{ warkopId: string }>; searchParams: Promise<{ table?: string }> }) {
+export default function CustomerMenuPage({ params, searchParams }: { params: Promise<{ warkopId: string }>; searchParams: Promise<{ tableId?: string; table?: string }> }) {
   const { warkopId } = use(params);
   const query = use(searchParams);
   const [payload, setPayload] = useState<MenuPayload | null>(null);
+  const [tableId, setTableId] = useState(query.tableId || "");
   const [tableNumber, setTableNumber] = useState(query.table || "");
+  const [browseMode, setBrowseMode] = useState(false);
   const [cart, setCart] = useState<Record<string, CartItem>>({});
   const [paymentMethod, setPaymentMethod] = useState<"QRIS" | "CASH">("QRIS");
   const [proofImage, setProofImage] = useState<string | null>(null);
@@ -39,11 +42,32 @@ export default function CustomerMenuPage({ params, searchParams }: { params: Pro
       .then(async (response) => {
         const body = await response.json();
         if (!response.ok) throw new Error(body.error || "Menu gagal dimuat.");
+        
+        let matchedTable = body.tables.find((table: BusinessTable) => table.id === query.tableId)
+          || body.tables.find((table: BusinessTable) => table.label === query.table);
+
+        if (!matchedTable && typeof window !== "undefined") {
+          try {
+            const cached = sessionStorage.getItem(`okesih_table_${warkopId}`);
+            if (cached) {
+              const parsed = JSON.parse(cached);
+              matchedTable = body.tables.find((table: BusinessTable) => table.id === parsed.id || table.label === parsed.label);
+            }
+          } catch {}
+        }
+
+        if (matchedTable && typeof window !== "undefined") {
+          try {
+            sessionStorage.setItem(`okesih_table_${warkopId}`, JSON.stringify({ id: matchedTable.id, label: matchedTable.label }));
+          } catch {}
+        }
+
         setPayload(body);
-        setTableNumber((current) => body.tables.includes(current) ? current : (body.tables[0] || ""));
+        setTableId(matchedTable?.id || "");
+        setTableNumber(matchedTable?.label || "");
       })
       .catch((reason) => setError(reason instanceof Error ? reason.message : "Menu gagal dimuat."));
-  }, [warkopId]);
+  }, [query.table, query.tableId, warkopId]);
 
   useEffect(() => {
     if (!order || !customerToken) return;
@@ -84,12 +108,12 @@ export default function CustomerMenuPage({ params, searchParams }: { params: Pro
   };
 
   const submitOrder = async () => {
-    if (!tableNumber) return setError("Pilih meja terlebih dahulu.");
+    if (!tableId) return setError("Identitas meja tidak valid. Silakan scan ulang QR Code yang terpasang di meja.");
     if (paymentMethod === "QRIS" && !proofImage) return setError("Unggah bukti pembayaran QRIS terlebih dahulu.");
     setBusy(true); setError("");
     try {
       const response = await fetch("/api/public/orders", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
-        slug: warkopId, tableNumber, paymentMethod, proofImage: paymentMethod === "QRIS" ? proofImage : null, idempotencyKey: crypto.randomUUID(),
+        slug: warkopId, tableId, paymentMethod, proofImage: paymentMethod === "QRIS" ? proofImage : null, idempotencyKey: crypto.randomUUID(),
         items: Object.values(cart).map((item) => ({ menuId: item.menu.id, qty: item.qty, notes: item.notes })),
       }) });
       const body = await response.json();
@@ -100,6 +124,17 @@ export default function CustomerMenuPage({ params, searchParams }: { params: Pro
   };
 
   if (!payload) return <div className="customer-loading"><Image src="/logo.svg?v=2" width={64} height={64} alt="OKESIH"/><b>{error || "Menyiapkan menu..."}</b></div>;
+  if (!tableId && !browseMode) return (
+    <main className="customer-invalid-table">
+      <Image src={payload.profile.logo_url || "/logo.svg?v=2"} width={68} height={68} alt={payload.profile.nama}/>
+      <span>QR MEJA TIDAK VALID</span>
+      <h1>Scan QR Code di meja Anda</h1>
+      <p>Setiap QR Code terhubung langsung ke satu meja. Silakan scan ulang stiker QR yang terpasang pada meja agar pesanan terkirim ke lokasi yang tepat.</p>
+      <button type="button" className="btn-secondary" style={{ marginTop: "16px", padding: "10px 18px", borderRadius: "10px", fontWeight: 700, cursor: "pointer" }} onClick={() => setBrowseMode(true)}>
+        Lihat Katalog Menu Saja
+      </button>
+    </main>
+  );
   if (order) return <main className="customer-order-status"><Image src="/logo.svg?v=2" width={64} height={64} alt="OKESIH"/><span>ANTREAN</span><strong>#{String(order.queueNumber).padStart(3, "0")}</strong><h1>{orderStatus === "AWAITING_CONFIRMATION" ? "Menunggu konfirmasi kasir" : orderStatus === "COOKING" ? "Pesanan sedang disiapkan" : orderStatus === "READY" ? "Pesanan siap diantar" : orderStatus === "DONE" ? "Pesanan selesai" : "Pesanan tidak dapat diproses"}</h1><p>Meja {tableNumber} · {paymentMethod === "CASH" ? "Bayar tunai saat pesanan diantar" : "QRIS sedang diverifikasi"}</p><b>Rp {Number(order.total).toLocaleString("id-ID")}</b><button className="btn-secondary" onClick={() => { setOrder(null); setCart({}); setProofImage(null); }}>Pesan Tambahan</button></main>;
 
   return <div className="customer-menu-page">
@@ -109,7 +144,18 @@ export default function CustomerMenuPage({ params, searchParams }: { params: Pro
         <div><small>MENU DIGITAL</small><h1>{payload.profile.nama}</h1></div>
       </div>
       <p>Pesan santai dari meja. Kami siapkan untuk Anda.</p>
-      <label className="customer-table-picker"><span>Lokasi pesanan</span><b>Meja</b><select aria-label="Pilih nomor meja" value={tableNumber} onChange={(event) => setTableNumber(event.target.value)}><option value="" disabled>Pilih</option>{payload.tables.map((table) => <option key={table}>{table}</option>)}</select></label>
+      {tableId ? (
+        <div className="customer-table-picker" aria-label={`Pesanan untuk meja ${tableNumber}`}>
+          <span>Lokasi terdeteksi</span>
+          <b>Meja {tableNumber}</b>
+          <i aria-hidden="true">✓</i>
+        </div>
+      ) : (
+        <div className="customer-table-picker" style={{ borderColor: "#fed7aa", background: "#fffaf5" }}>
+          <span style={{ color: "#c2410c" }}>Status</span>
+          <b style={{ color: "#ea580c" }}>Scan QR Meja untuk Pesan</b>
+        </div>
+      )}
     </header>
     {error && <div className="customer-error">{error}<button onClick={() => setError("")}>×</button></div>}
     <div className="customer-menu-tools">
@@ -118,6 +164,6 @@ export default function CustomerMenuPage({ params, searchParams }: { params: Pro
     </div>
     <main className="customer-menu-list">{visibleMenus.length ? visibleMenus.map((menu) => { const qty = cart[menu.id]?.qty || 0; return <article key={menu.id} className={qty ? "selected" : ""}><div className="customer-menu-icon" aria-hidden="true">{categoryIcon(menu.kategori)}</div><div className="customer-menu-copy"><small>{menu.kategori}</small><h2>{menu.nama}</h2>{menu.desc_menu && <p>{menu.desc_menu}</p>}<b>Rp {Number(menu.harga).toLocaleString("id-ID")}</b></div><div className="customer-qty">{qty > 0 ? <><button aria-label={`Kurangi ${menu.nama}`} onClick={() => changeQty(menu, -1)}>−</button><strong>{qty}</strong><button aria-label={`Tambah ${menu.nama}`} onClick={() => changeQty(menu, 1)}>+</button></> : <button className="add" aria-label={`Tambah ${menu.nama}`} onClick={() => changeQty(menu, 1)}>+</button>}</div></article>; }) : <div className="customer-menu-empty"><span>⌕</span><b>Menu tidak ditemukan</b><p>Coba kata kunci atau kategori lainnya.</p></div>}</main>
     {count > 0 && <button className="customer-cart-bar" onClick={() => setCheckout(true)}><span className="customer-cart-count">{count}</span><span><small>Pesanan Anda</small><b>Rp {total.toLocaleString("id-ID")}</b></span><strong>Lihat pesanan <i>→</i></strong></button>}
-    {checkout && <div className="customer-checkout-backdrop"><section className="customer-checkout"><header><div><small>RINGKASAN PESANAN</small><h2>Periksa pesanan Anda</h2><p>Meja {tableNumber || "belum dipilih"}</p></div><button className="customer-close" onClick={() => setCheckout(false)} aria-label="Tutup">×</button></header><div className="customer-checkout-items">{Object.values(cart).map(({ menu, qty, notes }) => <div className="customer-checkout-item" key={menu.id}><div><b>{menu.nama}</b><span>Rp {(Number(menu.harga) * qty).toLocaleString("id-ID")}</span></div><div className="customer-checkout-qty"><button onClick={() => changeQty(menu, -1)}>−</button><strong>{qty}</strong><button onClick={() => changeQty(menu, 1)}>+</button></div><input value={notes} onChange={(event) => changeNote(menu.id, event.target.value)} placeholder="Catatan, mis. tanpa gula" maxLength={300} /></div>)}</div><div className="customer-payment"><button className={paymentMethod === "QRIS" ? "active" : ""} onClick={() => setPaymentMethod("QRIS")}><span>▣</span> QRIS</button><button className={paymentMethod === "CASH" ? "active" : ""} onClick={() => setPaymentMethod("CASH")}><span>●</span> Tunai</button></div>{paymentMethod === "QRIS" && <div className="customer-qris">{payload.profile.qris_image_url && <img src={payload.profile.qris_image_url} alt={`QRIS ${payload.profile.qris_merchant_name || payload.profile.nama}`}/>}<b>{payload.profile.qris_merchant_name || payload.profile.nama}</b><label className="customer-proof-upload">Unggah bukti pembayaran<input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => readProof(event.target.files?.[0])}/></label>{proofImage && <span>✓ Bukti pembayaran siap dikirim</span>}</div>}<footer><div><small>Total pembayaran</small><strong>Rp {total.toLocaleString("id-ID")}</strong></div><button className="btn-primary" disabled={busy} onClick={() => void submitOrder()}>{busy ? "Menyimpan..." : "Kirim Pesanan →"}</button></footer></section></div>}
+    {checkout && <div className="customer-checkout-backdrop"><section className="customer-checkout"><header><div><small>RINGKASAN PESANAN</small><h2>Periksa pesanan Anda</h2><p>{tableNumber ? `Meja ${tableNumber}` : "⚠️ Lokasi meja belum terdeteksi"}</p></div><button className="customer-close" onClick={() => setCheckout(false)} aria-label="Tutup">×</button></header><div className="customer-checkout-items">{Object.values(cart).map(({ menu, qty, notes }) => <div className="customer-checkout-item" key={menu.id}><div><b>{menu.nama}</b><span>Rp {(Number(menu.harga) * qty).toLocaleString("id-ID")}</span></div><div className="customer-checkout-qty"><button onClick={() => changeQty(menu, -1)}>−</button><strong>{qty}</strong><button onClick={() => changeQty(menu, 1)}>+</button></div><input value={notes} onChange={(event) => changeNote(menu.id, event.target.value)} placeholder="Catatan, mis. tanpa gula" maxLength={300} /></div>)}</div><div className="customer-payment"><button className={paymentMethod === "QRIS" ? "active" : ""} onClick={() => setPaymentMethod("QRIS")}><span>▣</span> QRIS</button><button className={paymentMethod === "CASH" ? "active" : ""} onClick={() => setPaymentMethod("CASH")}><span>●</span> Tunai</button></div>{paymentMethod === "QRIS" && <div className="customer-qris">{payload.profile.qris_image_url && <img src={payload.profile.qris_image_url} alt={`QRIS ${payload.profile.qris_merchant_name || payload.profile.nama}`}/>}<b>{payload.profile.qris_merchant_name || payload.profile.nama}</b><label className="customer-proof-upload">Unggah bukti pembayaran<input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => readProof(event.target.files?.[0])}/></label>{proofImage && <span>✓ Bukti pembayaran siap dikirim</span>}</div>}<footer><div><small>Total pembayaran</small><strong>Rp {total.toLocaleString("id-ID")}</strong></div><button className="btn-primary" disabled={busy} onClick={() => void submitOrder()}>{busy ? "Menyimpan..." : (tableId ? "Kirim Pesanan →" : "Scan QR Meja untuk Memesan")}</button></footer></section></div>}
   </div>;
 }

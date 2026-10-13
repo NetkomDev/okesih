@@ -186,7 +186,7 @@ export default function TenantOwnerDashboardPage() {
   const printTableStickers = async () => {
     if (!data?.tables.length) return setError("Tambahkan meja terlebih dahulu.");
     const cards = await Promise.all(data.tables.map(async (table) => {
-      const url = `${window.location.origin}/menu/${data.profile.slug}?table=${encodeURIComponent(table.label)}`;
+      const url = `${window.location.origin}/menu/${data.profile.slug}?tableId=${encodeURIComponent(table.id)}`;
       return { table, url, qr: await QRCode.toDataURL(url, { width: 320, margin: 1, errorCorrectionLevel: "H" }) };
     }));
     const popup = window.open("", "_blank");
@@ -248,7 +248,7 @@ export default function TenantOwnerDashboardPage() {
         <main className="owner-main">
           {error && <div className="owner-error">{error}<button onClick={() => setError("")}>×</button></div>}
           {view === "overview" && <section id="ringkasan">
-            <div className="owner-section-heading"><div><h1>Ringkasan Penjualan Hari Ini</h1><p>Pantau omzet tunai vs QRIS, kas di laci kasir, dan pembayaran sewa OKESIH.</p></div><Link href={`/menu/${profile.slug}?table=${encodeURIComponent(data.tables[0]?.label || "01")}`} target="_blank" className="btn-primary">Preview Menu Pelanggan</Link></div>
+            <div className="owner-section-heading"><div><h1>Ringkasan Penjualan Hari Ini</h1><p>Pantau omzet tunai vs QRIS, kas di laci kasir, dan pembayaran sewa OKESIH.</p></div><Link href={`/menu/${profile.slug}${data.tables[0] ? `?tableId=${encodeURIComponent(data.tables[0].id)}` : ""}`} target="_blank" className="btn-primary">Preview Menu Pelanggan</Link></div>
             <div className="owner-metrics">
               <article className="metric-revenue"><span className="metric-icon">↗</span><small>TOTAL OMZET PENJUALAN</small><strong>{money(metrics.total)}</strong><p>{metrics.receiptCount} transaksi hari ini</p></article>
               <article className="metric-payment"><span className="metric-icon">◈</span><small>RINCIAN PEMBAYARAN</small><b>Tunai <em>{money(metrics.cash)}</em></b><b>QRIS <em>{money(metrics.qris)}</em></b></article>
@@ -295,7 +295,7 @@ export default function TenantOwnerDashboardPage() {
             <article className="owner-panel">
               <h2>Cetak Stiker QR Code Meja Warkop</h2><p>Masukkan nomor atau nama meja sesuai kondisi nyata, dipisahkan koma atau baris baru.</p>
               <div className="owner-table-input"><textarea value={tableInput} onChange={(event) => setTableInput(event.target.value)} placeholder="Contoh: 01, 02, Teras 1, VIP"/><button disabled={busy || !tableInput.trim()} className="btn-primary" onClick={addTables}>Tambah Meja</button></div>
-              <div className="owner-table-chips">{data.tables.map((table) => <span key={table.id}><Link target="_blank" href={`/menu/${profile.slug}?table=${encodeURIComponent(table.label)}`}>Meja {table.label}</Link><button aria-label={`Hapus meja ${table.label}`} onClick={() => confirm(`Hapus meja ${table.label}?`) && void mutate(() => ownerFetch(`/api/owner/tables?id=${table.id}`, { method: "DELETE" }))}>×</button></span>)}</div>
+              <div className="owner-table-chips">{data.tables.map((table) => <span key={table.id}><Link target="_blank" href={`/menu/${profile.slug}?tableId=${encodeURIComponent(table.id)}`}>Meja {table.label}</Link><button aria-label={`Hapus meja ${table.label}`} onClick={() => confirm(`Hapus meja ${table.label}?`) && void mutate(() => ownerFetch(`/api/owner/tables?id=${table.id}`, { method: "DELETE" }))}>×</button></span>)}</div>
               <button className="btn-primary" disabled={!data.tables.length} onClick={() => void printTableStickers()}>🖨️ Cetak Semua Stiker QR Meja</button>
             </article>
           </section>}

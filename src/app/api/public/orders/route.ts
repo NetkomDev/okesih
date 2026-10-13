@@ -5,7 +5,8 @@ import { randomToken, sha256 } from "@/lib/device-auth";
 
 const schema = z.object({
   slug: z.string().trim().min(1).max(100),
-  tableNumber: z.string().trim().min(1).max(30),
+  tableId: z.string().uuid().optional(),
+  tableNumber: z.string().trim().min(1).max(30).optional(),
   paymentMethod: z.enum(["QRIS", "CASH"]),
   idempotencyKey: z.string().uuid(),
   proofImage: z.string().max(3_000_000).nullable().optional(),
@@ -14,7 +15,7 @@ const schema = z.object({
     qty: z.number().int().min(1).max(99),
     notes: z.string().trim().max(300).default(""),
   })).min(1).max(50),
-});
+}).refine((value) => value.tableId || value.tableNumber, { message: "Identitas meja wajib ada." });
 
 function decodeProof(dataUrl: string) {
   const match = dataUrl.match(/^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/=]+)$/);
@@ -31,7 +32,9 @@ export async function POST(request: Request) {
     const { data: profile } = await admin.from("warkops").select("id,is_active").eq("slug", input.slug).eq("is_active", true).maybeSingle();
     if (!profile) return Response.json({ error: "Usaha tidak ditemukan atau sedang tidak aktif." }, { status: 404 });
 
-    const { data: table } = await admin.from("warkop_tables").select("id").eq("warkop_id", profile.id).eq("label", input.tableNumber).eq("is_active", true).maybeSingle();
+    let tableQuery = admin.from("warkop_tables").select("id,label").eq("warkop_id", profile.id).eq("is_active", true);
+    tableQuery = input.tableId ? tableQuery.eq("id", input.tableId) : tableQuery.eq("label", input.tableNumber!);
+    const { data: table } = await tableQuery.maybeSingle();
     if (!table) return Response.json({ error: "Nomor meja tidak valid." }, { status: 400 });
 
     const uniqueMenuIds = [...new Set(input.items.map((item) => item.menuId))];
@@ -57,7 +60,7 @@ export async function POST(request: Request) {
     const customerToken = randomToken();
     const { data: order, error: rpcError } = await admin.rpc("create_customer_order", {
       p_warkop_id: profile.id,
-      p_table_number: input.tableNumber,
+      p_table_number: table.label,
       p_payment_method: input.paymentMethod,
       p_payment_proof_url: proofPath,
       p_items: items,
@@ -73,4 +76,3 @@ export async function POST(request: Request) {
     return Response.json({ error: error instanceof Error ? error.message : "Pesanan gagal disimpan." }, { status: 500 });
   }
 }
-
