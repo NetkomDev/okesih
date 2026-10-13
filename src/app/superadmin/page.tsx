@@ -378,8 +378,8 @@ export default function SuperAdminDashboardPage() {
   const [newProvince, setNewProvince] = useState<string>("");
   const [newCityRegency, setNewCityRegency] = useState<string>("");
   const [newCodeRange, setNewCodeRange] = useState<string>("500 - 599");
-  const [selectedMarketingId, setSelectedMarketingId] = useState<string>("mkt-01");
-  const [tenantCommissionRate, setTenantCommissionRate] = useState<number>(15);
+  const [selectedMarketingId, setSelectedMarketingId] = useState<string>("direct");
+  const [tenantCommissionRate, setTenantCommissionRate] = useState<string>("");
   const [generatedUsername, setGeneratedUsername] = useState<string>("");
   const [generatedPassword, setGeneratedPassword] = useState<string>("");
 
@@ -408,7 +408,8 @@ export default function SuperAdminDashboardPage() {
     setNewProvince("");
     setNewCityRegency("");
     setNewCodeRange(`${(tenants.length + 1) * 100} - ${(tenants.length + 1) * 100 + 99}`);
-    setTenantCommissionRate(defaultCommissionRate);
+    setSelectedMarketingId("direct");
+    setTenantCommissionRate(""); // default kosong (mengikuti standar global komisi)
     setGeneratedUsername(`owner_${randomSuffix}`);
     setGeneratedPassword(`okesih${randomSuffix}!`);
     setIsRegisterModalOpen(true);
@@ -418,12 +419,31 @@ export default function SuperAdminDashboardPage() {
   const handleCreateTenant = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newWarkopName.trim() || !newOwnerName.trim() || !newProvince || !newCityRegency.trim()) {
-      showToast("Form Belum Lengkap", "Nama warkop, owner, provinsi, dan kota/kabupaten wajib diisi.", "error");
+      showToast("Form Belum Lengkap", "Nama usaha, owner, provinsi, dan kota/kabupaten wajib diisi.", "error");
       return;
     }
 
     const assignedMarketer = marketingList.find((m) => m.id === selectedMarketingId);
-    const createdSlug = newSlug.trim() || newWarkopName.toLowerCase().replace(/[^a-z0-9]/g, "-");
+
+    // Auto-generate clean slug dari Nama Usaha
+    const createdSlug = (newSlug.trim() || newWarkopName.trim())
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || `tenant-${Date.now().toString().slice(-6)}`;
+
+    // Penentuan komisi bagi hasil:
+    // - Direct HQ -> Rp 0
+    // - Jika dikosongkan ("") atau "0" -> mengikuti standar global komisi (defaultCommissionRate)
+    // - Jika diisi angka tertentu (misal: 1, 15, dll) -> komisi ditetapkan sesuai angka tersebut
+    let finalCommission = 0;
+    if (selectedMarketingId === "direct") {
+      finalCommission = 0;
+    } else if (tenantCommissionRate.trim() === "" || tenantCommissionRate.trim() === "0" || Number(tenantCommissionRate) === 0) {
+      finalCommission = defaultCommissionRate;
+    } else {
+      finalCommission = Math.max(0, parseInt(tenantCommissionRate, 10) || 0);
+    }
+
     const newTenant: TenantWarkop = {
       id: `ten-${Date.now()}`,
       name: newWarkopName.trim(),
@@ -435,7 +455,7 @@ export default function SuperAdminDashboardPage() {
       uniqueCodeRange: newCodeRange,
       marketingAgentId: selectedMarketingId,
       marketingAgentName: assignedMarketer ? assignedMarketer.name : "Direct HQ",
-      commissionPerReceipt: selectedMarketingId === "direct" ? 0 : tenantCommissionRate,
+      commissionPerReceipt: finalCommission,
       todayTransactions: 0,
       totalSaasBilling: 0,
       paymentStatus: "PAID",
@@ -2390,7 +2410,7 @@ export default function SuperAdminDashboardPage() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
               <div>
                 <h2 style={{ fontSize: "1.35rem", fontWeight: 900, color: "#0284C7" }}>
-                  Daftarkan Tenant Warkop Baru
+                  Daftarkan Tenant Baru
                 </h2>
                 <div style={{ fontSize: "0.8rem", color: isDark ? "#94A3B8" : "#64748B" }}>
                   Tetapkan alokasi kode unik, marketing lapangan, dan kredensial owner instan
@@ -2406,9 +2426,10 @@ export default function SuperAdminDashboardPage() {
             </div>
 
             <form onSubmit={handleCreateTenant} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+              {/* Nama Usaha */}
               <div>
                 <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: isDark ? "#94A3B8" : "#475569", marginBottom: "0.35rem" }}>
-                  Nama Warkop (Contoh: Warkop Nusantara Jaya)
+                  Nama Usaha
                 </label>
                 <input
                   type="text"
@@ -2416,9 +2437,10 @@ export default function SuperAdminDashboardPage() {
                   value={newWarkopName}
                   onChange={(e) => {
                     setNewWarkopName(e.target.value);
-                    setNewSlug(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, "-"));
+                    const autoSlug = e.target.value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+                    setNewSlug(autoSlug);
                   }}
-                  placeholder="Ketik nama warkop..."
+                  placeholder="Contoh: Warkop Nusantara Jaya, Kafe Bahari, dll."
                   style={{
                     width: "100%",
                     padding: "0.75rem 1rem",
@@ -2430,8 +2452,17 @@ export default function SuperAdminDashboardPage() {
                     outline: "none",
                   }}
                 />
+                {newWarkopName.trim() && (
+                  <div style={{ marginTop: "0.4rem", display: "flex", alignItems: "center", gap: "0.45rem", fontSize: "0.75rem", color: isDark ? "#7DD3FC" : "#0284C7" }}>
+                    <span>🔗 URL Katalog Menu Otomatis:</span>
+                    <span style={{ fontWeight: 800, background: isDark ? "rgba(148, 163, 184, 0.12)" : "rgba(2, 132, 199, 0.08)", padding: "0.15rem 0.5rem", borderRadius: "5px" }}>
+                      okesih.com/menu/{newSlug || newWarkopName.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")}
+                    </span>
+                  </div>
+                )}
               </div>
 
+              {/* Wilayah */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
                 <div>
                   <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: isDark ? "#94A3B8" : "#475569", marginBottom: "0.35rem" }}>
@@ -2472,50 +2503,29 @@ export default function SuperAdminDashboardPage() {
                 </div>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-                <div>
-                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: isDark ? "#94A3B8" : "#475569", marginBottom: "0.35rem" }}>
-                    Slug URL Katalog Menu
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={newSlug}
-                    onChange={(e) => setNewSlug(e.target.value)}
-                    placeholder="nusantara-jaya"
-                    style={{
-                      width: "100%",
-                      padding: "0.75rem 1rem",
-                      borderRadius: "8px",
-                      background: isDark ? "rgba(15, 23, 42, 0.8)" : "#F8FAFC",
-                      border: isDark ? "1px solid rgba(56, 189, 248, 0.3)" : "1px solid rgba(0, 0, 0, 0.15)",
-                      color: "#0284C7",
-                      fontSize: "0.85rem",
-                      outline: "none",
-                    }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: isDark ? "#94A3B8" : "#475569", marginBottom: "0.35rem" }}>
-                    Tetapkan Rentang Kode Unik
-                  </label>
-                  <input
-                    type="text"
-                    value={newCodeRange}
-                    onChange={(e) => setNewCodeRange(e.target.value)}
-                    placeholder="500 - 599"
-                    style={{
-                      width: "100%",
-                      padding: "0.75rem 1rem",
-                      borderRadius: "8px",
-                      background: isDark ? "rgba(15, 23, 42, 0.8)" : "#F8FAFC",
-                      border: isDark ? "1px solid rgba(56, 189, 248, 0.3)" : "1px solid rgba(0, 0, 0, 0.15)",
-                      color: isDark ? "#FFF" : "#0F172A",
-                      fontSize: "0.85rem",
-                      outline: "none",
-                    }}
-                  />
+              {/* Rentang Kode Unik POS */}
+              <div>
+                <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: isDark ? "#94A3B8" : "#475569", marginBottom: "0.35rem" }}>
+                  Tetapkan Rentang Kode Unik POS
+                </label>
+                <input
+                  type="text"
+                  value={newCodeRange}
+                  onChange={(e) => setNewCodeRange(e.target.value)}
+                  placeholder="500 - 599"
+                  style={{
+                    width: "100%",
+                    padding: "0.75rem 1rem",
+                    borderRadius: "8px",
+                    background: isDark ? "rgba(15, 23, 42, 0.8)" : "#F8FAFC",
+                    border: isDark ? "1px solid rgba(56, 189, 248, 0.3)" : "1px solid rgba(0, 0, 0, 0.15)",
+                    color: isDark ? "#FFF" : "#0F172A",
+                    fontSize: "0.85rem",
+                    outline: "none",
+                  }}
+                />
+                <div style={{ fontSize: "0.72rem", color: isDark ? "#94A3B8" : "#64748B", marginTop: "0.25rem" }}>
+                  Alokasi 3 digit unik untuk identifikasi mutasi otomatis QRIS kasir tenant ini.
                 </div>
               </div>
 
@@ -2527,7 +2537,12 @@ export default function SuperAdminDashboardPage() {
                   </label>
                   <select
                     value={selectedMarketingId}
-                    onChange={(e) => setSelectedMarketingId(e.target.value)}
+                    onChange={(e) => {
+                      setSelectedMarketingId(e.target.value);
+                      if (e.target.value === "direct") {
+                        setTenantCommissionRate("");
+                      }
+                    }}
                     style={{
                       width: "100%",
                       padding: "0.75rem 1rem",
@@ -2554,27 +2569,42 @@ export default function SuperAdminDashboardPage() {
                   </label>
                   <input
                     type="number"
-                    value={tenantCommissionRate}
-                    onChange={(e) => setTenantCommissionRate(parseInt(e.target.value) || 0)}
+                    min={0}
+                    disabled={selectedMarketingId === "direct"}
+                    value={selectedMarketingId === "direct" ? "0" : tenantCommissionRate}
+                    onChange={(e) => setTenantCommissionRate(e.target.value)}
+                    placeholder={`0 (Standar: Rp ${defaultCommissionRate})`}
                     style={{
                       width: "100%",
                       padding: "0.75rem 1rem",
                       borderRadius: "8px",
-                      background: isDark ? "rgba(15, 23, 42, 0.8)" : "#F8FAFC",
+                      background: selectedMarketingId === "direct"
+                        ? (isDark ? "rgba(148, 163, 184, 0.08)" : "#E2E8F0")
+                        : (isDark ? "rgba(15, 23, 42, 0.8)" : "#F8FAFC"),
                       border: isDark ? "1px solid rgba(168, 85, 247, 0.4)" : "1px solid rgba(168, 85, 247, 0.3)",
-                      color: isDark ? "#C084FC" : "#7C3AED",
+                      color: selectedMarketingId === "direct"
+                        ? (isDark ? "#64748B" : "#94A3B8")
+                        : (isDark ? "#C084FC" : "#7C3AED"),
                       fontWeight: 800,
                       fontSize: "0.85rem",
                       outline: "none",
+                      cursor: selectedMarketingId === "direct" ? "not-allowed" : "text",
                     }}
                   />
+                  <div style={{ fontSize: "0.72rem", color: isDark ? "#94A3B8" : "#64748B", marginTop: "0.25rem" }}>
+                    {selectedMarketingId === "direct"
+                      ? "Direct HQ (Tanpa komisi marketing)"
+                      : !tenantCommissionRate || tenantCommissionRate.trim() === "0" || tenantCommissionRate.trim() === ""
+                      ? `Kosong / 0 = Mengikuti standar global (Rp ${defaultCommissionRate}/struk)`
+                      : `Komisi khusus: Rp ${tenantCommissionRate}/struk`}
+                  </div>
                 </div>
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "1rem" }}>
                 <div>
                   <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: isDark ? "#94A3B8" : "#475569", marginBottom: "0.35rem" }}>
-                    Nama Pemilik / Owner Warkop
+                    Nama Pemilik / Owner
                   </label>
                   <input
                     type="text"
