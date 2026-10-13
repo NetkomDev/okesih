@@ -68,3 +68,24 @@ npm run build
    * `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    * `SUPABASE_SERVICE_ROLE_KEY` (Tandai opsi **Sensitive**)
 3. Vercel akan otomatis men-deploy setiap kali ada push ke branch `main`.
+
+## 📲 Pengirim Otomatis WhatsApp Tenant (Tanpa WhatsApp API)
+
+Pendaftaran tenant menambahkan pesan selamat datang dan kredensial ke tabel
+`whatsapp_outbox`. Pesan dikirim oleh aplikasi WhatsApp Desktop pada Mac super
+admin yang selalu aktif. WhatsApp Desktop harus login sebagai nomor
+**+62 856-9448-8510**.
+
+1. Jalankan migration `supabase/migrations/09_whatsapp_outbox.sql` pada Supabase.
+2. Pada Mac super admin, clone aplikasi dan isi `.env.local` dengan
+   `NEXT_PUBLIC_SUPABASE_URL` serta `SUPABASE_SERVICE_ROLE_KEY` yang sama dengan
+   production.
+3. Install dependency dengan `npm install`.
+4. Pastikan WhatsApp Desktop sudah login sebagai **+62 856-9448-8510**.
+5. Jalankan `npm run whatsapp:worker`. Saat pertama kali mengirim, izinkan
+   Terminal/Node mengendalikan WhatsApp pada **System Settings → Privacy &
+   Security → Accessibility**.
+6. Biarkan proses hidup 24/7 menggunakan LaunchAgent macOS.
+
+Otomasi WhatsApp Desktop ini bukan integrasi resmi WhatsApp; sesi dapat terputus dan akun
+tetap tunduk pada ketentuan serta pembatasan WhatsApp.

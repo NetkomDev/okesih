@@ -6,6 +6,7 @@
     "dev": "next dev --webpack",
     "build": "next build --webpack && node scripts/check-secrets.mjs",
     "start": "next start",
+    "whatsapp:worker": "node scripts/whatsapp-worker.mjs",
     "lint": "eslint",
     "check-secrets": "node scripts/check-secrets.mjs"
   },

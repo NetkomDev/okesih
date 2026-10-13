@@ -382,6 +382,7 @@ export default function SuperAdminDashboardPage() {
   const [tenantCommissionRate, setTenantCommissionRate] = useState<string>("");
   const [generatedUsername, setGeneratedUsername] = useState<string>("");
   const [generatedPassword, setGeneratedPassword] = useState<string>("");
+  const [isTenantSaving, setIsTenantSaving] = useState<boolean>(false);
 
   // Modal: Daftarkan Marketing Lapangan Baru
   const [isMarketingModalOpen, setIsMarketingModalOpen] = useState<boolean>(false);
@@ -418,10 +419,25 @@ export default function SuperAdminDashboardPage() {
   // Simpan Tenant Baru (Persistens ke Supabase)
   const handleCreateTenant = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newWarkopName.trim() || !newOwnerName.trim() || !newProvince || !newCityRegency.trim()) {
-      showToast("Form Belum Lengkap", "Nama usaha, owner, provinsi, dan kota/kabupaten wajib diisi.", "error");
+    if (!newWarkopName.trim() || !newOwnerName.trim() || !newPhone.trim() || !newProvince || !newCityRegency.trim()) {
+      showToast("Form Belum Lengkap", "Nama usaha, owner, nomor WhatsApp, provinsi, dan kota/kabupaten wajib diisi.", "error");
       return;
     }
+
+    const phoneDigits = newPhone.replace(/\D/g, "");
+    const normalizedPhone = phoneDigits.startsWith("62")
+      ? phoneDigits
+      : phoneDigits.startsWith("0")
+        ? `62${phoneDigits.slice(1)}`
+        : phoneDigits.startsWith("8")
+          ? `62${phoneDigits}`
+          : phoneDigits;
+    if (!/^628\d{8,11}$/.test(normalizedPhone)) {
+      showToast("Nomor WhatsApp Tidak Valid", "Gunakan nomor Indonesia aktif, misalnya 081234567890.", "error");
+      return;
+    }
+
+    setIsTenantSaving(true);
 
     const assignedMarketer = marketingList.find((m) => m.id === selectedMarketingId);
 
@@ -449,7 +465,7 @@ export default function SuperAdminDashboardPage() {
       name: newWarkopName.trim(),
       slug: createdSlug,
       ownerName: newOwnerName.trim(),
-      phone: newPhone || "0812xxxxxxx",
+      phone: `+${normalizedPhone}`,
       province: newProvince,
       cityRegency: newCityRegency.trim(),
       uniqueCodeRange: newCodeRange,
@@ -506,12 +522,27 @@ export default function SuperAdminDashboardPage() {
         username: generatedUsername,
         password: generatedPassword,
       });
-      showToast("Tenant Berhasil Didaftarkan", `${newTenant.name} telah aktif di ekosistem OKESIH.`, "success");
+      showToast(
+        "Tenant Berhasil Didaftarkan",
+        `Pesan selamat datang dan kredensial ${newTenant.name} telah diantrekan ke WhatsApp owner.`,
+        "success"
+      );
     } catch (err) {
       console.error("Gagal sinkron tenant ke Supabase:", err);
       setTenants((prev) => prev.filter((tenant) => tenant.id !== newTenant.id));
+      if (assignedMarketer) {
+        setMarketingList((prev) =>
+          prev.map((m) =>
+            m.id === assignedMarketer.id
+              ? { ...m, totalTenantsAcquired: Math.max(0, m.totalTenantsAcquired - 1) }
+              : m
+          )
+        );
+      }
       setNewTenantCredentials(null);
       showToast("Tenant Gagal Disimpan", err instanceof Error ? err.message : "Terjadi kesalahan jaringan.", "error");
+    } finally {
+      setIsTenantSaving(false);
     }
   };
 
@@ -2631,6 +2662,8 @@ export default function SuperAdminDashboardPage() {
                   </label>
                   <input
                     type="text"
+                    required
+                    inputMode="tel"
                     value={newPhone}
                     onChange={(e) => setNewPhone(e.target.value)}
                     placeholder="081234567890"
@@ -2677,6 +2710,7 @@ export default function SuperAdminDashboardPage() {
 
               <button
                 type="submit"
+                disabled={isTenantSaving}
                 className="btn-primary"
                 style={{
                   width: "100%",
@@ -2685,9 +2719,11 @@ export default function SuperAdminDashboardPage() {
                   fontWeight: 900,
                   background: "linear-gradient(135deg, #0EA5E9, #0284C7)",
                   marginTop: "0.5rem",
+                  opacity: isTenantSaving ? 0.65 : 1,
+                  cursor: isTenantSaving ? "wait" : "pointer",
                 }}
               >
-                ✓ DAFTARKAN TENANT &amp; SIMPAN
+                {isTenantSaving ? "MENYIMPAN & MENGANTREKAN WHATSAPP..." : "✓ DAFTARKAN TENANT & SIMPAN"}
               </button>
             </form>
           </div>

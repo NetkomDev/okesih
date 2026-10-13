@@ -53,3 +53,7 @@ public/sw.js.map
 public/workbox-*.js
 public/workbox-*.js.map
 public/swe-worker-*.js
+
+# Local session/cache WhatsApp Web worker
+.wwebjs_auth/
+.wwebjs_cache/

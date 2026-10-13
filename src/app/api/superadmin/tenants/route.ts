@@ -1,6 +1,14 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
+function normalizeIndonesianWhatsAppNumber(value: unknown) {
+  const digits = String(value || "").replace(/\D/g, "");
+  if (digits.startsWith("62")) return digits;
+  if (digits.startsWith("0")) return `62${digits.slice(1)}`;
+  if (digits.startsWith("8")) return `62${digits}`;
+  return digits;
+}
+
 export async function GET() {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -77,8 +85,8 @@ export async function GET() {
         id: w.id,
         name: w.nama,
         slug: w.slug,
-        ownerName: ownerMap.get(w.id) || "Owner Warkop",
-        phone: "0812xxxxxxx",
+        ownerName: w.owner_name || ownerMap.get(w.id) || "Owner Warkop",
+        phone: w.owner_phone ? `+${w.owner_phone}` : "Belum diatur",
         province: w.province || "Belum diatur",
         cityRegency: w.city_regency || "Belum diatur",
         uniqueCodeRange: `${start} - ${end}`,
@@ -133,9 +141,17 @@ export async function POST(request: Request) {
       password,
     } = body;
 
-    if (!name || !slug || !province || !cityRegency || !username || !password) {
+    if (!name || !slug || !ownerName || !phone || !province || !cityRegency || !username || !password) {
       return NextResponse.json(
-        { error: "Data tenant, wilayah, dan kredensial owner wajib diisi." },
+        { error: "Data tenant, wilayah, nomor WhatsApp, dan kredensial owner wajib diisi." },
+        { status: 400 }
+      );
+    }
+
+    const ownerWhatsApp = normalizeIndonesianWhatsAppNumber(phone);
+    if (!/^628\d{8,11}$/.test(ownerWhatsApp)) {
+      return NextResponse.json(
+        { error: "Nomor WhatsApp owner tidak valid. Gunakan nomor Indonesia aktif, misalnya 081234567890." },
         { status: 400 }
       );
     }
@@ -159,6 +175,8 @@ export async function POST(request: Request) {
       .insert({
         nama: name.trim(),
         slug: slug.trim().toLowerCase(),
+        owner_name: ownerName.trim(),
+        owner_phone: ownerWhatsApp,
         province: province.trim(),
         city_regency: cityRegency.trim(),
         unique_code_range_start: rangeStart,
@@ -201,7 +219,40 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: memberError.message }, { status: 500 });
     }
 
-    // 3. Update counter akuisisi marketing jika diasosiasikan
+    // 3. Antrekan pesan. Worker WhatsApp Web pada perangkat super admin akan
+    // mengirimkannya dari nomor +62 856-9448-8510.
+    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://okesih.com").replace(/\/$/, "");
+    const welcomeMessage = [
+      `Halo ${ownerName.trim()}, selamat datang di OKESIH! 🎉`,
+      "",
+      `Tenant *${newWarkop.nama}* Anda telah aktif dan siap digunakan.`,
+      "",
+      "Berikut kredensial login Owner:",
+      `Username: *${finalOwnerUsername}*`,
+      `Password: *${String(password)}*`,
+      `Login: ${appUrl}/login`,
+      "",
+      "Mohon simpan data ini dengan aman dan segera ganti password setelah login pertama.",
+      "",
+      "Salam,",
+      "Tim OKESIH",
+    ].join("\n");
+
+    const { error: outboxError } = await supabase.from("whatsapp_outbox").insert({
+      warkop_id: newWarkop.id,
+      recipient_phone: ownerWhatsApp,
+      message: welcomeMessage,
+    });
+    if (outboxError) {
+      await supabase.auth.admin.deleteUser(authData.user.id);
+      await supabase.from("warkops").delete().eq("id", newWarkop.id);
+      return NextResponse.json(
+        { error: `Tenant dibatalkan karena pesan WhatsApp gagal diantrekan: ${outboxError.message}` },
+        { status: 500 }
+      );
+    }
+
+    // 4. Update counter akuisisi marketing jika diasosiasikan
     if (marketingAgentId && marketingAgentId !== "direct") {
       // Ambil counter lama
       const { data: mktData } = await supabase
@@ -226,8 +277,8 @@ export async function POST(request: Request) {
         id: newWarkop.id,
         name: newWarkop.nama,
         slug: newWarkop.slug,
-        ownerName: ownerName || finalOwnerUsername,
-        phone: phone || "-",
+        ownerName: ownerName.trim(),
+        phone: `+${ownerWhatsApp}`,
         province: newWarkop.province,
         cityRegency: newWarkop.city_regency,
         uniqueCodeRange: `${rangeStart} - ${rangeEnd}`,
@@ -235,6 +286,7 @@ export async function POST(request: Request) {
         commissionPerReceipt: Number(newWarkop.marketing_commission_per_receipt) || 0,
         status: "ACTIVE",
         joinedDate: "Hari Ini",
+        whatsappQueued: true,
       },
     });
   } catch (err: unknown) {
