@@ -1927,12 +1927,13 @@ button {
 }
 
 .owner-metrics article > strong {
-  margin-top: 2px;
+  /* Keep the main figure visually close to its supporting status line. */
+  margin-top: auto;
   line-height: 1.1;
 }
 
 .owner-metrics article > p:last-child {
-  margin-top: auto;
+  margin-top: 0;
   min-height: 18px;
   display: flex;
   align-items: flex-end;
@@ -1943,7 +1944,8 @@ button {
 }
 
 .owner-metrics .metric-payment b:first-of-type {
-  margin-top: 3px;
+  /* Move both payment rows into the same lower visual zone as the figures. */
+  margin-top: auto;
 }
 
 .owner-metrics .metric-payment b {
