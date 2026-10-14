@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "OKESIH.COM — POS & Kitchen Display Warkop",
-    short_name: "OKESIH",
+    name: "OKESIH - POS & Kitchen Display",
+    short_name: "OKESIH - POS & Kitchen Display",
     description: "Sistem POS Kasir, Kitchen Display, dan Antrean TV untuk Warkop Berkecepatan Tinggi",
     start_url: "/",
     display: "standalone",
