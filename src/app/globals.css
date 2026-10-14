@@ -2259,7 +2259,7 @@ button {
 }
 .owner-revenue-chart::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(120deg, transparent 55%, rgba(255,255,255,0.035)); }
 .owner-revenue-chart.is-loading .owner-line-chart { opacity: 0.48; }
-.owner-revenue-chart > header { position: relative; z-index: 1; display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
+.owner-revenue-chart > header { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
 .owner-revenue-chart > header span { color: var(--ow-accent); font-size: 10px; font-weight: 900; letter-spacing: 0.11em; }
 .owner-revenue-chart > header h2 { margin: 6px 0 4px; font-size: clamp(19px, 1.7vw, 24px); letter-spacing: -0.03em; }
 .owner-revenue-chart > header p { color: var(--ow-muted); font-size: 12px; }
@@ -2350,7 +2350,7 @@ button {
   .owner-quick-grid > a:last-child { grid-column: 1 / -1; }
   .owner-quick-grid small { display: block; }
   .owner-revenue-chart { padding: 18px 12px; }
-  .owner-revenue-chart > header { flex-direction: column; gap: 14px; }
+  .owner-revenue-chart > header { flex-direction: column; align-items: flex-start; gap: 14px; }
   .owner-chart-filters { width: 100%; }
   .owner-chart-filters button { flex: 1; min-width: 0; padding-inline: 5px; }
   .owner-chart-stats { margin: 18px 0 8px; gap: 18px; justify-content: space-between; }
