@@ -1,32 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
-import { useAuthGuard } from "@/lib/auth-helpers";
+import { useState } from "react";
+import { useMarketingData } from "../MarketingContext";
 import "../marketing-dashboard.css";
-
-type Application = {
-  id: string;
-  business_name: string;
-  owner_name: string;
-  owner_phone?: string;
-  province: string;
-  city_regency: string;
-  status: "PENDING" | "PROCESSING" | "APPROVED" | "REJECTED";
-  review_notes?: string;
-  created_at: string;
-};
-
-type Dashboard = {
-  profile: {
-    name: string;
-    area: string;
-  };
-  applications: Application[];
-  totals: {
-    pending: number;
-  };
-};
 
 const labels = {
   PENDING: "Menunggu review",
@@ -36,27 +13,13 @@ const labels = {
 };
 
 export default function MarketingPengajuanPage() {
-  const { isAuthorized, loading } = useAuthGuard(["MARKETING"]);
-  const [data, setData] = useState<Dashboard | null>(null);
-  const [error, setError] = useState("");
+  const { data, loading, error, isAuthorized } = useMarketingData();
   const [filter, setFilter] = useState<"ALL" | "PENDING" | "APPROVED" | "REJECTED">("ALL");
-
-  const load = useCallback(async () => {
-    const res = await fetch("/api/marketing/dashboard", { cache: "no-store" });
-    const payload = await res.json();
-    if (!res.ok) throw new Error(payload.error || "Gagal memuat status pengajuan.");
-    setData(payload.data);
-  }, []);
-
-  useEffect(() => {
-    if (!isAuthorized) return;
-    load().catch((err) => setError(err.message));
-  }, [isAuthorized, load]);
 
   if (loading || !isAuthorized || !data) {
     return (
       <main className="mkt-loading">
-        <span className="mkt-splash-text">{error || "Dashboard Marketing"}</span>
+        <span className="mkt-splash-text">{error || "Dashboard marketing"}</span>
       </main>
     );
   }

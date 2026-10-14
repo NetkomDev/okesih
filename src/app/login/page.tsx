@@ -14,7 +14,6 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState("");
-  const [saasFeePerReceipt, setSaasFeePerReceipt] = useState<number>(50);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -26,13 +25,6 @@ export default function LoginPage() {
         setLoginError("Akses Ditolak: Anda tidak memiliki izin untuk halaman tersebut.");
       }
     }
-  }, []);
-
-  useEffect(() => {
-    fetch("/api/platform-settings", { cache: "no-store" })
-      .then((response) => response.ok ? response.json() : Promise.reject())
-      .then((payload) => setSaasFeePerReceipt(payload.data.saasFeePerReceipt))
-      .catch(() => undefined);
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -189,9 +181,6 @@ export default function LoginPage() {
           <h1 style={{ fontSize: "1.5rem", fontWeight: 900, letterSpacing: "-0.02em", marginBottom: "0" }}>
             Portal Operasional OKESIH
           </h1>
-          <p style={{ marginTop: "0.55rem", color: "var(--text-muted)", fontSize: "0.8rem" }}>
-            Biaya layanan aktif: <strong style={{ color: "var(--brand-orange-light)" }}>Rp {saasFeePerReceipt.toLocaleString("id-ID")}/struk</strong>
-          </p>
         </div>
 
         {/* Form Login */}

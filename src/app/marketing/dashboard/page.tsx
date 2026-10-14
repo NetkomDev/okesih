@@ -2,52 +2,11 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { INDONESIA_PROVINCES } from "@/lib/indonesia-regions";
-import { logoutUser, useAuthGuard } from "@/lib/auth-helpers";
+import { logoutUser } from "@/lib/auth-helpers";
+import { useMarketingData } from "./MarketingContext";
 import "./marketing-dashboard.css";
-
-type Tenant = {
-  id: string;
-  name: string;
-  ownerName: string;
-  province: string;
-  cityRegency: string;
-  receipts: number;
-  commission: number;
-  paymentStatus?: "PAID" | "UNPAID";
-  unpaidAmount?: number;
-};
-
-type Application = {
-  id: string;
-  business_name: string;
-  owner_name: string;
-  province: string;
-  city_regency: string;
-  status: "PENDING" | "PROCESSING" | "APPROVED" | "REJECTED";
-  review_notes?: string;
-  created_at: string;
-};
-
-type Dashboard = {
-  profile: {
-    name: string;
-    referralCode: string;
-    area: string;
-    commissionPaid: number;
-  };
-  applications: Application[];
-  tenants: Tenant[];
-  totals: {
-    tenants: number;
-    pending: number;
-    unpaidTenants?: number;
-    paidTenants?: number;
-    receipts: number;
-    commission: number;
-  };
-};
 
 type InstallPromptEvent = Event & {
   prompt: () => Promise<{ outcome: "accepted" | "dismissed" }>;
@@ -56,8 +15,7 @@ type InstallPromptEvent = Event & {
 const money = (value: number) => `Rp ${value.toLocaleString("id-ID")}`;
 
 export default function MarketingDashboardPage() {
-  const { isAuthorized, loading } = useAuthGuard(["MARKETING"]);
-  const [data, setData] = useState<Dashboard | null>(null);
+  const { data, loading, error: contextError, refresh, isAuthorized } = useMarketingData();
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [saving, setSaving] = useState(false);
@@ -74,22 +32,6 @@ export default function MarketingDashboardPage() {
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
   const [installHelperText, setInstallHelperText] = useState("");
 
-  const load = useCallback(async () => {
-    const response = await fetch("/api/marketing/dashboard", { cache: "no-store" });
-    const payload = await response.json();
-    if (!response.ok) throw new Error(payload.error || "Dashboard gagal dimuat.");
-    setData(payload.data);
-  }, []);
-
-  useEffect(() => {
-    if (!isAuthorized) return;
-    const timer = window.setTimeout(
-      () => void load().catch((cause) => setError(cause.message)),
-      0
-    );
-    return () => window.clearTimeout(timer);
-  }, [isAuthorized, load]);
-
   // Cek dan tangani PWA prompt untuk popup install setelah login
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -98,7 +40,6 @@ export default function MarketingDashboardPage() {
       window.matchMedia("(display-mode: standalone), (display-mode: fullscreen)").matches ||
       Boolean((navigator as Navigator & { standalone?: boolean }).standalone);
 
-    // Jika belum standalone dan belum pernah ditutup pada sesi ini
     const dismissed = sessionStorage.getItem("mkt_pwa_dismissed") === "1";
     if (!isStandalone && !dismissed) {
       const popupTimer = window.setTimeout(() => {
@@ -172,7 +113,7 @@ export default function MarketingDashboardPage() {
       setNotice(
         "Pengajuan berhasil dikirim ke WhatsApp Super Admin. Kredensial owner baru dikirim setelah disetujui."
       );
-      await load();
+      await refresh();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Terjadi kesalahan.");
     } finally {
@@ -191,7 +132,7 @@ export default function MarketingDashboardPage() {
           priority
           unoptimized
         />
-        <span className="mkt-splash-text">{error || "Dashboard marketing"}</span>
+        <span className="mkt-splash-text">{contextError || error || "Dashboard marketing"}</span>
       </main>
     );
   }
@@ -227,10 +168,10 @@ export default function MarketingDashboardPage() {
           </div>
         </header>
 
-        {error && <div className="mkt-alert error">{error}</div>}
+        {(error || contextError) && <div className="mkt-alert error">{error || contextError}</div>}
         {notice && <div className="mkt-alert success">✓ {notice}</div>}
 
-        {/* 4 Cards Statistik Interaktif: Klik untuk menuju halaman detail */}
+        {/* 4 Cards Statistik Interaktif: Klik untuk menuju halaman detail tanpa reload */}
         <section className="mkt-stats">
           {/* Card 1: Tenant Aktif -> Menuju Halaman Tenant Binaan */}
           <Link href="/marketing/dashboard/tenant-binaan" className="mkt-stat-card-link" title="Buka Daftar Tenant Binaan & Status Pembayaran">
@@ -305,8 +246,8 @@ export default function MarketingDashboardPage() {
           </Link>
         </section>
 
-        {/* Content Layout: Form Pendaftaran Tenant Baru & Shortcut Navigasi */}
-        <section className="mkt-content-grid" style={{ gridTemplateColumns: "1fr 360px" }}>
+        {/* Content Layout Responsif: Di mobile 1 kolom penuh tanpa overflow */}
+        <section className="mkt-content-grid">
           {/* Form Daftarkan Tenant Baru */}
           <form id="form-tenant" onSubmit={submit} className="mkt-panel mkt-form">
             <PanelHead
@@ -375,7 +316,7 @@ export default function MarketingDashboardPage() {
             </button>
           </form>
 
-          {/* Kolom Kanan: Navigasi Cepat Halaman Baru */}
+          {/* Kolom Menu Navigasi Cepat & Tips */}
           <aside className="mkt-side-nav-column">
             <div className="mkt-panel">
               <div className="mkt-panel-head">

@@ -1,65 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
-import { useAuthGuard } from "@/lib/auth-helpers";
+import { useState } from "react";
+import { useMarketingData } from "../MarketingContext";
 import "../marketing-dashboard.css";
-
-type Tenant = {
-  id: string;
-  name: string;
-  slug: string;
-  ownerName: string;
-  phone?: string;
-  province: string;
-  cityRegency: string;
-  status: "ACTIVE" | "SUSPENDED";
-  paymentStatus: "PAID" | "UNPAID";
-  unpaidAmount: number;
-  receipts: number;
-  commission: number;
-  joinedAt: string;
-};
-
-type Dashboard = {
-  profile: {
-    name: string;
-    area: string;
-  };
-  tenants: Tenant[];
-  totals: {
-    tenants: number;
-    unpaidTenants: number;
-    paidTenants: number;
-    receipts: number;
-  };
-};
 
 const money = (value: number) => `Rp ${value.toLocaleString("id-ID")}`;
 
 export default function MarketingTenantBinaanPage() {
-  const { isAuthorized, loading } = useAuthGuard(["MARKETING"]);
-  const [data, setData] = useState<Dashboard | null>(null);
-  const [error, setError] = useState("");
+  const { data, loading, error, isAuthorized } = useMarketingData();
   const [filter, setFilter] = useState<"ALL" | "UNPAID" | "PAID">("ALL");
   const [search, setSearch] = useState("");
-
-  const load = useCallback(async () => {
-    const res = await fetch("/api/marketing/dashboard", { cache: "no-store" });
-    const payload = await res.json();
-    if (!res.ok) throw new Error(payload.error || "Gagal memuat daftar tenant binaan.");
-    setData(payload.data);
-  }, []);
-
-  useEffect(() => {
-    if (!isAuthorized) return;
-    load().catch((err) => setError(err.message));
-  }, [isAuthorized, load]);
 
   if (loading || !isAuthorized || !data) {
     return (
       <main className="mkt-loading">
-        <span className="mkt-splash-text">{error || "Dashboard Marketing"}</span>
+        <span className="mkt-splash-text">{error || "Dashboard marketing"}</span>
       </main>
     );
   }
@@ -78,8 +34,8 @@ export default function MarketingTenantBinaanPage() {
     return true;
   });
 
-  const unpaidCount = data.tenants.filter((t) => t.paymentStatus === "UNPAID").length;
-  const paidCount = data.tenants.filter((t) => t.paymentStatus === "PAID").length;
+  const unpaidCount = data.totals.unpaidTenants ?? data.tenants.filter((t) => t.paymentStatus === "UNPAID").length;
+  const paidCount = data.totals.paidTenants ?? data.tenants.filter((t) => t.paymentStatus === "PAID").length;
 
   return (
     <main className="mkt-shell">

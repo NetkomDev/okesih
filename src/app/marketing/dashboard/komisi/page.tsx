@@ -1,62 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
-import { useAuthGuard } from "@/lib/auth-helpers";
+import { useMarketingData } from "../MarketingContext";
 import "../marketing-dashboard.css";
-
-type Tenant = {
-  id: string;
-  name: string;
-  slug: string;
-  ownerName: string;
-  phone?: string;
-  province: string;
-  cityRegency: string;
-  receipts: number;
-  commission: number;
-  commissionPerReceipt: number;
-};
-
-type Dashboard = {
-  profile: {
-    name: string;
-    referralCode: string;
-    area: string;
-    commissionRate: number;
-    commissionPaid: number;
-  };
-  tenants: Tenant[];
-  totals: {
-    tenants: number;
-    receipts: number;
-    commission: number;
-  };
-};
 
 const money = (value: number) => `Rp ${value.toLocaleString("id-ID")}`;
 
 export default function MarketingKomisiPage() {
-  const { isAuthorized, loading } = useAuthGuard(["MARKETING"]);
-  const [data, setData] = useState<Dashboard | null>(null);
-  const [error, setError] = useState("");
-
-  const load = useCallback(async () => {
-    const res = await fetch("/api/marketing/dashboard", { cache: "no-store" });
-    const payload = await res.json();
-    if (!res.ok) throw new Error(payload.error || "Gagal memuat rincian komisi.");
-    setData(payload.data);
-  }, []);
-
-  useEffect(() => {
-    if (!isAuthorized) return;
-    load().catch((err) => setError(err.message));
-  }, [isAuthorized, load]);
+  const { data, loading, error, isAuthorized } = useMarketingData();
 
   if (loading || !isAuthorized || !data) {
     return (
       <main className="mkt-loading">
-        <span className="mkt-splash-text">{error || "Dashboard Marketing"}</span>
+        <span className="mkt-splash-text">{error || "Dashboard marketing"}</span>
       </main>
     );
   }
@@ -103,7 +59,7 @@ export default function MarketingKomisiPage() {
         </section>
 
         {/* Rincian Komisi per Tenant */}
-        <section className="mkt-panel" style={{ marginTop: "24px" }}>
+        <section className="mkt-panel" style={{ marginTop: "20px" }}>
           <div className="mkt-panel-head">
             <div className="mkt-panel-icon">Rp</div>
             <div>
