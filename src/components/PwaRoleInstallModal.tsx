@@ -2,26 +2,24 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { PwaRoleKind, PWA_ROLE_CONFIGS, isStandaloneApp } from "@/lib/pwa-routing";
-
-type InstallPromptEvent = Event & {
-  prompt: () => Promise<{ outcome: "accepted" | "dismissed" }>;
-};
+import { PwaRoleKind, PWA_ROLE_CONFIGS, isStandaloneApp, type InstallationKind } from "@/lib/pwa-routing";
+import { requestPwaInstallation } from "@/lib/pwa-install";
 
 interface PwaRoleInstallModalProps {
   pwaKind: PwaRoleKind;
   title?: string;
   subtitle?: string;
+  enabled?: boolean;
 }
 
 export default function PwaRoleInstallModal({
   pwaKind,
   title,
   subtitle,
+  enabled = true,
 }: PwaRoleInstallModalProps) {
   const [showModal, setShowModal] = useState(false);
-  const [prompt, setPrompt] = useState<InstallPromptEvent | null>(null);
-  const [helperText, setHelperText] = useState("");
+  const [installing, setInstalling] = useState(false);
 
   const config = PWA_ROLE_CONFIGS[pwaKind];
   const appTitle = title || `Pasang Aplikasi ${config?.name || "OKESIH"}`;
@@ -31,61 +29,38 @@ export default function PwaRoleInstallModal({
   const storageKey = `okesih_install_dismissed_${pwaKind}`;
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || !enabled) return;
 
     // Jangan tampilkan jika sudah diinstal (standalone) atau user sudah klik nanti di sesi ini
     const standalone = isStandaloneApp();
     const dismissed = sessionStorage.getItem(storageKey) === "1";
 
     if (!standalone && !dismissed) {
-      // Tampilkan popup setelah delay singkat (750ms) pasca login berhasil
-      const timer = window.setTimeout(() => {
-        setShowModal(true);
-      }, 750);
-
-      const handleBeforeInstall = (e: Event) => {
-        e.preventDefault();
-        setPrompt(e as InstallPromptEvent);
-      };
-
-      const handleInstallReady = () => {
-        if (window.__okesihInstallPrompt) {
-          setPrompt(window.__okesihInstallPrompt as InstallPromptEvent);
+      const showWhenReady = () => {
+        if (window.__okesihInstallPrompt && window.__okesihInstallKind === pwaKind.toUpperCase()) {
+          setShowModal(true);
         }
       };
-
-      if (window.__okesihInstallPrompt) {
-        setPrompt(window.__okesihInstallPrompt as InstallPromptEvent);
-      }
-
-      window.addEventListener("beforeinstallprompt", handleBeforeInstall);
+      const timer = window.setTimeout(showWhenReady, 750);
+      const handleInstallReady = () => window.setTimeout(showWhenReady, 300);
       window.addEventListener("okesih-install-ready", handleInstallReady);
 
       return () => {
         window.clearTimeout(timer);
-        window.removeEventListener("beforeinstallprompt", handleBeforeInstall);
         window.removeEventListener("okesih-install-ready", handleInstallReady);
       };
     }
-  }, [storageKey]);
+  }, [enabled, pwaKind, storageKey]);
 
   if (!showModal) return null;
 
   const handleInstallClick = async () => {
-    if (prompt) {
-      const result = await prompt.prompt();
-      if (result.outcome === "accepted") {
-        setShowModal(false);
-        try {
-          sessionStorage.setItem(storageKey, "1");
-        } catch {}
-      }
-      setPrompt(null);
-    } else {
-      setHelperText(
-        "Buka menu browser Anda (ikon titik tiga ⋮ di Chrome atau tombol Bagikan ⎋ di Safari iOS), lalu pilih 'Tambahkan ke Layar Utama' / 'Instal Aplikasi'."
-      );
-    }
+    setInstalling(true);
+    const result = await requestPwaInstallation(pwaKind.toUpperCase() as InstallationKind);
+    setInstalling(false);
+    setShowModal(false);
+    try { sessionStorage.setItem(storageKey, "1"); } catch {}
+    if (result === "unavailable") alert("Buka menu browser, lalu pilih ‘Instal aplikasi’ atau ‘Tambahkan ke layar utama’.");
   };
 
   const dismissModal = () => {
@@ -179,25 +154,6 @@ export default function PwaRoleInstallModal({
           {appSubtitle}
         </p>
 
-        {/* Helper instructions if browser prompt cannot be invoked directly */}
-        {helperText && (
-          <div
-            style={{
-              backgroundColor: "rgba(59, 130, 246, 0.12)",
-              border: "1px solid rgba(59, 130, 246, 0.3)",
-              borderRadius: "0.75rem",
-              padding: "0.75rem 1rem",
-              marginBottom: "1.25rem",
-              fontSize: "0.8rem",
-              color: "#93c5fd",
-              lineHeight: 1.5,
-              textAlign: "left",
-            }}
-          >
-            ℹ {helperText}
-          </div>
-        )}
-
         {/* Action Buttons */}
         <div
           style={{
@@ -209,6 +165,7 @@ export default function PwaRoleInstallModal({
           <button
             type="button"
             onClick={handleInstallClick}
+            disabled={installing}
             style={{
               width: "100%",
               display: "inline-flex",
@@ -241,7 +198,7 @@ export default function PwaRoleInstallModal({
               <polyline points="7 10 12 15 17 10" />
               <line x1="12" y1="15" x2="12" y2="3" />
             </svg>
-            <span>Pasang Sekarang</span>
+            <span>{installing ? "Menyiapkan..." : "Pasang Sekarang"}</span>
           </button>
 
           <button

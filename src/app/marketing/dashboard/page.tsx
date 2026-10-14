@@ -2,15 +2,12 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { INDONESIA_PROVINCES } from "@/lib/indonesia-regions";
 import { logoutUser } from "@/lib/auth-helpers";
+import PwaRoleInstallModal from "@/components/PwaRoleInstallModal";
 import { useMarketingData } from "./MarketingContext";
 import "./marketing-dashboard.css";
-
-type InstallPromptEvent = Event & {
-  prompt: () => Promise<{ outcome: "accepted" | "dismissed" }>;
-};
 
 const money = (value: number) => `Rp ${value.toLocaleString("id-ID")}`;
 
@@ -26,75 +23,6 @@ export default function MarketingDashboardPage() {
     province: "",
     cityRegency: "",
   });
-
-  // State untuk popup install PWA
-  const [showInstallModal, setShowInstallModal] = useState(false);
-  const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
-  const [installHelperText, setInstallHelperText] = useState("");
-
-  // Cek dan tangani PWA prompt untuk popup install setelah login
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const isStandalone =
-      window.matchMedia("(display-mode: standalone), (display-mode: fullscreen)").matches ||
-      Boolean((navigator as Navigator & { standalone?: boolean }).standalone);
-
-    const dismissed = sessionStorage.getItem("mkt_pwa_dismissed") === "1";
-    if (!isStandalone && !dismissed) {
-      const popupTimer = window.setTimeout(() => {
-        setShowInstallModal(true);
-      }, 700);
-
-      const handleBeforeInstall = (e: Event) => {
-        e.preventDefault();
-        setInstallPrompt(e as InstallPromptEvent);
-      };
-
-      const handleInstallReady = () => {
-        if (window.__okesihInstallPrompt) {
-          setInstallPrompt(window.__okesihInstallPrompt as InstallPromptEvent);
-        }
-      };
-
-      if (window.__okesihInstallPrompt) {
-        setInstallPrompt(window.__okesihInstallPrompt as InstallPromptEvent);
-      }
-
-      window.addEventListener("beforeinstallprompt", handleBeforeInstall);
-      window.addEventListener("okesih-install-ready", handleInstallReady);
-
-      return () => {
-        window.clearTimeout(popupTimer);
-        window.removeEventListener("beforeinstallprompt", handleBeforeInstall);
-        window.removeEventListener("okesih-install-ready", handleInstallReady);
-      };
-    }
-  }, []);
-
-  const handleInstallClick = async () => {
-    if (installPrompt) {
-      const result = await installPrompt.prompt();
-      if (result.outcome === "accepted") {
-        setShowInstallModal(false);
-        try {
-          sessionStorage.setItem("mkt_pwa_dismissed", "1");
-        } catch {}
-      }
-      setInstallPrompt(null);
-    } else {
-      setInstallHelperText(
-        "Buka menu peramban/browser Anda (ikon titik tiga ⋮ atau tombol Share ⎋ di Safari), lalu pilih 'Tambahkan ke Layar Utama' atau 'Instal Aplikasi'."
-      );
-    }
-  };
-
-  const dismissInstallModal = () => {
-    setShowInstallModal(false);
-    try {
-      sessionStorage.setItem("mkt_pwa_dismissed", "1");
-    } catch {}
-  };
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -141,6 +69,7 @@ export default function MarketingDashboardPage() {
 
   return (
     <main className="mkt-shell">
+      <PwaRoleInstallModal pwaKind="marketing" />
       <div className="mkt-container">
         {/* Header Dashboard Marketing bertema Hijau Tosca & Orange Elegan */}
         <header className="mkt-header">
@@ -406,62 +335,6 @@ export default function MarketingDashboardPage() {
         <footer>© {new Date().getFullYear()} OKESIH.COM · Portal Mitra Marketing</footer>
       </div>
 
-      {/* Modal Popup PWA Install setelah login */}
-      {showInstallModal && (
-        <div className="mkt-modal-backdrop" role="dialog" aria-modal="true">
-          <div className="mkt-modal-card">
-            <button
-              type="button"
-              className="mkt-modal-close"
-              onClick={dismissInstallModal}
-              aria-label="Tutup popup"
-            >
-              ✕
-            </button>
-            <div className="mkt-modal-icon-wrap">
-              <Image
-                src="/logo.svg"
-                alt="Logo OKESIH"
-                width={72}
-                height={72}
-                priority
-              />
-            </div>
-            <h3>Pasang Aplikasi OKESIH Marketing</h3>
-            <p>
-              Tambahkan aplikasi langsung ke layar utama HP Anda agar lebih cepat dibuka dan bekerja lebih maksimal tanpa perlu membuka browser lagi.
-            </p>
-
-            {installHelperText && (
-              <div className="mkt-modal-helper">
-                ℹ {installHelperText}
-              </div>
-            )}
-
-            <div className="mkt-modal-actions">
-              <button
-                type="button"
-                className="mkt-modal-btn-primary"
-                onClick={handleInstallClick}
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="7 10 12 15 17 10" />
-                  <line x1="12" y1="15" x2="12" y2="3" />
-                </svg>
-                <span>Pasang Sekarang</span>
-              </button>
-              <button
-                type="button"
-                className="mkt-modal-btn-secondary"
-                onClick={dismissInstallModal}
-              >
-                Nanti Saja
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </main>
   );
 }

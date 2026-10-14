@@ -2,12 +2,13 @@
 
 import { useEffect } from "react";
 import { installationKind } from "@/lib/pwa-routing";
+import type { InstallPromptEvent } from "@/lib/pwa-install";
 
 export default function PwaInstallCapture() {
   useEffect(() => {
     const capture = (event: Event) => {
       event.preventDefault();
-      window.__okesihInstallPrompt = event;
+      window.__okesihInstallPrompt = event as InstallPromptEvent;
       window.__okesihInstallKind = installationKind(window.location.pathname);
       window.dispatchEvent(new Event("okesih-install-ready"));
     };
@@ -21,8 +22,4 @@ export default function PwaInstallCapture() {
     };
   }, []);
   return null;
-}
-
-declare global {
-  interface Window { __okesihInstallPrompt?: Event; __okesihInstallKind?: "POS" | "KDS" | "OWNER" | "MARKETING" | "SUPERADMIN" | "DASHBOARD"; }
 }

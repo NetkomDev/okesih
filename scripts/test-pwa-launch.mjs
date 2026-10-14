@@ -6,6 +6,7 @@ import { installationKind, isDashboardLaunch, isRoleAllowedForPwa, PWA_ROLE_CONF
 import { createDevicePin, hashDevicePin, readDevicePin, devicePinKey } from "../src/lib/device-pin.ts";
 import dashboardManifest from "../src/lib/pwa-manifest.ts";
 import { getTrustedUserRole } from "../src/lib/auth-role.ts";
+import { requestPwaInstallation } from "../src/lib/pwa-install.ts";
 
 test("shared dashboard manifest preserves identity and opens login", () => {
   const manifest = dashboardManifest();
@@ -55,6 +56,21 @@ test("authorization trusts server-managed app metadata only", () => {
   assert.equal(getTrustedUserRole({ app_metadata: { role: "OWNER" }, user_metadata: { role: "SUPERADMIN" } }), "OWNER");
 });
 
+test("install prompt is consumed once and reads browser userChoice", async () => {
+  let prompted = 0;
+  globalThis.window = {
+    __okesihInstallKind: "OWNER",
+    __okesihInstallPrompt: {
+      prompt: async () => { prompted += 1; },
+      userChoice: Promise.resolve({ outcome: "accepted", platform: "web" }),
+    },
+  };
+  assert.equal(await requestPwaInstallation("OWNER"), "accepted");
+  assert.equal(prompted, 1);
+  assert.equal(await requestPwaInstallation("OWNER"), "unavailable");
+  delete globalThis.window;
+});
+
 test("operational and dashboard manifests keep native launch targets", async () => {
   for (const [kind, name, shortName, path, id] of [["pos", "OKESIH KASIR", "OKESIH KASIR", "/pos?pwa=pos", "/pwa/pos"], ["kds", "OKESIH KDS", "OKESIH KDS", "/kds?pwa=kds", "/pwa/kds"], ["owner", "OKESIH Owner", "OKESIH Owner", "/owner?pwa=owner", "/pwa/owner"], ["marketing", "OKESIH Marketing", "OKESIH Marketing", "/marketing/dashboard?pwa=marketing", "/pwa/marketing"], ["superadmin", "OKESIH Super Admin", "OKESIH HQ", "/superadmin?pwa=superadmin", "/pwa/superadmin"]]) {
     const manifest = JSON.parse(await readFile(new URL(`../public/manifest-${kind}.webmanifest`, import.meta.url), "utf8"));
@@ -63,7 +79,10 @@ test("operational and dashboard manifests keep native launch targets", async () 
     assert.equal(manifest.start_url, path);
     assert.equal(manifest.scope, "/");
     assert.equal(manifest.id, id);
-    assert.ok(manifest.icons.every((icon) => icon.src === "/logo.svg" && icon.type === "image/svg+xml"));
+    assert.deepEqual(manifest.icons.map((icon) => [icon.src, icon.sizes, icon.type]), [
+      ["/icons/icon-192.png", "192x192", "image/png"],
+      ["/icons/icon-512.png", "512x512", "image/png"],
+    ]);
   }
 });
 
