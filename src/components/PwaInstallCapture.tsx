@@ -1,37 +1,10 @@
 "use client";
 
 import { useEffect } from "react";
-import { installationKind, isDashboardLaunch } from "@/lib/pwa-routing";
-
-function isInstalled() {
-  if (typeof window === "undefined") return false;
-  return (
-    window.matchMedia("(display-mode: standalone), (display-mode: fullscreen)").matches ||
-    Boolean((navigator as Navigator & { standalone?: boolean }).standalone)
-  );
-}
+import { installationKind } from "@/lib/pwa-routing";
 
 export default function PwaInstallCapture() {
   useEffect(() => {
-    const checkLaunch = () => {
-      if (isInstalled() && isDashboardLaunch(window.location.pathname)) {
-        window.location.replace("/login");
-        return true;
-      }
-      return false;
-    };
-    checkLaunch();
-
-    const restored = (event: PageTransitionEvent) => {
-      if (event.persisted) checkLaunch();
-    };
-    const resumed = () => {
-      if (document.visibilityState === "visible") checkLaunch();
-    };
-
-    window.addEventListener("pageshow", restored);
-    document.addEventListener("visibilitychange", resumed);
-
     const capture = (event: Event) => {
       event.preventDefault();
       window.__okesihInstallPrompt = event;
@@ -43,8 +16,6 @@ export default function PwaInstallCapture() {
     window.addEventListener("appinstalled", installed);
 
     return () => {
-      window.removeEventListener("pageshow", restored);
-      document.removeEventListener("visibilitychange", resumed);
       window.removeEventListener("beforeinstallprompt", capture);
       window.removeEventListener("appinstalled", installed);
     };
@@ -53,6 +24,5 @@ export default function PwaInstallCapture() {
 }
 
 declare global {
-  interface Window { __okesihInstallPrompt?: Event; __okesihInstallKind?: "POS" | "KDS" | "DASHBOARD"; }
+  interface Window { __okesihInstallPrompt?: Event; __okesihInstallKind?: "POS" | "KDS" | "OWNER" | "MARKETING" | "SUPERADMIN" | "DASHBOARD"; }
 }
-

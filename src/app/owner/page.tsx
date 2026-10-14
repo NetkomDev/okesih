@@ -278,7 +278,7 @@ export default function TenantOwnerDashboardPage() {
       <div className="owner-content">
         <header className="owner-topbar">
           <div className="owner-brand"><img src={profile.logo_url || "/logo.svg?v=2"} alt={profile.logo_url ? `Logo ${profile.nama}` : "OKESIH"}/><div><strong>{profile.nama}</strong><small>PORTAL OWNER BISNIS</small></div><span className="owner-status">● {profile.is_active ? "Buka & Beroperasi" : "Tidak Aktif"}</span></div>
-          <div className="owner-actions"><ThemeToggle/><Link href="/pos" className="btn-secondary">Layar Kasir</Link><Link href="/kds" className="btn-secondary">Layar Dapur</Link><button onClick={logoutUser} className="btn-secondary">Logout</button></div>
+          <div className="owner-actions"><ThemeToggle/><PwaInstallButton label="Install Owner" compact onInstalled={() => void onboardingAction({ action: "pwa_installed" })}/><Link href="/pos" className="btn-secondary">Layar Kasir</Link><Link href="/kds" className="btn-secondary">Layar Dapur</Link><button onClick={logoutUser} className="btn-secondary">Logout</button></div>
         </header>
 
         <main className="owner-main">

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useAuthGuard, logoutUser } from "@/lib/auth-helpers";
 import ThemeToggle from "@/components/ThemeToggle";
+import PwaInstallButton from "@/components/PwaInstallButton";
 import { INDONESIA_PROVINCES } from "@/lib/indonesia-regions";
 
 interface MarketingAgent {
@@ -1145,6 +1146,7 @@ export default function SuperAdminDashboardPage() {
 
           <div className="superadmin-actions" style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
             <ThemeToggle />
+            <PwaInstallButton label="Install HQ" compact />
 
             <button
               onClick={handleOpenRegisterModal}

@@ -6,8 +6,8 @@ export const metadata: Metadata = {
   applicationName: "OKESIH Marketing",
   manifest: "/manifest-marketing.webmanifest",
   icons: {
-    icon: "/logo.svg",
-    apple: "/logo.svg",
+    icon: "/icons/icon-192.png",
+    apple: "/icons/icon-192.png",
   },
   appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "OKESIH Marketing" },
 };

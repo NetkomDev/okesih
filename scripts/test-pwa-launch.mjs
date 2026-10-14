@@ -14,11 +14,14 @@ test("shared dashboard manifest preserves identity and opens login", () => {
   assert.equal(manifest.scope, "/");
 });
 
-test("dashboard launches require login; operational and customer screens stay independent", () => {
-  for (const path of ["/", "/owner", "/owner/menu", "/superadmin", "/marketing", "/admin"]) {
-    assert.equal(isDashboardLaunch(path), true, path);
-    assert.equal(installationKind(path), "DASHBOARD", path);
-  }
+test("dedicated dashboards keep independent install identities", () => {
+  for (const path of ["/", "/owner", "/owner/menu", "/superadmin", "/marketing", "/admin"]) assert.equal(isDashboardLaunch(path), true, path);
+  assert.equal(installationKind("/"), "DASHBOARD");
+  assert.equal(installationKind("/owner"), "OWNER");
+  assert.equal(installationKind("/owner/menu"), "OWNER");
+  assert.equal(installationKind("/marketing/dashboard"), "MARKETING");
+  assert.equal(installationKind("/marketing/dashboard/komisi"), "MARKETING");
+  assert.equal(installationKind("/superadmin"), "SUPERADMIN");
   for (const path of ["/login", "/pos", "/kds", "/menu/risolinan", "/tv", "/ownership"]) {
     assert.equal(isDashboardLaunch(path), false, path);
   }
@@ -26,14 +29,14 @@ test("dashboard launches require login; operational and customer screens stay in
   assert.equal(installationKind("/kds"), "KDS");
 });
 
-test("operational manifests keep separate identities and launch targets", async () => {
-  for (const [kind, name, path] of [["pos", "OKESIH KASIR", "/pos"], ["kds", "OKESIH KDS", "/kds"], ["owner", "OKESIH POS", "/login"]]) {
+test("operational and dashboard manifests keep native launch targets", async () => {
+  for (const [kind, name, shortName, path, id] of [["pos", "OKESIH KASIR", "OKESIH KASIR", "/pos", "/pwa/pos"], ["kds", "OKESIH KDS", "OKESIH KDS", "/kds", "/pwa/kds"], ["owner", "OKESIH Owner", "OKESIH Owner", "/owner", "/owner"], ["marketing", "OKESIH Marketing", "OKESIH Marketing", "/marketing/dashboard", "/marketing/dashboard"], ["superadmin", "OKESIH Super Admin", "OKESIH HQ", "/superadmin", "/superadmin"]]) {
     const manifest = JSON.parse(await readFile(new URL(`../public/manifest-${kind}.webmanifest`, import.meta.url), "utf8"));
     assert.equal(manifest.name, name);
-    assert.equal(manifest.short_name, name);
+    assert.equal(manifest.short_name, shortName);
     assert.equal(manifest.start_url, path);
     assert.ok(path.startsWith(manifest.scope));
-    assert.equal(manifest.id, `/pwa/${kind}`);
+    assert.equal(manifest.id, id);
   }
 });
 
