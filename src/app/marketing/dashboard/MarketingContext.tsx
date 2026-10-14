@@ -2,6 +2,9 @@
 
 import React, { createContext, useContext, useCallback, useEffect, useState } from "react";
 import { useAuthGuard } from "@/lib/auth-helpers";
+import PwaRoleMismatchModal from "@/components/PwaRoleMismatchModal";
+
+
 
 export type Tenant = {
   id: string;
@@ -63,10 +66,21 @@ type MarketingContextType = {
 const MarketingContext = createContext<MarketingContextType | null>(null);
 
 export function MarketingProvider({ children }: { children: React.ReactNode }) {
-  const { isAuthorized, loading: authLoading } = useAuthGuard(["MARKETING"]);
+  const { isAuthorized, loading: authLoading, roleMismatch } = useAuthGuard(["MARKETING"]);
   const [data, setData] = useState<DashboardData | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState("");
+
+  if (roleMismatch) {
+    return (
+      <PwaRoleMismatchModal
+        isOpen={true}
+        pwaKind={roleMismatch.pwaKind}
+        userRole={roleMismatch.userRole}
+      />
+    );
+  }
+
 
   const refresh = useCallback(async () => {
     try {

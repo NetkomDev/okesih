@@ -5,7 +5,10 @@ import { useState, useEffect } from "react";
 import { useAuthGuard, logoutUser } from "@/lib/auth-helpers";
 import ThemeToggle from "@/components/ThemeToggle";
 import PwaInstallButton from "@/components/PwaInstallButton";
+import PwaRoleInstallModal from "@/components/PwaRoleInstallModal";
+import PwaRoleMismatchModal from "@/components/PwaRoleMismatchModal";
 import { INDONESIA_PROVINCES } from "@/lib/indonesia-regions";
+
 
 interface MarketingAgent {
   id: string;
@@ -100,7 +103,8 @@ interface AnalyticsData {
 }
 
 export default function SuperAdminDashboardPage() {
-  const { isAuthorized, loading } = useAuthGuard(["SUPERADMIN"]);
+  const { isAuthorized, loading, roleMismatch } = useAuthGuard(["SUPERADMIN"]);
+
 
   // Dynamic Theme State (Dark / Light)
   const [theme, setTheme] = useState<"dark" | "light">("dark");
@@ -708,6 +712,16 @@ export default function SuperAdminDashboardPage() {
   const netPlatformRevenue = analytics?.netRevenue ?? totalGrossSaasBilling - totalMarketingCommission;
   const periodLabel = { today: "Hari ini", week: "Minggu ini", month: "Bulan ini", year: "Tahun ini" }[analyticsPeriod];
 
+  if (roleMismatch) {
+    return (
+      <PwaRoleMismatchModal
+        isOpen={true}
+        pwaKind={roleMismatch.pwaKind}
+        userRole={roleMismatch.userRole}
+      />
+    );
+  }
+
   if (loading || !isAuthorized) {
     return (
       <div
@@ -743,7 +757,11 @@ export default function SuperAdminDashboardPage() {
         transition: "background-color 0.2s ease, color 0.2s ease",
       }}
     >
+      {/* Popup Install Otomatis Pasca Login Khusus Super Admin */}
+      <PwaRoleInstallModal pwaKind="superadmin" />
+
       {/* Toast Notification Floating Container */}
+
       {toast && (
         <div
           style={{

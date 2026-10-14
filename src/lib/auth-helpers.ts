@@ -86,6 +86,13 @@ export async function logoutUser(): Promise<void> {
   }
 }
 
+import { detectActivePwaKind, isStandaloneApp, type PwaRoleKind } from "./pwa-routing";
+
+export interface RoleMismatchInfo {
+  pwaKind: PwaRoleKind;
+  userRole: string;
+}
+
 /**
  * Hook Auth Guard untuk mengunci halaman dashboard sesuai hak akses (role).
  * Menutup celah keamanan sehingga pengguna tidak dapat sembarangan membuka
@@ -101,6 +108,7 @@ export function useAuthGuard(allowedRoles: UserRole[]) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [currentRole, setCurrentRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [roleMismatch, setRoleMismatch] = useState<RoleMismatchInfo | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -116,7 +124,11 @@ export function useAuthGuard(allowedRoles: UserRole[]) {
 
         if (!user) {
           if (isMounted) {
-            router.replace("/login?error=login_required");
+            const activePwa = detectActivePwaKind();
+            const redirectUrl = activePwa
+              ? `/login?error=login_required&from_pwa=${encodeURIComponent(activePwa)}`
+              : "/login?error=login_required";
+            router.replace(redirectUrl);
           }
           return;
         }
@@ -125,7 +137,23 @@ export function useAuthGuard(allowedRoles: UserRole[]) {
 
         if (!role || !permittedRoles.includes(role)) {
           if (isMounted) {
-            // Arahkan ke dashboard yang menjadi haknya jika mencoba masuk ke halaman lain
+            const activePwa = detectActivePwaKind();
+            const standalone = isStandaloneApp();
+
+            // Jika sedang berjalan di PWA mandiri (standalone) atau terdapat target PWA aktif,
+            // jangan biarkan peran lain masuk dan jangan redirect ke dashboard lain di jendela PWA ini.
+            if (activePwa || standalone) {
+              const currentPwaKind: PwaRoleKind =
+                activePwa || (permittedRoles[0]?.toLowerCase() as PwaRoleKind) || "owner";
+              setRoleMismatch({
+                pwaKind: currentPwaKind,
+                userRole: role || "UNKNOWN",
+              });
+              setLoading(false);
+              return;
+            }
+
+            // Arahkan ke dashboard yang menjadi haknya jika membuka di peramban (browser) biasa
             if (role === "SUPERADMIN") {
               router.replace("/superadmin");
             } else if (role === "OWNER") {
@@ -163,5 +191,6 @@ export function useAuthGuard(allowedRoles: UserRole[]) {
     };
   }, [router, allowedRolesKey]);
 
-  return { isAuthorized, currentUser, currentRole, loading };
+  return { isAuthorized, currentUser, currentRole, loading, roleMismatch };
 }
+

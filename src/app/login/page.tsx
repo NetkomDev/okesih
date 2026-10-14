@@ -5,7 +5,14 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { extractUserRole } from "@/lib/auth-helpers";
+import {
+  detectActivePwaKind,
+  isRoleAllowedForPwa,
+  type PwaRoleKind,
+  PWA_ROLE_CONFIGS,
+} from "@/lib/pwa-routing";
 import ThemeToggle from "@/components/ThemeToggle";
+import PwaRoleMismatchModal from "@/components/PwaRoleMismatchModal";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -14,9 +21,20 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState("");
+  const [activePwa, setActivePwa] = useState<PwaRoleKind | null>(null);
+  const [mismatch, setMismatch] = useState<{
+    isOpen: boolean;
+    pwaKind: PwaRoleKind;
+    userRole: string;
+  } | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
+      const pwa = detectActivePwaKind();
+      if (pwa) {
+        setActivePwa(pwa);
+      }
+
       const params = new URLSearchParams(window.location.search);
       const err = params.get("error");
       if (err === "login_required") {
@@ -56,6 +74,18 @@ export default function LoginPage() {
       // Deteksi peran pengguna secara aman
       const role = extractUserRole(data.user);
 
+      // Verifikasi batas peran jika sedang login di PWA khusus role tertentu
+      if (activePwa && !isRoleAllowedForPwa(role, activePwa)) {
+        await supabase.auth.signOut();
+        setIsLoading(false);
+        setMismatch({
+          isOpen: true,
+          pwaKind: activePwa,
+          userRole: role || "UNKNOWN",
+        });
+        return;
+      }
+
       if (role === "SUPERADMIN") {
         router.push("/superadmin");
       } else if (role === "OWNER") {
@@ -74,6 +104,7 @@ export default function LoginPage() {
       setIsLoading(false);
     }
   };
+
 
   return (
     <main
@@ -181,7 +212,28 @@ export default function LoginPage() {
           <h1 style={{ fontSize: "1.5rem", fontWeight: 900, letterSpacing: "-0.02em", marginBottom: "0" }}>
             Portal Operasional OKESIH
           </h1>
+          {activePwa && PWA_ROLE_CONFIGS[activePwa] && (
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.45rem",
+                marginTop: "0.65rem",
+                padding: "0.35rem 0.85rem",
+                borderRadius: "9999px",
+                backgroundColor: `${PWA_ROLE_CONFIGS[activePwa].themeColor}22`,
+                border: `1px solid ${PWA_ROLE_CONFIGS[activePwa].themeColor}55`,
+                color: "#f3f4f6",
+                fontSize: "0.78rem",
+                fontWeight: 700,
+              }}
+            >
+              <span>📱</span>
+              <span>Aplikasi Khusus: {PWA_ROLE_CONFIGS[activePwa].name}</span>
+            </div>
+          )}
         </div>
+
 
         {/* Form Login */}
         <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
@@ -363,6 +415,16 @@ export default function LoginPage() {
           </button>
         </form>
       </div>
+
+      {mismatch && (
+        <PwaRoleMismatchModal
+          isOpen={mismatch.isOpen}
+          pwaKind={mismatch.pwaKind}
+          userRole={mismatch.userRole}
+          onClose={() => setMismatch(null)}
+        />
+      )}
     </main>
   );
 }
+

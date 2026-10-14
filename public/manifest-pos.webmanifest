@@ -3,7 +3,7 @@
   "name": "OKESIH KASIR",
   "short_name": "OKESIH KASIR",
   "description": "Kasir POS tenant OKESIH",
-  "start_url": "/pos",
+  "start_url": "/pos?pwa=pos",
   "scope": "/pos",
   "display": "standalone",
   "orientation": "landscape",

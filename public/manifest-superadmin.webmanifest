@@ -1,1 +1,26 @@
-{"id":"/superadmin","name":"OKESIH Super Admin","short_name":"OKESIH HQ","description":"Command Center Super Admin OKESIH","start_url":"/superadmin","scope":"/","display":"standalone","orientation":"any","background_color":"#06090e","theme_color":"#f4512c","icons":[{"src":"/icons/icon-192.png","sizes":"192x192","type":"image/png","purpose":"maskable"},{"src":"/icons/icon-512.png","sizes":"512x512","type":"image/png","purpose":"any"}]}
+{
+  "id": "/pwa/superadmin",
+  "name": "OKESIH Super Admin",
+  "short_name": "OKESIH HQ",
+  "description": "Command Center Super Admin OKESIH",
+  "start_url": "/superadmin?pwa=superadmin",
+  "scope": "/superadmin",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#06090e",
+  "theme_color": "#f4512c",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

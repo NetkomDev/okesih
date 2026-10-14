@@ -3,7 +3,7 @@
   "name": "OKESIH KDS",
   "short_name": "OKESIH KDS",
   "description": "Kitchen Display System tenant OKESIH",
-  "start_url": "/kds",
+  "start_url": "/kds?pwa=kds",
   "scope": "/kds",
   "display": "fullscreen",
   "orientation": "landscape",

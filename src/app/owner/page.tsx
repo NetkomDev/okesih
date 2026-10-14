@@ -8,6 +8,9 @@ import { useAuthGuard, logoutUser } from "@/lib/auth-helpers";
 import { createClient } from "@/lib/supabase/client";
 import ThemeToggle from "@/components/ThemeToggle";
 import PwaInstallButton from "@/components/PwaInstallButton";
+import PwaRoleInstallModal from "@/components/PwaRoleInstallModal";
+import PwaRoleMismatchModal from "@/components/PwaRoleMismatchModal";
+
 
 type MenuItem = { id: string; name: string; price: number; category: string; description: string; isAvailable: boolean };
 type Staff = { id: string; username: string; name: string; role: "KASIR" | "DAPUR"; status: "ACTIVE" | "INACTIVE" };
@@ -45,7 +48,8 @@ function escapeHtml(value: string) {
 export default function TenantOwnerDashboardPage() {
   const pathname = usePathname();
   const router = useRouter();
-  const { isAuthorized, loading } = useAuthGuard(["OWNER"]);
+  const { isAuthorized, loading, roleMismatch } = useAuthGuard(["OWNER"]);
+
   const [data, setData] = useState<DashboardData | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -238,6 +242,16 @@ export default function TenantOwnerDashboardPage() {
     finally { setBusy(false); }
   };
 
+  if (roleMismatch) {
+    return (
+      <PwaRoleMismatchModal
+        isOpen={true}
+        pwaKind={roleMismatch.pwaKind}
+        userRole={roleMismatch.userRole}
+      />
+    );
+  }
+
   if (loading || !isAuthorized || !data) return (
     <div className="owner-loading" role="status" aria-label="Menyiapkan portal owner OKESIH">
       <div className="owner-loading-brand">
@@ -269,7 +283,11 @@ export default function TenantOwnerDashboardPage() {
 
   return (
     <div className={`owner-shell ${sidebarExpanded ? "sidebar-open" : "sidebar-closed"}`}>
+      {/* Popup Install Otomatis Pasca Login Khusus Owner */}
+      <PwaRoleInstallModal pwaKind="owner" />
+
       <aside className="owner-sidebar" onMouseEnter={() => autoHide && setSidebarExpanded(true)} onMouseLeave={() => autoHide && setSidebarExpanded(false)}>
+
         <div className="owner-sidebar-head"><span className="owner-sidebar-mark">O</span><b>OWNER SPACE</b><button className="owner-sidebar-toggle" onClick={() => setSidebarExpanded((value) => !value)} aria-label="Buka atau ciutkan sidebar">☰</button></div>
         <nav>{navItems.map(([icon, label, href, itemView]) => <Link key={href} href={href} title={label} className={view === itemView ? "active" : ""} aria-current={view === itemView ? "page" : undefined}><span>{icon}</span><b>{label}</b></Link>)}</nav>
         <label className="owner-autohide"><input type="checkbox" checked={autoHide} onChange={(event) => setAutoHide(event.target.checked)} /><span>Auto-hide</span></label>
