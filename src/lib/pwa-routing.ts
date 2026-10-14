@@ -96,6 +96,18 @@ export function isStandaloneApp(): boolean {
 }
 
 const STORAGE_ACTIVE_PWA_KEY = "okesih_active_pwa";
+const STANDALONE_PWA_KEY = "okesih_installed_pwa_role";
+
+function getCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(new RegExp("(^|;\\s*)(" + name + ")=([^;]*)"));
+  return match ? decodeURIComponent(match[3]) : null;
+}
+
+function setCookie(name: string, value: string) {
+  if (typeof document === "undefined") return;
+  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=31536000; SameSite=Lax`;
+}
 
 /**
  * Deteksi PWA mana yang sedang aktif dijalankan (dari query param, storage, atau path standalone).
@@ -110,6 +122,12 @@ export function detectActivePwaKind(): PwaRoleKind | null {
     if (pwaParam && (pwaParam in PWA_ROLE_CONFIGS)) {
       const validKind = pwaParam as PwaRoleKind;
       sessionStorage.setItem(STORAGE_ACTIVE_PWA_KEY, validKind);
+      if (isStandaloneApp()) {
+        try {
+          localStorage.setItem(STANDALONE_PWA_KEY, validKind);
+          setCookie("okesih_pwa", validKind);
+        } catch {}
+      }
       return validKind;
     }
   } catch {}
@@ -122,26 +140,54 @@ export function detectActivePwaKind(): PwaRoleKind | null {
     }
   } catch {}
 
-  // 3. Jika sedang berjalan di standalone mode, simpulkan dari pathname
+  // 3. Jika sedang berjalan di standalone mode (aplikasi PWA yang sudah terpasang)
   if (isStandaloneApp()) {
+    // 3a. Cek localStorage identitas PWA
+    try {
+      const localStored = localStorage.getItem(STANDALONE_PWA_KEY) as PwaRoleKind | null;
+      if (localStored && (localStored in PWA_ROLE_CONFIGS)) {
+        return localStored;
+      }
+    } catch {}
+
+    // 3b. Cek cookie fallback
+    try {
+      const cookieStored = getCookie("okesih_pwa") as PwaRoleKind | null;
+      if (cookieStored && (cookieStored in PWA_ROLE_CONFIGS)) {
+        return cookieStored;
+      }
+    } catch {}
+
+    // 3c. Simpulkan dari pathname saat ini
     const path = window.location.pathname;
-    if (/^\/superadmin(\/|$)/.test(path)) return "superadmin";
-    if (/^\/owner(\/|$)/.test(path)) return "owner";
-    if (/^\/marketing(\/|$)/.test(path)) return "marketing";
-    if (/^\/pos(\/|$)/.test(path)) return "pos";
-    if (/^\/kds(\/|$)/.test(path)) return "kds";
+    let inferred: PwaRoleKind | null = null;
+    if (/^\/superadmin(\/|$)/.test(path)) inferred = "superadmin";
+    else if (/^\/owner(\/|$)/.test(path)) inferred = "owner";
+    else if (/^\/marketing(\/|$)/.test(path)) inferred = "marketing";
+    else if (/^\/pos(\/|$)/.test(path)) inferred = "pos";
+    else if (/^\/kds(\/|$)/.test(path)) inferred = "kds";
+
+    if (inferred) {
+      try {
+        localStorage.setItem(STANDALONE_PWA_KEY, inferred);
+        setCookie("okesih_pwa", inferred);
+      } catch {}
+      return inferred;
+    }
   }
 
   return null;
 }
 
 /**
- * Set PWA aktif secara manual ke sessionStorage.
+ * Set PWA aktif secara manual ke sessionStorage dan standalone storage.
  */
 export function setActivePwaKind(kind: PwaRoleKind) {
   if (typeof window === "undefined") return;
   try {
     sessionStorage.setItem(STORAGE_ACTIVE_PWA_KEY, kind);
+    localStorage.setItem(STANDALONE_PWA_KEY, kind);
+    setCookie("okesih_pwa", kind);
   } catch {}
 }
 
@@ -152,8 +198,13 @@ export function clearActivePwaKind() {
   if (typeof window === "undefined") return;
   try {
     sessionStorage.removeItem(STORAGE_ACTIVE_PWA_KEY);
+    if (!isStandaloneApp()) {
+      localStorage.removeItem(STANDALONE_PWA_KEY);
+      document.cookie = "okesih_pwa=; path=/; max-age=0";
+    }
   } catch {}
 }
+
 
 /**
  * Validasi apakah role akun pengguna diizinkan untuk mengakses PWA tertentu.

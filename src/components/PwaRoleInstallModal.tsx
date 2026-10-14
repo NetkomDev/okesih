@@ -36,21 +36,15 @@ export default function PwaRoleInstallModal({
     const dismissed = sessionStorage.getItem(storageKey) === "1";
 
     if (!standalone && !dismissed) {
-      const showWhenReady = () => {
-        if (window.__okesihInstallPrompt && window.__okesihInstallKind === pwaKind.toUpperCase()) {
-          setShowModal(true);
-        }
-      };
-      const timer = window.setTimeout(showWhenReady, 750);
-      const handleInstallReady = () => window.setTimeout(showWhenReady, 300);
-      window.addEventListener("okesih-install-ready", handleInstallReady);
+      const timer = window.setTimeout(() => {
+        setShowModal(true);
+      }, 700);
 
       return () => {
         window.clearTimeout(timer);
-        window.removeEventListener("okesih-install-ready", handleInstallReady);
       };
     }
-  }, [enabled, pwaKind, storageKey]);
+  }, [enabled, storageKey]);
 
   if (!showModal) return null;
 
@@ -58,10 +52,20 @@ export default function PwaRoleInstallModal({
     setInstalling(true);
     const result = await requestPwaInstallation(pwaKind.toUpperCase() as InstallationKind);
     setInstalling(false);
-    setShowModal(false);
-    try { sessionStorage.setItem(storageKey, "1"); } catch {}
-    if (result === "unavailable") alert("Buka menu browser, lalu pilih ‘Instal aplikasi’ atau ‘Tambahkan ke layar utama’.");
+
+    if (result === "accepted" || result === "dismissed") {
+      setShowModal(false);
+      try {
+        sessionStorage.setItem(storageKey, "1");
+      } catch {}
+    } else {
+      // Browser belum menyediakan event atau di platform iOS Safari
+      alert(
+        "Buka menu browser Anda (ikon titik tiga ⋮ di Chrome atau tombol Bagikan ⎋ di Safari iOS), lalu pilih 'Tambahkan ke Layar Utama' / 'Instal Aplikasi'."
+      );
+    }
   };
+
 
   const dismissModal = () => {
     setShowModal(false);

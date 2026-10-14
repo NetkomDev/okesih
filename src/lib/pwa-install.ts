@@ -5,16 +5,21 @@ export type InstallPromptEvent = Event & {
   userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
 };
 
-export async function requestPwaInstallation(expectedKind: InstallationKind) {
+export async function requestPwaInstallation(_expectedKind?: InstallationKind) {
   const installPrompt = window.__okesihInstallPrompt;
   if (!installPrompt) return "unavailable" as const;
-  if (window.__okesihInstallKind !== expectedKind) return "wrong-kind" as const;
 
-  window.__okesihInstallPrompt = undefined;
-  await installPrompt.prompt();
-  const choice = await installPrompt.userChoice;
-  return choice.outcome;
+  try {
+    await installPrompt.prompt();
+    const choice = await installPrompt.userChoice;
+    window.__okesihInstallPrompt = undefined;
+    return choice.outcome;
+  } catch (err) {
+    console.error("Install prompt error:", err);
+    return "unavailable" as const;
+  }
 }
+
 
 declare global {
   interface Window {
