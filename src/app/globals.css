@@ -2115,6 +2115,8 @@ button {
 .owner-table-wrap td strong,
 .owner-table-wrap td b { color: var(--ow-text) !important; }
 .owner-category { display: inline-flex; padding: 4px 8px; border-radius: 6px; background: var(--ow-surface-raised); color: var(--ow-muted); font-size: 11px; font-weight: 800; }
+.owner-category-field { display: grid; gap: 6px; color: var(--ow-text); font-size: 12px; font-weight: 800; }
+.owner-category-field small { color: var(--ow-muted); font-size: 10px; font-weight: 500; line-height: 1.4; }
 .owner-dot { color: #94a3b8; font-weight: 800; }.owner-dot.active { color: #10b981; }
 .link-button { color: #3b82f6; }.link-button.danger { color: #ef4444; }
 .pill.active { color: #059669; }
