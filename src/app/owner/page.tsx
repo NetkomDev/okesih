@@ -15,6 +15,8 @@ type Waiter = { id: string; name: string; phone: string | null; is_active: boole
 type BusinessTable = { id: string; label: string; sort_order: number; is_active: boolean };
 type Profile = { id: string; nama: string; slug: string; is_active: boolean; logo_url: string | null; qris_image_url: string | null; qris_merchant_name: string | null };
 type Metrics = { receiptCount: number; cash: number; qris: number; total: number; billing: { tagihan_pokok: number; kode_unik: number; total_tagihan: number; status_bayar: string } | null };
+type RevenuePeriod = "day" | "week" | "month" | "year";
+type RevenueData = { period: RevenuePeriod; series: { label: string; value: number }[]; total: number; average: number; transactionCount: number };
 type DashboardData = { profile: Profile; menus: MenuItem[]; staff: Staff[]; waiters: Waiter[]; tables: BusinessTable[]; metrics: Metrics };
 type DeviceInstallation = { id: string; device_type: "POS" | "KDS"; device_name: string; status: "ACTIVE" | "REVOKED" | "EXPIRED"; paired_at: string; last_seen_at: string; expires_at: string; revoked_at: string | null };
 type OwnerOnboarding = { password_changed_at: string | null; owner_pwa_installed_at: string | null; completed_at: string | null };
@@ -62,6 +64,9 @@ export default function TenantOwnerDashboardPage() {
   const [onboardingReady, setOnboardingReady] = useState(false);
   const [pairingCode, setPairingCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [revenuePeriod, setRevenuePeriod] = useState<RevenuePeriod>("day");
+  const [revenueData, setRevenueData] = useState<RevenueData | null>(null);
+  const [revenueLoading, setRevenueLoading] = useState(false);
   const qrisInput = useRef<HTMLInputElement>(null);
   const logoInput = useRef<HTMLInputElement>(null);
 
@@ -120,6 +125,24 @@ export default function TenantOwnerDashboardPage() {
     const destination = legacyRoutes[window.location.hash];
     if (destination) router.replace(destination);
   }, [pathname, router]);
+
+  useEffect(() => {
+    if (!isAuthorized || pathname !== "/owner") return;
+    let cancelled = false;
+    const loadRevenue = async () => {
+      setRevenueLoading(true);
+      try {
+        const payload = await ownerFetch(`/api/owner/revenue?period=${revenuePeriod}`, { cache: "no-store" });
+        if (!cancelled) setRevenueData(payload.data);
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : "Grafik omzet gagal dimuat.");
+      } finally {
+        if (!cancelled) setRevenueLoading(false);
+      }
+    };
+    void loadRevenue();
+    return () => { cancelled = true; };
+  }, [isAuthorized, pathname, revenuePeriod]);
 
   const mutate = async (work: () => Promise<unknown>) => {
     setBusy(true);
@@ -228,6 +251,18 @@ export default function TenantOwnerDashboardPage() {
   );
 
   const { profile, metrics } = data;
+  const revenueSeries = revenueData?.series || [];
+  const revenueMaximum = Math.max(...revenueSeries.map((item) => item.value), 1);
+  const chartWidth = 900;
+  const chartHeight = 230;
+  const chartPadding = 18;
+  const revenuePoints = revenueSeries.map((item, index) => {
+    const x = revenueSeries.length <= 1 ? chartWidth / 2 : chartPadding + (index / (revenueSeries.length - 1)) * (chartWidth - chartPadding * 2);
+    const y = chartHeight - chartPadding - (item.value / revenueMaximum) * (chartHeight - chartPadding * 2);
+    return { ...item, x, y };
+  });
+  const linePath = revenuePoints.map((point, index) => `${index === 0 ? "M" : "L"}${point.x},${point.y}`).join(" ");
+  const areaPath = revenuePoints.length ? `${linePath} L${revenuePoints.at(-1)?.x},${chartHeight - chartPadding} L${revenuePoints[0].x},${chartHeight - chartPadding} Z` : "";
   const view = pathname.endsWith("/menu") ? "menu" : pathname.endsWith("/staff") ? "staff" : pathname.endsWith("/waiters") ? "waiters" : pathname.endsWith("/qris-tables") ? "qris-tables" : pathname.endsWith("/devices") ? "devices" : "overview";
   const navItems = [["▦", "Ringkasan", "/owner", "overview"], ["◫", "Katalog Menu", "/owner/menu", "menu"], ["♟", "Akun Staf", "/owner/staff", "staff"], ["♙", "Waiter", "/owner/waiters", "waiters"], ["▣", "QRIS & Meja", "/owner/qris-tables", "qris-tables"], ["⌁", "Perangkat & PWA", "/owner/devices", "devices"]];
 
@@ -255,6 +290,33 @@ export default function TenantOwnerDashboardPage() {
               <article className="metric-cash"><span className="metric-icon">▤</span><small>UANG FISIK DI LACI KASIR</small><strong className="green">{money(metrics.cash)}</strong><p>Nilai berdasarkan pembayaran tunai</p></article>
               <article className="metric-billing"><span className="metric-icon">◎</span><small>SEWA SAAS OKESIH</small><strong className="yellow">{money(Number(metrics.billing?.total_tagihan || 0))}</strong><p>{metrics.billing?.status_bayar || "Belum ditagihkan"}</p></article>
             </div>
+            <section className={`owner-revenue-chart ${revenueLoading ? "is-loading" : ""}`} aria-labelledby="owner-chart-title">
+              <header>
+                <div><span>ANALITIK PENJUALAN</span><h2 id="owner-chart-title">Grafik Omzet Penjualan</h2><p>Pergerakan omzet dari transaksi tunai dan QRIS yang sudah tercatat.</p></div>
+                <div className="owner-chart-filters" aria-label="Filter periode grafik omzet">
+                  {(["day", "week", "month", "year"] as RevenuePeriod[]).map((period) => <button key={period} className={revenuePeriod === period ? "active" : ""} onClick={() => setRevenuePeriod(period)}>{({ day: "Hari", week: "Minggu", month: "Bulan", year: "Tahun" })[period]}</button>)}
+                </div>
+              </header>
+              <div className="owner-chart-stats">
+                <div><small>Total periode</small><strong>{money(revenueData?.total || 0)}</strong></div>
+                <div><small>Rata-rata</small><b>{money(revenueData?.average || 0)}</b></div>
+                <div><small>Transaksi</small><b>{revenueData?.transactionCount || 0} struk</b></div>
+              </div>
+              <div className="owner-line-chart">
+                <div className="owner-y-axis"><span>{money(revenueMaximum)}</span><span>{money(Math.round(revenueMaximum / 2))}</span><span>Rp 0</span></div>
+                <div className="owner-plot">
+                  <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} preserveAspectRatio="none" role="img" aria-label={`Grafik omzet periode ${revenuePeriod}`}>
+                    <defs><linearGradient id="ownerRevenueArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#f4512c" stopOpacity="0.3"/><stop offset="100%" stopColor="#f4512c" stopOpacity="0.02"/></linearGradient></defs>
+                    <line x1="0" y1="18" x2="900" y2="18" className="chart-grid-line"/><line x1="0" y1="115" x2="900" y2="115" className="chart-grid-line"/><line x1="0" y1="212" x2="900" y2="212" className="chart-grid-line"/>
+                    {areaPath && <path d={areaPath} fill="url(#ownerRevenueArea)"/>}
+                    {linePath && <path d={linePath} className="chart-revenue-line"/>}
+                    {revenuePoints.map((point, index) => <circle key={`${point.label}-${index}`} cx={point.x} cy={point.y} r="5" className="chart-revenue-point"><title>{point.label}: {money(point.value)}</title></circle>)}
+                  </svg>
+                  <div className="owner-x-axis">{revenueSeries.map((item, index) => <span key={`${item.label}-${index}`}>{item.label}</span>)}</div>
+                  {!revenueLoading && revenueData?.transactionCount === 0 && <div className="owner-chart-empty"><b>Belum ada transaksi</b><span>Grafik akan terisi otomatis ketika penjualan tercatat.</span></div>}
+                </div>
+              </div>
+            </section>
             <div className="owner-quick-grid">
               {navItems.slice(1).map(([icon, label, href]) => <Link key={href} href={href}><span>{icon}</span><div><b>{label}</b><small>Buka halaman pengelolaan</small></div><em>→</em></Link>)}
             </div>
