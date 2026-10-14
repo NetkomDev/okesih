@@ -39,7 +39,7 @@ export function useDeviceApp(type: "POS" | "KDS") {
       const operations = await listDeviceOperations(type);
       setPendingCount(operations.length);
       for (const operation of operations) {
-        const response = await fetch(operation.path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(operation.body) });
+        const response = await fetch(operation.path, { method: "POST", headers: { "Content-Type": "application/json", "X-Device-Type": type }, body: JSON.stringify(operation.body) });
         if (response.status === 401) { setAuthorized(false); await clearDeviceData(type); break; }
         if (!response.ok && response.status >= 500) break;
         if (!response.ok) {
@@ -54,7 +54,7 @@ export function useDeviceApp(type: "POS" | "KDS") {
 
   const refresh = useCallback(async (quiet = false) => {
     try {
-      const response = await fetch("/api/device/bootstrap", { cache: "no-store" });
+      const response = await fetch("/api/device/bootstrap", { cache: "no-store", headers: { "X-Device-Type": type } });
       if (response.status === 401) { setAuthorized(false); setData(null); return; }
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "Data perangkat gagal dimuat.");
@@ -110,7 +110,7 @@ export function useDeviceApp(type: "POS" | "KDS") {
       setData((current) => current ? { ...current, orders: current.orders.map((order) => order.id === orderId ? { ...order, status_pesanan: status } : order) } : current);
       return;
     }
-    const response = await fetch("/api/device/orders", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const response = await fetch("/api/device/orders", { method: "POST", headers: { "Content-Type": "application/json", "X-Device-Type": type }, body: JSON.stringify(body) });
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || "Status pesanan gagal diperbarui.");
     await refresh(true);

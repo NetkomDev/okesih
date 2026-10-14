@@ -1,11 +1,13 @@
 import type { MetadataRoute } from "next";
 
-export default function manifest(): MetadataRoute.Manifest {
+export default function dashboardManifest(): MetadataRoute.Manifest {
   return {
-    name: "OKESIH - POS & Kitchen Display",
-    short_name: "OKESIH - POS & Kitchen Display",
+    id: "/",
+    name: "OKESIH POS",
+    short_name: "OKESIH POS",
     description: "Sistem POS Kasir, Kitchen Display, dan Antrean TV untuk Warkop Berkecepatan Tinggi",
-    start_url: "/",
+    start_url: "/login",
+    scope: "/",
     display: "standalone",
     orientation: "any",
     background_color: "#0D0D0E",
@@ -54,7 +56,7 @@ export default function manifest(): MetadataRoute.Manifest {
       },
       {
         name: "Dashboard Admin",
-        url: "/admin",
+        url: "/login",
         description: "Buka Dashboard Manajemen Warkop",
       },
     ],

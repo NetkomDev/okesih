@@ -1,7 +1,7 @@
 {
   "id": "/pwa/kds",
-  "name": "OKESIH Dapur KDS",
-  "short_name": "Dapur OKESIH",
+  "name": "OKESIH KDS",
+  "short_name": "OKESIH KDS",
   "description": "Kitchen Display System tenant OKESIH",
   "start_url": "/kds",
   "scope": "/kds",

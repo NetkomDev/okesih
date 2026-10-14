@@ -40,7 +40,11 @@ export async function requireDevice(request: NextRequest, allowedTypes: DeviceTy
   let matchedType: DeviceType | null = null;
   let token: string | undefined;
 
-  for (const type of allowedTypes) {
+  const requestedType = request.headers.get("X-Device-Type");
+  if (requestedType && !allowedTypes.includes(requestedType as DeviceType)) {
+    throw new DeviceApiError("Jenis perangkat tidak diizinkan.", 403);
+  }
+  for (const type of allowedTypes.filter((type) => !requestedType || requestedType === type)) {
     const candidate = request.cookies.get(DEVICE_COOKIE[type])?.value;
     if (candidate) {
       matchedType = type;
@@ -98,4 +102,3 @@ export function deviceErrorResponse(error: unknown) {
   const message = error instanceof Error ? error.message : "Terjadi kesalahan internal.";
   return Response.json({ error: message }, { status, headers: { "Cache-Control": "no-store" } });
 }
-

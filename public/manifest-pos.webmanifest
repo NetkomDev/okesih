@@ -1,7 +1,7 @@
 {
   "id": "/pwa/pos",
-  "name": "OKESIH Kasir",
-  "short_name": "Kasir OKESIH",
+  "name": "OKESIH KASIR",
+  "short_name": "OKESIH KASIR",
   "description": "Kasir POS tenant OKESIH",
   "start_url": "/pos",
   "scope": "/pos",

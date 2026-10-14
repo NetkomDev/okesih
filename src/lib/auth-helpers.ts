@@ -71,7 +71,7 @@ export function extractUserRole(user: User | null | undefined): UserRole | null 
 
 /**
  * Fungsi logout aman yang membersihkan seluruh sesi Supabase Auth
- * dan mengembalikan pengguna ke halaman utama.
+ * dan mengembalikan pengguna ke halaman login.
  */
 export async function logoutUser(): Promise<void> {
   try {
@@ -80,7 +80,7 @@ export async function logoutUser(): Promise<void> {
   } catch (err) {
     console.error("Error signing out:", err);
   } finally {
-    window.location.href = "/";
+    window.location.href = "/login";
   }
 }
 
@@ -114,7 +114,7 @@ export function useAuthGuard(allowedRoles: UserRole[]) {
 
         if (!user) {
           if (isMounted) {
-            router.replace("/?error=login_required");
+            router.replace("/login?error=login_required");
           }
           return;
         }
@@ -133,7 +133,7 @@ export function useAuthGuard(allowedRoles: UserRole[]) {
             } else if (role === "DAPUR") {
               router.replace("/kds");
             } else {
-              router.replace("/?error=unauthorized");
+              router.replace("/login?error=unauthorized");
             }
           }
           return;
@@ -147,7 +147,7 @@ export function useAuthGuard(allowedRoles: UserRole[]) {
         }
       } catch {
         if (isMounted) {
-          router.replace("/?error=auth_failed");
+          router.replace("/login?error=auth_failed");
         }
       }
     };

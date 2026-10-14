@@ -1,0 +1,13 @@
+.cashier-lock-button {
+  position: fixed;
+  bottom: max(18px, env(safe-area-inset-bottom));
+  right: 18px;
+  z-index: 20;
+  padding: 12px 18px;
+  border: 1px solid #f4512c;
+  border-radius: 12px;
+  background: #172033;
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 4px 20px #0003;
+}

@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import SplashScreen from "@/components/SplashScreen";
 import PwaInstallCapture from "@/components/PwaInstallCapture";
+import PwaLaunchBoundary from "@/components/PwaLaunchBoundary";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -71,12 +72,12 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "https://okesih.vercel.app",
   },
-  applicationName: "OKESIH - POS & Kitchen Display",
+  applicationName: "OKESIH POS",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "OKESIH - POS & Kitchen Display",
+    title: "OKESIH POS",
   },
   icons: {
     icon: [{ url: "/favicon.svg?v=2", type: "image/svg+xml" }],
@@ -112,7 +113,7 @@ export default function RootLayout({
       <body>
         <PwaInstallCapture />
         <SplashScreen />
-        {children}
+        <PwaLaunchBoundary>{children}</PwaLaunchBoundary>
       </body>
     </html>
   );
