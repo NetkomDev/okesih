@@ -113,7 +113,8 @@ export default function RootLayout({
       <body>
         <PwaInstallCapture />
         <SplashScreen />
-        <PwaLaunchBoundary>{children}</PwaLaunchBoundary>
+        <PwaLaunchBoundary />
+        {children}
       </body>
     </html>
   );

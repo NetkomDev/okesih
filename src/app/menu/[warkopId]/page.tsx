@@ -18,6 +18,21 @@ function categoryIcon(category: string) {
   return "✦";
 }
 
+function formatTableNumber(label: string): string {
+  if (!label) return "01";
+  const trimmed = label.trim();
+  const mejaMatch = trimmed.match(/^meja\s*(\d+)$/i);
+  if (mejaMatch) {
+    const num = parseInt(mejaMatch[1], 10);
+    return num < 100 ? String(num).padStart(2, "0") : String(num);
+  }
+  if (/^\d+$/.test(trimmed)) {
+    const num = parseInt(trimmed, 10);
+    return num < 100 ? String(num).padStart(2, "0") : String(num);
+  }
+  return trimmed;
+}
+
 function ToscaBatikOrnament() {
   return (
     <div className="batik-tosca-badge" aria-label="Ornamen Batik Nusantara OKESIH">
@@ -168,7 +183,7 @@ export default function CustomerMenuPage({ params, searchParams }: { params: Pro
   };
 
   if (!payload) return <div className="customer-loading" role="status" aria-label={error || "Menyiapkan menu"}><Image src="/logo.svg?v=2" width={64} height={64} alt="OKESIH"/></div>;
-  if (order) return <main className="customer-order-status"><Image src="/logo.svg?v=2" width={64} height={64} alt="OKESIH"/><span>ANTREAN</span><strong>#{String(order.queueNumber).padStart(3, "0")}</strong><h1>{orderStatus === "AWAITING_CONFIRMATION" ? "Menunggu konfirmasi kasir" : orderStatus === "COOKING" ? "Pesanan sedang disiapkan" : orderStatus === "READY" ? "Pesanan siap diantar" : orderStatus === "DONE" ? "Pesanan selesai" : "Pesanan tidak dapat diproses"}</h1><p>Meja {tableNumber} · {paymentMethod === "CASH" ? "Bayar tunai saat pesanan diantar" : "QRIS sedang diverifikasi"}</p><b>Rp {Number(order.total).toLocaleString("id-ID")}</b><button className="btn-secondary" onClick={() => { setOrder(null); setCart({}); setProofImage(null); }}>Pesan Tambahan</button></main>;
+  if (order) return <main className="customer-order-status"><Image src="/logo.svg?v=2" width={64} height={64} alt="OKESIH"/><span>ANTREAN</span><strong>#{String(order.queueNumber).padStart(3, "0")}</strong><h1>{orderStatus === "AWAITING_CONFIRMATION" ? "Menunggu konfirmasi kasir" : orderStatus === "COOKING" ? "Pesanan sedang disiapkan" : orderStatus === "READY" ? "Pesanan siap diantar" : orderStatus === "DONE" ? "Pesanan selesai" : "Pesanan tidak dapat diproses"}</h1><p>Meja {formatTableNumber(tableNumber)} · {paymentMethod === "CASH" ? "Bayar tunai saat pesanan diantar" : "QRIS sedang diverifikasi"}</p><b>Rp {Number(order.total).toLocaleString("id-ID")}</b><button className="btn-secondary" onClick={() => { setOrder(null); setCart({}); setProofImage(null); }}>Pesan Tambahan</button></main>;
 
   return <div className="customer-menu-page">
     <header className="customer-menu-head">
@@ -178,20 +193,11 @@ export default function CustomerMenuPage({ params, searchParams }: { params: Pro
       </div>
       <p>Pesan santai dari meja. Kami siapkan untuk Anda.</p>
       {tableId ? (
-        <div className="customer-table-picker customer-table-picker-batik" aria-label={`Pesanan untuk meja ${tableNumber}`}>
-          <div className="batik-table-rosette" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="22" height="22" fill="none">
-              <circle cx="12" cy="12" r="10.5" fill="#042f2e" stroke="#5eead4" strokeWidth="1" />
-              <path d="M12,3 C9.5,7 9.5,17 12,21 C14.5,17 14.5,7 12,3 Z" fill="#2dd4bf" opacity="0.95" />
-              <path d="M3,12 C7,9.5 17,9.5 21,12 C17,14.5 7,14.5 3,12 Z" fill="#2dd4bf" opacity="0.95" />
-              <circle cx="12" cy="12" r="2.8" fill="#ffffff" />
-            </svg>
+        <div className="customer-table-tag" aria-label={`Nomor Meja ${formatTableNumber(tableNumber)}`}>
+          <span className="customer-table-tag-label">MEJA</span>
+          <div className="customer-table-tag-box">
+            <b>{formatTableNumber(tableNumber)}</b>
           </div>
-          <div className="batik-table-copy">
-            <small>LOKASI MEJA</small>
-            <b>Meja {tableNumber}</b>
-          </div>
-          <i aria-hidden="true">✓</i>
         </div>
       ) : (
         <ToscaBatikOrnament />
@@ -204,6 +210,6 @@ export default function CustomerMenuPage({ params, searchParams }: { params: Pro
     </div>
     <main className="customer-menu-list">{visibleMenus.length ? visibleMenus.map((menu) => { const qty = cart[menu.id]?.qty || 0; return <article key={menu.id} className={qty ? "selected" : ""}><div className="customer-menu-icon" aria-hidden="true">{categoryIcon(menu.kategori)}</div><div className="customer-menu-copy"><small>{menu.kategori}</small><h2>{menu.nama}</h2>{menu.desc_menu && <p>{menu.desc_menu}</p>}<b>Rp {Number(menu.harga).toLocaleString("id-ID")}</b></div><div className="customer-qty">{qty > 0 ? <><button aria-label={`Kurangi ${menu.nama}`} onClick={() => changeQty(menu, -1)}>−</button><strong>{qty}</strong><button aria-label={`Tambah ${menu.nama}`} onClick={() => changeQty(menu, 1)}>+</button></> : <button className="add" aria-label={`Tambah ${menu.nama}`} onClick={() => changeQty(menu, 1)}>+</button>}</div></article>; }) : <div className="customer-menu-empty"><span>⌕</span><b>Menu tidak ditemukan</b><p>Coba kata kunci atau kategori lainnya.</p></div>}</main>
     {count > 0 && <button className="customer-cart-bar" onClick={() => setCheckout(true)}><span className="customer-cart-count">{count}</span><span><small>Pesanan Anda</small><b>Rp {total.toLocaleString("id-ID")}</b></span><strong>Lihat pesanan <i>→</i></strong></button>}
-    {checkout && <div className="customer-checkout-backdrop"><section className="customer-checkout"><header><div><small>RINGKASAN PESANAN</small><h2>Periksa pesanan Anda</h2><p>{tableNumber ? `Meja ${tableNumber}` : "⚠️ Lokasi meja belum terdeteksi"}</p></div><button className="customer-close" onClick={() => setCheckout(false)} aria-label="Tutup">×</button></header><div className="customer-checkout-items">{Object.values(cart).map(({ menu, qty, notes }) => <div className="customer-checkout-item" key={menu.id}><div><b>{menu.nama}</b><span>Rp {(Number(menu.harga) * qty).toLocaleString("id-ID")}</span></div><div className="customer-checkout-qty"><button onClick={() => changeQty(menu, -1)}>−</button><strong>{qty}</strong><button onClick={() => changeQty(menu, 1)}>+</button></div><input value={notes} onChange={(event) => changeNote(menu.id, event.target.value)} placeholder="Catatan, mis. tanpa gula" maxLength={300} /></div>)}</div><div className="customer-payment"><button className={paymentMethod === "QRIS" ? "active" : ""} onClick={() => setPaymentMethod("QRIS")}><span>▣</span> QRIS</button><button className={paymentMethod === "CASH" ? "active" : ""} onClick={() => setPaymentMethod("CASH")}><span>●</span> Tunai</button></div>{paymentMethod === "QRIS" && <div className="customer-qris">{payload.profile.qris_image_url && <img src={payload.profile.qris_image_url} alt={`QRIS ${payload.profile.qris_merchant_name || payload.profile.nama}`}/>}<b>{payload.profile.qris_merchant_name || payload.profile.nama}</b><label className="customer-proof-upload">Unggah bukti pembayaran<input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => readProof(event.target.files?.[0])}/></label>{proofImage && <span>✓ Bukti pembayaran siap dikirim</span>}</div>}<footer><div><small>Total pembayaran</small><strong>Rp {total.toLocaleString("id-ID")}</strong></div><button className="btn-primary" disabled={busy} onClick={() => void submitOrder()}>{busy ? "Menyimpan..." : (tableId ? "Kirim Pesanan →" : "Scan QR Meja untuk Memesan")}</button></footer></section></div>}
+    {checkout && <div className="customer-checkout-backdrop"><section className="customer-checkout"><header><div><small>RINGKASAN PESANAN</small><h2>Periksa pesanan Anda</h2><p>{tableNumber ? `Meja ${formatTableNumber(tableNumber)}` : "⚠️ Lokasi meja belum terdeteksi"}</p></div><button className="customer-close" onClick={() => setCheckout(false)} aria-label="Tutup">×</button></header><div className="customer-checkout-items">{Object.values(cart).map(({ menu, qty, notes }) => <div className="customer-checkout-item" key={menu.id}><div><b>{menu.nama}</b><span>Rp {(Number(menu.harga) * qty).toLocaleString("id-ID")}</span></div><div className="customer-checkout-qty"><button onClick={() => changeQty(menu, -1)}>−</button><strong>{qty}</strong><button onClick={() => changeQty(menu, 1)}>+</button></div><input value={notes} onChange={(event) => changeNote(menu.id, event.target.value)} placeholder="Catatan, mis. tanpa gula" maxLength={300} /></div>)}</div><div className="customer-payment"><button className={paymentMethod === "QRIS" ? "active" : ""} onClick={() => setPaymentMethod("QRIS")}><span>▣</span> QRIS</button><button className={paymentMethod === "CASH" ? "active" : ""} onClick={() => setPaymentMethod("CASH")}><span>●</span> Tunai</button></div>{paymentMethod === "QRIS" && <div className="customer-qris">{payload.profile.qris_image_url && <img src={payload.profile.qris_image_url} alt={`QRIS ${payload.profile.qris_merchant_name || payload.profile.nama}`}/>}<b>{payload.profile.qris_merchant_name || payload.profile.nama}</b><label className="customer-proof-upload">Unggah bukti pembayaran<input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => readProof(event.target.files?.[0])}/></label>{proofImage && <span>✓ Bukti pembayaran siap dikirim</span>}</div>}<footer><div><small>Total pembayaran</small><strong>Rp {total.toLocaleString("id-ID")}</strong></div><button className="btn-primary" disabled={busy} onClick={() => void submitOrder()}>{busy ? "Menyimpan..." : (tableId ? "Kirim Pesanan →" : "Scan QR Meja untuk Memesan")}</button></footer></section></div>}
   </div>;
 }
