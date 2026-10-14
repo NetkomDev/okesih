@@ -1,0 +1,96 @@
+import { NextResponse } from "next/server";
+import { createClient as createAdminClient } from "@supabase/supabase-js";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+
+async function superAdminContext() {
+  const sessionClient = await createServerSupabaseClient();
+  const { data: { user } } = await sessionClient.auth.getUser();
+  if (!user || String(user.app_metadata?.role).toUpperCase() !== "SUPERADMIN") return null;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) throw new Error("Konfigurasi database belum lengkap.");
+  return { user, admin: createAdminClient(url, key, { auth: { persistSession: false } }) };
+}
+
+export async function GET() {
+  try {
+    const ctx = await superAdminContext();
+    if (!ctx) return NextResponse.json({ error: "Akses Super Admin diperlukan." }, { status: 401 });
+    const { data, error } = await ctx.admin.from("tenant_applications")
+      .select("id,business_name,owner_name,owner_phone,province,city_regency,status,review_notes,created_at,marketing_partners(full_name,referral_code,commission_rate)")
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    return NextResponse.json({ data });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Pengajuan gagal dimuat." }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: Request) {
+  let applicationId = "";
+  try {
+    const ctx = await superAdminContext();
+    if (!ctx) return NextResponse.json({ error: "Akses Super Admin diperlukan." }, { status: 401 });
+    const body = await request.json();
+    applicationId = String(body.id || "");
+    const decision = String(body.decision || "").toUpperCase();
+    if (!applicationId || !["APPROVE", "REJECT"].includes(decision)) return NextResponse.json({ error: "ID dan keputusan review wajib diisi." }, { status: 400 });
+
+    const { admin, user } = ctx;
+    if (decision === "REJECT") {
+      const { data, error } = await admin.from("tenant_applications").update({ status: "REJECTED", review_notes: String(body.notes || "Pengajuan belum dapat disetujui."), reviewed_at: new Date().toISOString(), reviewed_by: user.id }).eq("id", applicationId).eq("status", "PENDING").select().maybeSingle();
+      if (error) throw error;
+      if (!data) return NextResponse.json({ error: "Pengajuan sudah diproses sebelumnya." }, { status: 409 });
+      return NextResponse.json({ success: true, data });
+    }
+
+    const { data: application, error: claimError } = await admin.from("tenant_applications")
+      .update({ status: "PROCESSING", reviewed_by: user.id }).eq("id", applicationId).eq("status", "PENDING")
+      .select("*,marketing_partners(full_name,referral_code,commission_rate,total_tenants_acquired)").maybeSingle();
+    if (claimError) throw claimError;
+    if (!application) return NextResponse.json({ error: "Pengajuan sudah diproses sebelumnya." }, { status: 409 });
+
+    const marketing = Array.isArray(application.marketing_partners) ? application.marketing_partners[0] : application.marketing_partners;
+    const suffix = `${Date.now()}`.slice(-6);
+    const baseSlug = application.business_name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "tenant";
+    const slug = `${baseSlug}-${suffix}`;
+    const username = `owner_${suffix}`;
+    const password = `okesih${suffix}!`;
+    const { data: lastRange } = await admin.from("warkops").select("unique_code_range_end").order("unique_code_range_end", { ascending: false }).limit(1).maybeSingle();
+    const rangeStart = Math.max(100, Math.ceil((Number(lastRange?.unique_code_range_end || 99) + 1) / 100) * 100);
+    const { data: tenant, error: tenantError } = await admin.from("warkops").insert({
+      nama: application.business_name, slug, owner_name: application.owner_name, owner_phone: application.owner_phone,
+      province: application.province, city_regency: application.city_regency, unique_code_range_start: rangeStart,
+      unique_code_range_end: rangeStart + 99, marketing_agent_id: application.marketing_partner_id,
+      marketing_commission_per_receipt: Number(marketing?.commission_rate || 0), is_active: true,
+    }).select().single();
+    if (tenantError) throw tenantError;
+
+    const { data: authData, error: authError } = await admin.auth.admin.createUser({
+      email: `${username}@okesih.local`, password, email_confirm: true,
+      app_metadata: { role: "OWNER", warkop_id: tenant.id },
+      user_metadata: { role: "OWNER", warkop_id: tenant.id, warkop_slug: slug },
+    });
+    if (authError || !authData.user) { await admin.from("warkops").delete().eq("id", tenant.id); throw authError || new Error("Akun owner gagal dibuat."); }
+    const { error: memberError } = await admin.from("warkop_members").insert({ warkop_id: tenant.id, user_id: authData.user.id, username, role: "OWNER" });
+    const { error: onboardingError } = memberError ? { error: null } : await admin.from("owner_onboarding").insert({ warkop_id: tenant.id, owner_user_id: authData.user.id });
+    if (memberError || onboardingError) { await admin.auth.admin.deleteUser(authData.user.id); await admin.from("warkops").delete().eq("id", tenant.id); throw memberError || onboardingError; }
+
+    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://okesih.com").replace(/\/$/, "");
+    const message = [`Halo ${application.owner_name}, pengajuan *${tenant.nama}* telah diverifikasi dan diaktifkan oleh OKESIH. 🎉`, "", `Username: *${username}*`, `Password: *${password}*`, `Login: ${appUrl}/login`, `Menu usaha: ${appUrl}/menu/${slug}`, "", "Silakan login, ganti password, lalu ikuti petunjuk instalasi aplikasi OKESIH."].join("\n");
+    const { error: outboxError } = await admin.from("whatsapp_outbox").insert({ warkop_id: tenant.id, recipient_phone: application.owner_phone, message });
+    if (outboxError) { await admin.auth.admin.deleteUser(authData.user.id); await admin.from("warkops").delete().eq("id", tenant.id); throw new Error(`WhatsApp owner gagal diantrekan: ${outboxError.message}`); }
+
+    await Promise.all([
+      admin.from("tenant_applications").update({ status: "APPROVED", warkop_id: tenant.id, review_notes: String(body.notes || "Terverifikasi"), reviewed_at: new Date().toISOString() }).eq("id", applicationId),
+      admin.from("marketing_partners").update({ total_tenants_acquired: Number(marketing?.total_tenants_acquired || 0) + 1 }).eq("id", application.marketing_partner_id),
+    ]);
+    return NextResponse.json({ success: true, data: { tenantId: tenant.id, name: tenant.nama, username, whatsappQueued: true } });
+  } catch (error) {
+    if (applicationId) {
+      const url = process.env.NEXT_PUBLIC_SUPABASE_URL; const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      if (url && key) await createAdminClient(url, key).from("tenant_applications").update({ status: "PENDING" }).eq("id", applicationId).eq("status", "PROCESSING");
+    }
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Pengajuan gagal diproses." }, { status: 500 });
+  }
+}

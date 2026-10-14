@@ -31,6 +31,10 @@ export async function GET() {
       .select("id,nama,slug,owner_name,owner_phone,province,city_regency,is_active,marketing_commission_per_receipt,created_at")
       .eq("marketing_agent_id", partner.id).order("created_at", { ascending: false });
     if (error) throw error;
+    const { data: applications, error: applicationError } = await admin.from("tenant_applications")
+      .select("id,business_name,owner_name,owner_phone,province,city_regency,status,review_notes,created_at,warkop_id")
+      .eq("marketing_partner_id", partner.id).order("created_at", { ascending: false });
+    if (applicationError) throw applicationError;
     const ids = (tenants || []).map((item) => item.id);
     let transactions: Array<{ warkop_id: string }> = [];
     if (ids.length) {
@@ -47,7 +51,7 @@ export async function GET() {
       receipts: receiptCount.get(tenant.id) || 0,
       commission: (receiptCount.get(tenant.id) || 0) * Number(tenant.marketing_commission_per_receipt || 0),
     }));
-    return NextResponse.json({ data: { profile: { name: partner.full_name, referralCode: partner.referral_code, area: partner.city_area, commissionRate: Number(partner.commission_rate), commissionPaid: Number(partner.commission_paid) }, tenants: mapped, totals: { tenants: mapped.length, receipts: mapped.reduce((sum, item) => sum + item.receipts, 0), commission: mapped.reduce((sum, item) => sum + item.commission, 0) } } });
+    return NextResponse.json({ data: { profile: { name: partner.full_name, referralCode: partner.referral_code, area: partner.city_area, commissionRate: Number(partner.commission_rate), commissionPaid: Number(partner.commission_paid) }, applications: applications || [], tenants: mapped, totals: { tenants: mapped.length, pending: (applications || []).filter((item) => item.status === "PENDING" || item.status === "PROCESSING").length, receipts: mapped.reduce((sum, item) => sum + item.receipts, 0), commission: mapped.reduce((sum, item) => sum + item.commission, 0) } } });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Gagal memuat dashboard." }, { status: 500 });
   }
@@ -62,26 +66,16 @@ export async function POST(request: Request) {
     if (!body.name || !body.ownerName || !body.phone || !body.province || !body.cityRegency) return NextResponse.json({ error: "Semua data usaha, owner, WhatsApp, dan wilayah wajib diisi." }, { status: 400 });
     const phone = normalizePhone(body.phone);
     if (!/^628\d{8,11}$/.test(phone)) return NextResponse.json({ error: "Nomor WhatsApp owner tidak valid." }, { status: 400 });
-    const baseSlug = String(body.name).trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "tenant";
-    const suffix = Math.floor(Math.random() * 9000) + 1000;
-    const slug = `${baseSlug}-${suffix}`;
-    const username = `owner_${suffix}`;
-    const password = `okesih${suffix}!`;
-    const { data: lastRange } = await admin.from("warkops").select("unique_code_range_end").order("unique_code_range_end", { ascending: false }).limit(1).maybeSingle();
-    const rangeStart = Math.max(100, Math.ceil((Number(lastRange?.unique_code_range_end || 99) + 1) / 100) * 100);
-    const { data: tenant, error: tenantError } = await admin.from("warkops").insert({ nama: String(body.name).trim(), slug, owner_name: String(body.ownerName).trim(), owner_phone: phone, province: String(body.province).trim(), city_regency: String(body.cityRegency).trim(), unique_code_range_start: rangeStart, unique_code_range_end: rangeStart + 99, marketing_agent_id: partner.id, marketing_commission_per_receipt: Number(partner.commission_rate) || 0, is_active: true }).select().single();
-    if (tenantError) throw tenantError;
-    const { data: authData, error: authError } = await admin.auth.admin.createUser({ email: `${username}@okesih.local`, password, email_confirm: true, app_metadata: { role: "OWNER", warkop_id: tenant.id }, user_metadata: { role: "OWNER", warkop_id: tenant.id, warkop_slug: slug } });
-    if (authError || !authData.user) { await admin.from("warkops").delete().eq("id", tenant.id); throw authError || new Error("Akun owner gagal dibuat."); }
-    const { error: memberError } = await admin.from("warkop_members").insert({ warkop_id: tenant.id, user_id: authData.user.id, username, role: "OWNER" });
-    const { error: onboardingError } = memberError ? { error: null } : await admin.from("owner_onboarding").insert({ warkop_id: tenant.id, owner_user_id: authData.user.id });
-    if (memberError || onboardingError) { await admin.auth.admin.deleteUser(authData.user.id); await admin.from("warkops").delete().eq("id", tenant.id); throw memberError || onboardingError; }
-    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://okesih.com").replace(/\/$/, "");
-    const message = [`Halo ${String(body.ownerName).trim()}, tenant *${tenant.nama}* telah didaftarkan oleh ${partner.full_name} (${partner.referral_code}). 🎉`, "", `Username: *${username}*`, `Password: *${password}*`, `Login: ${appUrl}/login`, `Menu usaha: ${appUrl}/menu/${slug}`, "", "Silakan login, ganti password, lalu ikuti petunjuk instalasi aplikasi OKESIH."].join("\n");
-    const { error: outboxError } = await admin.from("whatsapp_outbox").insert({ warkop_id: tenant.id, recipient_phone: phone, message });
-    if (outboxError) { await admin.auth.admin.deleteUser(authData.user.id); await admin.from("warkops").delete().eq("id", tenant.id); throw new Error(`WhatsApp gagal diantrekan: ${outboxError.message}`); }
-    await admin.from("marketing_partners").update({ total_tenants_acquired: Number(partner.total_tenants_acquired || 0) + 1 }).eq("id", partner.id);
-    return NextResponse.json({ success: true, data: { name: tenant.nama, username, password, whatsappQueued: true } });
+    const { data: application, error: applicationError } = await admin.from("tenant_applications").insert({
+      marketing_partner_id: partner.id, business_name: String(body.name).trim(), owner_name: String(body.ownerName).trim(),
+      owner_phone: phone, province: String(body.province).trim(), city_regency: String(body.cityRegency).trim(), status: "PENDING",
+    }).select().single();
+    if (applicationError) throw applicationError;
+    const adminPhone = normalizePhone(process.env.SUPERADMIN_WHATSAPP_NUMBER || "6285694488510");
+    const message = ["*PENGAJUAN TENANT BARU OKESIH*", "", `Marketing: *${partner.full_name}* (${partner.referral_code})`, `Usaha: *${application.business_name}*`, `Owner: ${application.owner_name}`, `WhatsApp Owner: +${phone}`, `Wilayah: ${application.city_regency}, ${application.province}`, "", "Silakan review dan verifikasi melalui Dashboard Super Admin → Daftar Tenant."].join("\n");
+    const { error: outboxError } = await admin.from("whatsapp_outbox").insert({ recipient_phone: adminPhone, message });
+    if (outboxError) { await admin.from("tenant_applications").delete().eq("id", application.id); throw new Error(`Notifikasi Super Admin gagal diantrekan: ${outboxError.message}`); }
+    return NextResponse.json({ success: true, data: { id: application.id, name: application.business_name, status: "PENDING", whatsappQueued: true } });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Tenant gagal didaftarkan." }, { status: 500 });
   }

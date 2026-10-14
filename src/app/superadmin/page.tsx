@@ -44,6 +44,19 @@ interface TenantWarkop {
   joinedDate: string;
 }
 
+interface TenantApplication {
+  id: string;
+  business_name: string;
+  owner_name: string;
+  owner_phone: string;
+  province: string;
+  city_regency: string;
+  status: "PENDING" | "PROCESSING" | "APPROVED" | "REJECTED";
+  review_notes?: string;
+  created_at: string;
+  marketing_partners: { full_name: string; referral_code: string; commission_rate: number } | null;
+}
+
 interface ToastNotification {
   id: number;
   title: string;
@@ -261,6 +274,8 @@ export default function SuperAdminDashboardPage() {
 
   // State Tenant Warkop
   const [tenants, setTenants] = useState<TenantWarkop[]>([]);
+  const [tenantApplications, setTenantApplications] = useState<TenantApplication[]>([]);
+  const [reviewingApplicationId, setReviewingApplicationId] = useState<string | null>(null);
 
   // Load Tenants dari Supabase API
   const loadTenants = async () => {
@@ -273,9 +288,36 @@ export default function SuperAdminDashboardPage() {
     }
   };
 
+  const loadTenantApplications = async () => {
+    try {
+      const response = await fetch("/api/superadmin/tenant-applications", { cache: "no-store" });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Pengajuan tenant gagal dimuat.");
+      setTenantApplications(payload.data || []);
+    } catch (error) {
+      console.error("Gagal memuat pengajuan tenant:", error);
+    }
+  };
+
+  const reviewTenantApplication = async (id: string, decision: "APPROVE" | "REJECT") => {
+    setReviewingApplicationId(id);
+    try {
+      const response = await fetch("/api/superadmin/tenant-applications", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, decision }) });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Pengajuan gagal diproses.");
+      await Promise.all([loadTenantApplications(), loadTenants(), loadMarketingPartners()]);
+      showToast(decision === "APPROVE" ? "Tenant Disetujui" : "Pengajuan Ditolak", decision === "APPROVE" ? "Tenant dan akun owner dibuat. Kredensial telah diantrekan ke WhatsApp owner." : "Status pengajuan telah diperbarui.", "success");
+    } catch (error) {
+      showToast("Review Gagal", error instanceof Error ? error.message : "Terjadi kesalahan jaringan.", "error");
+    } finally {
+      setReviewingApplicationId(null);
+    }
+  };
+
   useEffect(() => {
     loadTenants();
     loadMarketingPartners();
+    loadTenantApplications();
   }, []);
 
   useEffect(() => {
@@ -283,6 +325,7 @@ export default function SuperAdminDashboardPage() {
       loadMarketingPartners();
     } else if (activeTab === "tenants") {
       loadTenants();
+      loadTenantApplications();
     }
   }, [activeTab]);
 
@@ -1539,6 +1582,25 @@ export default function SuperAdminDashboardPage() {
                 </button>
               </div>
             </div>
+
+            {tenantApplications.filter((item) => item.status === "PENDING" || item.status === "PROCESSING").length > 0 && (
+              <div style={{ marginBottom: "1.5rem", padding: "1rem", borderRadius: "12px", background: isDark ? "rgba(245, 158, 11, 0.08)" : "#FFFBEB", border: "1px solid rgba(245, 158, 11, 0.35)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
+                  <div><strong style={{ color: isDark ? "#FBBF24" : "#B45309" }}>Pengajuan Tenant Menunggu Verifikasi</strong><div style={{ fontSize: "0.75rem", color: isDark ? "#94A3B8" : "#64748B", marginTop: "2px" }}>Setujui untuk membuat tenant, akun owner, dan mengirim kredensial melalui WhatsApp Super Admin.</div></div>
+                  <span style={{ background: "#F59E0B", color: "#fff", borderRadius: "999px", padding: "0.2rem 0.6rem", fontWeight: 800, fontSize: "0.75rem" }}>{tenantApplications.filter((item) => item.status === "PENDING" || item.status === "PROCESSING").length} baru</span>
+                </div>
+                <div style={{ display: "grid", gap: "0.65rem" }}>
+                  {tenantApplications.filter((item) => item.status === "PENDING" || item.status === "PROCESSING").map((item) => {
+                    const marketing = Array.isArray(item.marketing_partners) ? item.marketing_partners[0] : item.marketing_partners;
+                    const busy = reviewingApplicationId === item.id || item.status === "PROCESSING";
+                    return <div key={item.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap", padding: "0.85rem", borderRadius: "10px", background: isDark ? "rgba(15,23,42,.75)" : "#fff", border: isDark ? "1px solid rgba(255,255,255,.08)" : "1px solid #FDE68A" }}>
+                      <div><div style={{ fontWeight: 850, color: isDark ? "#fff" : "#17211B" }}>{item.business_name}</div><div style={{ fontSize: "0.75rem", color: isDark ? "#94A3B8" : "#64748B", marginTop: "3px" }}>{item.owner_name} · +{item.owner_phone} · {item.city_regency}, {item.province}</div><div style={{ fontSize: "0.72rem", color: "#059669", marginTop: "3px", fontWeight: 750 }}>Marketing: {marketing?.full_name || "-"} ({marketing?.referral_code || "-"})</div></div>
+                      <div style={{ display: "flex", gap: "0.5rem" }}><button disabled={busy} onClick={() => void reviewTenantApplication(item.id, "REJECT")} style={{ border: "1px solid #EF4444", color: "#DC2626", background: "transparent", borderRadius: "7px", padding: "0.45rem 0.75rem", fontWeight: 800, cursor: busy ? "wait" : "pointer" }}>Tolak</button><button disabled={busy} onClick={() => void reviewTenantApplication(item.id, "APPROVE")} style={{ border: 0, color: "#fff", background: "#059669", borderRadius: "7px", padding: "0.45rem 0.8rem", fontWeight: 800, cursor: busy ? "wait" : "pointer" }}>{busy ? "Memproses..." : "Verifikasi & Aktifkan"}</button></div>
+                    </div>;
+                  })}
+                </div>
+              </div>
+            )}
 
             <div className="superadmin-table-container">
               <table style={{ width: "100%", minWidth: "1050px", borderCollapse: "collapse", textAlign: "left", fontSize: "0.875rem" }}>
