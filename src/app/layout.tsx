@@ -3,7 +3,6 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import SplashScreen from "@/components/SplashScreen";
 import PwaInstallCapture from "@/components/PwaInstallCapture";
-import PwaLaunchBoundary from "@/components/PwaLaunchBoundary";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -113,7 +112,6 @@ export default function RootLayout({
       <body>
         <PwaInstallCapture />
         <SplashScreen />
-        <PwaLaunchBoundary />
         {children}
       </body>
     </html>

@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { use, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useParams, useSearchParams } from "next/navigation";
 
 type Menu = { id: string; nama: string; harga: number; kategori: string; desc_menu: string | null };
 type BusinessTable = { id: string; label: string };
@@ -78,12 +79,16 @@ function ToscaBatikOrnament() {
   );
 }
 
-export default function CustomerMenuPage({ params, searchParams }: { params: Promise<{ warkopId: string }>; searchParams: Promise<{ tableId?: string; table?: string }> }) {
-  const { warkopId } = use(params);
-  const query = use(searchParams);
+function CustomerMenuContent() {
+  const urlParams = useParams();
+  const searchParams = useSearchParams();
+  const warkopId = (urlParams?.warkopId as string) || "";
+  const paramTableId = searchParams.get("tableId") || "";
+  const paramTable = searchParams.get("table") || "";
+
   const [payload, setPayload] = useState<MenuPayload | null>(null);
-  const [tableId, setTableId] = useState(query.tableId || "");
-  const [tableNumber, setTableNumber] = useState(query.table || "");
+  const [tableId, setTableId] = useState(paramTableId);
+  const [tableNumber, setTableNumber] = useState(paramTable);
   const [cart, setCart] = useState<Record<string, CartItem>>({});
   const [paymentMethod, setPaymentMethod] = useState<"QRIS" | "CASH">("QRIS");
   const [proofImage, setProofImage] = useState<string | null>(null);
@@ -97,13 +102,14 @@ export default function CustomerMenuPage({ params, searchParams }: { params: Pro
   const [search, setSearch] = useState("");
 
   useEffect(() => {
+    if (!warkopId) return;
     fetch(`/api/public/menu/${encodeURIComponent(warkopId)}`)
       .then(async (response) => {
         const body = await response.json();
         if (!response.ok) throw new Error(body.error || "Menu gagal dimuat.");
         
-        let matchedTable = body.tables.find((table: BusinessTable) => table.id === query.tableId)
-          || body.tables.find((table: BusinessTable) => table.label === query.table);
+        let matchedTable = body.tables.find((table: BusinessTable) => table.id === paramTableId)
+          || body.tables.find((table: BusinessTable) => table.label === paramTable);
 
         if (!matchedTable && typeof window !== "undefined") {
           try {
@@ -126,7 +132,7 @@ export default function CustomerMenuPage({ params, searchParams }: { params: Pro
         setTableNumber(matchedTable?.label || "");
       })
       .catch((reason) => setError(reason instanceof Error ? reason.message : "Menu gagal dimuat."));
-  }, [query.table, query.tableId, warkopId]);
+  }, [paramTable, paramTableId, warkopId]);
 
   useEffect(() => {
     if (!order || !customerToken) return;
@@ -187,6 +193,9 @@ export default function CustomerMenuPage({ params, searchParams }: { params: Pro
 
   return <div className="customer-menu-page">
     <header className="customer-menu-head">
+      <div className="customer-header-ornament" aria-hidden="true">
+        <img src="/ornamen-header-menu.svg" alt="" />
+      </div>
       <div className="customer-brand-row">
         {payload.profile.logo_url ? <img className="customer-business-logo" src={payload.profile.logo_url} alt={`Logo ${payload.profile.nama}`} /> : <Image src="/logo.svg?v=2" width={40} height={40} alt="OKESIH" />}
         <div><small>MENU DIGITAL</small><h1>{payload.profile.nama}</h1></div>
@@ -213,3 +222,12 @@ export default function CustomerMenuPage({ params, searchParams }: { params: Pro
     {checkout && <div className="customer-checkout-backdrop"><section className="customer-checkout"><header><div><small>RINGKASAN PESANAN</small><h2>Periksa pesanan Anda</h2><p>{tableNumber ? `Meja ${formatTableNumber(tableNumber)}` : "⚠️ Lokasi meja belum terdeteksi"}</p></div><button className="customer-close" onClick={() => setCheckout(false)} aria-label="Tutup">×</button></header><div className="customer-checkout-items">{Object.values(cart).map(({ menu, qty, notes }) => <div className="customer-checkout-item" key={menu.id}><div><b>{menu.nama}</b><span>Rp {(Number(menu.harga) * qty).toLocaleString("id-ID")}</span></div><div className="customer-checkout-qty"><button onClick={() => changeQty(menu, -1)}>−</button><strong>{qty}</strong><button onClick={() => changeQty(menu, 1)}>+</button></div><input value={notes} onChange={(event) => changeNote(menu.id, event.target.value)} placeholder="Catatan, mis. tanpa gula" maxLength={300} /></div>)}</div><div className="customer-payment"><button className={paymentMethod === "QRIS" ? "active" : ""} onClick={() => setPaymentMethod("QRIS")}><span>▣</span> QRIS</button><button className={paymentMethod === "CASH" ? "active" : ""} onClick={() => setPaymentMethod("CASH")}><span>●</span> Tunai</button></div>{paymentMethod === "QRIS" && <div className="customer-qris">{payload.profile.qris_image_url && <img src={payload.profile.qris_image_url} alt={`QRIS ${payload.profile.qris_merchant_name || payload.profile.nama}`}/>}<b>{payload.profile.qris_merchant_name || payload.profile.nama}</b><label className="customer-proof-upload">Unggah bukti pembayaran<input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => readProof(event.target.files?.[0])}/></label>{proofImage && <span>✓ Bukti pembayaran siap dikirim</span>}</div>}<footer><div><small>Total pembayaran</small><strong>Rp {total.toLocaleString("id-ID")}</strong></div><button className="btn-primary" disabled={busy} onClick={() => void submitOrder()}>{busy ? "Menyimpan..." : (tableId ? "Kirim Pesanan →" : "Scan QR Meja untuk Memesan")}</button></footer></section></div>}
   </div>;
 }
+
+export default function CustomerMenuPage() {
+  return (
+    <Suspense fallback={<div className="customer-loading" role="status"><Image src="/logo.svg?v=2" width={64} height={64} alt="OKESIH"/></div>}>
+      <CustomerMenuContent />
+    </Suspense>
+  );
+}
+

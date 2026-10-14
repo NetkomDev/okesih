@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect } from "react";
-import { usePathname } from "next/navigation";
 import { isDashboardLaunch } from "@/lib/pwa-routing";
 
 function isInstalled() {
@@ -13,9 +12,7 @@ function isInstalled() {
 }
 
 /** Check once per document launch, and redirect dashboard PWAs to login screen */
-export default function PwaLaunchBoundary({ children }: { children?: React.ReactNode }) {
-  const pathname = usePathname();
-
+export default function PwaLaunchBoundary() {
   useEffect(() => {
     const redirect = () => {
       if (typeof window === "undefined") return false;
@@ -41,8 +38,8 @@ export default function PwaLaunchBoundary({ children }: { children?: React.React
       window.removeEventListener("pageshow", restored);
       document.removeEventListener("visibilitychange", resumed);
     };
-  }, [pathname]);
+  }, []);
 
-  return children ? <>{children}</> : null;
+  return null;
 }
 
