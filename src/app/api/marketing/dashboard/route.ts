@@ -37,21 +37,74 @@ export async function GET() {
     if (applicationError) throw applicationError;
     const ids = (tenants || []).map((item) => item.id);
     let transactions: Array<{ warkop_id: string }> = [];
+    let billings: Array<{ warkop_id: string; status_bayar: string; tagihan_pokok: number }> = [];
     if (ids.length) {
-      const result = await admin.from("transactions").select("warkop_id").in("warkop_id", ids).neq("status_pesanan", "VOID").neq("status_pesanan", "REJECTED");
-      if (result.error) throw result.error;
-      transactions = result.data || [];
+      const [trxResult, billingResult] = await Promise.all([
+        admin.from("transactions").select("warkop_id").in("warkop_id", ids).neq("status_pesanan", "VOID").neq("status_pesanan", "REJECTED"),
+        admin.from("saas_billings").select("warkop_id, status_bayar, tagihan_pokok").in("warkop_id", ids).order("created_at", { ascending: false }),
+      ]);
+      if (trxResult.error) throw trxResult.error;
+      transactions = trxResult.data || [];
+      billings = billingResult.data || [];
     }
     const receiptCount = new Map<string, number>();
     transactions.forEach((row) => receiptCount.set(row.warkop_id, (receiptCount.get(row.warkop_id) || 0) + 1));
-    const mapped = (tenants || []).map((tenant) => ({
-      id: tenant.id, name: tenant.nama, slug: tenant.slug, ownerName: tenant.owner_name,
-      phone: tenant.owner_phone, province: tenant.province, cityRegency: tenant.city_regency,
-      status: tenant.is_active ? "ACTIVE" : "SUSPENDED", joinedAt: tenant.created_at,
-      receipts: receiptCount.get(tenant.id) || 0,
-      commission: (receiptCount.get(tenant.id) || 0) * Number(tenant.marketing_commission_per_receipt || 0),
-    }));
-    return NextResponse.json({ data: { profile: { name: partner.full_name, referralCode: partner.referral_code, area: partner.city_area, commissionRate: Number(partner.commission_rate), commissionPaid: Number(partner.commission_paid) }, applications: applications || [], tenants: mapped, totals: { tenants: mapped.length, pending: (applications || []).filter((item) => item.status === "PENDING" || item.status === "PROCESSING").length, receipts: mapped.reduce((sum, item) => sum + item.receipts, 0), commission: mapped.reduce((sum, item) => sum + item.commission, 0) } } });
+    const billingMap = new Map<string, { status: "PAID" | "UNPAID"; amount: number }>();
+    billings.forEach((b) => {
+      if (!billingMap.has(b.warkop_id)) {
+        billingMap.set(b.warkop_id, {
+          status: b.status_bayar === "PAID" ? "PAID" : "UNPAID",
+          amount: Number(b.tagihan_pokok) || 0,
+        });
+      } else if (b.status_bayar === "UNPAID") {
+        // Jika ada salah satu tagihan yang belum bayar, tandai UNPAID
+        billingMap.set(b.warkop_id, {
+          status: "UNPAID",
+          amount: (billingMap.get(b.warkop_id)?.amount || 0) + (Number(b.tagihan_pokok) || 0),
+        });
+      }
+    });
+
+    const mapped = (tenants || []).map((tenant) => {
+      const bInfo = billingMap.get(tenant.id);
+      return {
+        id: tenant.id,
+        name: tenant.nama,
+        slug: tenant.slug,
+        ownerName: tenant.owner_name,
+        phone: tenant.owner_phone,
+        province: tenant.province,
+        cityRegency: tenant.city_regency,
+        status: tenant.is_active ? "ACTIVE" : "SUSPENDED",
+        paymentStatus: bInfo?.status || "PAID",
+        unpaidAmount: bInfo?.amount || 0,
+        commissionPerReceipt: Number(tenant.marketing_commission_per_receipt || 0),
+        joinedAt: tenant.created_at,
+        receipts: receiptCount.get(tenant.id) || 0,
+        commission: (receiptCount.get(tenant.id) || 0) * Number(tenant.marketing_commission_per_receipt || 0),
+      };
+    });
+    return NextResponse.json({
+      data: {
+        profile: {
+          name: partner.full_name,
+          referralCode: partner.referral_code,
+          area: partner.city_area,
+          commissionRate: Number(partner.commission_rate),
+          commissionPaid: Number(partner.commission_paid),
+        },
+        applications: applications || [],
+        tenants: mapped,
+        totals: {
+          tenants: mapped.length,
+          pending: (applications || []).filter((item) => item.status === "PENDING" || item.status === "PROCESSING").length,
+          unpaidTenants: mapped.filter((item) => item.paymentStatus === "UNPAID").length,
+          paidTenants: mapped.filter((item) => item.paymentStatus === "PAID").length,
+          receipts: mapped.reduce((sum, item) => sum + item.receipts, 0),
+          commission: mapped.reduce((sum, item) => sum + item.commission, 0),
+        },
+      },
+    });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Gagal memuat dashboard." }, { status: 500 });
   }

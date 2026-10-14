@@ -1,5 +1,7 @@
 "use client";
+
 import Image from "next/image";
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { INDONESIA_PROVINCES } from "@/lib/indonesia-regions";
 import { logoutUser, useAuthGuard } from "@/lib/auth-helpers";
@@ -13,6 +15,8 @@ type Tenant = {
   cityRegency: string;
   receipts: number;
   commission: number;
+  paymentStatus?: "PAID" | "UNPAID";
+  unpaidAmount?: number;
 };
 
 type Application = {
@@ -38,6 +42,8 @@ type Dashboard = {
   totals: {
     tenants: number;
     pending: number;
+    unpaidTenants?: number;
+    paidTenants?: number;
     receipts: number;
     commission: number;
   };
@@ -48,12 +54,6 @@ type InstallPromptEvent = Event & {
 };
 
 const money = (value: number) => `Rp ${value.toLocaleString("id-ID")}`;
-const labels = {
-  PENDING: "Menunggu review",
-  PROCESSING: "Sedang diproses",
-  APPROVED: "Disetujui",
-  REJECTED: "Ditolak",
-};
 
 export default function MarketingDashboardPage() {
   const { isAuthorized, loading } = useAuthGuard(["MARKETING"]);
@@ -101,7 +101,6 @@ export default function MarketingDashboardPage() {
     // Jika belum standalone dan belum pernah ditutup pada sesi ini
     const dismissed = sessionStorage.getItem("mkt_pwa_dismissed") === "1";
     if (!isStandalone && !dismissed) {
-      // Beri sedikit jeda agar dashboard selesai render dan transisi mulus
       const popupTimer = window.setTimeout(() => {
         setShowInstallModal(true);
       }, 700);
@@ -192,10 +191,12 @@ export default function MarketingDashboardPage() {
           priority
           unoptimized
         />
-        <span>{error || "Menyiapkan dashboard marketing..."}</span>
+        <span className="mkt-splash-text">{error || "Dashboard marketing"}</span>
       </main>
     );
   }
+
+  const unpaidCount = data.totals.unpaidTenants ?? data.tenants.filter((t) => t.paymentStatus === "UNPAID").length;
 
   return (
     <main className="mkt-shell">
@@ -221,7 +222,7 @@ export default function MarketingDashboardPage() {
             <div>
               <span>Dashboard kemitraan</span>
               <h1>Selamat datang, {data.profile.name}</h1>
-              <p>Pantau pengajuan tenant dan perkembangan komisi secara transparan.</p>
+              <p>Pantau pengajuan tenant, status tagihan binaan, dan perkembangan komisi secara transparan.</p>
             </div>
           </div>
         </header>
@@ -229,36 +230,49 @@ export default function MarketingDashboardPage() {
         {error && <div className="mkt-alert error">{error}</div>}
         {notice && <div className="mkt-alert success">✓ {notice}</div>}
 
-        {/* 4 Cards Statistik dengan icon besar hampir memenuhi latar */}
+        {/* 4 Cards Statistik Interaktif: Klik untuk menuju halaman detail */}
         <section className="mkt-stats">
-          <article>
-            <i className="green" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                <polyline points="9 22 9 12 15 12 15 22" />
-              </svg>
-            </i>
-            <div>
-              <small>Tenant aktif</small>
-              <strong>{data.totals.tenants}</strong>
-              <p>Usaha terverifikasi</p>
-            </div>
-          </article>
+          {/* Card 1: Tenant Aktif -> Menuju Halaman Tenant Binaan */}
+          <Link href="/marketing/dashboard/tenant-binaan" className="mkt-stat-card-link" title="Buka Daftar Tenant Binaan & Status Pembayaran">
+            <article className="mkt-clickable-card">
+              <i className="green" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                  <polyline points="9 22 9 12 15 12 15 22" />
+                </svg>
+              </i>
+              <div>
+                <small>Tenant aktif</small>
+                <strong>{data.totals.tenants}</strong>
+                <p>
+                  {unpaidCount > 0 ? (
+                    <span style={{ color: "#dc2626", fontWeight: 700 }}>{unpaidCount} belum bayar ↗</span>
+                  ) : (
+                    "Usaha binaan ↗"
+                  )}
+                </p>
+              </div>
+            </article>
+          </Link>
 
-          <article>
-            <i className="amber" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10" />
-                <polyline points="12 6 12 12 16 14" />
-              </svg>
-            </i>
-            <div>
-              <small>Menunggu review</small>
-              <strong>{data.totals.pending}</strong>
-              <p>Pengajuan diproses</p>
-            </div>
-          </article>
+          {/* Card 2: Menunggu Review -> Menuju Halaman Status Pengajuan */}
+          <Link href="/marketing/dashboard/pengajuan" className="mkt-stat-card-link" title="Buka Halaman Status Pengajuan Tenant">
+            <article className="mkt-clickable-card">
+              <i className="amber" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
+                </svg>
+              </i>
+              <div>
+                <small>Menunggu review</small>
+                <strong>{data.totals.pending}</strong>
+                <p>Lihat pengajuan ↗</p>
+              </div>
+            </article>
+          </Link>
 
+          {/* Card 3: Total Struk */}
           <article>
             <i className="orange" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -276,21 +290,25 @@ export default function MarketingDashboardPage() {
             </div>
           </article>
 
-          <article>
-            <i className="blue" aria-hidden="true">
-              <span className="mkt-rp-icon">Rp</span>
-            </i>
-            <div>
-              <small>Komisi berjalan</small>
-              <strong>{money(data.totals.commission)}</strong>
-              <p>{money(data.profile.commissionPaid)} dicairkan</p>
-            </div>
-          </article>
+          {/* Card 4: Komisi Berjalan -> Menuju Halaman Komisi */}
+          <Link href="/marketing/dashboard/komisi" className="mkt-stat-card-link" title="Buka Rincian & Pencairan Komisi">
+            <article className="mkt-clickable-card">
+              <i className="blue" aria-hidden="true">
+                <span className="mkt-rp-icon">Rp</span>
+              </i>
+              <div>
+                <small>Komisi berjalan</small>
+                <strong>{money(data.totals.commission)}</strong>
+                <p>Rincian komisi ↗</p>
+              </div>
+            </article>
+          </Link>
         </section>
 
-        {/* Content Grid: Form Pendaftaran Tenant & Data Review */}
-        <section className="mkt-content-grid">
-          <form onSubmit={submit} className="mkt-panel mkt-form">
+        {/* Content Layout: Form Pendaftaran Tenant Baru & Shortcut Navigasi */}
+        <section className="mkt-content-grid" style={{ gridTemplateColumns: "1fr 360px" }}>
+          {/* Form Daftarkan Tenant Baru */}
+          <form id="form-tenant" onSubmit={submit} className="mkt-panel mkt-form">
             <PanelHead
               icon="＋"
               title="Daftarkan Tenant Baru"
@@ -349,83 +367,63 @@ export default function MarketingDashboardPage() {
               </label>
             </div>
             <div className="mkt-flow-note">
-              <b>Alur verifikasi</b>
-              <span>Pengajuan → WA Super Admin → Review → Kredensial dikirim ke owner</span>
+              <b>Alur verifikasi otomatis:</b>
+              <span>Pengajuan → Terkirim ke WA Super Admin → Review Cepat → Kredensial akun dikirim ke WA owner.</span>
             </div>
             <button className="mkt-primary" disabled={saving}>
               {saving ? "Mengirim pengajuan..." : "Daftarkan & Kirim WhatsApp"}
             </button>
           </form>
 
-          <div className="mkt-right-column">
-            <section className="mkt-panel">
-              <PanelHead icon="✓" title="Status Pengajuan" text="Riwayat review tenant terbaru Anda." />
-              {data.applications.length === 0 ? (
-                <Empty text="Belum ada pengajuan tenant." />
-              ) : (
-                <div className="mkt-list">
-                  {data.applications.map((item) => (
-                    <article key={item.id} className="mkt-list-item">
-                      <div>
-                        <strong>{item.business_name}</strong>
-                        <span>
-                          {item.owner_name} · {item.city_regency}, {item.province}
-                        </span>
-                        <small>
-                          {new Date(item.created_at).toLocaleDateString("id-ID", {
-                            day: "numeric",
-                            month: "short",
-                            year: "numeric",
-                          })}
-                        </small>
-                      </div>
-                      <div className={`mkt-status ${item.status.toLowerCase()}`}>
-                        {labels[item.status]}
-                      </div>
-                      {item.review_notes && <p>Catatan: {item.review_notes}</p>}
-                    </article>
-                  ))}
+          {/* Kolom Kanan: Navigasi Cepat Halaman Baru */}
+          <aside className="mkt-side-nav-column">
+            <div className="mkt-panel">
+              <div className="mkt-panel-head">
+                <div className="mkt-panel-icon">⚡</div>
+                <div>
+                  <h2>Menu Marketing</h2>
+                  <p>Akses fitur monitoring kemitraan.</p>
                 </div>
-              )}
-            </section>
+              </div>
 
-            <section className="mkt-panel">
-              <PanelHead icon="▦" title="Tenant Binaan Aktif" text="Performa usaha yang sudah diverifikasi." />
-              {data.tenants.length === 0 ? (
-                <Empty text="Tenant aktif akan tampil setelah disetujui Super Admin." />
-              ) : (
-                <div className="mkt-table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Usaha</th>
-                        <th>Wilayah</th>
-                        <th>Struk</th>
-                        <th>Komisi</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data.tenants.map((tenant) => (
-                        <tr key={tenant.id}>
-                          <td>
-                            <strong>{tenant.name}</strong>
-                            <span>{tenant.ownerName}</span>
-                          </td>
-                          <td>
-                            {tenant.cityRegency}, {tenant.province}
-                          </td>
-                          <td>{tenant.receipts}</td>
-                          <td>
-                            <strong>{money(tenant.commission)}</strong>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </section>
-          </div>
+              <div className="mkt-quick-links">
+                <Link href="/marketing/dashboard/tenant-binaan" className="mkt-quick-link-item">
+                  <div className="mkt-quick-link-icon green">🏪</div>
+                  <div>
+                    <strong>Tenant Binaan &amp; Tagihan</strong>
+                    <p>{data.totals.tenants} tenant aktif · {unpaidCount > 0 ? `${unpaidCount} belum bayar` : "Semua lunas"}</p>
+                  </div>
+                  <span>→</span>
+                </Link>
+
+                <Link href="/marketing/dashboard/pengajuan" className="mkt-quick-link-item">
+                  <div className="mkt-quick-link-icon amber">📋</div>
+                  <div>
+                    <strong>Status Pengajuan</strong>
+                    <p>{data.totals.pending} pengajuan sedang diverifikasi</p>
+                  </div>
+                  <span>→</span>
+                </Link>
+
+                <Link href="/marketing/dashboard/komisi" className="mkt-quick-link-item">
+                  <div className="mkt-quick-link-icon blue">💰</div>
+                  <div>
+                    <strong>Rincian &amp; Pencairan Komisi</strong>
+                    <p>Total {money(data.totals.commission)} berjalan</p>
+                  </div>
+                  <span>→</span>
+                </Link>
+              </div>
+            </div>
+
+            <div className="mkt-tips-card">
+              <span className="mkt-tips-badge">Tips Lapangan</span>
+              <h4>Tindak Lanjut Tenant Menunggak</h4>
+              <p>
+                Buka menu <b>Tenant Binaan</b> untuk melihat tenant yang berstatus belum bayar. Anda dapat langsung menekan tombol WhatsApp atau mendatangi outlet mereka untuk memastikan sistem kasir tetap berjalan lancar.
+              </p>
+            </div>
+          </aside>
         </section>
 
         {/* Profil Akun Mitra & Tombol Keluar yang Elegan di Bagian Bawah */}
@@ -481,7 +479,7 @@ export default function MarketingDashboardPage() {
             </button>
             <div className="mkt-modal-icon-wrap">
               <Image
-                src="/icons/icon-192.png"
+                src="/logo.svg"
                 alt="Logo OKESIH"
                 width={72}
                 height={72}
@@ -537,8 +535,4 @@ function PanelHead({ icon, title, text }: { icon: string; title: string; text: s
       </div>
     </div>
   );
-}
-
-function Empty({ text }: { text: string }) {
-  return <div className="mkt-empty">{text}</div>;
 }

@@ -135,12 +135,18 @@
   border: 1px solid #a7f3d0;
 }
 
-/* 4 Card Statistik: Icon Besar & Hampir Memenuhi Latar */
+/* 4 Card Statistik: Icon Besar & Interaktif */
 .mkt-stats {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 16px;
   margin: 22px 0;
+}
+
+.mkt-stat-card-link {
+  text-decoration: none;
+  color: inherit;
+  display: block;
 }
 
 .mkt-stats article {
@@ -152,12 +158,20 @@
   border-radius: 18px;
   padding: 18px 20px;
   box-shadow: 0 8px 24px rgba(15, 118, 110, 0.05);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  height: 100%;
+  box-sizing: border-box;
 }
 
-.mkt-stats article:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 28px rgba(15, 118, 110, 0.08);
+.mkt-clickable-card {
+  cursor: pointer;
+}
+
+.mkt-stats article:hover,
+.mkt-clickable-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px rgba(15, 118, 110, 0.12);
+  border-color: #0d9488;
 }
 
 .mkt-stats small {
@@ -235,12 +249,12 @@
 /* Grid Konten */
 .mkt-content-grid {
   display: grid;
-  grid-template-columns: 390px 1fr;
+  grid-template-columns: 1fr 360px;
   gap: 18px;
   align-items: start;
 }
 
-.mkt-right-column {
+.mkt-side-nav-column {
   display: grid;
   gap: 18px;
 }
@@ -368,63 +382,479 @@
   cursor: wait;
 }
 
-/* List Status Pengajuan */
-.mkt-list {
+/* Quick Navigation Links di Samping */
+.mkt-quick-links {
   display: grid;
   gap: 10px;
 }
 
-.mkt-list-item {
-  position: relative;
-  border: 1px solid #e2e8e4;
+.mkt-quick-link-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 14px;
   border-radius: 14px;
-  padding: 14px 145px 14px 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.2s ease;
+}
+
+.mkt-quick-link-item:hover {
+  background: #ffffff;
+  border-color: #0d9488;
+  transform: translateX(3px);
+  box-shadow: 0 6px 18px rgba(15, 118, 110, 0.08);
+}
+
+.mkt-quick-link-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
   display: grid;
-  gap: 4px;
-  background: #fcfdfc;
+  place-items: center;
+  font-size: 18px;
+  flex-shrink: 0;
 }
 
-.mkt-list-item strong,
-.mkt-list-item span,
-.mkt-list-item small {
+.mkt-quick-link-icon.green {
+  background: #d1fae5;
+}
+
+.mkt-quick-link-icon.amber {
+  background: #fef3c7;
+}
+
+.mkt-quick-link-icon.blue {
+  background: #e0f2fe;
+}
+
+.mkt-quick-link-item strong {
   display: block;
-}
-
-.mkt-list-item strong {
-  font-size: 14px;
+  font-size: 13.5px;
   color: #0f172a;
 }
 
-.mkt-list-item span {
-  color: #64748b;
-  font-size: 12px;
-  margin-top: 2px;
-}
-
-.mkt-list-item small {
-  color: #94a3b8;
-  font-size: 11px;
-  margin-top: 4px;
-}
-
-.mkt-list-item p {
-  grid-column: 1 / -1;
-  margin: 8px 0 0;
+.mkt-quick-link-item p {
+  margin: 2px 0 0;
   font-size: 11.5px;
-  background: #f1f5f9;
+  color: #64748b;
+}
+
+.mkt-quick-link-item span {
+  margin-left: auto;
+  font-size: 16px;
+  color: #0d9488;
+  font-weight: 800;
+}
+
+/* Tips Card */
+.mkt-tips-card {
+  background: linear-gradient(135deg, #042f2e 0%, #0f766e 100%);
+  border-radius: 18px;
+  padding: 20px;
+  color: #ffffff;
+  box-shadow: 0 10px 25px rgba(4, 47, 46, 0.2);
+}
+
+.mkt-tips-badge {
+  display: inline-block;
+  background: #ff6a2a;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 850;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.mkt-tips-card h4 {
+  margin: 0 0 6px;
+  font-size: 15px;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.mkt-tips-card p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #ccfbf1;
+}
+
+/* Subpages: Header Navigasi Subpage */
+.mkt-subpage-header {
+  margin-bottom: 22px;
+}
+
+.mkt-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 12px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 750;
+  color: #0f766e;
+  text-decoration: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  margin-bottom: 14px;
+  transition: all 0.2s ease;
+}
+
+.mkt-back-btn:hover {
+  background: #f0fdfa;
+  border-color: #0f766e;
+  transform: translateX(-2px);
+}
+
+.mkt-subpage-title-box h1 {
+  font-size: clamp(22px, 3.5vw, 32px);
+  font-weight: 850;
+  color: #0f172a;
+  margin: 0 0 6px;
+  letter-spacing: -0.02em;
+}
+
+.mkt-subpage-title-box p {
+  margin: 0;
+  font-size: 13.5px;
+  color: #64748b;
+  max-width: 680px;
+  line-height: 1.5;
+}
+
+/* Subpage Metric Cards: Komisi & Tenant Binaan */
+.mkt-komisi-summary-grid,
+.mkt-tenant-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.mkt-komisi-card,
+.mkt-tenant-metric-card {
+  background: #ffffff;
+  border: 1px solid #e2e8e4;
+  border-radius: 18px;
+  padding: 20px;
+  box-shadow: 0 8px 24px rgba(15, 118, 110, 0.04);
+}
+
+.mkt-komisi-card.highlight {
+  background: linear-gradient(135deg, #042f2e 0%, #0f766e 100%);
+  color: #ffffff;
+  border-color: #0f766e;
+}
+
+.mkt-komisi-card.highlight small {
+  color: #5eead4;
+}
+
+.mkt-komisi-card.highlight strong {
+  color: #ffffff;
+}
+
+.mkt-komisi-card.highlight span {
+  color: #ccfbf1;
+}
+
+.mkt-komisi-card small,
+.mkt-tenant-metric-card small {
+  display: block;
+  font-size: 12px;
+  font-weight: 750;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.mkt-komisi-card strong,
+.mkt-tenant-metric-card strong {
+  display: block;
+  font-size: 26px;
+  font-weight: 900;
+  color: #0f172a;
+  margin: 4px 0 2px;
+}
+
+.mkt-komisi-card span,
+.mkt-tenant-metric-card span {
+  font-size: 11.5px;
+  color: #94a3b8;
+}
+
+.mkt-tenant-metric-card.unpaid.warning {
+  border-color: #fca5a5;
+  background: #fffafa;
+}
+
+.mkt-tenant-metric-card.unpaid.warning strong {
+  color: #b91c1c;
+}
+
+/* Filter Bar & Tabs */
+.mkt-filter-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  margin: 22px 0 16px;
+  flex-wrap: wrap;
+}
+
+.mkt-filter-tabs {
+  display: flex;
+  gap: 8px;
+  background: #e2e8f0;
+  padding: 4px;
+  border-radius: 14px;
+}
+
+.mkt-filter-tabs button {
+  border: none;
+  background: transparent;
   color: #475569;
-  padding: 8px 10px;
+  font-size: 12.5px;
+  font-weight: 750;
+  padding: 8px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mkt-filter-tabs button.active {
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.mkt-filter-tabs button.active.unpaid {
+  color: #b91c1c;
+  font-weight: 850;
+}
+
+.mkt-search-box input {
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 9px 14px;
+  font-size: 13px;
+  outline: none;
+  min-width: 240px;
+}
+
+.mkt-search-box input:focus {
+  border-color: #0d9488;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
+}
+
+.mkt-btn-add-tenant {
+  background: linear-gradient(135deg, #ff6a2a 0%, #ea580c 100%);
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 10px 18px;
+  border-radius: 12px;
+  box-shadow: 0 6px 16px rgba(234, 88, 12, 0.3);
+  transition: transform 0.15s ease;
+}
+
+.mkt-btn-add-tenant:hover {
+  transform: translateY(-1px);
+}
+
+/* Badge Status Pembayaran Tenant */
+.mkt-badge-unpaid-box {
+  display: grid;
+  gap: 3px;
+}
+
+.mkt-badge-unpaid {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fca5a5;
   border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 11.5px;
+  font-weight: 850;
+  width: fit-content;
+}
+
+.mkt-unpaid-amount {
+  color: #dc2626;
+  font-weight: 750;
+  font-size: 11px;
+}
+
+.mkt-badge-paid {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #d1fae5;
+  color: #047857;
+  border: 1px solid #6ee7b7;
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 11.5px;
+  font-weight: 850;
+  width: fit-content;
+}
+
+.mkt-row-unpaid {
+  background: #fffdfd;
+}
+
+/* Tombol WA Follow Up */
+.mkt-tenant-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mkt-wa-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #25d366;
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 11.5px;
+  font-weight: 800;
+  padding: 7px 12px;
+  border-radius: 8px;
+  transition: all 0.15s ease;
+}
+
+.mkt-wa-btn:hover {
+  background: #1eb956;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(37, 211, 102, 0.35);
+}
+
+.mkt-wa-btn.urgent {
+  background: #dc2626;
+}
+
+.mkt-wa-btn.urgent:hover {
+  background: #b91c1c;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.35);
+}
+
+/* Payout Info Notice */
+.mkt-payout-info {
+  display: flex;
+  gap: 14px;
+  background: #f0fdfa;
+  border: 1px solid #99f6e4;
+  border-radius: 16px;
+  padding: 16px 20px;
+  margin-top: 20px;
+  color: #0f766e;
+}
+
+.mkt-payout-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #0d9488;
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.mkt-payout-info strong {
+  display: block;
+  font-size: 13.5px;
+  color: #042f2e;
+  margin-bottom: 2px;
+}
+
+.mkt-payout-info p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #115e59;
+}
+
+/* Detailed List Item untuk Pengajuan */
+.mkt-list-item-detailed {
+  border: 1px solid #e2e8e4;
+  border-radius: 16px;
+  padding: 18px 20px;
+  background: #ffffff;
+  transition: border-color 0.15s ease;
+}
+
+.mkt-list-item-detailed:hover {
+  border-color: #0d9488;
+}
+
+.mkt-list-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.mkt-list-header-row h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 850;
+  color: #0f172a;
+}
+
+.mkt-list-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  padding: 12px 14px;
+  background: #f8fafc;
+  border-radius: 12px;
+}
+
+.mkt-list-meta-grid small {
+  display: block;
+  font-size: 11px;
+  color: #64748b;
+  margin-bottom: 2px;
+}
+
+.mkt-list-meta-grid span {
+  font-size: 12.5px;
+  font-weight: 750;
+  color: #1e293b;
+}
+
+.mkt-review-notes {
+  margin-top: 10px;
+  font-size: 12px;
+  background: #fef3c7;
+  color: #92400e;
+  border-radius: 10px;
+  padding: 10px 14px;
+  line-height: 1.4;
 }
 
 .mkt-status {
-  position: absolute;
-  right: 14px;
-  top: 14px;
   border-radius: 99px;
-  padding: 6px 10px;
-  font-size: 10.5px;
+  padding: 6px 12px;
+  font-size: 11px;
   font-weight: 850;
+  width: fit-content;
 }
 
 .mkt-status.pending,
@@ -452,7 +882,7 @@
   font-size: 13px;
 }
 
-/* Tabel Tenant Aktif */
+/* Tabel Shared */
 .mkt-table-wrap {
   overflow-x: auto;
 }
@@ -460,7 +890,7 @@
 .mkt-table-wrap table {
   border-collapse: collapse;
   width: 100%;
-  min-width: 540px;
+  min-width: 600px;
   font-size: 12.5px;
 }
 
@@ -474,7 +904,7 @@
 }
 
 .mkt-table-wrap td {
-  padding: 13px 12px;
+  padding: 14px 12px;
   border-bottom: 1px solid #f1f5f9;
   color: #1e293b;
 }
@@ -483,7 +913,7 @@
   display: block;
   color: #64748b;
   font-size: 11px;
-  margin-top: 3px;
+  margin-top: 2px;
 }
 
 /* Bar Profil Akun & Tombol Keluar yang Elegan di Bawah */
@@ -577,11 +1007,12 @@
   filter: drop-shadow(0 12px 28px rgba(255, 87, 34, 0.3));
 }
 
-.mkt-loading span {
-  font-size: 13.5px;
-  font-weight: 650;
-  color: #99f6e4;
-  letter-spacing: 0.3px;
+.mkt-splash-text {
+  font-size: 16px;
+  font-weight: 750;
+  color: #5eead4;
+  letter-spacing: 0.5px;
+  text-transform: capitalize;
 }
 
 /* Popup Modal Install PWA */
@@ -748,6 +1179,13 @@
   .mkt-content-grid {
     grid-template-columns: 1fr;
   }
+  .mkt-komisi-summary-grid,
+  .mkt-tenant-summary-grid {
+    grid-template-columns: 1fr;
+  }
+  .mkt-list-meta-grid {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
 @media (max-width: 620px) {
@@ -784,13 +1222,6 @@
   .mkt-form-row {
     grid-template-columns: 1fr;
   }
-  .mkt-list-item {
-    padding: 48px 14px 14px;
-  }
-  .mkt-status {
-    left: 14px;
-    right: auto;
-  }
   .mkt-account-bar {
     margin: 20px 14px 0;
     padding: 14px 16px;
@@ -807,5 +1238,19 @@
   .mkt-logo {
     width: 48px;
     height: 48px;
+  }
+  .mkt-filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .mkt-filter-tabs {
+    overflow-x: auto;
+  }
+  .mkt-search-box input {
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .mkt-list-meta-grid {
+    grid-template-columns: 1fr;
   }
 }
