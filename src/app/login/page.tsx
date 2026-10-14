@@ -429,8 +429,6 @@ export default function LoginPage() {
         <PwaRoleMismatchModal
           isOpen={mismatch.isOpen}
           pwaKind={mismatch.pwaKind}
-          userRole={mismatch.userRole}
-          onClose={() => setMismatch(null)}
         />
       )}
     </main>

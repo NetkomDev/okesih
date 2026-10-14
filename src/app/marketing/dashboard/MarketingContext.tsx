@@ -71,17 +71,6 @@ export function MarketingProvider({ children }: { children: React.ReactNode }) {
   const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState("");
 
-  if (roleMismatch) {
-    return (
-      <PwaRoleMismatchModal
-        isOpen={true}
-        pwaKind={roleMismatch.pwaKind}
-        userRole={roleMismatch.userRole}
-      />
-    );
-  }
-
-
   const refresh = useCallback(async () => {
     try {
       const response = await fetch("/api/marketing/dashboard", { cache: "no-store" });
@@ -100,7 +89,7 @@ export function MarketingProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!isAuthorized) return;
-    refresh();
+    queueMicrotask(() => void refresh());
 
     // Auto-sync data saat PWA dibuka kembali atau kembali aktif
     const onVisibilityChange = () => {
@@ -120,6 +109,15 @@ export function MarketingProvider({ children }: { children: React.ReactNode }) {
       window.removeEventListener("focus", onFocus);
     };
   }, [isAuthorized, refresh]);
+
+  if (roleMismatch) {
+    return (
+      <PwaRoleMismatchModal
+        isOpen={true}
+        pwaKind={roleMismatch.pwaKind}
+      />
+    );
+  }
 
   return (
     <MarketingContext.Provider

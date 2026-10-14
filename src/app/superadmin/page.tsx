@@ -717,7 +717,6 @@ export default function SuperAdminDashboardPage() {
       <PwaRoleMismatchModal
         isOpen={true}
         pwaKind={roleMismatch.pwaKind}
-        userRole={roleMismatch.userRole}
       />
     );
   }

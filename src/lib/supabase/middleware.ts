@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
-import type { User } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 import { clientEnv } from "@/lib/env";
+import { getTrustedUserRole } from "@/lib/auth-role";
 
 type ProtectedSurface = {
   role: "SUPERADMIN" | "OWNER" | "MARKETING";
@@ -17,8 +17,11 @@ function getProtectedSurface(path: string): ProtectedSurface | null {
   return null;
 }
 
-function getUserRole(user: User | null) {
-  return String(user?.app_metadata?.role || user?.user_metadata?.role || "").toUpperCase();
+function copyResponseCookies(source: NextResponse, target: NextResponse) {
+  source.cookies.getAll().forEach(({ name, value, ...options }) => {
+    target.cookies.set(name, value, options);
+  });
+  return target;
 }
 
 /**
@@ -61,7 +64,7 @@ export async function updateSession(request: NextRequest) {
   const protectedSurface = getProtectedSurface(path);
 
   if (isSuperAdminApi) {
-    if (!user || getUserRole(user) !== "SUPERADMIN") {
+    if (!user || getTrustedUserRole(user) !== "SUPERADMIN") {
       return NextResponse.json(
         { error: "Akses khusus Super Admin." },
         { status: user ? 403 : 401 }
@@ -70,14 +73,16 @@ export async function updateSession(request: NextRequest) {
   }
 
   if (protectedSurface) {
-    const role = getUserRole(user);
+    const role = getTrustedUserRole(user);
     if (!user || role !== protectedSurface.role) {
+      if (user) await supabase.auth.signOut({ scope: "local" });
+
       const redirectUrl = request.nextUrl.clone();
       redirectUrl.pathname = "/login";
       redirectUrl.search = "";
       redirectUrl.searchParams.set("error", user ? "unauthorized" : "login_required");
       redirectUrl.searchParams.set("from_pwa", protectedSurface.pwa);
-      return NextResponse.redirect(redirectUrl);
+      return copyResponseCookies(supabaseResponse, NextResponse.redirect(redirectUrl));
     }
   }
 

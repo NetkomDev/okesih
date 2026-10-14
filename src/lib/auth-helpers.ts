@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "./supabase/client";
 import type { User } from "@supabase/supabase-js";
+import { getTrustedUserRole, type UserRole } from "./auth-role";
 
 /**
  * Helper utilitas untuk sistem autentikasi OKESIH tanpa OTP/Email ribet.
@@ -14,7 +15,7 @@ import type { User } from "@supabase/supabase-js";
 
 export const AUTH_DUMMY_DOMAIN = "okesih.local";
 
-export type UserRole = "SUPERADMIN" | "OWNER" | "MARKETING" | "KASIR" | "DAPUR";
+export type { UserRole } from "./auth-role";
 
 /**
  * Normalisasi username menjadi email internal Supabase Auth.
@@ -49,41 +50,29 @@ export function emailToUsername(email: string): string {
 }
 
 /**
- * Ekstraksi peran (role) pengguna secara andal dari user metadata atau email.
+ * Ekstraksi peran dari app metadata yang hanya dapat ditetapkan oleh server.
  */
 export function extractUserRole(user: User | null | undefined): UserRole | null {
-  if (!user) return null;
-
-  const metaRole = String(user.app_metadata?.role || user.user_metadata?.role || "").toUpperCase();
-  if (metaRole === "SUPERADMIN") return "SUPERADMIN";
-  if (metaRole === "OWNER") return "OWNER";
-  if (metaRole === "MARKETING") return "MARKETING";
-  if (metaRole === "KASIR") return "KASIR";
-  if (metaRole === "DAPUR") return "DAPUR";
-
-  const email = (user.email || "").toLowerCase().trim();
-  if (email.startsWith("superadmin")) return "SUPERADMIN";
-  if (email.startsWith("owner")) return "OWNER";
-  if (email.startsWith("marketing")) return "MARKETING";
-  if (email.startsWith("kasir")) return "KASIR";
-  if (email.startsWith("dapur")) return "DAPUR";
-
-  return null;
+  return getTrustedUserRole(user);
 }
 
 /**
  * Fungsi logout aman yang membersihkan seluruh sesi Supabase Auth
  * dan mengembalikan pengguna ke halaman login.
  */
-export async function logoutUser(): Promise<void> {
+export async function logoutUserTo(destination: string): Promise<void> {
   try {
     const supabase = createClient();
     await supabase.auth.signOut();
   } catch (err) {
     console.error("Error signing out:", err);
   } finally {
-    window.location.href = "/login";
+    window.location.href = destination;
   }
+}
+
+export async function logoutUser(): Promise<void> {
+  await logoutUserTo("/login");
 }
 
 import { detectActivePwaKind, isStandaloneApp, type PwaRoleKind } from "./pwa-routing";
@@ -117,12 +106,9 @@ export function useAuthGuard(allowedRoles: UserRole[]) {
       try {
         const permittedRoles = allowedRolesKey.split("|") as UserRole[];
         const supabase = createClient();
-        // Guard antarmuka cukup membaca sesi lokal yang sudah diverifikasi saat login.
-        // Otorisasi sensitif tetap diverifikasi ulang oleh setiap API Route di server.
-        const { data: { session } } = await supabase.auth.getSession();
-        const user = session?.user ?? null;
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
 
-        if (!user) {
+        if (userError || !user) {
           if (isMounted) {
             const activePwa = detectActivePwaKind();
             const redirectUrl = activePwa
@@ -136,6 +122,7 @@ export function useAuthGuard(allowedRoles: UserRole[]) {
         const role = extractUserRole(user);
 
         if (!role || !permittedRoles.includes(role)) {
+          await supabase.auth.signOut({ scope: "local" });
           if (isMounted) {
             const activePwa = detectActivePwaKind();
             const standalone = isStandaloneApp();

@@ -247,7 +247,6 @@ export default function TenantOwnerDashboardPage() {
       <PwaRoleMismatchModal
         isOpen={true}
         pwaKind={roleMismatch.pwaKind}
-        userRole={roleMismatch.userRole}
       />
     );
   }

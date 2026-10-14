@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { getTrustedUserRole } from "@/lib/auth-role";
 
 const periods = new Set(["today", "week", "month", "year"]);
 
 export async function GET(request: Request) {
   const sessionClient = await createServerSupabaseClient();
   const { data: { user } } = await sessionClient.auth.getUser();
-  const role = String(user?.user_metadata?.role || "").toUpperCase();
-  const isSuperAdmin = role === "SUPERADMIN" || user?.email?.toLowerCase().startsWith("superadmin");
+  const isSuperAdmin = getTrustedUserRole(user) === "SUPERADMIN";
   if (!user || !isSuperAdmin) {
     return NextResponse.json({ error: "Akses super admin diperlukan." }, { status: 403 });
   }

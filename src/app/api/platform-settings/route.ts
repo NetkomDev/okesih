@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { getTrustedUserRole } from "@/lib/auth-role";
 
 const DEFAULT_SETTINGS = {
   queueDismissSeconds: 60,
@@ -49,7 +50,7 @@ export async function GET() {
 export async function PATCH(request: Request) {
   const sessionClient = await createServerSupabaseClient();
   const { data: { user } } = await sessionClient.auth.getUser();
-  const role = String(user?.user_metadata?.role || "").toUpperCase();
+  const role = getTrustedUserRole(user);
   const isSuperAdmin = role === "SUPERADMIN" || user?.email?.toLowerCase().startsWith("superadmin");
 
   if (!user || !isSuperAdmin) {

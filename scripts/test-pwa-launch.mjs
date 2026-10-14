@@ -5,6 +5,7 @@ import { test } from "node:test";
 import { installationKind, isDashboardLaunch, isRoleAllowedForPwa, PWA_ROLE_CONFIGS } from "../src/lib/pwa-routing.ts";
 import { createDevicePin, hashDevicePin, readDevicePin, devicePinKey } from "../src/lib/device-pin.ts";
 import dashboardManifest from "../src/lib/pwa-manifest.ts";
+import { getTrustedUserRole } from "../src/lib/auth-role.ts";
 
 test("shared dashboard manifest preserves identity and opens login", () => {
   const manifest = dashboardManifest();
@@ -45,6 +46,13 @@ test("each installed PWA accepts only its matching account role", () => {
       assert.equal(isRoleAllowedForPwa(role, kind), role === allowedRole, `${kind} / ${role}`);
     }
   }
+});
+
+test("authorization trusts server-managed app metadata only", () => {
+  assert.equal(getTrustedUserRole({ app_metadata: { role: "SUPERADMIN" } }), "SUPERADMIN");
+  assert.equal(getTrustedUserRole({ app_metadata: { role: "OWNER" } }), "OWNER");
+  assert.equal(getTrustedUserRole({ user_metadata: { role: "SUPERADMIN" }, email: "superadmin@okesih.local" }), null);
+  assert.equal(getTrustedUserRole({ app_metadata: { role: "OWNER" }, user_metadata: { role: "SUPERADMIN" } }), "OWNER");
 });
 
 test("operational and dashboard manifests keep native launch targets", async () => {
