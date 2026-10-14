@@ -14,7 +14,7 @@ export default function dashboardManifest(): MetadataRoute.Manifest {
     theme_color: "#FF4500",
     icons: [
       {
-        src: "/favicon.svg",
+        src: "/logo.svg",
         sizes: "any",
         type: "image/svg+xml",
         purpose: "any",
@@ -24,18 +24,6 @@ export default function dashboardManifest(): MetadataRoute.Manifest {
         sizes: "any",
         type: "image/svg+xml",
         purpose: "maskable",
-      },
-      {
-        src: "/icons/icon-192.png",
-        sizes: "192x192",
-        type: "image/png",
-        purpose: "maskable",
-      },
-      {
-        src: "/icons/icon-512.png",
-        sizes: "512x512",
-        type: "image/png",
-        purpose: "any",
       },
     ],
     shortcuts: [

@@ -1,6 +1,25 @@
 import { createServerClient } from "@supabase/ssr";
+import type { User } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 import { clientEnv } from "@/lib/env";
+
+type ProtectedSurface = {
+  role: "SUPERADMIN" | "OWNER" | "MARKETING";
+  pwa: "superadmin" | "owner" | "marketing";
+};
+
+function getProtectedSurface(path: string): ProtectedSurface | null {
+  if (path === "/superadmin") return { role: "SUPERADMIN", pwa: "superadmin" };
+  if (path === "/owner" || path.startsWith("/owner/")) return { role: "OWNER", pwa: "owner" };
+  if (path === "/marketing/dashboard" || path.startsWith("/marketing/dashboard/")) {
+    return { role: "MARKETING", pwa: "marketing" };
+  }
+  return null;
+}
+
+function getUserRole(user: User | null) {
+  return String(user?.app_metadata?.role || user?.user_metadata?.role || "").toUpperCase();
+}
 
 /**
  * Menyegarkan (refresh) token sesi Supabase pada setiap request yang lewat middleware.
@@ -34,27 +53,30 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  // Menyegarkan sesi auth sekaligus mengunci seluruh permukaan Super Admin
-  // di sisi server. Client guard tetap dipertahankan sebagai lapisan UX.
+  // Menyegarkan sesi auth sekaligus mengunci dashboard berdasarkan perannya.
+  // Client guard tetap dipertahankan sebagai lapisan UX.
   const { data: { user } } = await supabase.auth.getUser();
   const path = request.nextUrl.pathname;
-  const isSuperAdminSurface = path === "/superadmin" || path.startsWith("/api/superadmin/");
+  const isSuperAdminApi = path === "/api/superadmin" || path.startsWith("/api/superadmin/");
+  const protectedSurface = getProtectedSurface(path);
 
-  if (isSuperAdminSurface) {
-    const role = String(user?.user_metadata?.role || "").toUpperCase();
-    const isSuperAdmin = role === "SUPERADMIN" || user?.email?.toLowerCase().startsWith("superadmin");
+  if (isSuperAdminApi) {
+    if (!user || getUserRole(user) !== "SUPERADMIN") {
+      return NextResponse.json(
+        { error: "Akses khusus Super Admin." },
+        { status: user ? 403 : 401 }
+      );
+    }
+  }
 
-    if (!user || !isSuperAdmin) {
-      if (path.startsWith("/api/")) {
-        return NextResponse.json(
-          { error: "Akses khusus Super Admin." },
-          { status: user ? 403 : 401 }
-        );
-      }
-
+  if (protectedSurface) {
+    const role = getUserRole(user);
+    if (!user || role !== protectedSurface.role) {
       const redirectUrl = request.nextUrl.clone();
       redirectUrl.pathname = "/login";
-      redirectUrl.search = `?error=${user ? "unauthorized" : "login_required"}`;
+      redirectUrl.search = "";
+      redirectUrl.searchParams.set("error", user ? "unauthorized" : "login_required");
+      redirectUrl.searchParams.set("from_pwa", protectedSurface.pwa);
       return NextResponse.redirect(redirectUrl);
     }
   }

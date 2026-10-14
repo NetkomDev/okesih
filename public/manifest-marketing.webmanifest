@@ -4,23 +4,23 @@
   "short_name": "OKESIH Marketing",
   "description": "Dashboard mitra marketing OKESIH",
   "start_url": "/marketing/dashboard?pwa=marketing",
-  "scope": "/marketing",
+  "scope": "/",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#042f2e",
   "theme_color": "#0f766e",
   "icons": [
     {
-      "src": "/icons/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable"
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
     },
     {
-      "src": "/icons/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
     }
   ]
 }

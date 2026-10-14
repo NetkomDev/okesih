@@ -54,7 +54,7 @@ export function emailToUsername(email: string): string {
 export function extractUserRole(user: User | null | undefined): UserRole | null {
   if (!user) return null;
 
-  const metaRole = (user.user_metadata?.role as string | undefined)?.toUpperCase();
+  const metaRole = String(user.app_metadata?.role || user.user_metadata?.role || "").toUpperCase();
   if (metaRole === "SUPERADMIN") return "SUPERADMIN";
   if (metaRole === "OWNER") return "OWNER";
   if (metaRole === "MARKETING") return "MARKETING";
@@ -193,4 +193,3 @@ export function useAuthGuard(allowedRoles: UserRole[]) {
 
   return { isAuthorized, currentUser, currentRole, loading, roleMismatch };
 }
-

@@ -29,7 +29,9 @@ export default function LoginPage() {
   } | null>(null);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled || typeof window === "undefined") return;
       const pwa = detectActivePwaKind();
       if (pwa) {
         setActivePwa(pwa);
@@ -42,7 +44,11 @@ export default function LoginPage() {
       } else if (err === "unauthorized") {
         setLoginError("Akses Ditolak: Anda tidak memiliki izin untuk halaman tersebut.");
       }
-    }
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -74,13 +80,16 @@ export default function LoginPage() {
       // Deteksi peran pengguna secara aman
       const role = extractUserRole(data.user);
 
+      // Baca ulang saat submit agar konteks PWA tetap terkunci meski effect belum selesai.
+      const pwaContext = activePwa || detectActivePwaKind();
+
       // Verifikasi batas peran jika sedang login di PWA khusus role tertentu
-      if (activePwa && !isRoleAllowedForPwa(role, activePwa)) {
+      if (pwaContext && !isRoleAllowedForPwa(role, pwaContext)) {
         await supabase.auth.signOut();
         setIsLoading(false);
         setMismatch({
           isOpen: true,
-          pwaKind: activePwa,
+          pwaKind: pwaContext,
           userRole: role || "UNKNOWN",
         });
         return;
@@ -155,7 +164,7 @@ export default function LoginPage() {
       </div>
 
       {/* Navigasi Kembali & Theme Toggle */}
-      <div style={{ position: "absolute", top: "2rem", left: "2rem", zIndex: 10 }}>
+      {!activePwa && <div style={{ position: "absolute", top: "2rem", left: "2rem", zIndex: 10 }}>
         <Link
           href="/"
           style={{
@@ -176,7 +185,7 @@ export default function LoginPage() {
           <span>←</span>
           <span>Kembali ke Beranda</span>
         </Link>
-      </div>
+      </div>}
 
       <div style={{ position: "absolute", top: "2rem", right: "2rem", zIndex: 10 }}>
         <ThemeToggle />
@@ -427,4 +436,3 @@ export default function LoginPage() {
     </main>
   );
 }
-

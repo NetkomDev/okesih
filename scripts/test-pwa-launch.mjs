@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { test } from "node:test";
-import { installationKind, isDashboardLaunch } from "../src/lib/pwa-routing.ts";
+import { installationKind, isDashboardLaunch, isRoleAllowedForPwa, PWA_ROLE_CONFIGS } from "../src/lib/pwa-routing.ts";
 import { createDevicePin, hashDevicePin, readDevicePin, devicePinKey } from "../src/lib/device-pin.ts";
 import dashboardManifest from "../src/lib/pwa-manifest.ts";
 
@@ -29,14 +29,33 @@ test("dedicated dashboards keep independent install identities", () => {
   assert.equal(installationKind("/kds"), "KDS");
 });
 
+test("each installed PWA accepts only its matching account role", () => {
+  const expected = {
+    superadmin: "SUPERADMIN",
+    owner: "OWNER",
+    marketing: "MARKETING",
+    pos: "KASIR",
+    kds: "DAPUR",
+  };
+  const allRoles = Object.values(expected);
+
+  for (const [kind, allowedRole] of Object.entries(expected)) {
+    assert.deepEqual(PWA_ROLE_CONFIGS[kind].allowedRoles, [allowedRole]);
+    for (const role of allRoles) {
+      assert.equal(isRoleAllowedForPwa(role, kind), role === allowedRole, `${kind} / ${role}`);
+    }
+  }
+});
+
 test("operational and dashboard manifests keep native launch targets", async () => {
-  for (const [kind, name, shortName, path, id] of [["pos", "OKESIH KASIR", "OKESIH KASIR", "/pos", "/pwa/pos"], ["kds", "OKESIH KDS", "OKESIH KDS", "/kds", "/pwa/kds"], ["owner", "OKESIH Owner", "OKESIH Owner", "/owner", "/owner"], ["marketing", "OKESIH Marketing", "OKESIH Marketing", "/marketing/dashboard", "/marketing/dashboard"], ["superadmin", "OKESIH Super Admin", "OKESIH HQ", "/superadmin", "/superadmin"]]) {
+  for (const [kind, name, shortName, path, id] of [["pos", "OKESIH KASIR", "OKESIH KASIR", "/pos?pwa=pos", "/pwa/pos"], ["kds", "OKESIH KDS", "OKESIH KDS", "/kds?pwa=kds", "/pwa/kds"], ["owner", "OKESIH Owner", "OKESIH Owner", "/owner?pwa=owner", "/pwa/owner"], ["marketing", "OKESIH Marketing", "OKESIH Marketing", "/marketing/dashboard?pwa=marketing", "/pwa/marketing"], ["superadmin", "OKESIH Super Admin", "OKESIH HQ", "/superadmin?pwa=superadmin", "/pwa/superadmin"]]) {
     const manifest = JSON.parse(await readFile(new URL(`../public/manifest-${kind}.webmanifest`, import.meta.url), "utf8"));
     assert.equal(manifest.name, name);
     assert.equal(manifest.short_name, shortName);
     assert.equal(manifest.start_url, path);
-    assert.ok(path.startsWith(manifest.scope));
+    assert.equal(manifest.scope, "/");
     assert.equal(manifest.id, id);
+    assert.ok(manifest.icons.every((icon) => icon.src === "/logo.svg" && icon.type === "image/svg+xml"));
   }
 });
 
