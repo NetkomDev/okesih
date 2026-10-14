@@ -111,7 +111,7 @@ export default function MarketingDashboardPage() {
       if (!response.ok) throw new Error(payload.error || "Pengajuan tenant gagal dikirim.");
       setForm({ name: "", ownerName: "", phone: "", province: "", cityRegency: "" });
       setNotice(
-        "Pengajuan berhasil dikirim ke WhatsApp Super Admin. Kredensial owner baru dikirim setelah disetujui."
+        "Pengajuan berhasil dikirim ke WhatsApp Admin. Akun owner segera diterbitkan setelah diverifikasi oleh Admin."
       );
       await refresh();
     } catch (cause) {
@@ -253,7 +253,7 @@ export default function MarketingDashboardPage() {
             <PanelHead
               icon="＋"
               title="Daftarkan Tenant Baru"
-              text="Diverifikasi Super Admin sebelum akun owner diterbitkan."
+              text="Akun owner segera diterbitkan setelah diverifikasi oleh Admin"
             />
             <label>
               Nama usaha
@@ -309,7 +309,7 @@ export default function MarketingDashboardPage() {
             </div>
             <div className="mkt-flow-note">
               <b>Alur verifikasi otomatis:</b>
-              <span>Pengajuan → Terkirim ke WA Super Admin → Review Cepat → Kredensial akun dikirim ke WA owner.</span>
+              <span>Pengajuan → Terkirim ke WA Admin → Review Cepat → Kredensial akun dikirim ke WA owner.</span>
             </div>
             <button className="mkt-primary" disabled={saving}>
               {saving ? "Mengirim pengajuan..." : "Daftarkan & Kirim WhatsApp"}

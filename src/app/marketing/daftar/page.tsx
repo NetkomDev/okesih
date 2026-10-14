@@ -237,7 +237,7 @@ export default function MarketingRegisterPage() {
               Pendaftaran Anda Berhasil Diterima!
             </h2>
             <p style={{ fontSize: "0.9rem", color: "#E2E8F0", marginBottom: "1.25rem" }}>
-              Terima kasih <strong>{mktSuccess.fullName}</strong>. Data Anda telah masuk ke sistem antrean verifikasi Super Admin untuk wilayah <strong>{mktSuccess.cityArea}</strong>.
+              Terima kasih <strong>{mktSuccess.fullName}</strong>. Data Anda telah masuk ke sistem antrean verifikasi Admin untuk wilayah <strong>{mktSuccess.cityArea}</strong>.
             </p>
 
             <div
@@ -260,7 +260,7 @@ export default function MarketingRegisterPage() {
 
             <div>
               <a
-                href={`https://wa.me/6281234567890?text=${encodeURIComponent(`Halo Super Admin OKESIH, saya baru saja mendaftar sebagai Mitra Marketing atas nama ${mktSuccess.fullName} (Kode: ${mktSuccess.referralCode}) untuk area ${mktSuccess.cityArea}. Mohon bantuan aktivasi kemitraan saya.`)}`}
+                href={`https://wa.me/6281234567890?text=${encodeURIComponent(`Halo Admin OKESIH, saya baru saja mendaftar sebagai Mitra Marketing atas nama ${mktSuccess.fullName} (Kode: ${mktSuccess.referralCode}) untuk area ${mktSuccess.cityArea}. Mohon bantuan aktivasi kemitraan saya.`)}`}
                 target="_blank"
                 rel="noreferrer"
                 className="btn-primary"
@@ -375,7 +375,7 @@ export default function MarketingRegisterPage() {
                 }}
               />
               <div style={{ fontSize: "0.775rem", color: "var(--text-dim)", marginTop: "0.35rem", fontWeight: 500 }}>
-                Digunakan Super Admin untuk memetakan distribusi materi stiker &amp; tenant.
+                Digunakan Admin untuk memetakan distribusi materi stiker &amp; tenant.
               </div>
             </div>
 
@@ -541,7 +541,7 @@ export default function MarketingRegisterPage() {
           </button>
 
           <div style={{ textAlign: "center", fontSize: "0.78rem", color: "var(--text-dim)" }}>
-            Pendaftaran 100% Gratis tanpa dipungut biaya apapun. Tim Super Admin OKESIH akan memvalidasi data Anda maksimal 1x24 jam kerja.
+            Pendaftaran 100% Gratis tanpa dipungut biaya apapun. Tim Admin OKESIH akan memvalidasi data Anda maksimal 1x24 jam kerja.
           </div>
         </form>
       </div>

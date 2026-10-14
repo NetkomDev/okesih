@@ -125,9 +125,9 @@ export async function POST(request: Request) {
     }).select().single();
     if (applicationError) throw applicationError;
     const adminPhone = normalizePhone(process.env.SUPERADMIN_WHATSAPP_NUMBER || "6285694488510");
-    const message = ["*PENGAJUAN TENANT BARU OKESIH*", "", `Marketing: *${partner.full_name}* (${partner.referral_code})`, `Usaha: *${application.business_name}*`, `Owner: ${application.owner_name}`, `WhatsApp Owner: +${phone}`, `Wilayah: ${application.city_regency}, ${application.province}`, "", "Silakan review dan verifikasi melalui Dashboard Super Admin → Daftar Tenant."].join("\n");
+    const message = ["*PENGAJUAN TENANT BARU OKESIH*", "", `Marketing: *${partner.full_name}* (${partner.referral_code})`, `Usaha: *${application.business_name}*`, `Owner: ${application.owner_name}`, `WhatsApp Owner: +${phone}`, `Wilayah: ${application.city_regency}, ${application.province}`, "", "Silakan review dan verifikasi melalui Dashboard Admin → Daftar Tenant."].join("\n");
     const { error: outboxError } = await admin.from("whatsapp_outbox").insert({ recipient_phone: adminPhone, message });
-    if (outboxError) { await admin.from("tenant_applications").delete().eq("id", application.id); throw new Error(`Notifikasi Super Admin gagal diantrekan: ${outboxError.message}`); }
+    if (outboxError) { await admin.from("tenant_applications").delete().eq("id", application.id); throw new Error(`Notifikasi Admin gagal diantrekan: ${outboxError.message}`); }
     return NextResponse.json({ success: true, data: { id: application.id, name: application.business_name, status: "PENDING", whatsappQueued: true } });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Tenant gagal didaftarkan." }, { status: 500 });

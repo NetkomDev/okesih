@@ -77,7 +77,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: "Pendaftaran berhasil diterima! Tim Super Admin akan segera meninjau dan mengaktifkan akun kemitraan Anda.",
+      message: "Pendaftaran berhasil diterima! Tim Admin akan segera meninjau dan mengaktifkan akun kemitraan Anda.",
       data: {
         id: data.id,
         fullName: data.full_name,

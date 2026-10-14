@@ -50,7 +50,7 @@ export default function MarketingPengajuanPage() {
           </Link>
           <div className="mkt-subpage-title-box">
             <h1>Status Pengajuan Tenant Baru</h1>
-            <p>Pantau proses verifikasi dan riwayat persetujuan akun tenant baru yang Anda ajukan ke Super Admin.</p>
+            <p>Pantau proses verifikasi dan riwayat persetujuan akun tenant baru yang Anda ajukan ke Admin.</p>
           </div>
         </div>
 
@@ -61,7 +61,7 @@ export default function MarketingPengajuanPage() {
           <div className="mkt-tenant-metric-card total">
             <small>Total Pengajuan</small>
             <strong>{applications.length}</strong>
-            <span>Diajukan ke Super Admin</span>
+            <span>Diajukan ke Admin</span>
           </div>
           <div className="mkt-tenant-metric-card unpaid warning">
             <small>Menunggu Review</small>
@@ -119,7 +119,7 @@ export default function MarketingPengajuanPage() {
             <div className="mkt-panel-icon">📋</div>
             <div>
               <h2>Riwayat Pengajuan Tenant</h2>
-              <p>Status diperbarui otomatis setelah Super Admin memeriksa kredensial dan menerbitkan akun.</p>
+              <p>Status diperbarui otomatis setelah Admin memeriksa kredensial dan menerbitkan akun.</p>
             </div>
           </div>
 
@@ -164,7 +164,7 @@ export default function MarketingPengajuanPage() {
 
                     {item.review_notes && (
                       <div className="mkt-review-notes">
-                        <b>Catatan Super Admin:</b> {item.review_notes}
+                        <b>Catatan Admin:</b> {item.review_notes}
                       </div>
                     )}
                   </div>

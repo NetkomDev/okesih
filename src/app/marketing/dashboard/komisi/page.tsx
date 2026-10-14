@@ -44,7 +44,7 @@ export default function MarketingKomisiPage() {
           <div className="mkt-komisi-card highlight">
             <small>Sisa Saldo Komisi</small>
             <strong>{money(sisaKomisi)}</strong>
-            <span>Siap ditransfer Super Admin</span>
+            <span>Siap ditransfer Admin</span>
           </div>
           <div className="mkt-komisi-card">
             <small>Total Komisi Berjalan</small>
@@ -117,7 +117,7 @@ export default function MarketingKomisiPage() {
           <div>
             <strong>Mekanisme Pencairan Komisi Mitra Marketing:</strong>
             <p>
-              Komisi berjalan dihitung secara otomatis dari setiap struk transaksi tenant yang sah. Pencairan dana komisi ditransfer secara berkala oleh Super Admin ke rekening terdaftar Anda setelah verifikasi bulanan atau saat mencapai batas minimum penarikan.
+              Komisi berjalan dihitung secara otomatis dari setiap struk transaksi tenant yang sah. Pencairan dana komisi ditransfer secara berkala oleh Admin ke rekening terdaftar Anda setelah verifikasi bulanan atau saat mencapai batas minimum penarikan.
             </p>
           </div>
         </section>
