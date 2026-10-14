@@ -7,3 +7,11 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+## Aturan kerja proyek OKESIH
+
+- Jangan over-engineer teks atau kebutuhan yang sederhana.
+- Jika kebutuhan membingungkan atau ambigu, jangan membuat asumsi; minta klarifikasi.
+- Jangan membuat perubahan acak atau perubahan yang tidak penting bagi permintaan.
+- Selalu periksa ulang hasil pekerjaan sebelum menyatakan pekerjaan selesai.
+- Setelah pekerjaan selesai dan tervalidasi, selalu commit dan push ke branch deployment agar deployment Vercel terpicu, lalu verifikasi hasil deployment.
