@@ -14,7 +14,7 @@ import type { User } from "@supabase/supabase-js";
 
 export const AUTH_DUMMY_DOMAIN = "okesih.local";
 
-export type UserRole = "SUPERADMIN" | "OWNER" | "KASIR" | "DAPUR";
+export type UserRole = "SUPERADMIN" | "OWNER" | "MARKETING" | "KASIR" | "DAPUR";
 
 /**
  * Normalisasi username menjadi email internal Supabase Auth.
@@ -57,12 +57,14 @@ export function extractUserRole(user: User | null | undefined): UserRole | null 
   const metaRole = (user.user_metadata?.role as string | undefined)?.toUpperCase();
   if (metaRole === "SUPERADMIN") return "SUPERADMIN";
   if (metaRole === "OWNER") return "OWNER";
+  if (metaRole === "MARKETING") return "MARKETING";
   if (metaRole === "KASIR") return "KASIR";
   if (metaRole === "DAPUR") return "DAPUR";
 
   const email = (user.email || "").toLowerCase().trim();
   if (email.startsWith("superadmin")) return "SUPERADMIN";
   if (email.startsWith("owner")) return "OWNER";
+  if (email.startsWith("marketing")) return "MARKETING";
   if (email.startsWith("kasir")) return "KASIR";
   if (email.startsWith("dapur")) return "DAPUR";
 
@@ -128,6 +130,8 @@ export function useAuthGuard(allowedRoles: UserRole[]) {
               router.replace("/superadmin");
             } else if (role === "OWNER") {
               router.replace("/owner");
+            } else if (role === "MARKETING") {
+              router.replace("/marketing/dashboard");
             } else if (role === "KASIR") {
               router.replace("/pos");
             } else if (role === "DAPUR") {

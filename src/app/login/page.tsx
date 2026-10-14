@@ -68,6 +68,8 @@ export default function LoginPage() {
         router.push("/superadmin");
       } else if (role === "OWNER") {
         router.push("/owner");
+      } else if (role === "MARKETING") {
+        router.push("/marketing/dashboard");
       } else if (role === "KASIR") {
         router.push("/pos");
       } else if (role === "DAPUR") {

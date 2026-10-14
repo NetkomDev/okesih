@@ -394,6 +394,16 @@ export default function SuperAdminDashboardPage() {
   const [newMarketingAccountNo, setNewMarketingAccountNo] = useState<string>("");
   const [newMarketingAccountName, setNewMarketingAccountName] = useState<string>("");
   const [newMarketingCommRate, setNewMarketingCommRate] = useState<number>(15);
+  const [newMarketingUsername, setNewMarketingUsername] = useState<string>("");
+  const [newMarketingPassword, setNewMarketingPassword] = useState<string>("");
+  const [isMarketingSaving, setIsMarketingSaving] = useState<boolean>(false);
+
+  const handleOpenMarketingModal = () => {
+    const suffix = Math.floor(Math.random() * 9000) + 1000;
+    setNewMarketingUsername(`marketing_${suffix}`);
+    setNewMarketingPassword(`okesih${suffix}!`);
+    setIsMarketingModalOpen(true);
+  };
 
   // Search Query
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -571,19 +581,22 @@ export default function SuperAdminDashboardPage() {
       status: "ACTIVE",
     };
 
+    setIsMarketingSaving(true);
     try {
       const response = await fetch("/api/superadmin/marketing", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newMkt),
+        body: JSON.stringify({ ...newMkt, username: newMarketingUsername, password: newMarketingPassword }),
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Gagal menyimpan marketing.");
       await loadMarketingPartners();
       setIsMarketingModalOpen(false);
-      showToast("Marketing Berhasil Didaftarkan", `Mitra "${newMkt.name}" (${newMkt.referralCode}) berhasil didaftarkan.`, "success");
+      showToast("Marketing Berhasil Didaftarkan", `Kredensial ${newMkt.name} telah diantrekan ke WhatsApp ${newMkt.phone}.`, "success");
     } catch (error) {
       showToast("Gagal Menyimpan", error instanceof Error ? error.message : "Terjadi kesalahan jaringan.", "error");
+    } finally {
+      setIsMarketingSaving(false);
     }
   };
 
@@ -917,7 +930,7 @@ export default function SuperAdminDashboardPage() {
                   setNewMarketingCode(`MKT-${codeSuffix}`);
                   setNewMarketingAccountNo("");
                   setNewMarketingCommRate(defaultCommissionRate);
-                  setIsMarketingModalOpen(true);
+                  handleOpenMarketingModal();
                 }}
                 className="btn-primary"
                 style={{
@@ -1113,7 +1126,7 @@ export default function SuperAdminDashboardPage() {
                 setNewMarketingCode(`MKT-${codeSuffix}`);
                 setNewMarketingAccountNo("");
                 setNewMarketingCommRate(defaultCommissionRate);
-                setIsMarketingModalOpen(true);
+                handleOpenMarketingModal();
               }}
               className="btn-primary"
               style={{
@@ -1712,7 +1725,7 @@ export default function SuperAdminDashboardPage() {
                     setNewMarketingCode(`MKT-${codeSuffix}`);
                     setNewMarketingAccountNo("");
                     setNewMarketingCommRate(defaultCommissionRate);
-                    setIsMarketingModalOpen(true);
+                    handleOpenMarketingModal();
                   }}
                   className="btn-primary"
                   style={{
@@ -2953,8 +2966,19 @@ export default function SuperAdminDashboardPage() {
                 />
               </div>
 
+              <div style={{ background: isDark ? "rgba(14, 165, 233, 0.1)" : "#F0F9FF", border: "1px dashed #38BDF8", borderRadius: "8px", padding: "1rem" }}>
+                <div style={{ fontSize: "0.75rem", fontWeight: 800, color: "#0284C7", marginBottom: "0.65rem" }}>
+                  🔑 Kredensial login PWA Marketing — otomatis dikirim ke WhatsApp
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+                  <input required value={newMarketingUsername} onChange={(e) => setNewMarketingUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ""))} aria-label="Username marketing" style={{ padding: "0.6rem", borderRadius: "6px", border: "1px solid #BAE6FD", background: isDark ? "#0F172A" : "#FFF", color: isDark ? "#FFF" : "#0F172A", fontWeight: 700 }} />
+                  <input required value={newMarketingPassword} onChange={(e) => setNewMarketingPassword(e.target.value)} aria-label="Password awal marketing" style={{ padding: "0.6rem", borderRadius: "6px", border: "1px solid #BAE6FD", background: isDark ? "#0F172A" : "#FFF", color: "#0284C7", fontWeight: 700 }} />
+                </div>
+              </div>
+
               <button
                 type="submit"
+                disabled={isMarketingSaving}
                 className="btn-primary"
                 style={{
                   width: "100%",
@@ -2965,7 +2989,7 @@ export default function SuperAdminDashboardPage() {
                   marginTop: "0.5rem",
                 }}
               >
-                ✓ SIMPAN MARKETING LAPANGAN
+                {isMarketingSaving ? "MENYIMPAN & MENGANTREKAN WHATSAPP..." : "✓ SIMPAN & KIRIM KE WHATSAPP"}
               </button>
             </form>
           </div>
