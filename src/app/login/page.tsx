@@ -96,15 +96,15 @@ export default function LoginPage() {
       }
 
       if (role === "SUPERADMIN") {
-        router.push("/superadmin");
+        window.location.replace("/superadmin?pwa=superadmin");
       } else if (role === "OWNER") {
-        router.push("/owner");
+        window.location.replace("/owner?pwa=owner");
       } else if (role === "MARKETING") {
-        router.push("/marketing/dashboard");
+        window.location.replace("/marketing/dashboard?pwa=marketing");
       } else if (role === "KASIR") {
-        router.push("/pos");
+        window.location.replace("/pos?pwa=pos");
       } else if (role === "DAPUR") {
-        router.push("/kds");
+        window.location.replace("/kds?pwa=kds");
       } else {
         router.push("/admin");
       }

@@ -2,12 +2,12 @@ import type { MetadataRoute } from "next";
 
 export default function dashboardManifest(): MetadataRoute.Manifest {
   return {
-    id: "/",
+    id: "/app",
     name: "OKESIH POS",
     short_name: "OKESIH POS",
     description: "Sistem POS Kasir, Kitchen Display, dan Antrean TV untuk Warkop Berkecepatan Tinggi",
     start_url: "/login",
-    scope: "/",
+    scope: "/login",
     display: "standalone",
     orientation: "any",
     background_color: "#0D0D0E",

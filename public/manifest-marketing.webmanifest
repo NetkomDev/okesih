@@ -2,12 +2,12 @@
   "id": "/pwa/marketing",
   "name": "OKESIH Marketing",
   "short_name": "OKESIH Marketing",
-  "description": "Dashboard mitra marketing OKESIH",
+  "description": "Portal Mitra & Pemasaran OKESIH",
   "start_url": "/marketing/dashboard?pwa=marketing",
-  "scope": "/",
+  "scope": "/marketing",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#042f2e",
+  "background_color": "#09121d",
   "theme_color": "#0f766e",
   "icons": [
     {

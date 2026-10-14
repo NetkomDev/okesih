@@ -4,7 +4,7 @@
   "short_name": "OKESIH Owner",
   "description": "Dashboard pengelolaan usaha OKESIH",
   "start_url": "/owner?pwa=owner",
-  "scope": "/",
+  "scope": "/owner",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#0b1018",

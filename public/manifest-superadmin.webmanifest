@@ -4,7 +4,7 @@
   "short_name": "OKESIH HQ",
   "description": "Command Center Super Admin OKESIH",
   "start_url": "/superadmin?pwa=superadmin",
-  "scope": "/",
+  "scope": "/superadmin",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#06090e",

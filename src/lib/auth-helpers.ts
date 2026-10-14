@@ -73,7 +73,7 @@ export async function logoutUserTo(destination: string): Promise<void> {
 
 export async function logoutUser(): Promise<void> {
   const activePwa = typeof window !== "undefined" ? detectActivePwaKind() : null;
-  const target = activePwa ? `/login?from_pwa=${encodeURIComponent(activePwa)}` : "/login";
+  const target = activePwa ? `/${activePwa}/login` : "/login";
   await logoutUserTo(target);
 }
 
@@ -114,7 +114,7 @@ export function useAuthGuard(allowedRoles: UserRole[]) {
           if (isMounted) {
             const activePwa = detectActivePwaKind();
             const redirectUrl = activePwa
-              ? `/login?error=login_required&from_pwa=${encodeURIComponent(activePwa)}`
+              ? `/${activePwa}/login?error=login_required`
               : "/login?error=login_required";
             router.replace(redirectUrl);
           }

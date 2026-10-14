@@ -36,12 +36,26 @@ export default function PwaRoleInstallModal({
     const dismissed = sessionStorage.getItem(storageKey) === "1";
 
     if (!standalone && !dismissed) {
-      const timer = window.setTimeout(() => {
-        setShowModal(true);
-      }, 700);
+      const show = () => setShowModal(true);
+
+      // Jika prompt sudah siap, tampilkan segera
+      if (window.__okesihInstallPrompt) {
+        const timer = window.setTimeout(show, 600);
+        return () => window.clearTimeout(timer);
+      }
+
+      // Tunggu sinyal instalasi siap dari PwaInstallCapture
+      const handleReady = () => {
+        window.setTimeout(show, 300);
+      };
+      window.addEventListener("okesih-install-ready", handleReady, { once: true });
+
+      // Fallback timer maksimal 1.2 detik
+      const fallbackTimer = window.setTimeout(show, 1200);
 
       return () => {
-        window.clearTimeout(timer);
+        window.removeEventListener("okesih-install-ready", handleReady);
+        window.clearTimeout(fallbackTimer);
       };
     }
   }, [enabled, storageKey]);
@@ -50,6 +64,16 @@ export default function PwaRoleInstallModal({
 
   const handleInstallClick = async () => {
     setInstalling(true);
+
+    // Jika prompt native belum sempat tertangkap, beri waktu toleransi sejenak
+    if (!window.__okesihInstallPrompt) {
+      await new Promise<void>((resolve) => {
+        const onReady = () => resolve();
+        window.addEventListener("okesih-install-ready", onReady, { once: true });
+        window.setTimeout(resolve, 800);
+      });
+    }
+
     const result = await requestPwaInstallation(pwaKind.toUpperCase() as InstallationKind);
     setInstalling(false);
 
@@ -59,7 +83,7 @@ export default function PwaRoleInstallModal({
         sessionStorage.setItem(storageKey, "1");
       } catch {}
     } else {
-      // Browser belum menyediakan event atau di platform iOS Safari
+      // Browser belum menyediakan event native atau di platform iOS Safari
       alert(
         "Buka menu browser Anda (ikon titik tiga ⋮ di Chrome atau tombol Bagikan ⎋ di Safari iOS), lalu pilih 'Tambahkan ke Layar Utama' / 'Instal Aplikasi'."
       );
