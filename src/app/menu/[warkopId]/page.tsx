@@ -167,7 +167,7 @@ export default function CustomerMenuPage({ params, searchParams }: { params: Pro
     finally { setBusy(false); }
   };
 
-  if (!payload) return <div className="customer-loading"><Image src="/logo.svg?v=2" width={64} height={64} alt="OKESIH"/><b>{error || "Menyiapkan menu..."}</b></div>;
+  if (!payload) return <div className="customer-loading" role="status" aria-label={error || "Menyiapkan menu"}><Image src="/logo.svg?v=2" width={64} height={64} alt="OKESIH"/></div>;
   if (order) return <main className="customer-order-status"><Image src="/logo.svg?v=2" width={64} height={64} alt="OKESIH"/><span>ANTREAN</span><strong>#{String(order.queueNumber).padStart(3, "0")}</strong><h1>{orderStatus === "AWAITING_CONFIRMATION" ? "Menunggu konfirmasi kasir" : orderStatus === "COOKING" ? "Pesanan sedang disiapkan" : orderStatus === "READY" ? "Pesanan siap diantar" : orderStatus === "DONE" ? "Pesanan selesai" : "Pesanan tidak dapat diproses"}</h1><p>Meja {tableNumber} · {paymentMethod === "CASH" ? "Bayar tunai saat pesanan diantar" : "QRIS sedang diverifikasi"}</p><b>Rp {Number(order.total).toLocaleString("id-ID")}</b><button className="btn-secondary" onClick={() => { setOrder(null); setCart({}); setProofImage(null); }}>Pesan Tambahan</button></main>;
 
   return <div className="customer-menu-page">

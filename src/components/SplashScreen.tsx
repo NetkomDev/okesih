@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useSyncExternalStore } from "react";
+import { usePathname } from "next/navigation";
 
 /**
  * Komponen Splash Screen Sambutan OKESIH.COM
@@ -8,16 +9,20 @@ import React, { useEffect, useState } from "react";
  * dengan transisi fade-out halus saat halaman siap digunakan.
  */
 export default function SplashScreen() {
-  const [mounted, setMounted] = useState(false);
+  const pathname = usePathname();
+  const isTenantMenu = pathname.startsWith("/menu/");
+  const mounted = useSyncExternalStore(() => () => {}, () => true, () => false);
+  const hasSeenSplash = useSyncExternalStore(
+    () => () => {},
+    () => sessionStorage.getItem("okesih_splash_welcomed") === "true",
+    () => true
+  );
   const [visible, setVisible] = useState(true);
   const [fading, setFading] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
     // Cek apakah splash screen sudah pernah tampil di tab/sesi ini
-    const hasSeenSplash = sessionStorage.getItem("okesih_splash_welcomed");
     if (hasSeenSplash) {
-      setVisible(false);
       return;
     }
 
@@ -39,7 +44,7 @@ export default function SplashScreen() {
       clearTimeout(fadeTimer);
       clearTimeout(closeTimer);
     };
-  }, []);
+  }, [hasSeenSplash]);
 
   const handleDismiss = () => {
     setFading(true);
@@ -52,7 +57,7 @@ export default function SplashScreen() {
   };
 
   // Jangan render di server atau jika sudah ditutup
-  if (!mounted || !visible) return null;
+  if (!mounted || hasSeenSplash || !visible) return null;
 
   return (
     <aside
@@ -112,7 +117,7 @@ export default function SplashScreen() {
             alignItems: "center",
             justifyContent: "center",
             filter: "drop-shadow(0 12px 30px rgba(255, 69, 0, 0.25))",
-            marginBottom: "1.25rem",
+            marginBottom: isTenantMenu ? 0 : "1.25rem",
           }}
         >
           {/* Logo dengan nama/teks OKESIH.COM yang beranimasi */}
@@ -130,6 +135,7 @@ export default function SplashScreen() {
           />
         </div>
 
+        {!isTenantMenu && <>
         {/* Teks Sambutan Hangat */}
         <div
           style={{
@@ -174,10 +180,11 @@ export default function SplashScreen() {
             }}
           />
         </div>
+        </>}
       </div>
 
       {/* Tombol Lewati */}
-      <button
+      {!isTenantMenu && <button
         onClick={handleDismiss}
         type="button"
         style={{
@@ -206,7 +213,7 @@ export default function SplashScreen() {
         }}
       >
         Lewati ✕
-      </button>
+      </button>}
 
       <style jsx>{`
         @keyframes okesihProgress {
