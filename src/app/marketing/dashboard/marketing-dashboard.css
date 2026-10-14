@@ -1,3 +1,811 @@
-.mkt-shell{min-height:100vh;background:#f7f8f5;color:#17211b;padding:24px}.mkt-container{max-width:1180px;margin:auto}.mkt-header{position:relative;overflow:hidden;background:linear-gradient(125deg,#121815,#17251e 55%,#123d2d);border-radius:24px;color:#fff;padding:24px 28px 30px;box-shadow:0 20px 45px #162d212e}.mkt-header:after{content:"";position:absolute;width:280px;height:280px;border-radius:50%;right:-80px;bottom:-160px;background:#ff450029}.mkt-brand,.mkt-header-actions,.mkt-welcome{position:relative;z-index:1}.mkt-brand{display:flex;align-items:center;gap:12px}.mkt-logo{border-radius:14px;box-shadow:0 8px 24px #0004}.mkt-eyebrow{color:#ff6a2a;font-size:12px;font-weight:900;letter-spacing:1.5px}.mkt-title{font-weight:800;font-size:18px}.mkt-header-actions{position:absolute;right:28px;top:28px;display:flex;gap:10px}.mkt-ghost{border:1px solid #ffffff47;background:#ffffff14;color:#fff;border-radius:10px;padding:9px 14px;font-weight:750;cursor:pointer}.mkt-welcome{display:flex;justify-content:space-between;align-items:end;gap:30px;margin-top:38px}.mkt-welcome span{color:#9db6aa;font-size:12px;text-transform:uppercase;letter-spacing:1px;font-weight:800}.mkt-welcome h1{font-size:clamp(25px,4vw,38px);margin:6px 0}.mkt-welcome p{margin:0;color:#bdcec5}.mkt-identity{min-width:210px;padding:15px 18px;border:1px solid #ffffff24;border-radius:14px;background:#ffffff12;display:grid;gap:3px}.mkt-identity small{color:#9db6aa;font-weight:800}.mkt-identity strong{color:#ff6a2a;font-size:20px}.mkt-identity span{text-transform:none;letter-spacing:0}.mkt-alert{margin-top:16px;padding:14px 17px;border-radius:12px;font-size:14px;font-weight:650}.mkt-alert.error{background:#fff1f0;color:#b42318;border:1px solid #fecaca}.mkt-alert.success{background:#ecfdf3;color:#047857;border:1px solid #a7f3d0}.mkt-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:18px 0}.mkt-stats article{display:flex;align-items:center;gap:14px;background:#fff;border:1px solid #e5e9e6;border-radius:16px;padding:18px;box-shadow:0 8px 25px #1f32280d}.mkt-stats small{display:block;color:#718078;font-size:12px;font-weight:700}.mkt-stats strong{display:block;font-size:21px;margin:3px 0}.mkt-stats p{font-size:11px;color:#8b9690;margin:0}.mkt-stats i{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-style:normal;font-weight:900}.mkt-stats .green{background:#e6f7ef;color:#078454}.mkt-stats .amber{background:#fff4db;color:#bd7200}.mkt-stats .orange{background:#fff0e8;color:#e5470a}.mkt-stats .blue{background:#eaf4ff;color:#1677c8}.mkt-content-grid{display:grid;grid-template-columns:380px 1fr;gap:16px;align-items:start}.mkt-right-column{display:grid;gap:16px}.mkt-panel{background:#fff;border:1px solid #e3e8e4;border-radius:18px;padding:21px;box-shadow:0 8px 28px #1f32280e}.mkt-panel-head{display:flex;gap:12px;align-items:flex-start;margin-bottom:19px}.mkt-panel-icon{width:38px;height:38px;border-radius:11px;background:#17251e;color:#ff5a16;display:grid;place-items:center;font-weight:900;flex:none}.mkt-panel h2{font-size:17px;margin:1px 0 4px}.mkt-panel-head p{font-size:12px;color:#77837d;margin:0;line-height:1.4}.mkt-form{display:grid;gap:13px}.mkt-form label{font-size:12px;font-weight:750;color:#45534b;display:grid;gap:6px}.mkt-form input,.mkt-form select{width:100%;box-sizing:border-box;border:1px solid #d7ddd9;background:#fbfcfb;color:#17211b;border-radius:10px;padding:11px 12px;font:inherit;outline:none}.mkt-form input:focus,.mkt-form select:focus{border-color:#ff5a16;box-shadow:0 0 0 3px #ff5a161a}.mkt-form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.mkt-flow-note{background:#f5f8f6;border:1px dashed #b8c7bf;border-radius:11px;padding:12px;display:grid;gap:3px;font-size:11px;color:#66736c}.mkt-flow-note b{color:#284437}.mkt-primary{border:0;border-radius:11px;padding:13px;background:linear-gradient(135deg,#ff5a16,#e43f05);color:#fff;font-weight:850;box-shadow:0 9px 20px #e5430838;cursor:pointer}.mkt-primary:disabled{opacity:.65;cursor:wait}.mkt-list{display:grid;gap:9px}.mkt-list-item{position:relative;border:1px solid #e5e9e6;border-radius:12px;padding:13px 145px 13px 14px;display:grid;gap:3px}.mkt-list-item strong,.mkt-list-item span,.mkt-list-item small{display:block}.mkt-list-item span{color:#68766e;font-size:12px;margin-top:3px}.mkt-list-item small{color:#9aa39e;font-size:11px;margin-top:5px}.mkt-list-item p{grid-column:1/-1;margin:8px 0 0;font-size:11px;background:#f7f8f7;padding:8px;border-radius:7px}.mkt-status{position:absolute;right:12px;top:12px;border-radius:99px;padding:6px 9px;font-size:10px;font-weight:850}.mkt-status.pending,.mkt-status.processing{background:#fff5d9;color:#a26300}.mkt-status.approved{background:#e6f7ef;color:#08784f}.mkt-status.rejected{background:#feeceb;color:#b42318}.mkt-empty{padding:30px;text-align:center;background:#f8faf8;border-radius:12px;color:#7d8882;font-size:13px}.mkt-table-wrap{overflow:auto}.mkt-table-wrap table{border-collapse:collapse;width:100%;min-width:540px;font-size:12px}.mkt-table-wrap th{text-align:left;color:#78837d;background:#f7f9f7;padding:10px}.mkt-table-wrap td{padding:12px 10px;border-bottom:1px solid #edf0ee}.mkt-table-wrap td span{display:block;color:#8a948f;font-size:11px;margin-top:3px}.mkt-container footer{text-align:center;color:#89948e;font-size:11px;padding:24px}.mkt-loading{min-height:100vh;display:grid;place-content:center;justify-items:center;gap:15px;background:#121815;color:#fff}.mkt-loading img{border-radius:18px}
-@media(max-width:950px){.mkt-stats{grid-template-columns:1fr 1fr}.mkt-content-grid{grid-template-columns:1fr}}
-@media(max-width:620px){.mkt-shell{padding:0 0 20px}.mkt-header{border-radius:0 0 22px 22px;padding:18px}.mkt-header-actions{right:18px;top:20px}.mkt-welcome{display:block;margin-top:30px}.mkt-identity{margin-top:18px}.mkt-stats{grid-template-columns:1fr 1fr;padding:0 12px}.mkt-stats article{padding:14px;display:block}.mkt-stats i{margin-bottom:9px}.mkt-content-grid{padding:0 12px}.mkt-form-row{grid-template-columns:1fr}.mkt-list-item{padding:47px 14px 13px}.mkt-status{left:12px;right:auto}.mkt-title{font-size:15px}.mkt-logo{width:48px;height:48px}}
+/* Marketing Dashboard Stylesheet - Elegant Tosca & Orange Theme */
+
+.mkt-shell {
+  min-height: 100vh;
+  background: #f4f6f4;
+  color: #17211b;
+  padding: 24px;
+}
+
+.mkt-container {
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+/* Header Kemitraan: Perpaduan Hijau Tosca Mendalam & Orange Elegan */
+.mkt-header {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #042f2e 0%, #0d5d56 42%, #0f766e 78%, #115e59 100%);
+  border: 1px solid rgba(45, 212, 191, 0.22);
+  border-radius: 24px;
+  color: #ffffff;
+  padding: 28px 32px 34px;
+  box-shadow: 0 20px 45px rgba(4, 47, 46, 0.22), 0 4px 12px rgba(255, 87, 34, 0.08);
+}
+
+.mkt-header::after {
+  content: "";
+  position: absolute;
+  width: 340px;
+  height: 340px;
+  border-radius: 50%;
+  right: -90px;
+  bottom: -150px;
+  background: radial-gradient(circle, rgba(255, 106, 42, 0.35) 0%, rgba(249, 115, 22, 0.12) 50%, transparent 75%);
+  pointer-events: none;
+}
+
+.mkt-header::before {
+  content: "";
+  position: absolute;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  left: 35%;
+  top: -100px;
+  background: radial-gradient(circle, rgba(94, 234, 212, 0.18) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.mkt-brand,
+.mkt-welcome {
+  position: relative;
+  z-index: 1;
+}
+
+.mkt-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.mkt-logo {
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  background: #ffffff;
+  padding: 4px;
+  flex-shrink: 0;
+}
+
+.mkt-eyebrow {
+  color: #ff7843;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.mkt-title {
+  font-weight: 800;
+  font-size: 19px;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+}
+
+.mkt-welcome {
+  margin-top: 32px;
+}
+
+.mkt-welcome span {
+  display: inline-block;
+  color: #5eead4;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.mkt-welcome h1 {
+  font-size: clamp(24px, 4vw, 36px);
+  font-weight: 850;
+  color: #ffffff !important;
+  margin: 4px 0 8px;
+  letter-spacing: -0.02em;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+}
+
+.mkt-welcome p {
+  margin: 0;
+  color: #ccfbf1;
+  font-size: 13.5px;
+  max-width: 650px;
+  line-height: 1.5;
+}
+
+/* Alert Notifikasi */
+.mkt-alert {
+  margin-top: 18px;
+  padding: 14px 18px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.mkt-alert.error {
+  background: #fff1f0;
+  color: #b42318;
+  border: 1px solid #fecaca;
+}
+
+.mkt-alert.success {
+  background: #ecfdf3;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+/* 4 Card Statistik: Icon Besar & Hampir Memenuhi Latar */
+.mkt-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin: 22px 0;
+}
+
+.mkt-stats article {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: #ffffff;
+  border: 1px solid #e2e8e4;
+  border-radius: 18px;
+  padding: 18px 20px;
+  box-shadow: 0 8px 24px rgba(15, 118, 110, 0.05);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.mkt-stats article:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(15, 118, 110, 0.08);
+}
+
+.mkt-stats small {
+  display: block;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.mkt-stats strong {
+  display: block;
+  font-size: 22px;
+  font-weight: 850;
+  color: #0f172a;
+  margin: 2px 0;
+}
+
+.mkt-stats p {
+  font-size: 11.5px;
+  color: #94a3b8;
+  margin: 0;
+}
+
+/* Icon Kotak Berukuran 52x52 dengan icon di dalamnya berukuran 38px (hampir memenuhi latar) */
+.mkt-stats i {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-style: normal;
+  padding: 6px;
+  box-sizing: border-box;
+}
+
+.mkt-stats i svg {
+  width: 38px;
+  height: 38px;
+  display: block;
+}
+
+.mkt-rp-icon {
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: -1.5px;
+  line-height: 1;
+}
+
+.mkt-stats .green {
+  background: #d1fae5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.mkt-stats .amber {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.mkt-stats .orange {
+  background: #ffedd5;
+  color: #ea580c;
+  border: 1px solid #fed7aa;
+}
+
+.mkt-stats .blue {
+  background: #e0f2fe;
+  color: #0284c7;
+  border: 1px solid #bae6fd;
+}
+
+/* Grid Konten */
+.mkt-content-grid {
+  display: grid;
+  grid-template-columns: 390px 1fr;
+  gap: 18px;
+  align-items: start;
+}
+
+.mkt-right-column {
+  display: grid;
+  gap: 18px;
+}
+
+.mkt-panel {
+  background: #ffffff;
+  border: 1px solid #e3e8e4;
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 8px 28px rgba(15, 118, 110, 0.05);
+}
+
+.mkt-panel-head {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.mkt-panel-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: #042f2e;
+  color: #ff6a2a;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  font-size: 18px;
+  flex: none;
+}
+
+.mkt-panel h2 {
+  font-size: 18px;
+  font-weight: 800;
+  margin: 1px 0 4px;
+  color: #0f172a;
+}
+
+.mkt-panel-head p {
+  font-size: 12.5px;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Form Pendaftaran Tenant */
+.mkt-form {
+  display: grid;
+  gap: 14px;
+}
+
+.mkt-form label {
+  font-size: 12px;
+  font-weight: 750;
+  color: #334155;
+  display: grid;
+  gap: 6px;
+}
+
+.mkt-form input,
+.mkt-form select {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  color: #0f172a;
+  border-radius: 10px;
+  padding: 12px 14px;
+  font: inherit;
+  font-size: 13.5px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.mkt-form input:focus,
+.mkt-form select:focus {
+  border-color: #0d9488;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
+}
+
+.mkt-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.mkt-flow-note {
+  background: #f0fdfa;
+  border: 1px dashed #99f6e4;
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: grid;
+  gap: 4px;
+  font-size: 11.5px;
+  color: #0f766e;
+}
+
+.mkt-flow-note b {
+  color: #042f2e;
+  font-weight: 750;
+}
+
+.mkt-primary {
+  border: 0;
+  border-radius: 12px;
+  padding: 14px;
+  background: linear-gradient(135deg, #ff6a2a 0%, #ea580c 100%);
+  color: #ffffff;
+  font-weight: 850;
+  font-size: 14.5px;
+  box-shadow: 0 9px 22px rgba(234, 88, 12, 0.32);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.mkt-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 26px rgba(234, 88, 12, 0.4);
+}
+
+.mkt-primary:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+/* List Status Pengajuan */
+.mkt-list {
+  display: grid;
+  gap: 10px;
+}
+
+.mkt-list-item {
+  position: relative;
+  border: 1px solid #e2e8e4;
+  border-radius: 14px;
+  padding: 14px 145px 14px 16px;
+  display: grid;
+  gap: 4px;
+  background: #fcfdfc;
+}
+
+.mkt-list-item strong,
+.mkt-list-item span,
+.mkt-list-item small {
+  display: block;
+}
+
+.mkt-list-item strong {
+  font-size: 14px;
+  color: #0f172a;
+}
+
+.mkt-list-item span {
+  color: #64748b;
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.mkt-list-item small {
+  color: #94a3b8;
+  font-size: 11px;
+  margin-top: 4px;
+}
+
+.mkt-list-item p {
+  grid-column: 1 / -1;
+  margin: 8px 0 0;
+  font-size: 11.5px;
+  background: #f1f5f9;
+  color: #475569;
+  padding: 8px 10px;
+  border-radius: 8px;
+}
+
+.mkt-status {
+  position: absolute;
+  right: 14px;
+  top: 14px;
+  border-radius: 99px;
+  padding: 6px 10px;
+  font-size: 10.5px;
+  font-weight: 850;
+}
+
+.mkt-status.pending,
+.mkt-status.processing {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.mkt-status.approved {
+  background: #d1fae5;
+  color: #047857;
+}
+
+.mkt-status.rejected {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.mkt-empty {
+  padding: 36px 20px;
+  text-align: center;
+  background: #f8fafc;
+  border-radius: 14px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+/* Tabel Tenant Aktif */
+.mkt-table-wrap {
+  overflow-x: auto;
+}
+
+.mkt-table-wrap table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 540px;
+  font-size: 12.5px;
+}
+
+.mkt-table-wrap th {
+  text-align: left;
+  color: #64748b;
+  background: #f8fafc;
+  padding: 11px 12px;
+  font-weight: 750;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.mkt-table-wrap td {
+  padding: 13px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #1e293b;
+}
+
+.mkt-table-wrap td span {
+  display: block;
+  color: #64748b;
+  font-size: 11px;
+  margin-top: 3px;
+}
+
+/* Bar Profil Akun & Tombol Keluar yang Elegan di Bawah */
+.mkt-account-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 16px 22px;
+  margin-top: 26px;
+  box-shadow: 0 4px 18px rgba(15, 118, 110, 0.04);
+}
+
+.mkt-account-info {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.mkt-account-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0d9488 0%, #042f2e 100%);
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  font-size: 18px;
+  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.25);
+  flex-shrink: 0;
+}
+
+.mkt-account-info strong {
+  display: block;
+  font-size: 14.5px;
+  color: #0f172a;
+}
+
+.mkt-account-info p {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.mkt-logout-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  border-radius: 11px;
+  padding: 10px 18px;
+  font-size: 13.5px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mkt-logout-btn:hover {
+  background: #dc2626;
+  color: #ffffff;
+  border-color: #dc2626;
+  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.25);
+}
+
+.mkt-container footer {
+  text-align: center;
+  color: #94a3b8;
+  font-size: 11.5px;
+  padding: 24px 0 12px;
+}
+
+/* Loading Screen Sambutan */
+.mkt-loading {
+  min-height: 100vh;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 16px;
+  background: #042f2e;
+  color: #ffffff;
+}
+
+.mkt-loading img {
+  border-radius: 20px;
+  filter: drop-shadow(0 12px 28px rgba(255, 87, 34, 0.3));
+}
+
+.mkt-loading span {
+  font-size: 13.5px;
+  font-weight: 650;
+  color: #99f6e4;
+  letter-spacing: 0.3px;
+}
+
+/* Popup Modal Install PWA */
+.mkt-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: rgba(4, 47, 46, 0.78);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  animation: mktFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mkt-modal-card {
+  position: relative;
+  background: #ffffff;
+  border-radius: 24px;
+  max-width: 390px;
+  width: 100%;
+  padding: 28px 24px;
+  text-align: center;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.35);
+  animation: mktScaleUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mkt-modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 15px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.mkt-modal-close:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.mkt-modal-icon-wrap {
+  width: 76px;
+  height: 76px;
+  margin: 0 auto 16px;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 10px 24px rgba(15, 118, 110, 0.22);
+}
+
+.mkt-modal-icon-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.mkt-modal-card h3 {
+  font-size: 19px;
+  font-weight: 850;
+  color: #0f172a;
+  margin: 0 0 8px;
+  letter-spacing: -0.01em;
+}
+
+.mkt-modal-card p {
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.5;
+  margin: 0 0 20px;
+}
+
+.mkt-modal-helper {
+  font-size: 12px;
+  color: #0f766e;
+  background: #f0fdfa;
+  border: 1px solid #99f6e4;
+  padding: 10px 12px;
+  border-radius: 11px;
+  margin-bottom: 18px;
+  line-height: 1.45;
+  text-align: left;
+}
+
+.mkt-modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mkt-modal-btn-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  border: none;
+  border-radius: 12px;
+  padding: 13px 18px;
+  background: linear-gradient(135deg, #ff6a2a 0%, #ea580c 100%);
+  color: #ffffff;
+  font-size: 14.5px;
+  font-weight: 850;
+  cursor: pointer;
+  box-shadow: 0 8px 22px rgba(234, 88, 12, 0.35);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.mkt-modal-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 26px rgba(234, 88, 12, 0.42);
+}
+
+.mkt-modal-btn-secondary {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.mkt-modal-btn-secondary:hover {
+  color: #0f172a;
+}
+
+@keyframes mktFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes mktScaleUp {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Responsif Mobile & Tablet */
+@media (max-width: 950px) {
+  .mkt-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+  .mkt-content-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .mkt-shell {
+    padding: 0 0 24px;
+  }
+  .mkt-header {
+    border-radius: 0 0 24px 24px;
+    padding: 22px 20px 28px;
+  }
+  .mkt-welcome {
+    margin-top: 24px;
+  }
+  .mkt-stats {
+    grid-template-columns: 1fr 1fr;
+    padding: 0 14px;
+    gap: 12px;
+  }
+  .mkt-stats article {
+    padding: 14px;
+    gap: 12px;
+  }
+  .mkt-stats i {
+    width: 48px;
+    height: 48px;
+  }
+  .mkt-stats i svg {
+    width: 34px;
+    height: 34px;
+  }
+  .mkt-content-grid {
+    padding: 0 14px;
+  }
+  .mkt-form-row {
+    grid-template-columns: 1fr;
+  }
+  .mkt-list-item {
+    padding: 48px 14px 14px;
+  }
+  .mkt-status {
+    left: 14px;
+    right: auto;
+  }
+  .mkt-account-bar {
+    margin: 20px 14px 0;
+    padding: 14px 16px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .mkt-logout-btn {
+    justify-content: center;
+  }
+  .mkt-title {
+    font-size: 16px;
+  }
+  .mkt-logo {
+    width: 48px;
+    height: 48px;
+  }
+}
