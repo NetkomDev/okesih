@@ -30,7 +30,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     let cancelled = false;
-    queueMicrotask(() => {
+    queueMicrotask(async () => {
       if (cancelled || typeof window === "undefined") return;
       const pwa = detectActivePwaKind();
       if (pwa) {
@@ -41,6 +41,34 @@ export default function LoginPage() {
       const err = params.get("error");
       if (err === "unauthorized") {
         setLoginError("Akses Ditolak: Anda tidak memiliki izin untuk halaman tersebut.");
+      }
+
+      // Jika user sudah memiliki sesi aktif di browser/PWA dan tidak ada error login khusus,
+      // arahkan langsung ke dashboard sesuai hak aksesnya tanpa harus login ulang
+      if (!err) {
+        try {
+          const supabase = createClient();
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user && !cancelled) {
+            const role = extractUserRole(user);
+            if (role === "SUPERADMIN") {
+              window.location.replace("/superadmin?pwa=superadmin");
+              return;
+            } else if (role === "OWNER") {
+              window.location.replace("/owner?pwa=owner");
+              return;
+            } else if (role === "MARKETING") {
+              window.location.replace("/marketing/dashboard?pwa=marketing");
+              return;
+            } else if (role === "KASIR") {
+              window.location.replace("/pos?pwa=pos");
+              return;
+            } else if (role === "DAPUR") {
+              window.location.replace("/kds?pwa=kds");
+              return;
+            }
+          }
+        } catch {}
       }
     });
 

@@ -22,17 +22,14 @@ export default function CashierPinGate({ deviceId, tenant, children }: {
       catch { setMode("error"); setError("Penyimpanan PIN tidak dapat dibaca. Aktifkan penyimpanan browser atau hubungi Owner untuk pairing ulang."); }
     }, 0);
     const lock = () => { generation.current++; setUnlocked(false); setPin(""); setConfirmation(""); };
-    const visibility = () => { if (document.visibilityState === "hidden") lock(); };
     const storage = (event: StorageEvent) => { if (event.key === devicePinKey(deviceId) || event.key === null) lock(); };
-    window.addEventListener("pagehide", lock);
-    document.addEventListener("visibilitychange", visibility);
     window.addEventListener("storage", storage);
     return () => {
       // This is a request generation counter, not a DOM ref; invalidate pending verification.
       // eslint-disable-next-line react-hooks/exhaustive-deps
       generation.current++;
-      window.clearTimeout(timer); window.removeEventListener("pagehide", lock);
-      document.removeEventListener("visibilitychange", visibility); window.removeEventListener("storage", storage);
+      window.clearTimeout(timer);
+      window.removeEventListener("storage", storage);
     };
   }, [deviceId]);
 
@@ -65,7 +62,7 @@ export default function CashierPinGate({ deviceId, tenant, children }: {
         }
         localStorage.setItem(devicePinKey(deviceId), JSON.stringify({ ...record, failures: 0, retryAt: 0 }));
         setMode("unlock"); setPin(""); setConfirmation("");
-        if (attemptGeneration === generation.current && document.visibilityState !== "hidden") setUnlocked(true);
+        if (attemptGeneration === generation.current) setUnlocked(true);
       } catch (reason) { setError(reason instanceof Error ? reason.message : "PIN tidak dapat diverifikasi."); }
       finally { inFlight.current = false; setBusy(false); }
     }}>
