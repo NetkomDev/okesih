@@ -2144,8 +2144,8 @@ button {
 }
 
 .owner-shell .owner-actions .btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.28) !important;
-  border-color: #ffffff !important;
+  background: var(--ow-accent) !important;
+  border-color: var(--ow-accent) !important;
   color: #ffffff !important;
 }
 
