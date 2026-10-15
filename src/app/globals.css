@@ -2976,3 +2976,69 @@ button {
   .owner-qris-page .owner-branding-actions{gap:8px}
   .owner-qris-page .owner-branding-actions button{flex:1 1 140px;min-height:42px}
 }
+
+/* Owner mobile hero: one consistent orange silhouette on every Owner page. */
+@media (max-width: 720px) {
+  .owner-shell .owner-topbar,
+  .owner-shell .owner-topbar.is-home,
+  .owner-shell .owner-topbar.is-subpage {
+    min-height: 188px;
+    border-radius: 0 0 50% 50% / 0 0 42px 42px !important;
+    background:
+      radial-gradient(circle at 50% 118%, rgba(255, 255, 255, 0.18), transparent 42%),
+      linear-gradient(160deg, #ff591c 0%, #ff4500 62%, #f43f16 100%) !important;
+    box-shadow:
+      0 18px 34px rgba(244, 63, 22, 0.22),
+      0 7px 14px rgba(255, 69, 0, 0.16) !important;
+  }
+
+  .owner-shell .owner-topbar.is-home {
+    align-content: flex-start;
+    align-items: center;
+    padding: 10px 18px 78px;
+  }
+
+  .owner-topbar.is-home .owner-brand {
+    min-height: 72px;
+    align-items: center;
+    gap: 13px;
+  }
+
+  .owner-topbar.is-home .owner-brand img {
+    width: 54px !important;
+    height: 54px !important;
+    border-radius: 14px;
+  }
+
+  .owner-shell .owner-topbar.is-home .owner-brand strong {
+    font-size: 23px !important;
+    line-height: 1.12;
+  }
+
+  .owner-topbar.is-home .owner-brand small {
+    margin-top: 3px;
+    font-size: 11px;
+    line-height: 1.2;
+  }
+
+  .owner-topbar.is-home .owner-home-divider {
+    margin-top: 5px;
+  }
+
+  .owner-shell .owner-topbar.is-subpage {
+    align-items: flex-start;
+    padding: 24px 16px 88px;
+  }
+
+  .owner-topbar.is-subpage .owner-subpage-title {
+    padding-top: 2px;
+  }
+
+  .owner-main {
+    margin-top: -70px !important;
+  }
+
+  #ringkasan > .owner-section-heading {
+    margin-top: 0 !important;
+  }
+}
