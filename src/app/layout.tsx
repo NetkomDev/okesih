@@ -81,7 +81,7 @@ export const metadata: Metadata = {
   icons: {
     icon: [{ url: "/favicon.svg?v=2", type: "image/svg+xml" }],
     shortcut: "/favicon.svg?v=2",
-    apple: "/logo.svg?v=2",
+    apple: "/icons/apple-touch-icon.png",
   },
 };
 
@@ -102,7 +102,7 @@ export default function RootLayout({
     <html lang="id" suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable}`}>
       <head>
         <link rel="icon" href="/favicon.svg?v=2" type="image/svg+xml" />
-        <link rel="apple-touch-icon" href="/logo.svg?v=2" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var s=localStorage.getItem("okesih-theme");var p=s||"light";document.documentElement.setAttribute("data-theme",p);}catch(e){document.documentElement.setAttribute("data-theme","light");}})();`,

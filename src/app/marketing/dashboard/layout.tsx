@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   icons: {
     icon: "/logo.svg",
-    apple: "/logo.svg",
+    apple: "/icons/apple-touch-icon.png",
   },
   appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "Okesih.com" },
 };
