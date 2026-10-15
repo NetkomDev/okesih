@@ -376,7 +376,13 @@ export default function TenantOwnerDashboardPage() {
 
         <div className="owner-sidebar-head"><span className="owner-sidebar-mark">O</span><b>OWNER SPACE</b><button className="owner-sidebar-toggle" onClick={() => setSidebarExpanded((value) => !value)} aria-label="Buka atau ciutkan sidebar">☰</button></div>
         <nav>{navItems.map(([icon, label, href, itemView]) => <Link key={href} href={href} title={label} className={view === itemView ? "active" : ""} aria-current={view === itemView ? "page" : undefined}><span>{icon}</span><b>{label}</b></Link>)}</nav>
-        <label className="owner-autohide"><input type="checkbox" checked={autoHide} onChange={(event) => setAutoHide(event.target.checked)} /><span>Auto-hide</span></label>
+        <div className="owner-sidebar-footer">
+          <button type="button" className="owner-sidebar-logout" onClick={logoutUser} title="Keluar dari Akun Owner" aria-label="Keluar dari akun owner">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            <span>Keluar</span>
+          </button>
+          <label className="owner-autohide"><input type="checkbox" checked={autoHide} onChange={(event) => setAutoHide(event.target.checked)} /><span>Auto-hide</span></label>
+        </div>
       </aside>
 
       <div className="owner-content">
