@@ -2798,6 +2798,8 @@ button {
   .owner-qris-page .owner-logo-preview img{width:92px;height:92px}
   .owner-qris-page .owner-qris-preview,.owner-qris-page .owner-qris-placeholder{width:150px;height:150px;margin:14px auto}
   .owner-qris-page .owner-table-input{margin:12px 0;gap:8px}
+  .owner-qris-page .owner-table-input textarea{display:block;width:100%;min-width:0;min-height:88px;line-height:1.5;resize:vertical}
+  .owner-qris-page .owner-table-input .btn-primary{width:100%;min-height:44px}
   .owner-qris-page .owner-table-chips{margin:10px 0 14px}
   .owner-qris-page .owner-branding-actions{gap:8px}
   .owner-qris-page .owner-branding-actions button{flex:1 1 140px;min-height:42px}
