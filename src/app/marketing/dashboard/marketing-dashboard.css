@@ -549,48 +549,62 @@ html, body {
   font-weight: 800;
 }
 
-/* Subpages: Header Navigasi Subpage */
+/* Subpages: Header Oranye Cerah Full Bleed dengan Sudut Bawah Rounded */
 .mkt-subpage-header {
-  margin-bottom: 18px;
-  width: 100%;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #ff6a00 0%, #ff4500 50%, #e63e00 100%);
+  border-radius: 0 0 24px 24px;
+  color: #ffffff;
+  padding: 24px 28px 28px;
+  margin: -24px -24px 24px -24px;
+  width: calc(100% + 48px);
+  box-shadow: 0 10px 30px rgba(255, 69, 0, 0.25);
   box-sizing: border-box;
 }
 
-.mkt-back-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: #ffffff;
-  border: 1px solid #d1d5db;
-  border-radius: 12px;
-  padding: 8px 14px;
-  font-size: 12.5px;
-  font-weight: 750;
-  color: #0f766e;
-  text-decoration: none;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
-  margin-bottom: 12px;
-  transition: all 0.2s ease;
+.mkt-subpage-header::after {
+  content: "";
+  position: absolute;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  right: -60px;
+  bottom: -110px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.05) 55%, transparent 75%);
+  pointer-events: none;
 }
 
-.mkt-back-btn:hover {
-  background: #f0fdfa;
-  border-color: #0f766e;
-  transform: translateX(-2px);
+.mkt-subpage-header::before {
+  content: "";
+  position: absolute;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  left: 20%;
+  top: -80px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.mkt-subpage-title-box {
+  position: relative;
+  z-index: 2;
 }
 
 .mkt-subpage-title-box h1 {
-  font-size: clamp(20px, 3.5vw, 30px);
-  font-weight: 850;
-  color: #0f172a;
-  margin: 0 0 5px;
-  letter-spacing: -0.02em;
+  font-size: clamp(22px, 4vw, 32px);
+  font-weight: 900;
+  color: #ffffff;
+  margin: 0 0 6px;
+  letter-spacing: -0.025em;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
 .mkt-subpage-title-box p {
   margin: 0;
-  font-size: 13px;
-  color: #64748b;
+  font-size: 13.5px;
+  color: rgba(255, 255, 255, 0.92);
   max-width: 680px;
   line-height: 1.5;
 }
@@ -1571,7 +1585,17 @@ html, body {
     justify-content: center !important;
   }
   .mkt-subpage-header {
-    margin-bottom: 14px !important;
+    margin: -12px -14px 18px -14px !important;
+    width: calc(100% + 28px) !important;
+    padding: 22px 18px 24px !important;
+    border-radius: 0 0 24px 24px !important;
+  }
+  .mkt-subpage-title-box h1 {
+    font-size: 21px !important;
+  }
+  .mkt-subpage-title-box p {
+    font-size: 12.5px !important;
+    line-height: 1.45 !important;
   }
   .mkt-filter-bar {
     flex-direction: column !important;
