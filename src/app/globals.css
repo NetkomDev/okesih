@@ -3043,3 +3043,71 @@ button {
     margin-top: 0 !important;
   }
 }
+
+/* Tablet and desktop use a compact neutral topbar; the orange hero is mobile-only. */
+@media (min-width: 721px) {
+  .owner-shell .owner-topbar,
+  [data-theme="light"] .owner-shell .owner-topbar,
+  .owner-shell .owner-topbar.is-home,
+  [data-theme="light"] .owner-shell .owner-topbar.is-home,
+  .owner-shell .owner-topbar.is-subpage,
+  [data-theme="light"] .owner-shell .owner-topbar.is-subpage {
+    min-height: 76px;
+    padding: 10px clamp(18px, 3.2vw, 42px);
+    flex-wrap: nowrap;
+    background: var(--ow-surface) !important;
+    border-bottom: 1px solid var(--ow-border) !important;
+    border-radius: 0 !important;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05) !important;
+    color: var(--ow-text) !important;
+  }
+
+  .owner-home-divider {
+    display: none;
+  }
+
+  .owner-shell .owner-brand strong {
+    color: var(--ow-text) !important;
+  }
+
+  .owner-brand small {
+    color: var(--ow-accent) !important;
+  }
+
+  .owner-status {
+    background: rgba(16, 185, 129, 0.1) !important;
+    border-color: rgba(16, 185, 129, 0.24) !important;
+    color: #059669 !important;
+  }
+
+  .owner-subpage-title h1 {
+    color: var(--ow-text) !important;
+  }
+
+  .owner-subpage-title p {
+    color: var(--ow-muted) !important;
+  }
+
+  .owner-shell .owner-actions .btn-secondary {
+    border-color: var(--ow-border) !important;
+    background: var(--ow-surface-raised) !important;
+    color: var(--ow-text) !important;
+    backdrop-filter: none;
+    box-shadow: none !important;
+  }
+
+  .owner-main {
+    margin: 0 auto !important;
+    padding-top: 26px;
+  }
+
+  #ringkasan .owner-section-heading h1 {
+    color: var(--ow-text) !important;
+    text-shadow: none;
+  }
+
+  #ringkasan .owner-section-heading p {
+    color: var(--ow-muted) !important;
+    text-shadow: none;
+  }
+}
