@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cacheDeviceSnapshot, clearDeviceData, enqueueDeviceOperation, listDeviceOperations, readDeviceSnapshot, removeDeviceOperation } from "@/lib/device-offline";
+import { createClient } from "@/lib/supabase/client";
 
 export type DeviceOrder = {
   id: string; table_number: string; nomor_antrean: number; total_harga: number; payment_method: "QRIS" | "CASH";
@@ -22,6 +23,13 @@ export type DeviceBootstrap = {
 
 type Pairing = { pairingId: string; pollSecret: string; code: string; expiresAt: string };
 
+async function deviceHeaders(type: "POS" | "KDS") {
+  if (type !== "POS") return { "Content-Type": "application/json", "X-Device-Type": type };
+  const { data } = await createClient().auth.getSession();
+  const token = data.session?.access_token;
+  return { "Content-Type": "application/json", "X-Device-Type": type, ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+}
+
 export function useDeviceApp(type: "POS" | "KDS") {
   const [data, setData] = useState<DeviceBootstrap | null>(null);
   const [authorized, setAuthorized] = useState<boolean | null>(null);
@@ -39,8 +47,12 @@ export function useDeviceApp(type: "POS" | "KDS") {
       const operations = await listDeviceOperations(type);
       setPendingCount(operations.length);
       for (const operation of operations) {
-        const response = await fetch(operation.path, { method: "POST", headers: { "Content-Type": "application/json", "X-Device-Type": type }, body: JSON.stringify(operation.body) });
-        if (response.status === 401) { setAuthorized(false); await clearDeviceData(type); break; }
+        const response = await fetch(operation.path, { method: "POST", headers: await deviceHeaders(type), body: JSON.stringify(operation.body) });
+        if (response.status === 401) {
+          const body = await response.json().catch(() => ({}));
+          setError(body.error || "Sesi operator berakhir. Masuk kembali untuk menyinkronkan perubahan.");
+          break;
+        }
         if (!response.ok && response.status >= 500) break;
         if (!response.ok) {
           const body = await response.json().catch(() => ({}));
@@ -55,7 +67,7 @@ export function useDeviceApp(type: "POS" | "KDS") {
   const refresh = useCallback(async (quiet = false) => {
     try {
       const response = await fetch("/api/device/bootstrap", { cache: "no-store", headers: { "X-Device-Type": type } });
-      if (response.status === 401) { setAuthorized(false); setData(null); return; }
+      if (response.status === 401) { setAuthorized(false); setData(null); await clearDeviceData(type); return; }
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "Data perangkat gagal dimuat.");
       setAuthorized(true); setData(body); setCachedAt(null); setError("");
@@ -98,7 +110,7 @@ export function useDeviceApp(type: "POS" | "KDS") {
 
   const transitionOrder = async (orderId: string, status: "COOKING" | "READY" | "DONE" | "REJECTED") => {
     const idempotencyKey = crypto.randomUUID();
-    const body = { orderId, status, idempotencyKey };
+    const body = { orderId, status, idempotencyKey, ...(type === "POS" && data?.shift?.id ? { shiftId: data.shift.id } : {}) };
     if (!navigator.onLine) {
       const offlineSince = cachedAt ? new Date(cachedAt).getTime() : Date.now();
       const offlineLimitMs = Number(data?.profile.offline_limit_hours || 0) * 60 * 60_000;
@@ -110,7 +122,7 @@ export function useDeviceApp(type: "POS" | "KDS") {
       setData((current) => current ? { ...current, orders: current.orders.map((order) => order.id === orderId ? { ...order, status_pesanan: status } : order) } : current);
       return;
     }
-    const response = await fetch("/api/device/orders", { method: "POST", headers: { "Content-Type": "application/json", "X-Device-Type": type }, body: JSON.stringify(body) });
+    const response = await fetch("/api/device/orders", { method: "POST", headers: await deviceHeaders(type), body: JSON.stringify(body) });
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || "Status pesanan gagal diperbarui.");
     await refresh(true);

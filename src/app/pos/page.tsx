@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import DevicePairing from "@/components/DevicePairing";
-import CashierPinGate from "@/components/CashierPinGate";
+import CashierShiftGate from "@/components/CashierShiftGate";
 import PwaInstallButton from "@/components/PwaInstallButton";
 import { type DeviceOrder, useDeviceApp } from "@/lib/use-device-app";
 
@@ -37,7 +37,7 @@ export default function PosModulePage() {
     finally { setBusy(false); }
   };
 
-  return <CashierPinGate key={app.data.device.id} deviceId={app.data.device.id} tenant={app.data.profile.nama}><div className="ops-app pos-app">
+  return <CashierShiftGate key={app.data.device.id} tenant={app.data.profile.nama} pendingCount={app.pendingCount} onShiftChanged={() => app.refresh()}><div className="ops-app pos-app">
     <header className="ops-header"><div className="ops-brand">{app.data.profile.logo_url ? <img src={app.data.profile.logo_url} alt={`Logo ${app.data.profile.nama}`}/> : <Image src="/logo.svg?v=2" width={42} height={42} alt="OKESIH"/>}<div><small>OKESIH KASIR</small><strong>{app.data.profile.nama}</strong></div></div><div className="ops-actions"><span className={app.online ? "ops-online" : "ops-offline"}>● {app.online ? "Online" : "Offline"}</span>{app.pendingCount > 0 && <span className="ops-sync">{app.pendingCount} menunggu sinkronisasi</span>}<PwaInstallButton compact label="Install Kasir"/><button onClick={() => { const Audio = window.AudioContext || (window as typeof window & { webkitAudioContext: typeof AudioContext }).webkitAudioContext; audio.current ||= new Audio(); void audio.current.resume(); setAudioEnabled(true); }}>🔊 {audioEnabled ? "Audio Aktif" : "Aktifkan Audio"}</button></div></header>
     {app.cachedAt && <div className="ops-warning">Mode offline · data terakhir {new Date(app.cachedAt).toLocaleTimeString("id-ID")}. Perubahan akan disinkronkan otomatis.</div>}
     {app.error && <div className="ops-error">{app.error}<button onClick={() => app.setError("")}>×</button></div>}
@@ -46,7 +46,7 @@ export default function PosModulePage() {
       <section className="ops-section"><div className="ops-title"><div><small>PROSES BERJALAN</small><h2>Dapur &amp; Pengantaran</h2></div></div><div className="ops-order-grid compact">{app.data.orders.filter((order) => order.status_pesanan !== "AWAITING_CONFIRMATION").map((order) => <OrderCard key={order.id} order={order} onOpen={() => setSelected(order)}/>)}</div></section>
     </main>
     {selected && <div className="ops-modal-backdrop"><section className="ops-modal"><button className="ops-modal-close" onClick={() => setSelected(null)}>×</button><small>ANTREAN #{String(selected.nomor_antrean).padStart(3, "0")}</small><h2>Meja {selected.table_number}</h2><div className={`ops-payment ${selected.payment_method.toLowerCase()}`}>{selected.payment_method === "CASH" ? "💵 BAYAR TUNAI" : "▣ QRIS — VERIFIKASI BUKTI"}</div>{selected.payment_proof_url && <a className="ops-proof" href={selected.payment_proof_url} target="_blank" rel="noreferrer">Buka Bukti Pembayaran</a>}<div className="ops-items">{selected.items.map((item) => <div key={item.id}><span>{item.qty}× {item.nama_menu}{item.notes && <small>{item.notes}</small>}</span><b>Rp {(Number(item.harga_satuan) * item.qty).toLocaleString("id-ID")}</b></div>)}</div><strong className="ops-total">Total Rp {Number(selected.total_harga).toLocaleString("id-ID")}</strong>{selected.status_pesanan === "AWAITING_CONFIRMATION" ? <div className="ops-modal-actions"><button disabled={busy} className="danger" onClick={() => void update(selected, "REJECTED")}>Tolak</button><button disabled={busy} className="primary" onClick={() => void update(selected, "COOKING")}>{busy ? "Menyimpan..." : "Konfirmasi & Kirim ke Dapur"}</button></div> : selected.status_pesanan === "READY" ? <button disabled={busy} className="primary" onClick={() => void update(selected, "DONE")}>Tandai Sudah Diantar</button> : <p>Status: {selected.status_pesanan}</p>}</section></div>}
-  </div></CashierPinGate>;
+  </div></CashierShiftGate>;
 }
 
 function OrderCard({ order, onOpen }: { order: DeviceOrder; onOpen: () => void }) {

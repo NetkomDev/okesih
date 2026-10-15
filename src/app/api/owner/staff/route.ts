@@ -1,4 +1,4 @@
-import { ownerErrorResponse, requireOwner } from "@/lib/owner-api";
+import { OwnerApiError, ownerErrorResponse, requireOwner } from "@/lib/owner-api";
 
 export async function POST(request: Request) {
   try {
@@ -19,7 +19,10 @@ export async function POST(request: Request) {
       app_metadata: { role, warkop_id: warkopId },
       user_metadata: { role, warkop_id: warkopId, warkop_slug: profile.slug },
     });
-    if (authError || !auth.user) throw new Error(authError?.message || "Akun staf gagal dibuat.");
+    if (authError || !auth.user) {
+      const duplicate = authError?.message.toLowerCase().includes("already") || authError?.message.toLowerCase().includes("registered");
+      throw new OwnerApiError(duplicate ? "Username tersebut sudah digunakan. Pilih username lain." : authError?.message || "Akun staf gagal dibuat.", duplicate ? 409 : 500);
+    }
 
     const { data, error } = await admin.from("warkop_members").insert({
       warkop_id: warkopId, user_id: auth.user.id, username, display_name: String(body.name || username).trim(), role, is_active: true,
@@ -45,6 +48,11 @@ export async function PATCH(request: Request) {
     }
     if (body.isActive !== undefined) {
       const active = Boolean(body.isActive);
+      if (!active) {
+        const { data: openShift, error: shiftError } = await admin.from("shifts").select("id").eq("opened_by", member.id).eq("status", "OPEN").maybeSingle();
+        if (shiftError) throw shiftError;
+        if (openShift) throw new OwnerApiError("Akhiri shift kasir sebelum menonaktifkan akunnya.", 409);
+      }
       const { error: authError } = await admin.auth.admin.updateUserById(member.user_id, { ban_duration: active ? "none" : "876000h" });
       if (authError) throw authError;
       const { error } = await admin.from("warkop_members").update({ is_active: active }).eq("id", member.id);

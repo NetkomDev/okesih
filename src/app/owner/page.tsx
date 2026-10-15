@@ -13,14 +13,15 @@ import PwaRoleMismatchModal from "@/components/PwaRoleMismatchModal";
 
 
 type MenuItem = { id: string; name: string; price: number; category: string; description: string; isAvailable: boolean };
-type Staff = { id: string; username: string; name: string; role: "KASIR" | "DAPUR"; status: "ACTIVE" | "INACTIVE" };
+type Staff = { id: string; username: string; name: string; role: "KASIR" | "DAPUR"; status: "ACTIVE" | "INACTIVE"; onShift: boolean };
 type Waiter = { id: string; name: string; phone: string | null; is_active: boolean };
 type BusinessTable = { id: string; label: string; sort_order: number; is_active: boolean };
 type Profile = { id: string; nama: string; slug: string; is_active: boolean; logo_url: string | null; qris_image_url: string | null; qris_merchant_name: string | null };
 type Metrics = { receiptCount: number; cash: number; qris: number; total: number; billing: { tagihan_pokok: number; kode_unik: number; total_tagihan: number; status_bayar: string } | null };
 type RevenuePeriod = "day" | "week" | "month" | "year";
 type RevenueData = { period: RevenuePeriod; series: { label: string; value: number }[]; total: number; average: number; transactionCount: number };
-type DashboardData = { profile: Profile; menus: MenuItem[]; staff: Staff[]; waiters: Waiter[]; tables: BusinessTable[]; metrics: Metrics };
+type ActiveCashier = { shiftId: string; memberId: string; name: string; deviceName: string; openedAt: string; lastActivityAt: string };
+type DashboardData = { profile: Profile; menus: MenuItem[]; staff: Staff[]; waiters: Waiter[]; tables: BusinessTable[]; metrics: Metrics; activeCashier: ActiveCashier | null };
 type DeviceInstallation = { id: string; device_type: "POS" | "KDS"; device_name: string; status: "ACTIVE" | "REVOKED" | "EXPIRED"; paired_at: string; last_seen_at: string; expires_at: string; revoked_at: string | null };
 type OwnerOnboarding = { password_changed_at: string | null; owner_pwa_installed_at: string | null; completed_at: string | null };
 
@@ -135,6 +136,13 @@ export default function TenantOwnerDashboardPage() {
           void loadDashboard();
         }
       )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "shifts" },
+        () => {
+          void loadDashboard();
+        }
+      )
       .subscribe();
 
     return () => {
@@ -153,6 +161,28 @@ export default function TenantOwnerDashboardPage() {
       setOnboardingReady(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Pusat perangkat gagal dimuat.");
+    }
+  };
+
+  const closeActiveCashierShift = async () => {
+    if (!data?.activeCashier) return;
+    const amount = window.prompt(`Masukkan kas fisik yang diserahkan oleh ${data.activeCashier.name} (Rp)`, "0");
+    if (amount === null) return;
+    const actualCash = Number(amount.replace(/[^0-9]/g, ""));
+    if (!Number.isFinite(actualCash) || actualCash < 0) return setError("Nominal kas fisik tidak valid.");
+    setBusy(true); setError("");
+    try {
+      await ownerFetch("/api/owner/shifts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ shiftId: data.activeCashier.shiftId, actualCash, notes: "Ditutup oleh Owner dari Dashboard Owner." }),
+      });
+      setNotice("Shift kasir berhasil diakhiri.");
+      await loadDashboard();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Shift kasir gagal diakhiri.");
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -437,6 +467,10 @@ export default function TenantOwnerDashboardPage() {
           {notice && <div className="owner-success">{notice}<button onClick={() => setNotice("")}>×</button></div>}
           {view === "overview" && <section id="ringkasan">
             <div className="owner-section-heading"><div><h1>Ringkasan Penjualan Hari Ini</h1><p>Pantau omzet tunai vs QRIS, kas di laci kasir, dan pembayaran sewa OKESIH.</p></div></div>
+            <div className={`owner-cashier-status ${data.activeCashier ? "is-active" : ""}`}>
+              <div><small>KASIR SAAT INI</small>{data.activeCashier ? <><b>● {data.activeCashier.name}</b><span>{data.activeCashier.deviceName} · mulai {new Date(data.activeCashier.openedAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}</span></> : <><b>Belum ada shift aktif</b><span>Kasir perlu masuk pada perangkat POS yang sudah dipairing.</span></>}</div>
+              {data.activeCashier && <button className="btn-secondary" disabled={busy} onClick={() => void closeActiveCashierShift()}>Akhiri Shift</button>}
+            </div>
             <div className="owner-metrics">
               <article className="metric-revenue"><span className="metric-icon">↗</span><small>TOTAL OMZET PENJUALAN</small><strong>{money(metrics.total)}</strong><p>{metrics.receiptCount} transaksi hari ini</p></article>
               <article className="metric-payment"><span className="metric-icon">◈</span><small>RINCIAN PEMBAYARAN</small><b>Tunai <em>{money(metrics.cash)}</em></b><b>QRIS <em>{money(metrics.qris)}</em></b></article>
@@ -654,7 +688,7 @@ export default function TenantOwnerDashboardPage() {
 
           {view === "staff" && <section id="staf" className="owner-panel owner-page-panel">
             <div className="owner-section-heading"><div><h2>Manajemen Akun Staf (Kasir &amp; Barista, dll.)</h2><p>Akun login staf tersimpan dan terisolasi untuk usaha ini.</p></div><button className="btn-primary" onClick={() => setStaffModal(true)}>+ Tambah Staf</button></div>
-            <div className="owner-table-wrap"><table><thead><tr><th>Username</th><th>Nama</th><th>Peran</th><th>Status</th><th>Aksi</th></tr></thead><tbody>{data.staff.length === 0 && <tr><td colSpan={5}><EmptyState icon="♟" title="Belum ada akun staf" text="Buat akun kasir atau barista agar akses operasional terpisah dan aman." /></td></tr>}{data.staff.map((staff) => <tr key={staff.id}><td><b>{staff.username}</b></td><td>{staff.name}</td><td><span className="owner-category">{staff.role}</span></td><td><span className={staff.status === "ACTIVE" ? "owner-dot active" : "owner-dot"}>{staff.status === "ACTIVE" ? "● Aktif" : "○ Nonaktif"}</span></td><td><button className="link-button" onClick={() => { const password = prompt(`Password baru untuk ${staff.username} (minimal 6 karakter)`); if (password) void mutate(() => ownerFetch("/api/owner/staff", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: staff.id, password }) })); }}>Reset Password</button><button className="link-button" onClick={() => void mutate(() => ownerFetch("/api/owner/staff", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: staff.id, isActive: staff.status !== "ACTIVE" }) }))}>{staff.status === "ACTIVE" ? "Nonaktifkan" : "Aktifkan"}</button></td></tr>)}</tbody></table></div>
+            <div className="owner-table-wrap"><table><thead><tr><th>Username</th><th>Nama</th><th>Peran</th><th>Status</th><th>Aksi</th></tr></thead><tbody>{data.staff.length === 0 && <tr><td colSpan={5}><EmptyState icon="♟" title="Belum ada akun staf" text="Buat akun kasir atau barista agar akses operasional terpisah dan aman." /></td></tr>}{data.staff.map((staff) => <tr key={staff.id}><td><b>{staff.username}</b></td><td>{staff.name}</td><td><span className="owner-category">{staff.role}</span></td><td><span className={staff.onShift ? "owner-dot shift" : staff.status === "ACTIVE" ? "owner-dot active" : "owner-dot"}>{staff.onShift ? "● Sedang shift" : staff.status === "ACTIVE" ? "● Aktif" : "○ Nonaktif"}</span></td><td><button className="link-button" onClick={() => { const password = prompt(`Password baru untuk ${staff.username} (minimal 6 karakter)`); if (password) void mutate(() => ownerFetch("/api/owner/staff", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: staff.id, password }) })); }}>Reset Password</button>{staff.onShift && <button className="link-button danger" disabled={busy} onClick={() => void closeActiveCashierShift()}>Akhiri Shift</button>}<button className="link-button" disabled={staff.onShift} onClick={() => void mutate(() => ownerFetch("/api/owner/staff", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: staff.id, isActive: staff.status !== "ACTIVE" }) }))}>{staff.status === "ACTIVE" ? "Nonaktifkan" : "Aktifkan"}</button></td></tr>)}</tbody></table></div>
           </section>}
 
           {view === "waiters" && <section id="waiter" className="owner-panel owner-page-panel">

@@ -3172,3 +3172,5 @@ button {
     display: none;
   }
 }
+
+.owner-cashier-status{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 0 14px;padding:12px 14px;border:1px solid var(--ow-border);border-radius:12px;background:var(--ow-surface);box-shadow:var(--ow-shadow)}.owner-cashier-status>div{display:grid;gap:2px}.owner-cashier-status small{color:var(--ow-muted);font-size:10px;font-weight:900;letter-spacing:.08em}.owner-cashier-status b{color:var(--ow-text)!important;font-size:14px}.owner-cashier-status span{color:var(--ow-muted);font-size:11px}.owner-cashier-status.is-active{border-color:rgba(16,185,129,.35)}.owner-cashier-status.is-active b,.owner-dot.shift{color:#059669!important}@media(max-width:720px){.owner-cashier-status{align-items:flex-start;padding:10px 12px}.owner-cashier-status .btn-secondary{padding:8px 10px;font-size:11px;white-space:nowrap}}
