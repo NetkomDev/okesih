@@ -59,6 +59,7 @@ export default function TenantOwnerDashboardPage() {
   const [staffModal, setStaffModal] = useState(false);
   const [waiterModal, setWaiterModal] = useState(false);
   const [menuForm, setMenuForm] = useState({ name: "", price: "", category: "Kopi", description: "" });
+  const [editingMenu, setEditingMenu] = useState<{ id: string; name: string; price: string; category: string; description: string; isAvailable: boolean } | null>(null);
   const [staffForm, setStaffForm] = useState({ username: "", name: "", password: "", role: "KASIR" });
   const [waiterForm, setWaiterForm] = useState({ name: "", phone: "" });
   const [tableInput, setTableInput] = useState("");
@@ -101,6 +102,31 @@ export default function TenantOwnerDashboardPage() {
     // Start data synchronization in parallel with the local auth guard.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadDashboard();
+
+    // Berlangganan event Realtime Supabase untuk tabel menus dan transactions
+    // sehingga status ketersediaan menu (Tersedia / Habis) tersinkron otomatis dengan penjualan kasir
+    const supabase = createClient();
+    const channel = supabase
+      .channel("owner-realtime-sync")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "menus" },
+        () => {
+          void loadDashboard();
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "transactions" },
+        () => {
+          void loadDashboard();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
   }, []);
 
   const loadDeviceCenter = async () => {
@@ -162,6 +188,26 @@ export default function TenantOwnerDashboardPage() {
       await ownerFetch("/api/owner/menus", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...menuForm, price: Number(menuForm.price) }) });
       setMenuModal(false);
       setMenuForm({ name: "", price: "", category: "Kopi", description: "" });
+    });
+  };
+
+  const updateMenu = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!editingMenu) return;
+    void mutate(async () => {
+      await ownerFetch("/api/owner/menus", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: editingMenu.id,
+          name: editingMenu.name,
+          price: Number(editingMenu.price),
+          category: editingMenu.category,
+          description: editingMenu.description,
+          isAvailable: editingMenu.isAvailable,
+        }),
+      });
+      setEditingMenu(null);
     });
   };
 
@@ -359,7 +405,6 @@ export default function TenantOwnerDashboardPage() {
             <div className="owner-section-heading owner-menu-heading">
               <div className="owner-menu-heading-title">
                 <h2>Katalog Menu</h2>
-                <p>Tersinkronisasi ke menu pelanggan dan kasir.</p>
               </div>
               <div className="owner-menu-actions">
                 <Link
@@ -424,8 +469,19 @@ export default function TenantOwnerDashboardPage() {
                         </button>
                       </td>
                       <td>
-                        <button className="link-button" onClick={() => { const value = prompt("Harga baru", String(menu.price)); if (value && Number(value) > 0) void mutate(() => ownerFetch("/api/owner/menus", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: menu.id, price: Number(value) }) })); }}>Ubah Harga</button>
-                        <button className="link-button" onClick={() => { const value = prompt("Kategori baru", menu.category); if (value?.trim()) void mutate(() => ownerFetch("/api/owner/menus", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: menu.id, category: value }) })); }}>Ubah Kategori</button>
+                        <button
+                          className="link-button"
+                          onClick={() => setEditingMenu({
+                            id: menu.id,
+                            name: menu.name,
+                            price: String(menu.price),
+                            category: menu.category,
+                            description: menu.description === "-" ? "" : menu.description,
+                            isAvailable: menu.isAvailable,
+                          })}
+                        >
+                          Edit
+                        </button>
                         <button className="link-button danger" onClick={() => confirm(`Hapus ${menu.name}?`) && void mutate(() => ownerFetch(`/api/owner/menus?id=${menu.id}`, { method: "DELETE" }))}>Hapus</button>
                       </td>
                     </tr>
@@ -464,22 +520,16 @@ export default function TenantOwnerDashboardPage() {
                       <button
                         type="button"
                         className="link-button"
-                        onClick={() => {
-                          const value = prompt("Harga baru", String(menu.price));
-                          if (value && Number(value) > 0) void mutate(() => ownerFetch("/api/owner/menus", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: menu.id, price: Number(value) }) }));
-                        }}
+                        onClick={() => setEditingMenu({
+                          id: menu.id,
+                          name: menu.name,
+                          price: String(menu.price),
+                          category: menu.category,
+                          description: menu.description === "-" ? "" : menu.description,
+                          isAvailable: menu.isAvailable,
+                        })}
                       >
-                        Ubah Harga
-                      </button>
-                      <button
-                        type="button"
-                        className="link-button"
-                        onClick={() => {
-                          const value = prompt("Kategori baru", menu.category);
-                          if (value?.trim()) void mutate(() => ownerFetch("/api/owner/menus", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: menu.id, category: value }) }));
-                        }}
-                      >
-                        Kategori
+                        Edit
                       </button>
                       <button
                         type="button"
@@ -545,9 +595,10 @@ export default function TenantOwnerDashboardPage() {
 
       {onboardingReady && onboarding && !onboarding.completed_at && <div className="owner-onboarding-backdrop"><section className="owner-onboarding-card"><img src="/logo.svg?v=2" alt="OKESIH"/><small>SELAMAT DATANG DI OKESIH</small><h2>Siapkan akun Owner Anda</h2>{!onboarding.password_changed_at ? <><p>Demi keamanan, ganti password awal yang diberikan Super Admin sebelum menggunakan dashboard.</p><label>Password baru<input type="password" minLength={8} value={newPassword} onChange={(event) => setNewPassword(event.target.value)} placeholder="Minimal 8 karakter"/></label><button className="btn-primary" disabled={busy || newPassword.length < 8} onClick={() => void onboardingAction({ action: "change_password", password: newPassword })}>{busy ? "Menyimpan..." : "Ganti Password & Lanjut"}</button></> : <><p>Pasang Dashboard Owner agar OKESIH dapat dibuka langsung dari layar utama. Browser tetap akan meminta persetujuan Anda.</p><PwaInstallButton label="Install OKESIH Owner" onInstalled={() => void onboardingAction({ action: "pwa_installed" })}/><button className="btn-secondary" disabled={busy} onClick={() => void onboardingAction({ action: "complete" })}>Lanjut ke Dashboard</button></>}{error && <div className="owner-error">{error}</div>}</section></div>}
 
-      {menuModal && <Modal title="Tambah Menu" onClose={() => setMenuModal(false)}><form onSubmit={createMenu}><input required placeholder="Nama menu" value={menuForm.name} onChange={(e) => setMenuForm({ ...menuForm, name: e.target.value })}/><input required min="1" type="number" placeholder="Harga" value={menuForm.price} onChange={(e) => setMenuForm({ ...menuForm, price: e.target.value })}/><label className="owner-category-field">Kategori<input required list="owner-menu-categories" maxLength={50} placeholder="Pilih atau ketik kategori baru" value={menuForm.category} onChange={(e) => setMenuForm({ ...menuForm, category: e.target.value })}/><small>Pilih kategori yang ada atau ketik kategori baru.</small></label><datalist id="owner-menu-categories">{categorySuggestions.map((item) => <option key={item} value={item}/>)}</datalist><textarea placeholder="Deskripsi" value={menuForm.description} onChange={(e) => setMenuForm({ ...menuForm, description: e.target.value })}/><button disabled={busy} className="btn-primary">Simpan Menu</button></form></Modal>}
-      {staffModal && <Modal title="Tambah Akun Staf" onClose={() => setStaffModal(false)}><form onSubmit={createStaff}><input required placeholder="Username" value={staffForm.username} onChange={(e) => setStaffForm({ ...staffForm, username: e.target.value })}/><input required placeholder="Nama staf" value={staffForm.name} onChange={(e) => setStaffForm({ ...staffForm, name: e.target.value })}/><input required minLength={6} type="password" placeholder="Password minimal 6 karakter" value={staffForm.password} onChange={(e) => setStaffForm({ ...staffForm, password: e.target.value })}/><select value={staffForm.role} onChange={(e) => setStaffForm({ ...staffForm, role: e.target.value })}><option value="KASIR">Kasir POS</option><option value="DAPUR">Barista / Dapur</option></select><button disabled={busy} className="btn-primary">Buat Akun Staf</button></form></Modal>}
-      {waiterModal && <Modal title="Tambah Waiter" onClose={() => setWaiterModal(false)}><form onSubmit={createWaiter}><input required placeholder="Nama waiter" value={waiterForm.name} onChange={(e) => setWaiterForm({ ...waiterForm, name: e.target.value })}/><input inputMode="tel" placeholder="Nomor telepon" value={waiterForm.phone} onChange={(e) => setWaiterForm({ ...waiterForm, phone: e.target.value })}/><button disabled={busy} className="btn-primary">Simpan Waiter</button></form></Modal>}
+      {menuModal && <Modal title="Tambah Menu" onClose={() => setMenuModal(false)}><form onSubmit={createMenu}><input required placeholder="Nama menu" value={menuForm.name} onChange={(e) => setMenuForm({ ...menuForm, name: e.target.value })}/><input required min="1" type="number" placeholder="Harga" value={menuForm.price} onChange={(e) => setMenuForm({ ...menuForm, price: e.target.value })}/><label className="owner-category-field">Kategori<input required list="owner-menu-categories" maxLength={50} placeholder="Pilih atau ketik kategori baru" value={menuForm.category} onChange={(e) => setMenuForm({ ...menuForm, category: e.target.value })}/><small>Pilih kategori yang ada atau ketik kategori baru.</small></label><datalist id="owner-menu-categories">{categorySuggestions.map((item) => <option key={item} value={item}/>)}</datalist><textarea placeholder="Deskripsi" value={menuForm.description} onChange={(e) => setMenuForm({ ...menuForm, description: e.target.value })}/><div className="owner-modal-actions"><button type="button" className="btn-secondary" onClick={() => setMenuModal(false)}>Batal</button><button disabled={busy} className="btn-primary" type="submit">Oke</button></div></form></Modal>}
+      {editingMenu && <Modal title="Edit Menu" onClose={() => setEditingMenu(null)}><form onSubmit={updateMenu}><label className="owner-category-field">Nama Menu<input required placeholder="Nama menu" value={editingMenu.name} onChange={(e) => setEditingMenu({ ...editingMenu, name: e.target.value })}/></label><label className="owner-category-field">Harga (Rp)<input required min="1" type="number" placeholder="Harga" value={editingMenu.price} onChange={(e) => setEditingMenu({ ...editingMenu, price: e.target.value })}/></label><label className="owner-category-field">Kategori<input required list="owner-menu-categories-edit" maxLength={50} placeholder="Pilih atau ketik kategori baru" value={editingMenu.category} onChange={(e) => setEditingMenu({ ...editingMenu, category: e.target.value })}/><small>Pilih kategori yang ada atau ketik kategori baru.</small></label><datalist id="owner-menu-categories-edit">{categorySuggestions.map((item) => <option key={item} value={item}/>)}</datalist><label className="owner-category-field">Deskripsi<textarea placeholder="Deskripsi menu" value={editingMenu.description} onChange={(e) => setEditingMenu({ ...editingMenu, description: e.target.value })}/></label><label className="owner-category-field" style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: "10px", marginTop: "4px" }}><input type="checkbox" checked={editingMenu.isAvailable} onChange={(e) => setEditingMenu({ ...editingMenu, isAvailable: e.target.checked })} style={{ width: "20px", height: "20px", margin: 0 }}/><span>Status Menu Tersedia untuk Dipesan</span></label><div className="owner-modal-actions"><button type="button" className="btn-secondary" onClick={() => setEditingMenu(null)}>Batal</button><button disabled={busy} className="btn-primary" type="submit">{busy ? "Menyimpan..." : "Oke"}</button></div></form></Modal>}
+      {staffModal && <Modal title="Tambah Akun Staf" onClose={() => setStaffModal(false)}><form onSubmit={createStaff}><input required placeholder="Username" value={staffForm.username} onChange={(e) => setStaffForm({ ...staffForm, username: e.target.value })}/><input required placeholder="Nama staf" value={staffForm.name} onChange={(e) => setStaffForm({ ...staffForm, name: e.target.value })}/><input required minLength={6} type="password" placeholder="Password minimal 6 karakter" value={staffForm.password} onChange={(e) => setStaffForm({ ...staffForm, password: e.target.value })}/><select value={staffForm.role} onChange={(e) => setStaffForm({ ...staffForm, role: e.target.value })}><option value="KASIR">Kasir POS</option><option value="DAPUR">Barista / Dapur</option></select><div className="owner-modal-actions"><button type="button" className="btn-secondary" onClick={() => setStaffModal(false)}>Batal</button><button disabled={busy} className="btn-primary" type="submit">Oke</button></div></form></Modal>}
+      {waiterModal && <Modal title="Tambah Waiter" onClose={() => setWaiterModal(false)}><form onSubmit={createWaiter}><input required placeholder="Nama waiter" value={waiterForm.name} onChange={(e) => setWaiterForm({ ...waiterForm, name: e.target.value })}/><input inputMode="tel" placeholder="Nomor telepon" value={waiterForm.phone} onChange={(e) => setWaiterForm({ ...waiterForm, phone: e.target.value })}/><div className="owner-modal-actions"><button type="button" className="btn-secondary" onClick={() => setWaiterModal(false)}>Batal</button><button disabled={busy} className="btn-primary" type="submit">Oke</button></div></form></Modal>}
     </div>
   );
 }

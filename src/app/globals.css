@@ -2410,24 +2410,32 @@ button {
 }
 
 @media (max-width: 720px) {
+  .owner-panel.owner-menu-catalog-page {
+    padding-top: 14px !important;
+  }
   .owner-menu-heading {
     flex-direction: column;
     align-items: stretch !important;
-    gap: 14px;
-    margin-bottom: 20px;
+    gap: 12px;
+    margin-bottom: 14px;
+    min-height: auto !important;
   }
   .owner-menu-heading-title {
     width: 100%;
+  }
+  .owner-menu-heading-title h2 {
+    margin-bottom: 0 !important;
   }
   .owner-menu-actions {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 8px;
     width: 100%;
+    margin-top: 2px;
   }
   .owner-menu-btn {
     width: 100%;
-    min-height: 52px;
+    min-height: 48px;
     padding: 8px 10px;
     font-size: 12.5px;
     gap: 8px;
@@ -2502,12 +2510,36 @@ button {
   .owner-menu-card-actions {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
   }
   .owner-menu-card-actions .link-button {
-    font-size: 12px;
-    padding: 4px 6px;
+    font-size: 13px;
+    font-weight: 800;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: var(--ow-surface);
+    border: 1px solid var(--ow-border);
+    text-decoration: none;
   }
+  .owner-menu-card-actions .link-button.danger {
+    background: rgba(239, 68, 68, 0.08);
+    border-color: rgba(239, 68, 68, 0.25);
+  }
+}
+
+.owner-modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+}
+.owner-modal-actions button {
+  min-height: 42px;
+  padding: 8px 18px;
+  border-radius: 9px;
+  font-weight: 800;
+  cursor: pointer;
 }
 
 @media (max-width: 1100px) {

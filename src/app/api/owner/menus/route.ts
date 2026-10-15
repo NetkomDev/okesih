@@ -23,7 +23,9 @@ export async function PATCH(request: Request) {
     const { admin, warkopId } = await requireOwner(request);
     const body = await request.json();
     const updates: Record<string, unknown> = {};
+    if (body.name !== undefined && String(body.name).trim()) updates.nama = String(body.name).trim();
     if (body.price !== undefined) updates.harga = Number(body.price);
+    if (body.description !== undefined) updates.desc_menu = String(body.description || "-").trim();
     if (body.isAvailable !== undefined) updates.is_available = Boolean(body.isAvailable);
     if (body.category !== undefined) {
       const category = normalizeCategory(body.category);
