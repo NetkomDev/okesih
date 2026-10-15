@@ -42,12 +42,6 @@ export default function MarketingTenantBinaanPage() {
       <div className="mkt-container">
         {/* Top Header */}
         <div className="mkt-subpage-header">
-          <Link href="/marketing/dashboard" className="mkt-back-btn">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-              <polyline points="15 18 9 12 15 6" />
-            </svg>
-            <span>Kembali ke Dashboard</span>
-          </Link>
           <div className="mkt-subpage-title-box">
             <h1>Tenant Binaan Aktif</h1>
             <p>Pantau performa operasional dan status pembayaran tagihan harian tenant binaan Anda untuk tindak lanjut cepat.</p>
