@@ -30,7 +30,11 @@ export class OwnerApiError extends Error {
 }
 
 export function ownerErrorResponse(error: unknown) {
-  const status = error instanceof OwnerApiError ? error.status : 500;
+  const status = error instanceof OwnerApiError
+    ? error.status
+    : error instanceof Error && "status" in error && typeof error.status === "number"
+      ? error.status
+      : 500;
   const message = error instanceof Error ? error.message : "Terjadi kesalahan internal.";
   return Response.json({ error: message }, { status });
 }

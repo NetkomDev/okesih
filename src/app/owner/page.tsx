@@ -32,9 +32,17 @@ async function ownerFetch(path: string, init?: RequestInit) {
   const token = data.session?.access_token;
   if (!token) throw new Error("Sesi login owner berakhir. Silakan login kembali.");
   const response = await fetch(path, { ...init, headers: { ...init?.headers, Authorization: `Bearer ${token}` } });
-  const payload = await response.json();
+  const responseText = await response.text();
+  let payload;
+  try { payload = responseText ? JSON.parse(responseText) : {}; }
+  catch { if (!response.ok) throw new Error(`Server gagal memproses permintaan (${response.status}).`); }
   if (!response.ok) throw new Error(payload.error || "Permintaan gagal diproses.");
   return payload;
+}
+
+function validateImage(file: File, maxSize: number, label: string) {
+  if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) throw new Error(`${label} harus berupa PNG, JPG, atau WebP.`);
+  if (file.size > maxSize) throw new Error(`${label} maksimal ${Math.round(maxSize / 1024 / 1024)} MB.`);
 }
 
 function money(value: number) {
@@ -52,6 +60,7 @@ export default function TenantOwnerDashboardPage() {
 
   const [data, setData] = useState<DashboardData | null>(null);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [autoHide, setAutoHide] = useState(true);
@@ -64,6 +73,8 @@ export default function TenantOwnerDashboardPage() {
   const [waiterForm, setWaiterForm] = useState({ name: "", phone: "" });
   const [tableInput, setTableInput] = useState("");
   const [merchantName, setMerchantName] = useState("");
+  const [businessName, setBusinessName] = useState("");
+  const [editingTable, setEditingTable] = useState<BusinessTable | null>(null);
   const [devices, setDevices] = useState<DeviceInstallation[]>([]);
   const [onboarding, setOnboarding] = useState<OwnerOnboarding | null>(null);
   const [onboardingReady, setOnboardingReady] = useState(false);
@@ -87,12 +98,14 @@ export default function TenantOwnerDashboardPage() {
       if (cached) {
         setData(cached);
         setMerchantName(cached.profile.qris_merchant_name || cached.profile.nama);
+        setBusinessName(cached.profile.nama);
       }
 
       const payload = await ownerFetch("/api/owner/dashboard", { cache: "no-store" });
       ownerDashboardCache.set(userId, payload.data);
       setData(payload.data);
       setMerchantName(payload.data.profile.qris_merchant_name || payload.data.profile.nama);
+      setBusinessName(payload.data.profile.nama);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Dashboard gagal dimuat.");
     }
@@ -174,10 +187,11 @@ export default function TenantOwnerDashboardPage() {
     return () => { cancelled = true; };
   }, [isAuthorized, pathname, revenuePeriod]);
 
-  const mutate = async (work: () => Promise<unknown>) => {
+  const mutate = async (work: () => Promise<unknown>, successMessage?: string) => {
     setBusy(true);
     setError("");
-    try { await work(); await loadDashboard(); }
+    setNotice("");
+    try { await work(); await loadDashboard(); if (successMessage) setNotice(successMessage); }
     catch (err) { setError(err instanceof Error ? err.message : "Perubahan gagal disimpan."); }
     finally { setBusy(false); }
   };
@@ -233,27 +247,54 @@ export default function TenantOwnerDashboardPage() {
     const labels = tableInput.split(/[,\n]/).map((item) => item.trim()).filter(Boolean);
     await ownerFetch("/api/owner/tables", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ labels }) });
     setTableInput("");
-  });
+  }, "Daftar meja berhasil disimpan.");
 
   const uploadQris = (file?: File) => {
     if (!file) return;
     void mutate(async () => {
-      const form = new FormData();
-      form.set("file", file);
-      form.set("merchantName", merchantName);
-      await ownerFetch("/api/owner/qris", { method: "POST", body: form });
-      if (qrisInput.current) qrisInput.current.value = "";
-    });
+      try {
+        validateImage(file, 3 * 1024 * 1024, "QRIS");
+        const form = new FormData();
+        form.set("file", file);
+        form.set("merchantName", merchantName.trim());
+        await ownerFetch("/api/owner/qris", { method: "POST", body: form });
+      } finally {
+        if (qrisInput.current) qrisInput.current.value = "";
+      }
+    }, "QRIS berhasil diperbarui.");
   };
 
   const uploadLogo = (file?: File) => {
     if (!file) return;
     void mutate(async () => {
-      const form = new FormData();
-      form.set("file", file);
-      await ownerFetch("/api/owner/branding", { method: "POST", body: form });
-      if (logoInput.current) logoInput.current.value = "";
-    });
+      try {
+        validateImage(file, 2 * 1024 * 1024, "Logo");
+        const form = new FormData();
+        form.set("file", file);
+        await ownerFetch("/api/owner/branding", { method: "POST", body: form });
+      } finally {
+        if (logoInput.current) logoInput.current.value = "";
+      }
+    }, "Logo usaha berhasil diperbarui.");
+  };
+
+  const saveBusinessName = () => void mutate(
+    () => ownerFetch("/api/owner/branding", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ businessName }) }),
+    "Nama usaha berhasil disimpan."
+  );
+
+  const saveMerchantName = () => void mutate(
+    () => ownerFetch("/api/owner/qris", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ merchantName }) }),
+    "Nama merchant berhasil disimpan."
+  );
+
+  const updateTable = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!editingTable) return;
+    void mutate(async () => {
+      await ownerFetch("/api/owner/tables", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: editingTable.id, label: editingTable.label }) });
+      setEditingTable(null);
+    }, "Nama meja berhasil diperbarui.");
   };
 
   const printTableStickers = async () => {
@@ -346,6 +387,7 @@ export default function TenantOwnerDashboardPage() {
 
         <main className="owner-main">
           {error && <div className="owner-error">{error}<button onClick={() => setError("")}>×</button></div>}
+          {notice && <div className="owner-success">{notice}<button onClick={() => setNotice("")}>×</button></div>}
           {view === "overview" && <section id="ringkasan">
             <div className="owner-section-heading"><div><h1>Ringkasan Penjualan Hari Ini</h1><p>Pantau omzet tunai vs QRIS, kas di laci kasir, dan pembayaran sewa OKESIH.</p></div></div>
             <div className="owner-metrics">
@@ -555,19 +597,22 @@ export default function TenantOwnerDashboardPage() {
             <div className="owner-card-grid">{data.waiters.length === 0 && <EmptyState icon="♙" title="Daftar waiter masih kosong" text="Tambahkan waiter sesuai kondisi aktual usaha Anda." />}{data.waiters.map((waiter) => <article key={waiter.id} className="owner-small-card"><span className="owner-avatar">{waiter.name.slice(0, 1).toUpperCase()}</span><b>{waiter.name}</b><span>{waiter.phone || "Tanpa nomor telepon"}</span><button className="link-button danger" onClick={() => confirm(`Hapus ${waiter.name}?`) && void mutate(() => ownerFetch(`/api/owner/waiters?id=${waiter.id}`, { method: "DELETE" }))}>Hapus</button></article>)}</div>
           </section>}
 
-          {view === "qris-tables" && <section id="qris" className="owner-settings-grid owner-page-panel">
+          {view === "qris-tables" && <section id="qris" className="owner-settings-grid owner-page-panel owner-qris-page">
             <article className="owner-panel owner-branding-panel">
               <h2>Identitas &amp; Logo Usaha</h2><p>Logo aktif otomatis tampil pada menu pelanggan, layar Kasir, dan layar Dapur. Jika belum diunggah, sistem menggunakan logo OKESIH.</p>
               <div className="owner-logo-preview"><img src={profile.logo_url || "/logo.svg?v=2"} alt={profile.logo_url ? `Logo ${profile.nama}` : "Logo OKESIH"}/></div>
+              <label>Nama Usaha<input maxLength={150} value={businessName} onChange={(event) => setBusinessName(event.target.value)} /></label>
+              <button disabled={busy || businessName.trim().length < 2 || businessName.trim() === profile.nama} className="btn-secondary owner-save-field" onClick={saveBusinessName}>Simpan Nama Usaha</button>
               <input ref={logoInput} hidden type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => uploadLogo(event.target.files?.[0])}/>
-              <div className="owner-branding-actions"><button disabled={busy} className="btn-primary" onClick={() => logoInput.current?.click()}>{busy ? "Menyimpan..." : profile.logo_url ? "Ganti Logo Usaha" : "Upload Logo Usaha"}</button>{profile.logo_url && <button disabled={busy} className="btn-secondary" onClick={() => confirm("Hapus logo usaha dan gunakan logo OKESIH?") && void mutate(() => ownerFetch("/api/owner/branding", { method: "DELETE" }))}>Gunakan Logo OKESIH</button>}</div>
+              <div className="owner-branding-actions"><button disabled={busy} className="btn-primary" onClick={() => logoInput.current?.click()}>{busy ? "Menyimpan..." : profile.logo_url ? "Ganti Logo Usaha" : "Upload Logo Usaha"}</button>{profile.logo_url && <button disabled={busy} className="btn-secondary" onClick={() => confirm("Hapus logo usaha dan gunakan logo OKESIH?") && void mutate(() => ownerFetch("/api/owner/branding", { method: "DELETE" }), "Logo usaha berhasil dihapus.")}>Gunakan Logo OKESIH</button>}</div>
               <small>PNG, JPG, atau WebP · Maksimal 2 MB · Disarankan rasio 1:1.</small>
             </article>
 
             <article className="owner-panel">
               <h2>QRIS Statis Toko</h2><p>Satu gambar aktif per tenant. Gambar baru otomatis menggantikan gambar lama tanpa duplikasi.</p>
               {profile.qris_image_url ? <img className="owner-qris-preview" src={profile.qris_image_url} alt={`QRIS ${profile.nama}`}/> : <div className="owner-qris-placeholder">Belum ada QRIS</div>}
-              <label>Nama Merchant<input value={merchantName} onChange={(event) => setMerchantName(event.target.value)} /></label>
+              <label>Nama Merchant<input maxLength={180} value={merchantName} onChange={(event) => setMerchantName(event.target.value)} /></label>
+              <button disabled={busy || !merchantName.trim() || merchantName.trim() === (profile.qris_merchant_name || profile.nama)} className="btn-secondary owner-save-field" onClick={saveMerchantName}>Simpan Nama Merchant</button>
               <input ref={qrisInput} hidden type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => uploadQris(event.target.files?.[0])}/>
               <button disabled={busy || !merchantName.trim()} className="btn-primary" onClick={() => qrisInput.current?.click()}>{busy ? "Menyimpan..." : "Upload / Ganti QRIS"}</button>
             </article>
@@ -575,7 +620,7 @@ export default function TenantOwnerDashboardPage() {
             <article className="owner-panel">
               <h2>Cetak Stiker QR Code Meja Warkop</h2><p>Masukkan nomor atau nama meja sesuai kondisi nyata, dipisahkan koma atau baris baru.</p>
               <div className="owner-table-input"><textarea value={tableInput} onChange={(event) => setTableInput(event.target.value)} placeholder="Contoh: 01, 02, Teras 1, VIP"/><button disabled={busy || !tableInput.trim()} className="btn-primary" onClick={addTables}>Tambah Meja</button></div>
-              <div className="owner-table-chips">{data.tables.map((table) => <span key={table.id}><Link target="_blank" href={`/menu/${profile.slug}?tableId=${encodeURIComponent(table.id)}`}>Meja {table.label}</Link><button aria-label={`Hapus meja ${table.label}`} onClick={() => confirm(`Hapus meja ${table.label}?`) && void mutate(() => ownerFetch(`/api/owner/tables?id=${table.id}`, { method: "DELETE" }))}>×</button></span>)}</div>
+              <div className="owner-table-chips">{data.tables.map((table) => <span key={table.id}><Link target="_blank" href={`/menu/${profile.slug}?tableId=${encodeURIComponent(table.id)}`}>Meja {table.label}</Link><button aria-label={`Edit meja ${table.label}`} onClick={() => setEditingTable(table)}>✎</button><button aria-label={`Hapus meja ${table.label}`} onClick={() => confirm(`Hapus meja ${table.label}?`) && void mutate(() => ownerFetch(`/api/owner/tables?id=${table.id}`, { method: "DELETE" }), "Meja berhasil dihapus.")}>×</button></span>)}</div>
               <button className="btn-primary" disabled={!data.tables.length} onClick={() => void printTableStickers()}>🖨️ Cetak Semua Stiker QR Meja</button>
             </article>
           </section>}
@@ -597,6 +642,7 @@ export default function TenantOwnerDashboardPage() {
 
       {menuModal && <Modal title="Tambah Menu" onClose={() => setMenuModal(false)}><form onSubmit={createMenu}><input required placeholder="Nama menu" value={menuForm.name} onChange={(e) => setMenuForm({ ...menuForm, name: e.target.value })}/><input required min="1" type="number" placeholder="Harga" value={menuForm.price} onChange={(e) => setMenuForm({ ...menuForm, price: e.target.value })}/><label className="owner-category-field">Kategori<input required list="owner-menu-categories" maxLength={50} placeholder="Pilih atau ketik kategori baru" value={menuForm.category} onChange={(e) => setMenuForm({ ...menuForm, category: e.target.value })}/><small>Pilih kategori yang ada atau ketik kategori baru.</small></label><datalist id="owner-menu-categories">{categorySuggestions.map((item) => <option key={item} value={item}/>)}</datalist><textarea placeholder="Deskripsi" value={menuForm.description} onChange={(e) => setMenuForm({ ...menuForm, description: e.target.value })}/><div className="owner-modal-actions"><button type="button" className="btn-secondary" onClick={() => setMenuModal(false)}>Batal</button><button disabled={busy} className="btn-primary" type="submit">Oke</button></div></form></Modal>}
       {editingMenu && <Modal title="Edit Menu" onClose={() => setEditingMenu(null)}><form onSubmit={updateMenu}><label className="owner-category-field">Nama Menu<input required placeholder="Nama menu" value={editingMenu.name} onChange={(e) => setEditingMenu({ ...editingMenu, name: e.target.value })}/></label><label className="owner-category-field">Harga (Rp)<input required min="1" type="number" placeholder="Harga" value={editingMenu.price} onChange={(e) => setEditingMenu({ ...editingMenu, price: e.target.value })}/></label><label className="owner-category-field">Kategori<input required list="owner-menu-categories-edit" maxLength={50} placeholder="Pilih atau ketik kategori baru" value={editingMenu.category} onChange={(e) => setEditingMenu({ ...editingMenu, category: e.target.value })}/><small>Pilih kategori yang ada atau ketik kategori baru.</small></label><datalist id="owner-menu-categories-edit">{categorySuggestions.map((item) => <option key={item} value={item}/>)}</datalist><label className="owner-category-field">Deskripsi<textarea placeholder="Deskripsi menu" value={editingMenu.description} onChange={(e) => setEditingMenu({ ...editingMenu, description: e.target.value })}/></label><label className="owner-category-field" style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: "10px", marginTop: "4px" }}><input type="checkbox" checked={editingMenu.isAvailable} onChange={(e) => setEditingMenu({ ...editingMenu, isAvailable: e.target.checked })} style={{ width: "20px", height: "20px", margin: 0 }}/><span>Status Menu Tersedia untuk Dipesan</span></label><div className="owner-modal-actions"><button type="button" className="btn-secondary" onClick={() => setEditingMenu(null)}>Batal</button><button disabled={busy} className="btn-primary" type="submit">{busy ? "Menyimpan..." : "Oke"}</button></div></form></Modal>}
+      {editingTable && <Modal title="Edit Nama Meja" onClose={() => setEditingTable(null)}><form onSubmit={updateTable}><label className="owner-category-field">Nama / Nomor Meja<input required maxLength={30} value={editingTable.label} onChange={(event) => setEditingTable({ ...editingTable, label: event.target.value })}/></label><div className="owner-modal-actions"><button type="button" className="btn-secondary" onClick={() => setEditingTable(null)}>Batal</button><button disabled={busy || !editingTable.label.trim()} className="btn-primary" type="submit">{busy ? "Menyimpan..." : "Simpan"}</button></div></form></Modal>}
       {staffModal && <Modal title="Tambah Akun Staf" onClose={() => setStaffModal(false)}><form onSubmit={createStaff}><input required placeholder="Username" value={staffForm.username} onChange={(e) => setStaffForm({ ...staffForm, username: e.target.value })}/><input required placeholder="Nama staf" value={staffForm.name} onChange={(e) => setStaffForm({ ...staffForm, name: e.target.value })}/><input required minLength={6} type="password" placeholder="Password minimal 6 karakter" value={staffForm.password} onChange={(e) => setStaffForm({ ...staffForm, password: e.target.value })}/><select value={staffForm.role} onChange={(e) => setStaffForm({ ...staffForm, role: e.target.value })}><option value="KASIR">Kasir POS</option><option value="DAPUR">Barista / Dapur</option></select><div className="owner-modal-actions"><button type="button" className="btn-secondary" onClick={() => setStaffModal(false)}>Batal</button><button disabled={busy} className="btn-primary" type="submit">Oke</button></div></form></Modal>}
       {waiterModal && <Modal title="Tambah Waiter" onClose={() => setWaiterModal(false)}><form onSubmit={createWaiter}><input required placeholder="Nama waiter" value={waiterForm.name} onChange={(e) => setWaiterForm({ ...waiterForm, name: e.target.value })}/><input inputMode="tel" placeholder="Nomor telepon" value={waiterForm.phone} onChange={(e) => setWaiterForm({ ...waiterForm, phone: e.target.value })}/><div className="owner-modal-actions"><button type="button" className="btn-secondary" onClick={() => setWaiterModal(false)}>Batal</button><button disabled={busy} className="btn-primary" type="submit">Oke</button></div></form></Modal>}
     </div>

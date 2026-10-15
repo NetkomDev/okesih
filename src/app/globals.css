@@ -2787,3 +2787,18 @@ button {
 @media(min-width:361px) and (max-width:540px){.superadmin-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}.superadmin-kpi-card{min-height:142px;padding:16px 14px!important}}
 @media(max-width:430px){.owner-actions .theme-toggle-btn{display:none!important}.superadmin-actions .pwa-install{font-size:0;width:36px;padding:0}.superadmin-actions .pwa-install:after{content:"↓";font-size:16px}}
 @media(max-width:360px){.owner-metrics,.superadmin-kpi-grid{grid-template-columns:1fr!important}}
+
+/* Owner QRIS & Meja: compact mobile flow without artificial empty card height. */
+.owner-success{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px;padding:12px 14px;border:1px solid #34d399;border-radius:10px;background:#064e3b;color:#d1fae5;font-size:13px;font-weight:750}.owner-success button{border:0;background:none;color:inherit;font-size:20px;cursor:pointer}.owner-save-field{width:100%;min-height:42px;margin-top:4px}
+@media(max-width:720px){
+  .owner-qris-page{display:grid!important;gap:12px}
+  .owner-qris-page>.owner-panel{display:block!important;min-height:0!important;margin:0!important;padding:16px!important}
+  .owner-qris-page>.owner-panel>.btn-primary:last-child{width:100%;min-height:44px;margin-top:10px!important}
+  .owner-qris-page .owner-logo-preview{width:120px;height:120px;margin:14px auto}
+  .owner-qris-page .owner-logo-preview img{width:92px;height:92px}
+  .owner-qris-page .owner-qris-preview,.owner-qris-page .owner-qris-placeholder{width:150px;height:150px;margin:14px auto}
+  .owner-qris-page .owner-table-input{margin:12px 0;gap:8px}
+  .owner-qris-page .owner-table-chips{margin:10px 0 14px}
+  .owner-qris-page .owner-branding-actions{gap:8px}
+  .owner-qris-page .owner-branding-actions button{flex:1 1 140px;min-height:42px}
+}
