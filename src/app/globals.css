@@ -2790,6 +2790,8 @@ button {
 
 /* Owner QRIS & Meja: compact mobile flow without artificial empty card height. */
 .owner-success{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px;padding:12px 14px;border:1px solid #34d399;border-radius:10px;background:#064e3b;color:#d1fae5;font-size:13px;font-weight:750}.owner-success button{border:0;background:none;color:inherit;font-size:20px;cursor:pointer}.owner-save-field{width:100%;min-height:42px;margin-top:4px}
+.owner-qris-page .owner-branding-panel .owner-branding-actions{margin-top:12px}
+.owner-qris-page .owner-table-chips button{color:#14b8a6}
 @media(max-width:720px){
   .owner-qris-page{display:grid!important;gap:12px}
   .owner-qris-page>.owner-panel{display:block!important;min-height:0!important;margin:0!important;padding:16px!important}
