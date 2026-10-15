@@ -380,8 +380,46 @@ export default function TenantOwnerDashboardPage() {
       </aside>
 
       <div className="owner-content">
-        <header className="owner-topbar">
-          <div className="owner-brand"><img src={profile.logo_url || "/logo.svg?v=2"} alt={profile.logo_url ? `Logo ${profile.nama}` : "OKESIH"}/><div><strong>{profile.nama}</strong><small>PORTAL OWNER BISNIS</small></div><span className="owner-status">● {profile.is_active ? "Buka & Beroperasi" : "Tidak Aktif"}</span></div>
+        <header className={`owner-topbar ${view === "overview" ? "is-home" : "is-subpage"}`}>
+          {view === "overview" ? (
+            <div className="owner-brand">
+              <img src={profile.logo_url || "/logo.svg?v=2"} alt={profile.logo_url ? `Logo ${profile.nama}` : "OKESIH"}/>
+              <div>
+                <strong>{profile.nama}</strong>
+                <small>PORTAL OWNER BISNIS</small>
+              </div>
+              <span className="owner-status">● {profile.is_active ? "Buka & Beroperasi" : "Tidak Aktif"}</span>
+            </div>
+          ) : (
+            <div className="owner-subpage-title">
+              <h1>
+                {view === "menu"
+                  ? "Katalog Menu"
+                  : view === "staff"
+                  ? "Akun Staf"
+                  : view === "waiters"
+                  ? "Daftar Waiter"
+                  : view === "qris-tables"
+                  ? "QRIS & Meja"
+                  : view === "devices"
+                  ? "Perangkat & PWA"
+                  : "Portal Owner"}
+              </h1>
+              <p>
+                {view === "menu"
+                  ? "Kelola menu, varian, harga jual, dan ketersediaan stok"
+                  : view === "staff"
+                  ? "Kelola akun login staf kasir dan barista/dapur"
+                  : view === "waiters"
+                  ? "Kelola daftar pelayan aktif usaha Anda"
+                  : view === "qris-tables"
+                  ? "Identitas toko, QRIS statis, dan cetak stiker meja"
+                  : view === "devices"
+                  ? "Pairing perangkat POS tablet kasir dan layar KDS dapur"
+                  : ""}
+              </p>
+            </div>
+          )}
           <div className="owner-actions"><ThemeToggle/><PwaInstallButton label="Install Owner" compact onInstalled={() => void onboardingAction({ action: "pwa_installed" })}/><Link href="/pos" className="btn-secondary">Layar Kasir</Link><Link href="/kds" className="btn-secondary">Layar Dapur</Link></div>
         </header>
 

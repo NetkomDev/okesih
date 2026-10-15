@@ -2036,6 +2036,42 @@ button {
   color: #ffffff !important;
 }
 
+/* Halaman Home: Area orange melengkung lebih lebar ke bawah ~15% */
+.owner-shell .owner-topbar.is-home,
+[data-theme="light"] .owner-shell .owner-topbar.is-home {
+  min-height: 98px;
+  padding: 18px clamp(18px, 3.2vw, 42px) 32px;
+  border-radius: 0 0 50% 50% / 0 0 44px 44px !important;
+}
+
+/* Judul Halaman yang Naik Menjadi Header di Halaman Lain */
+.owner-subpage-title {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.owner-subpage-title h1 {
+  font-size: clamp(20px, 2.5vw, 26px);
+  font-weight: 850;
+  color: #ffffff !important;
+  margin: 0;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+
+.owner-subpage-title p {
+  margin: 0;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.9) !important;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .owner-brand {
   gap: 16px;
 }
@@ -2856,6 +2892,9 @@ button {
 }
 @media(max-width:720px){
   .owner-shell .owner-topbar{padding:14px 16px 20px;min-height:74px;gap:10px;border-radius:0 0 50% 50% / 0 0 30px 30px !important}
+  .owner-shell .owner-topbar.is-home{padding:16px 16px 28px;min-height:88px;border-radius:0 0 50% 50% / 0 0 36px 36px !important}
+  .owner-subpage-title h1{font-size:18px !important}
+  .owner-subpage-title p{font-size:11px !important}
   .owner-brand{gap:12px;min-width:0;flex:1}
   .owner-brand img{width:48px !important;height:48px !important;border-radius:12px}
   .owner-shell .owner-brand strong{font-size:18px !important}
