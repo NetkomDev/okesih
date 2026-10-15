@@ -71,12 +71,12 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "https://okesih.vercel.app",
   },
-  applicationName: "OKESIH POS",
+  applicationName: "Okesih.com",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "OKESIH POS",
+    title: "Okesih.com",
   },
   icons: {
     icon: [{ url: "/favicon.svg?v=2", type: "image/svg+xml" }],

@@ -10,30 +10,6 @@ const withSerwist = withSerwistInit({
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  async rewrites() {
-    return [
-      {
-        source: "/superadmin/login",
-        destination: "/login?from_pwa=superadmin",
-      },
-      {
-        source: "/owner/login",
-        destination: "/login?from_pwa=owner",
-      },
-      {
-        source: "/marketing/login",
-        destination: "/login?from_pwa=marketing",
-      },
-      {
-        source: "/pos/login",
-        destination: "/login?from_pwa=pos",
-      },
-      {
-        source: "/kds/login",
-        destination: "/login?from_pwa=kds",
-      },
-    ];
-  },
 };
 
 export default withSerwist(nextConfig);

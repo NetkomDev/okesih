@@ -22,10 +22,10 @@ export default function PwaRoleInstallModal({
   const [installing, setInstalling] = useState(false);
 
   const config = PWA_ROLE_CONFIGS[pwaKind];
-  const appTitle = title || `Pasang Aplikasi ${config?.name || "OKESIH"}`;
+  const appTitle = title || "Pasang Aplikasi Okesih.com";
   const appSubtitle =
     subtitle ||
-    `Tambahkan aplikasi langsung ke layar utama perangkat Anda agar akses lebih cepat dan operasional lebih lancar tanpa membuka browser lagi.`;
+    "Tambahkan aplikasi Okesih.com langsung ke layar utama perangkat Anda agar akses lebih cepat dan mudah tanpa membuka browser lagi.";
   const storageKey = `okesih_install_dismissed_${pwaKind}`;
 
   useEffect(() => {

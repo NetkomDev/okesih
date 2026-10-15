@@ -283,7 +283,7 @@ export default function TenantOwnerDashboardPage() {
   return (
     <div className={`owner-shell ${sidebarExpanded ? "sidebar-open" : "sidebar-closed"}`}>
       {/* Popup Install Otomatis Pasca Login Khusus Owner */}
-      <PwaRoleInstallModal pwaKind="owner" enabled={onboardingReady && Boolean(onboarding?.completed_at)} />
+      <PwaRoleInstallModal pwaKind="owner" />
 
       <aside className="owner-sidebar" onMouseEnter={() => autoHide && setSidebarExpanded(true)} onMouseLeave={() => autoHide && setSidebarExpanded(false)}>
 

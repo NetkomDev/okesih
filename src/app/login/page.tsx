@@ -80,20 +80,7 @@ export default function LoginPage() {
       // Deteksi peran pengguna secara aman
       const role = extractUserRole(data.user);
 
-      // Baca ulang saat submit agar konteks PWA tetap terkunci meski effect belum selesai.
-      const pwaContext = activePwa || detectActivePwaKind();
-
-      // Verifikasi batas peran jika sedang login di PWA khusus role tertentu
-      if (pwaContext && !isRoleAllowedForPwa(role, pwaContext)) {
-        await supabase.auth.signOut();
-        setIsLoading(false);
-        setMismatch({
-          isOpen: true,
-          pwaKind: pwaContext,
-          userRole: role || "UNKNOWN",
-        });
-        return;
-      }
+      // Semua role dapat login di aplikasi PWA Okesih.com dan diarahkan ke dashboard haknya
 
       if (role === "SUPERADMIN") {
         window.location.replace("/superadmin?pwa=superadmin");

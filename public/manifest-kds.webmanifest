@@ -1,26 +1,38 @@
 {
-  "id": "/pwa/kds",
-  "name": "OKESIH Dapur KDS",
-  "short_name": "OKESIH KDS",
-  "description": "Kitchen Display System OKESIH",
-  "start_url": "/kds?pwa=kds",
-  "scope": "/kds",
+  "id": "/",
+  "name": "Okesih.com",
+  "short_name": "Okesih.com",
+  "description": "Platform Ekosistem Digital & Manajemen Bisnis OKESIH",
+  "start_url": "/login",
+  "scope": "/",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#06090e",
-  "theme_color": "#FF4500",
+  "background_color": "#0b1018",
+  "theme_color": "#f4512c",
   "icons": [
     {
       "src": "/icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "/icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

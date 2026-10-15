@@ -72,9 +72,7 @@ export async function logoutUserTo(destination: string): Promise<void> {
 }
 
 export async function logoutUser(): Promise<void> {
-  const activePwa = typeof window !== "undefined" ? detectActivePwaKind() : null;
-  const target = activePwa ? `/${activePwa}/login` : "/login";
-  await logoutUserTo(target);
+  await logoutUserTo("/login");
 }
 
 import { detectActivePwaKind, isStandaloneApp, type PwaRoleKind } from "./pwa-routing";
@@ -112,29 +110,30 @@ export function useAuthGuard(allowedRoles: UserRole[]) {
 
         if (userError || !user) {
           if (isMounted) {
-            const activePwa = detectActivePwaKind();
-            const redirectUrl = activePwa
-              ? `/${activePwa}/login?error=login_required`
-              : "/login?error=login_required";
-            router.replace(redirectUrl);
+            router.replace("/login?error=login_required");
           }
           return;
         }
 
         const role = extractUserRole(user);
 
-        // Jika akun tidak memiliki hak akses (role tidak sesuai), langsung tolak dan tampilkan popup mismatch
+        // Jika akun tidak memiliki hak akses (role tidak sesuai dengan halaman ini)
         if (!role || !permittedRoles.includes(role)) {
           if (isMounted) {
-            const currentPwaKind: PwaRoleKind =
-              detectActivePwaKind() ||
-              (permittedRoles[0]?.toLowerCase() as PwaRoleKind) ||
-              "owner";
-            setRoleMismatch({
-              pwaKind: currentPwaKind,
-              userRole: role || "UNKNOWN",
-            });
-            setLoading(false);
+            // Arahkan ke dashboard haknya secara otomatis
+            if (role === "SUPERADMIN") {
+              router.replace("/superadmin");
+            } else if (role === "OWNER") {
+              router.replace("/owner");
+            } else if (role === "MARKETING") {
+              router.replace("/marketing/dashboard");
+            } else if (role === "KASIR") {
+              router.replace("/pos");
+            } else if (role === "DAPUR") {
+              router.replace("/kds");
+            } else {
+              router.replace("/login?error=unauthorized");
+            }
           }
           return;
         }
