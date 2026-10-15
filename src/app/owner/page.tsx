@@ -382,14 +382,17 @@ export default function TenantOwnerDashboardPage() {
       <div className="owner-content">
         <header className={`owner-topbar ${view === "overview" ? "is-home" : "is-subpage"}`}>
           {view === "overview" ? (
-            <div className="owner-brand">
-              <img src={profile.logo_url || "/logo.svg?v=2"} alt={profile.logo_url ? `Logo ${profile.nama}` : "OKESIH"}/>
-              <div>
-                <strong>{profile.nama}</strong>
-                <small>PORTAL OWNER BISNIS</small>
+            <>
+              <div className="owner-brand">
+                <img src={profile.logo_url || "/logo.svg?v=2"} alt={profile.logo_url ? `Logo ${profile.nama}` : "OKESIH"}/>
+                <div>
+                  <strong>{profile.nama}</strong>
+                  <small>PORTAL OWNER BISNIS</small>
+                </div>
+                <span className="owner-status">● {profile.is_active ? "Buka & Beroperasi" : "Tidak Aktif"}</span>
               </div>
-              <span className="owner-status">● {profile.is_active ? "Buka & Beroperasi" : "Tidak Aktif"}</span>
-            </div>
+              <div className="owner-home-divider" aria-hidden="true" />
+            </>
           ) : (
             <div className="owner-subpage-title">
               <h1>
@@ -421,7 +424,6 @@ export default function TenantOwnerDashboardPage() {
             </div>
           )}
           <div className="owner-actions"><ThemeToggle/><PwaInstallButton label="Install Owner" compact onInstalled={() => void onboardingAction({ action: "pwa_installed" })}/><Link href="/pos" className="btn-secondary">Layar Kasir</Link><Link href="/kds" className="btn-secondary">Layar Dapur</Link></div>
-          {view === "overview" && <div className="owner-home-divider" aria-hidden="true" />}
         </header>
 
         <main className="owner-main">
