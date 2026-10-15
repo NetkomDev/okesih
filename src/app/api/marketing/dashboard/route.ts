@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { assertSameOrigin } from "@/lib/device-auth";
 
 function normalizePhone(value: unknown) {
   const digits = String(value || "").replace(/\D/g, "");
@@ -88,6 +89,7 @@ export async function GET() {
       data: {
         profile: {
           name: partner.full_name,
+          phone: partner.phone,
           referralCode: partner.referral_code,
           area: partner.city_area,
           commissionRate: Number(partner.commission_rate),
@@ -112,6 +114,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    assertSameOrigin(request);
     const ctx = await context();
     if (!ctx) return NextResponse.json({ error: "Akun marketing tidak aktif atau tidak terhubung." }, { status: 401 });
     const { admin, partner } = ctx;
@@ -125,11 +128,12 @@ export async function POST(request: Request) {
     }).select().single();
     if (applicationError) throw applicationError;
     const adminPhone = normalizePhone(process.env.SUPERADMIN_WHATSAPP_NUMBER || "6285694488510");
-    const message = ["*PENGAJUAN TENANT BARU OKESIH*", "", `Marketing: *${partner.full_name}* (${partner.referral_code})`, `Usaha: *${application.business_name}*`, `Owner: ${application.owner_name}`, `WhatsApp Owner: +${phone}`, `Wilayah: ${application.city_regency}, ${application.province}`, "", "Silakan review dan verifikasi melalui Dashboard Admin → Daftar Tenant."].join("\n");
-    const { error: outboxError } = await admin.from("whatsapp_outbox").insert({ recipient_phone: adminPhone, message });
-    if (outboxError) { await admin.from("tenant_applications").delete().eq("id", application.id); throw new Error(`Notifikasi Admin gagal diantrekan: ${outboxError.message}`); }
-    return NextResponse.json({ success: true, data: { id: application.id, name: application.business_name, status: "PENDING", whatsappQueued: true } });
+    const marketingPhone = normalizePhone(partner.phone);
+    const message = ["*PENGAJUAN TENANT BARU OKESIH*", "", `Marketing: *${partner.full_name}*`, `Kode Referral: ${partner.referral_code}`, `WhatsApp Marketing: +${marketingPhone}`, "", `Usaha: *${application.business_name}*`, `Owner: ${application.owner_name}`, `WhatsApp Owner: +${phone}`, `Wilayah: ${application.city_regency}, ${application.province}`, "", "Pengajuan sudah tersimpan. Silakan review melalui Dashboard Super Admin → Daftar Tenant."].join("\n");
+    const whatsappUrl = `https://wa.me/${adminPhone}?text=${encodeURIComponent(message)}`;
+    return NextResponse.json({ success: true, data: { id: application.id, name: application.business_name, status: "PENDING", whatsappUrl, marketingPhone } });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Tenant gagal didaftarkan." }, { status: 500 });
+    const status = error instanceof Error && "status" in error && typeof error.status === "number" ? error.status : 500;
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Tenant gagal didaftarkan." }, { status });
   }
 }

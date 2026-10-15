@@ -38,6 +38,7 @@ export type Application = {
 export type DashboardData = {
   profile: {
     name: string;
+    phone: string;
     referralCode: string;
     area: string;
     commissionRate: number;

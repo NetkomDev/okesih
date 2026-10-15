@@ -17,7 +17,7 @@ export async function GET() {
     const ctx = await superAdminContext();
     if (!ctx) return NextResponse.json({ error: "Akses Super Admin diperlukan." }, { status: 401 });
     const { data, error } = await ctx.admin.from("tenant_applications")
-      .select("id,business_name,owner_name,owner_phone,province,city_regency,status,review_notes,created_at,marketing_partners(full_name,referral_code,commission_rate)")
+      .select("id,business_name,owner_name,owner_phone,province,city_regency,status,review_notes,created_at,marketing_partners(full_name,phone,city_area,referral_code,commission_rate)")
       .order("created_at", { ascending: false });
     if (error) throw error;
     return NextResponse.json({ data });

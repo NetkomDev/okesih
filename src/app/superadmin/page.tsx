@@ -58,7 +58,7 @@ interface TenantApplication {
   status: "PENDING" | "PROCESSING" | "APPROVED" | "REJECTED";
   review_notes?: string;
   created_at: string;
-  marketing_partners: { full_name: string; referral_code: string; commission_rate: number } | null;
+  marketing_partners: { full_name: string; phone: string; city_area: string; referral_code: string; commission_rate: number } | null;
 }
 
 interface ToastNotification {
@@ -1613,7 +1613,7 @@ export default function SuperAdminDashboardPage() {
                     const marketing = Array.isArray(item.marketing_partners) ? item.marketing_partners[0] : item.marketing_partners;
                     const busy = reviewingApplicationId === item.id || item.status === "PROCESSING";
                     return <div key={item.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap", padding: "0.85rem", borderRadius: "10px", background: isDark ? "rgba(15,23,42,.75)" : "#fff", border: isDark ? "1px solid rgba(255,255,255,.08)" : "1px solid #FDE68A" }}>
-                      <div><div style={{ fontWeight: 850, color: isDark ? "#fff" : "#17211B" }}>{item.business_name}</div><div style={{ fontSize: "0.75rem", color: isDark ? "#94A3B8" : "#64748B", marginTop: "3px" }}>{item.owner_name} · +{item.owner_phone} · {item.city_regency}, {item.province}</div><div style={{ fontSize: "0.72rem", color: "#059669", marginTop: "3px", fontWeight: 750 }}>Marketing: {marketing?.full_name || "-"} ({marketing?.referral_code || "-"})</div></div>
+                      <div><div style={{ fontWeight: 850, color: isDark ? "#fff" : "#17211B" }}>{item.business_name}</div><div style={{ fontSize: "0.75rem", color: isDark ? "#94A3B8" : "#64748B", marginTop: "3px" }}>{item.owner_name} · +{item.owner_phone} · {item.city_regency}, {item.province}</div><div style={{ fontSize: "0.72rem", color: "#059669", marginTop: "3px", fontWeight: 750 }}>Marketing: {marketing?.full_name || "-"} · {marketing?.referral_code || "-"} · {marketing?.phone || "-"}</div></div>
                       <div style={{ display: "flex", gap: "0.5rem" }}><button disabled={busy} onClick={() => void reviewTenantApplication(item.id, "REJECT")} style={{ border: "1px solid #EF4444", color: "#DC2626", background: "transparent", borderRadius: "7px", padding: "0.45rem 0.75rem", fontWeight: 800, cursor: busy ? "wait" : "pointer" }}>Tolak</button><button disabled={busy} onClick={() => void reviewTenantApplication(item.id, "APPROVE")} style={{ border: 0, color: "#fff", background: "#059669", borderRadius: "7px", padding: "0.45rem 0.8rem", fontWeight: 800, cursor: busy ? "wait" : "pointer" }}>{busy ? "Memproses..." : "Verifikasi & Aktifkan"}</button></div>
                     </div>;
                   })}

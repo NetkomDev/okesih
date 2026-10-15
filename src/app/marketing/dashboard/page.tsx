@@ -12,7 +12,7 @@ import "./marketing-dashboard.css";
 const money = (value: number) => `Rp ${value.toLocaleString("id-ID")}`;
 
 export default function MarketingDashboardPage() {
-  const { data, loading, error: contextError, refresh, isAuthorized } = useMarketingData();
+  const { data, loading, error: contextError, isAuthorized } = useMarketingData();
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [saving, setSaving] = useState(false);
@@ -39,9 +39,9 @@ export default function MarketingDashboardPage() {
       if (!response.ok) throw new Error(payload.error || "Pengajuan tenant gagal dikirim.");
       setForm({ name: "", ownerName: "", phone: "", province: "", cityRegency: "" });
       setNotice(
-        "Pengajuan berhasil dikirim ke WhatsApp Admin. Akun owner segera diterbitkan setelah diverifikasi oleh Admin."
+        "Pengajuan tersimpan. Kirim pesan yang sudah disiapkan melalui WhatsApp Anda."
       );
-      await refresh();
+      window.location.assign(payload.data.whatsappUrl);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Terjadi kesalahan.");
     } finally {
@@ -237,8 +237,8 @@ export default function MarketingDashboardPage() {
               </label>
             </div>
             <div className="mkt-flow-note">
-              <b>Alur verifikasi otomatis:</b>
-              <span>Pengajuan → Terkirim ke WA Admin → Review Cepat → Kredensial akun dikirim ke WA owner.</span>
+              <b>WhatsApp marketing: {data.profile.phone}</b>
+              <span>Pastikan akun WhatsApp aktif di HP ini adalah nomor tersebut. Setelah data tersimpan, WhatsApp dibuka untuk mengirim pengajuan ke Super Admin.</span>
             </div>
             <button className="mkt-primary" disabled={saving}>
               {saving ? "Mengirim pengajuan..." : "Daftarkan & Kirim WhatsApp"}
