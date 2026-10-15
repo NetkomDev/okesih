@@ -33,9 +33,7 @@ export default function HomePage() {
       if (!shouldOpenLogin) return;
 
       queueMicrotask(() => {
-        if (err === "login_required") {
-          setLoginError("Sesi login diperlukan untuk mengakses dashboard tersebut.");
-        } else if (err === "unauthorized") {
+        if (err === "unauthorized") {
           setLoginError("Akses Ditolak: Anda tidak memiliki izin untuk halaman tersebut.");
         }
         setIsLoginModalOpen(true);
@@ -1322,7 +1320,7 @@ export default function HomePage() {
                       marginBottom: "0.4rem",
                     }}
                   >
-                    Username Akun
+                    Username
                   </label>
                   <div style={{ position: "relative" }}>
                     <span

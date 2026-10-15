@@ -39,9 +39,7 @@ export default function LoginPage() {
 
       const params = new URLSearchParams(window.location.search);
       const err = params.get("error");
-      if (err === "login_required") {
-        setLoginError("Sesi login diperlukan untuk mengakses dashboard tersebut.");
-      } else if (err === "unauthorized") {
+      if (err === "unauthorized") {
         setLoginError("Akses Ditolak: Anda tidak memiliki izin untuk halaman tersebut.");
       }
     });
@@ -169,7 +167,19 @@ export default function LoginPage() {
             transition: "all 0.2s ease",
           }}
         >
-          <span>←</span>
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{ display: "inline-block", flexShrink: 0 }}
+          >
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
           <span>Kembali ke Beranda</span>
         </Link>
       </div>}
@@ -259,7 +269,7 @@ export default function LoginPage() {
                 marginBottom: "0.4rem",
               }}
             >
-              Username Akun
+              Username
             </label>
             <div style={{ position: "relative" }}>
               <span
