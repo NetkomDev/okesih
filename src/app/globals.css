@@ -2427,6 +2427,7 @@ button {
   }
   .owner-menu-heading-title {
     width: 100%;
+    flex: 0 0 auto;
   }
   .owner-menu-heading-title h2 {
     margin: 0 !important;
