@@ -218,26 +218,6 @@ export default function LoginPage() {
           <h1 style={{ fontSize: "1.5rem", fontWeight: 900, letterSpacing: "-0.02em", marginBottom: "0" }}>
             Portal Operasional OKESIH
           </h1>
-          {activePwa && PWA_ROLE_CONFIGS[activePwa] && (
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "0.45rem",
-                marginTop: "0.65rem",
-                padding: "0.35rem 0.85rem",
-                borderRadius: "9999px",
-                backgroundColor: `${PWA_ROLE_CONFIGS[activePwa].themeColor}22`,
-                border: `1px solid ${PWA_ROLE_CONFIGS[activePwa].themeColor}55`,
-                color: "#f3f4f6",
-                fontSize: "0.78rem",
-                fontWeight: 700,
-              }}
-            >
-              <span>📱</span>
-              <span>Aplikasi Khusus: {PWA_ROLE_CONFIGS[activePwa].name}</span>
-            </div>
-          )}
         </div>
 
 
