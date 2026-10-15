@@ -3023,6 +3023,7 @@ button {
 
   .owner-topbar.is-home .owner-home-divider {
     margin-top: 5px;
+    transform: translateY(-16px);
   }
 
   .owner-shell .owner-topbar.is-subpage {
@@ -3035,7 +3036,7 @@ button {
   }
 
   .owner-main {
-    margin-top: -70px !important;
+    margin-top: -92px !important;
   }
 
   #ringkasan > .owner-section-heading {
