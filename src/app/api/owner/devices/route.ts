@@ -7,6 +7,7 @@ const actionSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("approve"), code: z.string().regex(/^\d{6}$/) }),
   z.object({ action: z.literal("rename"), deviceId: z.string().uuid(), deviceName: z.string().trim().min(2).max(100) }),
   z.object({ action: z.literal("revoke"), deviceId: z.string().uuid() }),
+  z.object({ action: z.literal("delete"), deviceId: z.string().uuid() }),
   z.object({ action: z.literal("revoke_all") }),
 ]);
 
@@ -75,6 +76,19 @@ export async function POST(request: NextRequest) {
       return Response.json({ success: true });
     }
 
+    if (input.action === "delete") {
+      const { error } = await admin.rpc("delete_revoked_device", {
+        p_warkop_id: warkopId,
+        p_device_id: input.deviceId,
+        p_actor_user_id: user.id,
+      });
+      if (error?.message.includes("DEVICE_NOT_FOUND")) throw new OwnerApiError("Perangkat tidak ditemukan.", 404);
+      if (error?.message.includes("DEVICE_MUST_BE_REVOKED")) throw new OwnerApiError("Cabut perangkat sebelum menghapusnya.", 409);
+      if (error?.message.includes("DEVICE_HAS_OPEN_SHIFT")) throw new OwnerApiError("Akhiri shift kasir sebelum menghapus perangkat.", 409);
+      if (error) throw error;
+      return Response.json({ success: true });
+    }
+
     const query = admin.from("device_installations").update({ status: "REVOKED", revoked_at: now, updated_at: now }).eq("warkop_id", warkopId).eq("status", "ACTIVE");
     const { error } = input.action === "revoke" ? await query.eq("id", input.deviceId) : await query;
     if (error) throw error;
@@ -85,4 +99,3 @@ export async function POST(request: NextRequest) {
     return ownerErrorResponse(error);
   }
 }
-
