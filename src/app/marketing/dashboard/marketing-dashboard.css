@@ -493,12 +493,17 @@ html, body {
   color: #64748b;
 }
 
-.mkt-quick-link-item span {
+.mkt-quick-link-item span,
+.mkt-quick-link-item .mkt-quick-arrow {
   margin-left: auto;
-  font-size: 16px;
   color: #0d9488;
-  font-weight: 800;
   flex-shrink: 0;
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.mkt-quick-link-item:hover .mkt-quick-arrow {
+  transform: translateX(3px);
+  color: #0f766e;
 }
 
 /* Tips Card */
@@ -537,6 +542,11 @@ html, body {
   font-size: 12px;
   line-height: 1.5;
   color: #ccfbf1;
+}
+
+.mkt-tips-card .mkt-highlight-text {
+  color: #fb923c;
+  font-weight: 800;
 }
 
 /* Subpages: Header Navigasi Subpage */

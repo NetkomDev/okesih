@@ -263,7 +263,7 @@ export default function MarketingDashboardPage() {
                     <strong>Tenant Binaan &amp; Tagihan</strong>
                     <p>{data.totals.tenants} tenant aktif · {unpaidCount > 0 ? `${unpaidCount} belum bayar` : "Semua lunas"}</p>
                   </div>
-                  <span>→</span>
+                  <svg className="mkt-quick-arrow" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
                 </Link>
 
                 <Link href="/marketing/dashboard/pengajuan" className="mkt-quick-link-item">
@@ -272,7 +272,7 @@ export default function MarketingDashboardPage() {
                     <strong>Status Pengajuan</strong>
                     <p>{data.totals.pending} pengajuan sedang diverifikasi</p>
                   </div>
-                  <span>→</span>
+                  <svg className="mkt-quick-arrow" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
                 </Link>
 
                 <Link href="/marketing/dashboard/komisi" className="mkt-quick-link-item">
@@ -281,7 +281,7 @@ export default function MarketingDashboardPage() {
                     <strong>Rincian &amp; Pencairan Komisi</strong>
                     <p>Total {money(data.totals.commission)} berjalan</p>
                   </div>
-                  <span>→</span>
+                  <svg className="mkt-quick-arrow" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
                 </Link>
               </div>
             </div>
@@ -290,7 +290,7 @@ export default function MarketingDashboardPage() {
               <span className="mkt-tips-badge">Tips Lapangan</span>
               <h4>Tindak Lanjut Tenant Menunggak</h4>
               <p>
-                Buka menu <b>Tenant Binaan</b> untuk melihat tenant yang berstatus belum bayar. Anda dapat langsung menekan tombol WhatsApp atau mendatangi outlet mereka untuk memastikan sistem kasir tetap berjalan lancar.
+                Buka menu <b className="mkt-highlight-text">Tenant Binaan</b> untuk melihat tenant yang berstatus belum bayar. Anda dapat langsung menekan tombol WhatsApp atau mendatangi outlet mereka untuk memastikan sistem kasir tetap berjalan lancar.
               </p>
             </div>
           </aside>
