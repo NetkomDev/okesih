@@ -2410,28 +2410,36 @@ button {
 }
 
 @media (max-width: 720px) {
-  .owner-panel.owner-menu-catalog-page {
-    padding-top: 14px !important;
+  .owner-page-panel.owner-menu-catalog-page {
+    padding: 16px 14px 24px !important;
+    min-height: auto !important;
+  }
+  .owner-page-panel.owner-menu-catalog-page > .owner-section-heading {
+    min-height: 0 !important;
+    margin-bottom: 12px !important;
   }
   .owner-menu-heading {
     flex-direction: column;
     align-items: stretch !important;
-    gap: 12px;
-    margin-bottom: 14px;
-    min-height: auto !important;
+    gap: 10px !important;
+    margin-bottom: 14px !important;
+    min-height: 0 !important;
   }
   .owner-menu-heading-title {
     width: 100%;
   }
   .owner-menu-heading-title h2 {
-    margin-bottom: 0 !important;
+    margin: 0 !important;
+    font-size: 20px !important;
+    line-height: 1.2 !important;
+    letter-spacing: -0.02em;
   }
   .owner-menu-actions {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 8px;
     width: 100%;
-    margin-top: 2px;
+    margin-top: 0 !important;
   }
   .owner-menu-btn {
     width: 100%;
@@ -2507,23 +2515,54 @@ button {
     border-top: 1px dashed var(--ow-border);
     margin-top: 2px;
   }
+  .owner-menu-card-footer .pill {
+    min-width: 82px;
+    height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 12px;
+    font-size: 12px;
+    font-weight: 800;
+    box-sizing: border-box;
+  }
   .owner-menu-card-actions {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
   }
-  .owner-menu-card-actions .link-button {
-    font-size: 13px;
+  .owner-menu-card-actions button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 66px;
+    height: 30px;
+    padding: 0 12px;
+    border-radius: 999px !important;
+    font-size: 12px;
     font-weight: 800;
-    padding: 6px 10px;
-    border-radius: 8px;
-    background: var(--ow-surface);
-    border: 1px solid var(--ow-border);
+    cursor: pointer;
+    box-sizing: border-box;
     text-decoration: none;
+    transition: all 0.16s ease;
   }
-  .owner-menu-card-actions .link-button.danger {
-    background: rgba(239, 68, 68, 0.08);
-    border-color: rgba(239, 68, 68, 0.25);
+  .owner-menu-card-actions .owner-menu-btn-edit {
+    border: 1px solid rgba(59, 130, 246, 0.35);
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6 !important;
+  }
+  .owner-menu-card-actions .owner-menu-btn-edit:hover {
+    background: rgba(59, 130, 246, 0.18);
+    border-color: rgba(59, 130, 246, 0.6);
+  }
+  .owner-menu-card-actions .owner-menu-btn-delete {
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444 !important;
+  }
+  .owner-menu-card-actions .owner-menu-btn-delete:hover {
+    background: rgba(239, 68, 68, 0.18);
+    border-color: rgba(239, 68, 68, 0.6);
   }
 }
 

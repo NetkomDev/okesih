@@ -519,7 +519,7 @@ export default function TenantOwnerDashboardPage() {
                     <div className="owner-menu-card-actions">
                       <button
                         type="button"
-                        className="link-button"
+                        className="owner-menu-btn-edit"
                         onClick={() => setEditingMenu({
                           id: menu.id,
                           name: menu.name,
@@ -533,7 +533,7 @@ export default function TenantOwnerDashboardPage() {
                       </button>
                       <button
                         type="button"
-                        className="link-button danger"
+                        className="owner-menu-btn-delete"
                         onClick={() => confirm(`Hapus ${menu.name}?`) && void mutate(() => ownerFetch(`/api/owner/menus?id=${menu.id}`, { method: "DELETE" }))}
                       >
                         Hapus
