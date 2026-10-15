@@ -14,9 +14,10 @@ export default function MarketingKomisiPage() {
   const [submitError, setSubmitError] = useState("");
   const [notice, setNotice] = useState("");
 
-  if (loading || !isAuthorized || !data) {
-    return <MarketingLoading error={error} />;
+  if (!isAuthorized || (!data && loading)) {
+    return <MarketingLoading />;
   }
+  if (!data) return null;
 
   const sisaKomisi = data.totals.availableCommission;
 

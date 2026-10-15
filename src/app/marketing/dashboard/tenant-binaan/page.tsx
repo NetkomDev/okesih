@@ -13,9 +13,10 @@ export default function MarketingTenantBinaanPage() {
   const [filter, setFilter] = useState<"ALL" | "UNPAID" | "PAID">("ALL");
   const [search, setSearch] = useState("");
 
-  if (loading || !isAuthorized || !data) {
-    return <MarketingLoading error={error} />;
+  if (!isAuthorized || (!data && loading)) {
+    return <MarketingLoading />;
   }
+  if (!data) return null;
 
   const filteredTenants = data.tenants.filter((tenant) => {
     if (filter === "UNPAID" && tenant.paymentStatus !== "UNPAID") return false;

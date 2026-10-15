@@ -1,29 +1,26 @@
 import Image from "next/image";
 
-export default function MarketingLoading({ error }: { error?: string }) {
+export default function MarketingLoading() {
   return (
-    <main className="mkt-loading" role="status" aria-label="Memuat portal marketing OKESIH">
-      <div className="mkt-loading-brand">
-        <span className="mkt-loading-halo" />
+    <aside
+      className="mkt-loading-overlay"
+      role="status"
+      aria-live="polite"
+      aria-label="Memuat data..."
+    >
+      <div className="mkt-loading-card">
         <Image
           src="/okesih-logo-animated.svg"
-          alt="OKESIH.COM"
-          width={84}
-          height={84}
+          alt="Loading OKESIH"
+          width={72}
+          height={72}
           priority
           unoptimized
         />
-        <div className="mkt-loading-wordmark">
-          <b>OKESIH</b>
-          <small>.COM</small>
-        </div>
         <div className="mkt-loading-progress">
           <i />
         </div>
-        <span className="mkt-splash-text">
-          {error || "Portal Mitra Marketing"}
-        </span>
       </div>
-    </main>
+    </aside>
   );
 }

@@ -50,9 +50,10 @@ export default function MarketingDashboardPage() {
     }
   };
 
-  if (loading || !isAuthorized || !data) {
-    return <MarketingLoading error={contextError || error} />;
+  if (!isAuthorized || (!data && loading)) {
+    return <MarketingLoading />;
   }
+  if (!data) return null;
 
   const unpaidCount = data.totals.unpaidTenants ?? data.tenants.filter((t) => t.paymentStatus === "UNPAID").length;
 

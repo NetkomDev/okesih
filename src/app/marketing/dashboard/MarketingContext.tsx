@@ -77,6 +77,7 @@ export type DashboardData = {
 type MarketingContextType = {
   data: DashboardData | null;
   loading: boolean;
+  refreshing: boolean;
   error: string;
   refresh: () => Promise<void>;
   isAuthorized: boolean;
@@ -88,9 +89,11 @@ export function MarketingProvider({ children }: { children: React.ReactNode }) {
   const { isAuthorized, loading: authLoading, roleMismatch } = useAuthGuard(["MARKETING"]);
   const [data, setData] = useState<DashboardData | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
 
   const refresh = useCallback(async () => {
+    setRefreshing(true);
     try {
       const response = await fetch("/api/marketing/dashboard", { cache: "no-store" });
       const payload = await response.json();
@@ -103,6 +106,7 @@ export function MarketingProvider({ children }: { children: React.ReactNode }) {
       setError(err instanceof Error ? err.message : "Terjadi kesalahan sinkronisasi data.");
     } finally {
       setDataLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
@@ -143,6 +147,7 @@ export function MarketingProvider({ children }: { children: React.ReactNode }) {
       value={{
         data,
         loading: authLoading || (dataLoading && !data),
+        refreshing,
         error,
         refresh,
         isAuthorized,

@@ -17,9 +17,10 @@ export default function MarketingPengajuanPage() {
   const { data, loading, error, isAuthorized } = useMarketingData();
   const [filter, setFilter] = useState<"ALL" | "PENDING" | "APPROVED" | "REJECTED">("ALL");
 
-  if (loading || !isAuthorized || !data) {
-    return <MarketingLoading error={error} />;
+  if (!isAuthorized || (!data && loading)) {
+    return <MarketingLoading />;
   }
+  if (!data) return null;
 
   const applications = data.applications || [];
   const pendingCount = applications.filter((a) => a.status === "PENDING" || a.status === "PROCESSING").length;
