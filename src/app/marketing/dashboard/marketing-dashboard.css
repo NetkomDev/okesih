@@ -658,6 +658,132 @@ html, body {
   color: #94a3b8;
 }
 
+.mkt-withdrawal-panel,
+.mkt-withdrawal-history {
+  margin-top: 20px;
+}
+
+.mkt-withdrawal-form {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr) auto;
+  align-items: end;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.mkt-withdrawal-form label {
+  display: grid;
+  gap: 7px;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.mkt-money-input {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  overflow: hidden;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.mkt-money-input span {
+  align-self: stretch;
+  display: grid;
+  place-items: center;
+  padding: 0 14px;
+  background: #ecfdf5;
+  color: #047857;
+  font-weight: 900;
+}
+
+.mkt-money-input input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  padding: 12px;
+  color: #0f172a;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.mkt-withdrawal-account {
+  min-height: 48px;
+  display: grid;
+  align-content: center;
+  padding: 8px 13px;
+  border: 1px solid #dbe7e3;
+  border-radius: 12px;
+  background: #f8faf9;
+}
+
+.mkt-withdrawal-account small,
+.mkt-withdrawal-account span,
+.mkt-withdrawal-note,
+.mkt-withdrawal-list span {
+  color: #64748b;
+  font-size: 11px;
+}
+
+.mkt-withdrawal-account strong {
+  color: #0f172a;
+  font-size: 13px;
+}
+
+.mkt-withdrawal-form .mkt-primary {
+  min-height: 48px;
+  white-space: nowrap;
+}
+
+.mkt-withdrawal-pending {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 12px;
+}
+
+.mkt-withdrawal-note {
+  margin: 10px 0 0;
+  line-height: 1.55;
+}
+
+.mkt-withdrawal-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.mkt-withdrawal-list > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+
+.mkt-withdrawal-list > div > div {
+  display: grid;
+  gap: 2px;
+}
+
+.mkt-withdrawal-list b {
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 10px;
+}
+
+.mkt-withdrawal-list .status-pending { background: #fef3c7; color: #92400e; }
+.mkt-withdrawal-list .status-paid { background: #d1fae5; color: #047857; }
+.mkt-withdrawal-list .status-rejected { background: #fee2e2; color: #b91c1c; }
+
 .mkt-tenant-metric-card.unpaid.warning {
   border-color: #fca5a5;
   background: #fffafa;
@@ -1300,6 +1426,12 @@ html, body {
   }
   .mkt-list-meta-grid {
     grid-template-columns: 1fr 1fr;
+  }
+  .mkt-withdrawal-form {
+    grid-template-columns: 1fr;
+  }
+  .mkt-withdrawal-form .mkt-primary {
+    width: 100%;
   }
 }
 

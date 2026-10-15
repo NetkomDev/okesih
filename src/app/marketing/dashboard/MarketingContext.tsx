@@ -35,6 +35,18 @@ export type Application = {
   created_at: string;
 };
 
+export type CommissionWithdrawal = {
+  id: string;
+  amount: number;
+  status: "PENDING" | "PAID" | "REJECTED";
+  bank_name: string;
+  bank_account_number: string;
+  bank_account_name: string;
+  notes?: string | null;
+  reviewed_at?: string | null;
+  created_at: string;
+};
+
 export type DashboardData = {
   profile: {
     name: string;
@@ -43,8 +55,12 @@ export type DashboardData = {
     area: string;
     commissionRate: number;
     commissionPaid: number;
+    bankName: string;
+    bankAccountNumber: string;
+    bankAccountName: string;
   };
   applications: Application[];
+  withdrawals: CommissionWithdrawal[];
   tenants: Tenant[];
   totals: {
     tenants: number;
@@ -53,6 +69,8 @@ export type DashboardData = {
     paidTenants: number;
     receipts: number;
     commission: number;
+    pendingWithdrawal: number;
+    availableCommission: number;
   };
 };
 

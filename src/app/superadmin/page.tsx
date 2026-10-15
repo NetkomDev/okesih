@@ -29,6 +29,19 @@ interface MarketingAgent {
   experienceNotes?: string;
 }
 
+interface MarketingWithdrawal {
+  id: string;
+  amount: number;
+  status: "PENDING" | "PAID" | "REJECTED";
+  bank_name: string;
+  bank_account_number: string;
+  bank_account_name: string;
+  notes?: string | null;
+  created_at: string;
+  reviewed_at?: string | null;
+  marketing_partners: { full_name: string; phone: string; referral_code: string } | null;
+}
+
 interface TenantWarkop {
   id: string;
   name: string;
@@ -200,6 +213,8 @@ export default function SuperAdminDashboardPage() {
 
   // State Marketing Lapangan
   const [marketingList, setMarketingList] = useState<MarketingAgent[]>([]);
+  const [marketingWithdrawals, setMarketingWithdrawals] = useState<MarketingWithdrawal[]>([]);
+  const [reviewingWithdrawalId, setReviewingWithdrawalId] = useState<string | null>(null);
 
   // Marketing Filter & Search State
   const [marketingFilterStatus, setMarketingFilterStatus] = useState<"ALL" | "PENDING" | "ACTIVE" | "INACTIVE">("ALL");
@@ -277,6 +292,32 @@ export default function SuperAdminDashboardPage() {
     }
   };
 
+  const loadMarketingWithdrawals = async () => {
+    try {
+      const response = await fetch("/api/superadmin/marketing-withdrawals", { cache: "no-store" });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Pengajuan pencairan gagal dimuat.");
+      setMarketingWithdrawals(payload.data || []);
+    } catch (error) {
+      console.error("Gagal memuat pencairan marketing:", error);
+    }
+  };
+
+  const reviewMarketingWithdrawal = async (id: string, decision: "PAID" | "REJECTED") => {
+    setReviewingWithdrawalId(id);
+    try {
+      const response = await fetch("/api/superadmin/marketing-withdrawals", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, decision }) });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Pengajuan pencairan gagal diproses.");
+      await Promise.all([loadMarketingWithdrawals(), loadMarketingPartners()]);
+      showToast(decision === "PAID" ? "Pencairan Selesai" : "Pencairan Ditolak", decision === "PAID" ? "Transfer dicatat dan saldo komisi marketing telah diperbarui." : "Saldo tertahan telah dikembalikan ke saldo tersedia.", "success");
+    } catch (error) {
+      showToast("Pencairan Gagal", error instanceof Error ? error.message : "Terjadi kesalahan jaringan.", "error");
+    } finally {
+      setReviewingWithdrawalId(null);
+    }
+  };
+
   // State Tenant Warkop
   const [tenants, setTenants] = useState<TenantWarkop[]>([]);
   const [tenantApplications, setTenantApplications] = useState<TenantApplication[]>([]);
@@ -322,12 +363,14 @@ export default function SuperAdminDashboardPage() {
   useEffect(() => {
     loadTenants();
     loadMarketingPartners();
+    loadMarketingWithdrawals();
     loadTenantApplications();
   }, []);
 
   useEffect(() => {
     if (activeTab === "marketing") {
       loadMarketingPartners();
+      loadMarketingWithdrawals();
     } else if (activeTab === "tenants") {
       loadTenants();
       loadTenantApplications();
@@ -1789,6 +1832,7 @@ export default function SuperAdminDashboardPage() {
                 <button
                   onClick={() => {
                     loadMarketingPartners();
+                    loadMarketingWithdrawals();
                     showToast("Data Dimuat Ulang", "Daftar mitra marketing telah diperbarui dari server.", "info");
                   }}
                   className="btn-secondary"
@@ -1820,6 +1864,25 @@ export default function SuperAdminDashboardPage() {
                 </button>
               </div>
             </div>
+
+            {marketingWithdrawals.filter((item) => item.status === "PENDING").length > 0 && (
+              <div style={{ marginBottom: "1.25rem", padding: "1rem", borderRadius: "12px", background: isDark ? "rgba(16,185,129,.08)" : "#F0FDFA", border: "1px solid rgba(20,184,166,.35)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", marginBottom: "0.75rem" }}>
+                  <div><strong style={{ color: isDark ? "#5EEAD4" : "#0F766E" }}>Pengajuan Pencairan Komisi</strong><div style={{ marginTop: "2px", color: isDark ? "#94A3B8" : "#64748B", fontSize: "0.75rem" }}>Tandai sudah transfer hanya setelah dana benar-benar dikirim.</div></div>
+                  <span style={{ padding: "0.2rem 0.6rem", borderRadius: "999px", background: "#0D9488", color: "#fff", fontSize: "0.75rem", fontWeight: 800 }}>{marketingWithdrawals.filter((item) => item.status === "PENDING").length} menunggu</span>
+                </div>
+                <div style={{ display: "grid", gap: "0.65rem" }}>
+                  {marketingWithdrawals.filter((item) => item.status === "PENDING").map((item) => {
+                    const marketing = Array.isArray(item.marketing_partners) ? item.marketing_partners[0] : item.marketing_partners;
+                    const busy = reviewingWithdrawalId === item.id;
+                    return <div key={item.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "1rem", padding: "0.85rem", borderRadius: "10px", background: isDark ? "rgba(15,23,42,.78)" : "#fff", border: isDark ? "1px solid rgba(255,255,255,.08)" : "1px solid #99F6E4" }}>
+                      <div><div style={{ color: isDark ? "#fff" : "#0F172A", fontWeight: 850 }}>{marketing?.full_name || "Marketing"} · Rp {Number(item.amount).toLocaleString("id-ID")}</div><div style={{ marginTop: "3px", color: isDark ? "#94A3B8" : "#64748B", fontSize: "0.75rem" }}>{marketing?.referral_code || "-"} · {marketing?.phone || "-"}</div><div style={{ marginTop: "3px", color: "#0D9488", fontSize: "0.72rem", fontWeight: 750 }}>{item.bank_name} · {item.bank_account_number} · a/n {item.bank_account_name}</div></div>
+                      <div style={{ display: "flex", gap: "0.5rem" }}><button disabled={busy} onClick={() => void reviewMarketingWithdrawal(item.id, "REJECTED")} style={{ padding: "0.45rem 0.75rem", border: "1px solid #EF4444", borderRadius: "7px", background: "transparent", color: "#DC2626", fontWeight: 800 }}>Tolak</button><button disabled={busy} onClick={() => void reviewMarketingWithdrawal(item.id, "PAID")} style={{ padding: "0.45rem 0.8rem", border: 0, borderRadius: "7px", background: "#059669", color: "#fff", fontWeight: 800 }}>{busy ? "Memproses..." : "Sudah Transfer"}</button></div>
+                    </div>;
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Filter & Pemetaan Wilayah Bar */}
             <div
@@ -2083,39 +2146,6 @@ export default function SuperAdminDashboardPage() {
                                 </>
                               ) : (
                                 <>
-                                  <button
-                                    onClick={() => {
-                                      setConfirmModal({
-                                        isOpen: true,
-                                        title: "Konfirmasi Pencairan Komisi",
-                                        message: `Proses pencairan komisi untuk ${m.name} sebesar Rp ${sisaKomisi.toLocaleString("id-ID")} ke ${m.bankName} ${m.accountNumber} (a/n ${m.accountName})?`,
-                                        confirmText: "Ya, Cairkan Sekarang",
-                                        confirmVariant: "success",
-                                        onConfirm: () => {
-                                          setMarketingList((prev) =>
-                                            prev.map((item) =>
-                                              item.id === m.id ? { ...item, commissionPaid: item.totalCommissionEarned } : item
-                                            )
-                                          );
-                                          setConfirmModal((c) => ({ ...c, isOpen: false }));
-                                          showToast(
-                                            "Pencairan Berhasil Diproses",
-                                            `Komisi Rp ${sisaKomisi.toLocaleString("id-ID")} untuk ${m.name} berhasil dicairkan.`,
-                                            "success"
-                                          );
-                                        },
-                                      });
-                                    }}
-                                    disabled={sisaKomisi <= 0}
-                                    className="btn-secondary"
-                                    style={{
-                                      padding: "0.4rem 0.75rem",
-                                      fontSize: "0.75rem",
-                                      opacity: sisaKomisi <= 0 ? 0.5 : 1,
-                                    }}
-                                  >
-                                    Cairkan Komisi
-                                  </button>
                                   {m.status === "ACTIVE" ? (
                                     <button
                                       onClick={() => handleUpdateMarketingStatus(m.id, "INACTIVE")}

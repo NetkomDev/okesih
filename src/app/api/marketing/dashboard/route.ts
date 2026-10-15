@@ -36,6 +36,10 @@ export async function GET() {
       .select("id,business_name,owner_name,owner_phone,province,city_regency,status,review_notes,created_at,warkop_id")
       .eq("marketing_partner_id", partner.id).order("created_at", { ascending: false });
     if (applicationError) throw applicationError;
+    const { data: withdrawals, error: withdrawalError } = await admin.from("marketing_commission_withdrawals")
+      .select("id,amount,status,bank_name,bank_account_number,bank_account_name,notes,reviewed_at,created_at")
+      .eq("marketing_partner_id", partner.id).order("created_at", { ascending: false }).limit(25);
+    if (withdrawalError) throw withdrawalError;
     const ids = (tenants || []).map((item) => item.id);
     let transactions: Array<{ warkop_id: string }> = [];
     let billings: Array<{ warkop_id: string; status_bayar: string; tagihan_pokok: number }> = [];
@@ -85,6 +89,9 @@ export async function GET() {
         commission: (receiptCount.get(tenant.id) || 0) * Number(tenant.marketing_commission_per_receipt || 0),
       };
     });
+    const commission = mapped.reduce((sum, item) => sum + item.commission, 0);
+    const pendingWithdrawal = (withdrawals || []).filter((item) => item.status === "PENDING").reduce((sum, item) => sum + Number(item.amount || 0), 0);
+    const availableCommission = Math.max(0, commission - Number(partner.commission_paid || 0) - pendingWithdrawal);
     return NextResponse.json({
       data: {
         profile: {
@@ -94,8 +101,12 @@ export async function GET() {
           area: partner.city_area,
           commissionRate: Number(partner.commission_rate),
           commissionPaid: Number(partner.commission_paid),
+          bankName: partner.bank_name,
+          bankAccountNumber: partner.bank_account_number,
+          bankAccountName: partner.bank_account_name,
         },
         applications: applications || [],
+        withdrawals: withdrawals || [],
         tenants: mapped,
         totals: {
           tenants: mapped.length,
@@ -103,7 +114,9 @@ export async function GET() {
           unpaidTenants: mapped.filter((item) => item.paymentStatus === "UNPAID").length,
           paidTenants: mapped.filter((item) => item.paymentStatus === "PAID").length,
           receipts: mapped.reduce((sum, item) => sum + item.receipts, 0),
-          commission: mapped.reduce((sum, item) => sum + item.commission, 0),
+          commission,
+          pendingWithdrawal,
+          availableCommission,
         },
       },
     });
