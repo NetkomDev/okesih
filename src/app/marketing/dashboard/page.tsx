@@ -238,54 +238,15 @@ export default function MarketingDashboardPage() {
             </div>
             <div className="mkt-flow-note">
               <b>WhatsApp marketing: {data.profile.phone}</b>
-              <span>Pastikan akun WhatsApp aktif di HP ini adalah nomor tersebut. Setelah data tersimpan, WhatsApp dibuka untuk mengirim pengajuan ke Super Admin.</span>
+              <span>Pastikan akun WhatsApp aktif di HP ini adalah nomor tersebut. Setelah data tersimpan, WhatsApp dibuka untuk mengirim pengajuan ke Admin.</span>
             </div>
             <button className="mkt-primary" disabled={saving}>
               {saving ? "Mengirim pengajuan..." : "Daftarkan & Kirim WhatsApp"}
             </button>
           </form>
 
-          {/* Kolom Menu Navigasi Cepat & Tips */}
+          {/* Kolom Tips Lapangan */}
           <aside className="mkt-side-nav-column">
-            <div className="mkt-panel">
-              <div className="mkt-panel-head">
-                <div className="mkt-panel-icon">⚡</div>
-                <div>
-                  <h2>Menu Marketing</h2>
-                  <p>Akses fitur monitoring kemitraan.</p>
-                </div>
-              </div>
-
-              <div className="mkt-quick-links">
-                <Link href="/marketing/dashboard/tenant-binaan" className="mkt-quick-link-item">
-                  <div className="mkt-quick-link-icon green">🏪</div>
-                  <div>
-                    <strong>Tenant Binaan &amp; Tagihan</strong>
-                    <p>{data.totals.tenants} tenant aktif · {unpaidCount > 0 ? `${unpaidCount} belum bayar` : "Semua lunas"}</p>
-                  </div>
-                  <svg className="mkt-quick-arrow" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
-                </Link>
-
-                <Link href="/marketing/dashboard/pengajuan" className="mkt-quick-link-item">
-                  <div className="mkt-quick-link-icon amber">📋</div>
-                  <div>
-                    <strong>Status Pengajuan</strong>
-                    <p>{data.totals.pending} pengajuan sedang diverifikasi</p>
-                  </div>
-                  <svg className="mkt-quick-arrow" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
-                </Link>
-
-                <Link href="/marketing/dashboard/komisi" className="mkt-quick-link-item">
-                  <div className="mkt-quick-link-icon blue">💰</div>
-                  <div>
-                    <strong>Rincian &amp; Pencairan Komisi</strong>
-                    <p>Total {money(data.totals.commission)} berjalan</p>
-                  </div>
-                  <svg className="mkt-quick-arrow" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
-                </Link>
-              </div>
-            </div>
-
             <div className="mkt-tips-card">
               <span className="mkt-tips-badge">Tips Lapangan</span>
               <h4>Tindak Lanjut Tenant Menunggak</h4>

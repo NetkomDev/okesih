@@ -8,7 +8,7 @@ html, body {
   min-height: 100vh;
   background: #f4f6f4;
   color: #17211b;
-  padding: 24px;
+  padding: 24px 24px calc(88px + env(safe-area-inset-bottom));
   box-sizing: border-box;
   width: 100%;
 }
@@ -1437,7 +1437,7 @@ html, body {
 
 @media (max-width: 640px) {
   .mkt-shell {
-    padding: 12px 14px 28px !important;
+    padding: 12px 14px calc(84px + env(safe-area-inset-bottom)) !important;
     overflow-x: hidden !important;
   }
   .mkt-header {
@@ -1549,3 +1549,97 @@ html, body {
     gap: 8px;
   }
 }
+
+/* ========================================================
+   Estetik Bottom Navbar Khusus PWA Marketing
+   ======================================================== */
+.mkt-bottom-navbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 80;
+  background: rgba(4, 47, 46, 0.95);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-top: 1px solid rgba(45, 212, 191, 0.2);
+  box-shadow: 0 -8px 28px rgba(0, 0, 0, 0.28);
+  padding: 6px 12px max(6px, env(safe-area-inset-bottom));
+}
+
+.mkt-bottom-nav-inner {
+  max-width: 540px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  align-items: center;
+}
+
+.mkt-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  height: 52px;
+  border-radius: 12px;
+  text-decoration: none;
+  color: #94a3b8;
+  position: relative;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  padding: 4px 2px;
+}
+
+.mkt-nav-item:hover {
+  color: #ccfbf1;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.mkt-nav-item.active {
+  color: #ffffff !important;
+  background: linear-gradient(180deg, rgba(13, 148, 136, 0.28) 0%, rgba(13, 148, 136, 0.12) 100%);
+  border: 1px solid rgba(45, 212, 191, 0.28);
+  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.2);
+}
+
+.mkt-nav-item.active::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 3px;
+  border-radius: 0 0 3px 3px;
+  background: #ff6a2a;
+  box-shadow: 0 2px 8px rgba(255, 106, 42, 0.6);
+}
+
+.mkt-nav-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+  transition: transform 0.2s ease;
+}
+
+.mkt-nav-item.active .mkt-nav-icon {
+  color: #2dd4bf;
+  transform: translateY(-1px);
+}
+
+.mkt-nav-label {
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+  color: inherit;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.mkt-nav-item.active .mkt-nav-label {
+  color: #ffffff;
+  font-weight: 850;
+}
+

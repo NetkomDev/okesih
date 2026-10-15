@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { MarketingProvider } from "./MarketingContext";
+import MarketingBottomNav from "./MarketingBottomNav";
 
 export const metadata: Metadata = {
   title: "Dashboard Marketing",
@@ -13,5 +14,10 @@ export const metadata: Metadata = {
 };
 
 export default function MarketingDashboardLayout({ children }: { children: React.ReactNode }) {
-  return <MarketingProvider>{children}</MarketingProvider>;
+  return (
+    <MarketingProvider>
+      {children}
+      <MarketingBottomNav />
+    </MarketingProvider>
+  );
 }
