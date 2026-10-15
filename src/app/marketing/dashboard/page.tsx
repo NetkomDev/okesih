@@ -61,6 +61,9 @@ export default function MarketingDashboardPage() {
     <main className="mkt-shell">
       <PwaRoleInstallModal pwaKind="marketing" />
       <div className="mkt-container">
+        {/* Latar Header Orange Full Bleed Melengkung di Belakang Card Header */}
+        <div className="mkt-home-header-bg" aria-hidden="true" />
+
         {/* Header Dashboard Marketing bertema Hijau Tosca & Orange Elegan */}
         <header className="mkt-header">
           <div className="mkt-brand">
