@@ -21,7 +21,7 @@ export default function PwaInstallButton({ label = "Install Aplikasi", compact =
     return () => { window.clearTimeout(initialTimer); window.removeEventListener("okesih-install-ready", installReady); window.removeEventListener("appinstalled", appInstalled); };
   }, [onInstalled]);
 
-  if (installed) return <span className={compact ? "pwa-installed compact" : "pwa-installed"}>✓ Aplikasi terpasang</span>;
+  if (installed) return null;
   return <button className={compact ? "pwa-install compact" : "pwa-install"} onClick={async () => {
     const currentKind = installationKind(window.location.pathname);
     if (available && window.__okesihInstallKind !== currentKind) {

@@ -295,7 +295,7 @@ export default function TenantOwnerDashboardPage() {
       <div className="owner-content">
         <header className="owner-topbar">
           <div className="owner-brand"><img src={profile.logo_url || "/logo.svg?v=2"} alt={profile.logo_url ? `Logo ${profile.nama}` : "OKESIH"}/><div><strong>{profile.nama}</strong><small>PORTAL OWNER BISNIS</small></div><span className="owner-status">● {profile.is_active ? "Buka & Beroperasi" : "Tidak Aktif"}</span></div>
-          <div className="owner-actions"><ThemeToggle/><PwaInstallButton label="Install Owner" compact onInstalled={() => void onboardingAction({ action: "pwa_installed" })}/><Link href="/pos" className="btn-secondary">Layar Kasir</Link><Link href="/kds" className="btn-secondary">Layar Dapur</Link><button onClick={logoutUser} className="btn-secondary">Logout</button></div>
+          <div className="owner-actions"><ThemeToggle/><PwaInstallButton label="Install Owner" compact onInstalled={() => void onboardingAction({ action: "pwa_installed" })}/><Link href="/pos" className="btn-secondary">Layar Kasir</Link><Link href="/kds" className="btn-secondary">Layar Dapur</Link><button onClick={logoutUser} className="btn-secondary owner-close-btn" title="Keluar / Tutup" aria-label="Tutup dan keluar dari akun owner" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "0.35rem" }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg><span className="owner-logout-text">Logout</span></button></div>
         </header>
 
         <main className="owner-main">

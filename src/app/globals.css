@@ -2529,7 +2529,7 @@ button {
 @media(max-width:720px){
   .owner-shell .owner-topbar{padding:10px 12px;min-height:66px;gap:8px}
   .owner-brand{gap:8px;min-width:0;flex:1}.owner-brand img{border-radius:10px}.owner-status{display:none}
-  .owner-actions{flex:none;gap:5px}.owner-actions .pwa-install{height:36px;padding:0 9px;font-size:10px}.owner-actions .btn-secondary:last-child{font-size:0;width:36px;height:36px;padding:0}.owner-actions .btn-secondary:last-child:after{content:"↪";font-size:17px}
+  .owner-actions{flex:none;gap:5px}.owner-actions .pwa-install{height:36px;padding:0 9px;font-size:10px}.owner-actions .btn-secondary:last-child{width:36px;height:36px;padding:0;border-radius:10px;display:inline-flex;align-items:center;justify-content:center}.owner-actions .owner-logout-text{display:none}.owner-actions .btn-secondary:last-child:after{content:none}
   .owner-main{width:100%;padding:16px 12px calc(84px + env(safe-area-inset-bottom))}
   .owner-sidebar{height:calc(64px + env(safe-area-inset-bottom));padding:6px 4px env(safe-area-inset-bottom)}
   .owner-sidebar nav a{height:50px;flex-direction:column;gap:1px}.owner-sidebar nav a span{font-size:18px}.owner-sidebar nav a b{display:block!important;opacity:1!important;font-size:8px!important;font-weight:750;max-width:54px;overflow:hidden;text-overflow:ellipsis}
