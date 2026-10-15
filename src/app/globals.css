@@ -2027,21 +2027,22 @@ button {
 .owner-shell .owner-topbar,
 [data-theme="light"] .owner-shell .owner-topbar {
   position: relative;
-  min-height: 84px;
-  padding: 16px clamp(18px, 3.2vw, 42px) 24px;
+  min-height: 96px;
+  padding: 16px clamp(18px, 3.2vw, 42px) 30px;
   background: #ff4500 !important;
   border-bottom: 0 !important;
-  border-radius: 0 0 50% 50% / 0 0 38px 38px !important;
+  border-radius: 0 0 50% 50% / 0 0 46px 46px !important;
   box-shadow: 0 10px 28px rgba(255, 69, 0, 0.28) !important;
   color: #ffffff !important;
+  z-index: 10;
 }
 
-/* Halaman Home: Area orange melengkung lebih lebar ke bawah ~15% */
+/* Halaman Home: Area orange melengkung lebih lebar ke bawah (+20% lagi) sehingga overlay dengan konten */
 .owner-shell .owner-topbar.is-home,
 [data-theme="light"] .owner-shell .owner-topbar.is-home {
-  min-height: 98px;
-  padding: 18px clamp(18px, 3.2vw, 42px) 32px;
-  border-radius: 0 0 50% 50% / 0 0 44px 44px !important;
+  min-height: 120px;
+  padding: 18px clamp(18px, 3.2vw, 42px) 46px;
+  border-radius: 0 0 50% 50% / 0 0 54px 54px !important;
 }
 
 /* Judul Halaman yang Naik Menjadi Header di Halaman Lain */
@@ -2162,7 +2163,13 @@ button {
   transform: translateY(0);
 }
 
-.owner-main { max-width: 1540px; margin: 0 auto; padding: 30px clamp(18px, 3.2vw, 48px) 68px; }
+.owner-main {
+  max-width: 1540px;
+  margin: -24px auto 0;
+  padding: 0 clamp(18px, 3.2vw, 48px) 68px;
+  position: relative;
+  z-index: 15;
+}
 .owner-shell h1,
 .owner-shell h2,
 .owner-shell h3,
@@ -2891,8 +2898,8 @@ button {
   .superadmin-table-container{margin-inline:-1rem;padding-inline:1rem;scroll-padding-inline:1rem}
 }
 @media(max-width:720px){
-  .owner-shell .owner-topbar{padding:14px 16px 20px;min-height:74px;gap:10px;border-radius:0 0 50% 50% / 0 0 30px 30px !important}
-  .owner-shell .owner-topbar.is-home{padding:16px 16px 28px;min-height:88px;border-radius:0 0 50% 50% / 0 0 36px 36px !important}
+  .owner-shell .owner-topbar{padding:14px 16px 26px;min-height:80px;gap:10px;border-radius:0 0 50% 50% / 0 0 34px 34px !important;z-index:10}
+  .owner-shell .owner-topbar.is-home{padding:16px 16px 36px;min-height:102px;border-radius:0 0 50% 50% / 0 0 42px 42px !important}
   .owner-subpage-title h1{font-size:18px !important}
   .owner-subpage-title p{font-size:11px !important}
   .owner-brand{gap:12px;min-width:0;flex:1}
@@ -2901,7 +2908,7 @@ button {
   .owner-status{display:none}
   .owner-actions{flex:none;gap:6px}
   .owner-actions .pwa-install{height:36px;padding:0 9px;font-size:10px}
-  .owner-main{width:100%;padding:16px 12px calc(84px + env(safe-area-inset-bottom))}
+  .owner-main{width:100%;margin-top:-20px !important;padding:0 12px calc(84px + env(safe-area-inset-bottom)) !important;position:relative;z-index:15}
   .owner-sidebar{height:calc(66px + env(safe-area-inset-bottom));padding:6px 6px env(safe-area-inset-bottom)}
   .owner-sidebar nav{grid-template-columns:repeat(4, 1fr)!important;gap:4px!important}
   .owner-sidebar nav a{height:52px;flex-direction:column;gap:2px;padding:4px 2px}
