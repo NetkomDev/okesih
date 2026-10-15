@@ -355,9 +355,144 @@ export default function TenantOwnerDashboardPage() {
             </div>
           </section>}
 
-          {view === "menu" && <section id="menu" className="owner-panel owner-page-panel">
-            <div className="owner-section-heading"><div><h2>Katalog Menu</h2><p>Tersinkronisasi ke menu pelanggan dan kasir.</p></div><div style={{ display: "flex", gap: "0.6rem", alignItems: "center", flexWrap: "wrap" }}><Link href={`/menu/${profile.slug}${data.tables[0] ? `?tableId=${encodeURIComponent(data.tables[0].id)}` : ""}`} target="_blank" className="btn-secondary" style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem", fontWeight: 700 }}><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg><span>Preview Menu Pelanggan</span></Link><button className="btn-primary" onClick={() => setMenuModal(true)}>+ Tambah Menu</button></div></div>
-            <div className="owner-table-wrap"><table><thead><tr><th>Nama</th><th>Kategori</th><th>Harga</th><th>Deskripsi</th><th>Status</th><th>Aksi</th></tr></thead><tbody>{data.menus.length === 0 && <tr><td colSpan={6}><EmptyState icon="◫" title="Katalog masih kosong" text="Tambahkan menu pertama agar langsung tampil di kasir dan menu pelanggan." /></td></tr>}{data.menus.map((menu) => <tr key={menu.id}><td><b>{menu.name}</b></td><td><span className="owner-category">{menu.category}</span></td><td><strong>{money(menu.price)}</strong></td><td>{menu.description}</td><td><button className={menu.isAvailable ? "pill active" : "pill"} disabled={busy} onClick={() => void mutate(() => ownerFetch("/api/owner/menus", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: menu.id, isAvailable: !menu.isAvailable }) }))}>{menu.isAvailable ? "● Tersedia" : "○ Habis"}</button></td><td><button className="link-button" onClick={() => { const value = prompt("Harga baru", String(menu.price)); if (value && Number(value) > 0) void mutate(() => ownerFetch("/api/owner/menus", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: menu.id, price: Number(value) }) })); }}>Ubah Harga</button><button className="link-button" onClick={() => { const value = prompt("Kategori baru", menu.category); if (value?.trim()) void mutate(() => ownerFetch("/api/owner/menus", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: menu.id, category: value }) })); }}>Ubah Kategori</button><button className="link-button danger" onClick={() => confirm(`Hapus ${menu.name}?`) && void mutate(() => ownerFetch(`/api/owner/menus?id=${menu.id}`, { method: "DELETE" }))}>Hapus</button></td></tr>)}</tbody></table></div>
+          {view === "menu" && <section id="menu" className="owner-panel owner-page-panel owner-menu-catalog-page">
+            <div className="owner-section-heading owner-menu-heading">
+              <div className="owner-menu-heading-title">
+                <h2>Katalog Menu</h2>
+                <p>Tersinkronisasi ke menu pelanggan dan kasir.</p>
+              </div>
+              <div className="owner-menu-actions">
+                <Link
+                  href={`/menu/${profile.slug}${data.tables[0] ? `?tableId=${encodeURIComponent(data.tables[0].id)}` : ""}`}
+                  target="_blank"
+                  className="owner-menu-btn owner-menu-btn-preview"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  <span>
+                    Preview Menu
+                    <small>Pelanggan</small>
+                  </span>
+                </Link>
+                <button
+                  type="button"
+                  className="owner-menu-btn owner-menu-btn-add"
+                  onClick={() => setMenuModal(true)}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  <span>
+                    Tambah
+                    <small>Menu Baru</small>
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            {/* Desktop / Tablet Table View */}
+            <div className="owner-table-wrap owner-menu-desktop-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Nama</th>
+                    <th>Kategori</th>
+                    <th>Harga</th>
+                    <th>Deskripsi</th>
+                    <th>Status</th>
+                    <th>Aksi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.menus.length === 0 && (
+                    <tr>
+                      <td colSpan={6}>
+                        <EmptyState icon="◫" title="Katalog masih kosong" text="Tambahkan menu pertama agar langsung tampil di kasir dan menu pelanggan." />
+                      </td>
+                    </tr>
+                  )}
+                  {data.menus.map((menu) => (
+                    <tr key={menu.id}>
+                      <td><b>{menu.name}</b></td>
+                      <td><span className="owner-category">{menu.category}</span></td>
+                      <td><strong>{money(menu.price)}</strong></td>
+                      <td>{menu.description}</td>
+                      <td>
+                        <button
+                          className={menu.isAvailable ? "pill active" : "pill"}
+                          disabled={busy}
+                          onClick={() => void mutate(() => ownerFetch("/api/owner/menus", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: menu.id, isAvailable: !menu.isAvailable }) }))}
+                        >
+                          {menu.isAvailable ? "● Tersedia" : "○ Habis"}
+                        </button>
+                      </td>
+                      <td>
+                        <button className="link-button" onClick={() => { const value = prompt("Harga baru", String(menu.price)); if (value && Number(value) > 0) void mutate(() => ownerFetch("/api/owner/menus", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: menu.id, price: Number(value) }) })); }}>Ubah Harga</button>
+                        <button className="link-button" onClick={() => { const value = prompt("Kategori baru", menu.category); if (value?.trim()) void mutate(() => ownerFetch("/api/owner/menus", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: menu.id, category: value }) })); }}>Ubah Kategori</button>
+                        <button className="link-button danger" onClick={() => confirm(`Hapus ${menu.name}?`) && void mutate(() => ownerFetch(`/api/owner/menus?id=${menu.id}`, { method: "DELETE" }))}>Hapus</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile PWA Card List View */}
+            <div className="owner-menu-mobile-list">
+              {data.menus.length === 0 && (
+                <EmptyState icon="◫" title="Katalog masih kosong" text="Tambahkan menu pertama agar langsung tampil di kasir dan menu pelanggan." />
+              )}
+              {data.menus.map((menu) => (
+                <article key={menu.id} className={`owner-menu-card ${menu.isAvailable ? "is-available" : "is-out"}`}>
+                  <div className="owner-menu-card-head">
+                    <div className="owner-menu-card-title">
+                      <b>{menu.name}</b>
+                      <span className="owner-category">{menu.category}</span>
+                    </div>
+                    <strong className="owner-menu-card-price">{money(menu.price)}</strong>
+                  </div>
+                  {menu.description && (
+                    <p className="owner-menu-card-desc">{menu.description}</p>
+                  )}
+                  <div className="owner-menu-card-footer">
+                    <button
+                      type="button"
+                      className={`pill ${menu.isAvailable ? "active" : ""}`}
+                      disabled={busy}
+                      onClick={() => void mutate(() => ownerFetch("/api/owner/menus", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: menu.id, isAvailable: !menu.isAvailable }) }))}
+                    >
+                      {menu.isAvailable ? "● Tersedia" : "○ Habis"}
+                    </button>
+                    <div className="owner-menu-card-actions">
+                      <button
+                        type="button"
+                        className="link-button"
+                        onClick={() => {
+                          const value = prompt("Harga baru", String(menu.price));
+                          if (value && Number(value) > 0) void mutate(() => ownerFetch("/api/owner/menus", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: menu.id, price: Number(value) }) }));
+                        }}
+                      >
+                        Ubah Harga
+                      </button>
+                      <button
+                        type="button"
+                        className="link-button"
+                        onClick={() => {
+                          const value = prompt("Kategori baru", menu.category);
+                          if (value?.trim()) void mutate(() => ownerFetch("/api/owner/menus", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: menu.id, category: value }) }));
+                        }}
+                      >
+                        Kategori
+                      </button>
+                      <button
+                        type="button"
+                        className="link-button danger"
+                        onClick={() => confirm(`Hapus ${menu.name}?`) && void mutate(() => ownerFetch(`/api/owner/menus?id=${menu.id}`, { method: "DELETE" }))}
+                      >
+                        Hapus
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
           </section>}
 
           {view === "staff" && <section id="staf" className="owner-panel owner-page-panel">
