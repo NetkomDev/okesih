@@ -1223,7 +1223,7 @@ html, body {
   padding: 22px 0 10px;
 }
 
-/* Loading Overlay di depan layar aktif */
+/* Loading Overlay di depan layar aktif (Clean & Completely Transparent) */
 .mkt-loading-overlay {
   position: fixed;
   inset: 0;
@@ -1231,11 +1231,11 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(4, 47, 46, 0.45);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  animation: mkt-fade-in 0.2s ease-out;
-  pointer-events: auto;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  pointer-events: none;
+  animation: mkt-fade-in 0.18s ease-out;
 }
 
 .mkt-loading-card {
@@ -1243,28 +1243,29 @@ html, body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 14px;
-  padding: 24px 28px;
-  background: rgba(4, 47, 46, 0.92);
-  border: 1px solid rgba(45, 212, 191, 0.3);
-  border-radius: 22px;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+  gap: 12px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .mkt-loading-card > img {
-  width: 72px;
-  height: 72px;
+  width: 76px;
+  height: 76px;
   object-fit: contain;
-  filter: drop-shadow(0 8px 18px rgba(255, 106, 42, 0.35));
+  filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.18));
   animation: mkt-logo-float 1.8s ease-in-out infinite;
 }
 
 .mkt-loading-progress {
-  width: 110px;
+  width: 104px;
   height: 3.5px;
   overflow: hidden;
   border-radius: 99px;
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(15, 118, 110, 0.15);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .mkt-loading-progress i {
