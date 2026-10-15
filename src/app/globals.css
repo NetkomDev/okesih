@@ -2037,12 +2037,13 @@ button {
   z-index: 10;
 }
 
-/* Halaman Home: Area orange melengkung lebih lebar ke bawah mencapai ~3/4 area atas card metrics */
+/* Halaman Home: Area orange melengkung lebih lebar ke bawah mencapai ~3/4 area atas card metrics.
+   Lengkungan dibuat berbentuk busur lingkaran sempurna yang natural (tidak patah/tajam di sudut kiri/kanan). */
 .owner-shell .owner-topbar.is-home,
 [data-theme="light"] .owner-shell .owner-topbar.is-home {
-  min-height: 195px;
-  padding: 20px clamp(18px, 3.2vw, 42px) 96px;
-  border-radius: 0 0 50% 50% / 0 0 88px 88px !important;
+  min-height: 175px;
+  padding: 8px clamp(18px, 3.2vw, 42px) 84px;
+  border-radius: 0 0 100% 100% / 0 0 76px 76px !important;
   box-shadow: 0 16px 36px rgba(255, 69, 0, 0.32) !important;
 }
 
@@ -2050,14 +2051,14 @@ button {
 .owner-home-divider {
   display: block;
   height: 1px;
-  margin: -74px auto 0;
+  margin: -80px auto 0;
   max-width: 1540px;
   width: calc(100% - clamp(36px, 6.4vw, 84px));
   background: linear-gradient(
     90deg,
     rgba(255, 255, 255, 0) 0%,
     rgba(255, 255, 255, 0.35) 15%,
-    rgba(255, 255, 255, 0.55) 50%,
+    rgba(255, 255, 255, 0.6) 50%,
     rgba(255, 255, 255, 0.35) 85%,
     rgba(255, 255, 255, 0) 100%
   );
@@ -2196,12 +2197,12 @@ button {
 .owner-shell h3,
 .owner-shell strong,
 .owner-shell b { color: var(--ow-text); }
-.owner-section-heading { align-items: center; margin-bottom: 18px; }
-.owner-section-heading h1 { font-size: clamp(25px, 2.4vw, 32px); letter-spacing: -0.035em; }
+.owner-section-heading { align-items: center; margin-bottom: 12px; margin-top: 0; }
+.owner-section-heading h1 { font-size: clamp(23px, 2.3vw, 30px); letter-spacing: -0.035em; margin-top: 0; margin-bottom: 3px; }
 .owner-section-heading h2,
 .owner-panel h2 { font-size: 20px; letter-spacing: -0.02em; }
 .owner-section-heading p,
-.owner-panel > p { color: var(--ow-muted) !important; line-height: 1.55; }
+.owner-panel > p { color: var(--ow-muted) !important; line-height: 1.5; margin-top: 2px; }
 .owner-shell .btn-primary {
   border: 0;
   border-radius: 10px;
@@ -2920,17 +2921,20 @@ button {
 }
 @media(max-width:720px){
   .owner-shell .owner-topbar{padding:14px 16px 26px;min-height:80px;gap:10px;border-radius:0 0 50% 50% / 0 0 34px 34px !important;z-index:10}
-  .owner-shell .owner-topbar.is-home{padding:18px 16px 82px;min-height:165px;border-radius:0 0 50% 50% / 0 0 68px 68px !important}
-  .owner-home-divider{margin:-62px auto 0;width:calc(100% - 32px)}
+  .owner-shell .owner-topbar.is-home{padding:8px 16px 72px;min-height:152px;border-radius:0 0 100% 100% / 0 0 62px 62px !important}
+  .owner-home-divider{margin:-68px auto 0;width:calc(100% - 28px)}
   .owner-subpage-title h1{font-size:18px !important}
   .owner-subpage-title p{font-size:11px !important}
   .owner-brand{gap:12px;min-width:0;flex:1}
-  .owner-brand img{width:48px !important;height:48px !important;border-radius:12px}
+  .owner-brand img{width:46px !important;height:46px !important;border-radius:12px}
   .owner-shell .owner-brand strong{font-size:18px !important}
   .owner-status{display:none}
   .owner-actions{flex:none;gap:6px}
   .owner-actions .pwa-install{height:36px;padding:0 9px;font-size:10px}
-  .owner-main{width:100%;margin-top:-20px !important;padding:0 12px calc(84px + env(safe-area-inset-bottom)) !important;position:relative;z-index:15}
+  .owner-main{width:100%;margin-top:-26px !important;padding:0 12px calc(84px + env(safe-area-inset-bottom)) !important;position:relative;z-index:15}
+  .owner-section-heading{margin-bottom:10px !important}
+  .owner-section-heading h1{font-size:21px !important;margin-bottom:2px !important}
+  .owner-section-heading p{font-size:12px !important}
   .owner-sidebar{height:calc(66px + env(safe-area-inset-bottom));padding:6px 6px env(safe-area-inset-bottom)}
   .owner-sidebar nav{grid-template-columns:repeat(4, 1fr)!important;gap:4px!important}
   .owner-sidebar nav a{height:52px;flex-direction:column;gap:2px;padding:4px 2px}
