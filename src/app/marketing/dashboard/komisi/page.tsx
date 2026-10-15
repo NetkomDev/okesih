@@ -107,7 +107,7 @@ export default function MarketingKomisiPage() {
             <button className="mkt-primary" disabled={submitting || sisaKomisi <= 0 || !amount || Number(amount) > sisaKomisi}>{submitting ? "Menyimpan..." : "Cairkan & Kirim WhatsApp"}</button>
           </form>
           {data.totals.pendingWithdrawal > 0 && <div className="mkt-withdrawal-pending">Sedang diproses Admin: <strong>{money(data.totals.pendingWithdrawal)}</strong></div>}
-          <p className="mkt-withdrawal-note">WhatsApp aktif di HP ini akan dibuka dengan pesan untuk Super Admin. Saldo yang diajukan langsung ditahan agar tidak dapat dicairkan dua kali.</p>
+          <p className="mkt-withdrawal-note">WhatsApp aktif di HP ini akan dibuka dengan pesan untuk Admin. Saldo yang diajukan langsung masuk dalam antrian pencairan paling lama 1 x 24 jam.</p>
         </section>
 
         {data.withdrawals.length > 0 && <section className="mkt-panel mkt-withdrawal-history">
