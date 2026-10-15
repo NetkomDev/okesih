@@ -278,7 +278,7 @@ export default function TenantOwnerDashboardPage() {
   const linePath = revenuePoints.map((point, index) => `${index === 0 ? "M" : "L"}${point.x},${point.y}`).join(" ");
   const areaPath = revenuePoints.length ? `${linePath} L${revenuePoints.at(-1)?.x},${chartHeight - chartPadding} L${revenuePoints[0].x},${chartHeight - chartPadding} Z` : "";
   const view = pathname.endsWith("/menu") ? "menu" : pathname.endsWith("/staff") ? "staff" : pathname.endsWith("/waiters") ? "waiters" : pathname.endsWith("/qris-tables") ? "qris-tables" : pathname.endsWith("/devices") ? "devices" : "overview";
-  const navItems = [["▦", "Ringkasan", "/owner", "overview"], ["◫", "Katalog Menu", "/owner/menu", "menu"], ["♟", "Akun Staf", "/owner/staff", "staff"], ["♙", "Waiter", "/owner/waiters", "waiters"], ["▣", "QRIS & Meja", "/owner/qris-tables", "qris-tables"], ["⌁", "Perangkat & PWA", "/owner/devices", "devices"]];
+  const navItems = [["⌂", "Home", "/owner", "overview"], ["◫", "Katalog Menu", "/owner/menu", "menu"], ["♟", "Akun Staf", "/owner/staff", "staff"], ["▣", "QRIS & Meja", "/owner/qris-tables", "qris-tables"]];
 
   return (
     <div className={`owner-shell ${sidebarExpanded ? "sidebar-open" : "sidebar-closed"}`}>
@@ -301,7 +301,7 @@ export default function TenantOwnerDashboardPage() {
         <main className="owner-main">
           {error && <div className="owner-error">{error}<button onClick={() => setError("")}>×</button></div>}
           {view === "overview" && <section id="ringkasan">
-            <div className="owner-section-heading"><div><h1>Ringkasan Penjualan Hari Ini</h1><p>Pantau omzet tunai vs QRIS, kas di laci kasir, dan pembayaran sewa OKESIH.</p></div><Link href={`/menu/${profile.slug}${data.tables[0] ? `?tableId=${encodeURIComponent(data.tables[0].id)}` : ""}`} target="_blank" className="btn-primary">Preview Menu Pelanggan</Link></div>
+            <div className="owner-section-heading"><div><h1>Ringkasan Penjualan Hari Ini</h1><p>Pantau omzet tunai vs QRIS, kas di laci kasir, dan pembayaran sewa OKESIH.</p></div></div>
             <div className="owner-metrics">
               <article className="metric-revenue"><span className="metric-icon">↗</span><small>TOTAL OMZET PENJUALAN</small><strong>{money(metrics.total)}</strong><p>{metrics.receiptCount} transaksi hari ini</p></article>
               <article className="metric-payment"><span className="metric-icon">◈</span><small>RINCIAN PEMBAYARAN</small><b>Tunai <em>{money(metrics.cash)}</em></b><b>QRIS <em>{money(metrics.qris)}</em></b></article>
@@ -336,12 +336,27 @@ export default function TenantOwnerDashboardPage() {
               </div>
             </section>
             <div className="owner-quick-grid">
-              {navItems.slice(1).map(([icon, label, href]) => <Link key={href} href={href}><span>{icon}</span><div><b>{label}</b><small>Buka halaman pengelolaan</small></div><em>→</em></Link>)}
+              {[
+                { icon: "◫", label: "Katalog Menu", desc: "Kelola daftar menu, varian, dan harga jual warkop", href: "/owner/menu" },
+                { icon: "♟", label: "Akun Staf", desc: "Kelola akun login kasir dan barista / dapur", href: "/owner/staff" },
+                { icon: "♙", label: "Waiter", desc: "Kelola daftar pelayan sesuai kondisi nyata usaha", href: "/owner/waiters" },
+                { icon: "▣", label: "QRIS & Meja", desc: "Atur QRIS statis dan cetak stiker QR meja", href: "/owner/qris-tables" },
+                { icon: "⌁", label: "Perangkat & PWA", desc: "Pairing perangkat POS, KDS, dan status aplikasi", href: "/owner/devices" },
+              ].map((item) => (
+                <Link key={item.href} href={item.href}>
+                  <span>{item.icon}</span>
+                  <div>
+                    <b>{item.label}</b>
+                    <small>{item.desc}</small>
+                  </div>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="owner-quick-arrow" style={{ flexShrink: 0 }}><polyline points="9 18 15 12 9 6" /></svg>
+                </Link>
+              ))}
             </div>
           </section>}
 
           {view === "menu" && <section id="menu" className="owner-panel owner-page-panel">
-            <div className="owner-section-heading"><div><h2>Katalog Menu</h2><p>Tersinkronisasi ke menu pelanggan dan kasir.</p></div><button className="btn-primary" onClick={() => setMenuModal(true)}>+ Tambah Menu</button></div>
+            <div className="owner-section-heading"><div><h2>Katalog Menu</h2><p>Tersinkronisasi ke menu pelanggan dan kasir.</p></div><div style={{ display: "flex", gap: "0.6rem", alignItems: "center", flexWrap: "wrap" }}><Link href={`/menu/${profile.slug}${data.tables[0] ? `?tableId=${encodeURIComponent(data.tables[0].id)}` : ""}`} target="_blank" className="btn-secondary" style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem", fontWeight: 700 }}><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg><span>Preview Menu Pelanggan</span></Link><button className="btn-primary" onClick={() => setMenuModal(true)}>+ Tambah Menu</button></div></div>
             <div className="owner-table-wrap"><table><thead><tr><th>Nama</th><th>Kategori</th><th>Harga</th><th>Deskripsi</th><th>Status</th><th>Aksi</th></tr></thead><tbody>{data.menus.length === 0 && <tr><td colSpan={6}><EmptyState icon="◫" title="Katalog masih kosong" text="Tambahkan menu pertama agar langsung tampil di kasir dan menu pelanggan." /></td></tr>}{data.menus.map((menu) => <tr key={menu.id}><td><b>{menu.name}</b></td><td><span className="owner-category">{menu.category}</span></td><td><strong>{money(menu.price)}</strong></td><td>{menu.description}</td><td><button className={menu.isAvailable ? "pill active" : "pill"} disabled={busy} onClick={() => void mutate(() => ownerFetch("/api/owner/menus", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: menu.id, isAvailable: !menu.isAvailable }) }))}>{menu.isAvailable ? "● Tersedia" : "○ Habis"}</button></td><td><button className="link-button" onClick={() => { const value = prompt("Harga baru", String(menu.price)); if (value && Number(value) > 0) void mutate(() => ownerFetch("/api/owner/menus", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: menu.id, price: Number(value) }) })); }}>Ubah Harga</button><button className="link-button" onClick={() => { const value = prompt("Kategori baru", menu.category); if (value?.trim()) void mutate(() => ownerFetch("/api/owner/menus", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: menu.id, category: value }) })); }}>Ubah Kategori</button><button className="link-button danger" onClick={() => confirm(`Hapus ${menu.name}?`) && void mutate(() => ownerFetch(`/api/owner/menus?id=${menu.id}`, { method: "DELETE" }))}>Hapus</button></td></tr>)}</tbody></table></div>
           </section>}
 

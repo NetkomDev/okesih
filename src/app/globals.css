@@ -51,7 +51,7 @@
 .owner-settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}.owner-qris-preview,.owner-qris-placeholder{width:170px;height:170px;object-fit:contain;background:#fff;border-radius:12px;margin:18px auto;display:flex;align-items:center;justify-content:center;color:#64748b}.owner-panel label{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--text-muted);margin:12px 0}.owner-panel input,.owner-panel textarea,.owner-panel select,.owner-modal input,.owner-modal textarea,.owner-modal select{width:100%;padding:11px 12px;border-radius:8px;border:1px solid var(--border-subtle);background:var(--bg-surface-1);color:#fff}.owner-table-input{display:grid;grid-template-columns:1fr auto;gap:10px;margin:16px 0}.owner-table-chips{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 18px}.owner-table-chips span{display:flex;align-items:center;border:1px solid var(--border-subtle);border-radius:999px;overflow:hidden;background:rgba(255,255,255,.04)}.owner-table-chips a{color:#fff;text-decoration:none;padding:7px 4px 7px 11px;font-size:12px}.owner-table-chips button{border:0;background:none;color:#fca5a5;padding:7px 9px;cursor:pointer}
 .owner-modal-backdrop{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.82);display:grid;place-items:center;padding:16px}.owner-modal{width:min(460px,100%);background:#111827;border:1px solid var(--border-subtle);border-radius:16px;padding:20px}.owner-modal header{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px}.owner-modal header button{border:0;background:none;color:#fff;font-size:25px;cursor:pointer}.owner-modal form{display:flex;flex-direction:column;gap:12px}
 @media(max-width:1000px){.owner-metrics{grid-template-columns:repeat(2,1fr)}.owner-settings-grid{grid-template-columns:1fr}.owner-status{display:none}}
-@media(max-width:720px){.owner-shell,.owner-shell.sidebar-open,.owner-shell.sidebar-closed{grid-template-columns:1fr}.owner-sidebar{position:fixed;left:0;bottom:0;top:auto;width:100%;height:58px;flex-direction:row;padding:6px;z-index:60}.owner-sidebar-toggle,.owner-autohide{display:none}.owner-sidebar nav{margin:0;display:grid;grid-template-columns:repeat(5,1fr);width:100%;gap:2px}.owner-sidebar nav a{height:46px;padding:0;justify-content:center}.owner-sidebar nav a b{display:none}.owner-topbar{padding:10px 12px}.owner-brand img{width:38px;height:38px}.owner-brand strong{font-size:15px}.owner-actions a{display:none}.owner-main{padding:18px 12px 76px}.owner-section-heading{align-items:flex-start;flex-direction:column}.owner-metrics{grid-template-columns:1fr}.owner-settings-grid{display:block}.owner-settings-grid article{margin-bottom:16px}.owner-table-input{grid-template-columns:1fr}}
+@media(max-width:720px){.owner-shell,.owner-shell.sidebar-open,.owner-shell.sidebar-closed{grid-template-columns:1fr}.owner-sidebar{position:fixed;left:0;bottom:0;top:auto;width:100%;height:58px;flex-direction:row;padding:6px;z-index:60}.owner-sidebar-toggle,.owner-autohide{display:none}.owner-sidebar nav{margin:0;display:grid;grid-template-columns:repeat(4,1fr);width:100%;gap:4px}.owner-sidebar nav a{height:46px;padding:0;justify-content:center}.owner-sidebar nav a b{display:none}.owner-topbar{padding:10px 12px}.owner-brand img{width:38px;height:38px}.owner-brand strong{font-size:15px}.owner-actions a{display:none}.owner-main{padding:18px 12px 76px}.owner-section-heading{align-items:flex-start;flex-direction:column}.owner-metrics{grid-template-columns:1fr}.owner-settings-grid{display:block}.owner-settings-grid article{margin-bottom:16px}.owner-table-input{grid-template-columns:1fr}}
 
 /* Super Admin Command Center
    A calm, dense operations workspace that keeps the OKESIH orange accent while
@@ -2214,12 +2214,12 @@ button {
 }
 
 .owner-quick-grid > a {
-  min-height: 78px;
+  min-height: 82px;
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) 14px;
+  grid-template-columns: 38px minmax(0, 1fr) 22px;
   align-items: center;
-  gap: 9px;
-  padding: 12px;
+  gap: 12px;
+  padding: 14px 16px;
   border-radius: 14px;
   border: 1px solid var(--ow-border);
   background: var(--ow-surface);
@@ -2235,19 +2235,19 @@ button {
 }
 
 .owner-quick-grid > a > span {
-  width: 34px;
-  height: 34px;
+  width: 38px;
+  height: 38px;
   display: grid;
   place-items: center;
   border-radius: 11px;
   background: var(--ow-accent-soft);
   color: var(--ow-accent);
-  font-size: 17px;
+  font-size: 19px;
 }
 
-.owner-quick-grid b { display: block; font-size: clamp(11px, 0.9vw, 13px); line-height: 1.25; }
-.owner-quick-grid small { display: block; margin-top: 3px; color: var(--ow-muted); font-size: 10px; line-height: 1.25; }
-.owner-quick-grid em { color: var(--ow-muted); font-style: normal; font-size: 16px; }
+.owner-quick-grid b { display: block; font-size: 15px; font-weight: 750; line-height: 1.3; }
+.owner-quick-grid small { display: block; margin-top: 4px; color: var(--ow-muted); font-size: 12px; line-height: 1.3; }
+.owner-quick-grid em { display: inline-flex; align-items: center; justify-content: center; color: var(--ow-muted); font-style: normal; }
 
 .owner-revenue-chart {
   position: relative;
@@ -2341,18 +2341,22 @@ button {
 }
 
 @media (max-width: 1100px) {
-  .owner-quick-grid small { display: none; }
-  .owner-quick-grid > a { grid-template-columns: 30px minmax(0, 1fr) 11px; gap: 7px; padding: 10px 9px; }
-  .owner-quick-grid > a > span { width: 30px; height: 30px; }
+  .owner-quick-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .owner-quick-grid > a:last-child { grid-column: 1 / -1; }
+  .owner-quick-grid small { display: block; }
+  .owner-quick-grid > a { grid-template-columns: 36px minmax(0, 1fr) 20px; gap: 10px; padding: 12px 14px; }
+  .owner-quick-grid > a > span { width: 36px; height: 36px; font-size: 18px; }
   .owner-chart-filters button { min-width: 56px; padding-inline: 9px; }
 }
 
 @media (max-width: 720px) {
   .owner-actions .theme-toggle-btn { display: inline-flex !important; }
   .owner-actions { gap: 7px; }
-  .owner-quick-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .owner-quick-grid > a:last-child { grid-column: 1 / -1; }
-  .owner-quick-grid small { display: block; }
+  .owner-quick-grid { grid-template-columns: 1fr; gap: 10px; }
+  .owner-quick-grid > a:last-child { grid-column: auto; }
+  .owner-quick-grid > a { grid-template-columns: 38px minmax(0, 1fr) 22px; gap: 12px; padding: 13px 15px; }
+  .owner-quick-grid b { font-size: 15px !important; }
+  .owner-quick-grid small { display: block !important; font-size: 11.5px !important; }
   .owner-revenue-chart { padding: 18px 12px; }
   .owner-revenue-chart > header { flex-direction: column; align-items: flex-start; gap: 14px; }
   .owner-chart-filters { width: 100%; }
@@ -2531,8 +2535,11 @@ button {
   .owner-brand{gap:8px;min-width:0;flex:1}.owner-brand img{border-radius:10px}.owner-status{display:none}
   .owner-actions{flex:none;gap:5px}.owner-actions .pwa-install{height:36px;padding:0 9px;font-size:10px}.owner-actions .btn-secondary:last-child{width:36px;height:36px;padding:0;border-radius:10px;display:inline-flex;align-items:center;justify-content:center}.owner-actions .owner-logout-text{display:none}.owner-actions .btn-secondary:last-child:after{content:none}
   .owner-main{width:100%;padding:16px 12px calc(84px + env(safe-area-inset-bottom))}
-  .owner-sidebar{height:calc(64px + env(safe-area-inset-bottom));padding:6px 4px env(safe-area-inset-bottom)}
-  .owner-sidebar nav a{height:50px;flex-direction:column;gap:1px}.owner-sidebar nav a span{font-size:18px}.owner-sidebar nav a b{display:block!important;opacity:1!important;font-size:8px!important;font-weight:750;max-width:54px;overflow:hidden;text-overflow:ellipsis}
+  .owner-sidebar{height:calc(66px + env(safe-area-inset-bottom));padding:6px 6px env(safe-area-inset-bottom)}
+  .owner-sidebar nav{grid-template-columns:repeat(4, 1fr)!important;gap:4px!important}
+  .owner-sidebar nav a{height:52px;flex-direction:column;gap:2px;padding:4px 2px}
+  .owner-sidebar nav a span{font-size:19px}
+  .owner-sidebar nav a b{display:block!important;opacity:1!important;font-size:11px!important;font-weight:750;max-width:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-0.01em}
   .owner-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.owner-metrics article{min-height:145px;padding:16px}.owner-metrics strong{font-size:23px}
 }
 @media(min-width:361px) and (max-width:540px){.superadmin-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}.superadmin-kpi-card{min-height:142px;padding:16px 14px!important}}
