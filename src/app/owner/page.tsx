@@ -396,7 +396,13 @@ export default function TenantOwnerDashboardPage() {
   const linePath = revenuePoints.map((point, index) => `${index === 0 ? "M" : "L"}${point.x},${point.y}`).join(" ");
   const areaPath = revenuePoints.length ? `${linePath} L${revenuePoints.at(-1)?.x},${chartHeight - chartPadding} L${revenuePoints[0].x},${chartHeight - chartPadding} Z` : "";
   const view = pathname.endsWith("/menu") ? "menu" : pathname.endsWith("/staff") ? "staff" : pathname.endsWith("/waiters") ? "waiters" : pathname.endsWith("/qris-tables") ? "qris-tables" : pathname.endsWith("/devices") ? "devices" : "overview";
-  const navItems = [["⌂", "Home", "/owner", "overview"], ["◫", "Katalog Menu", "/owner/menu", "menu"], ["♟", "Akun Staf", "/owner/staff", "staff"], ["▣", "QRIS & Meja", "/owner/qris-tables", "qris-tables"]];
+  const navItems = [
+    { icon: "⌂", label: "Home", mobileLabel: "Home", href: "/owner", itemView: "overview" },
+    { icon: "♟", label: "Akun Staf", mobileLabel: "Staf", href: "/owner/staff", itemView: "staff" },
+    { icon: "◫", label: "Katalog Menu", mobileLabel: "Katalog", href: "/owner/menu", itemView: "menu" },
+    { icon: "⌁", label: "Perangkat", mobileLabel: "Perangkat", href: "/owner/devices", itemView: "devices" },
+    { icon: "▣", label: "QRIS & Meja", mobileLabel: "Qris & Meja", href: "/owner/qris-tables", itemView: "qris-tables" },
+  ];
 
   return (
     <div className={`owner-shell ${sidebarExpanded ? "sidebar-open" : "sidebar-closed"}`}>
@@ -406,7 +412,21 @@ export default function TenantOwnerDashboardPage() {
       <aside className="owner-sidebar" onMouseEnter={() => autoHide && setSidebarExpanded(true)} onMouseLeave={() => autoHide && setSidebarExpanded(false)}>
 
         <div className="owner-sidebar-head"><span className="owner-sidebar-mark">O</span><b>OWNER SPACE</b><button className="owner-sidebar-toggle" onClick={() => setSidebarExpanded((value) => !value)} aria-label="Buka atau ciutkan sidebar">☰</button></div>
-        <nav>{navItems.map(([icon, label, href, itemView]) => <Link key={href} href={href} title={label} className={view === itemView ? "active" : ""} aria-current={view === itemView ? "page" : undefined}><span>{icon}</span><b>{label}</b></Link>)}</nav>
+        <nav>
+          {navItems.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              title={item.label}
+              className={view === item.itemView ? "active" : ""}
+              aria-current={view === item.itemView ? "page" : undefined}
+            >
+              <span>{item.icon}</span>
+              <b className="owner-nav-desktop-label">{item.label}</b>
+              <b className="owner-nav-mobile-label">{item.mobileLabel}</b>
+            </Link>
+          ))}
+        </nav>
         <div className="owner-sidebar-footer">
           <button type="button" className="owner-sidebar-logout" onClick={logoutUser} title="Keluar dari Akun Owner" aria-label="Keluar dari akun owner">
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
