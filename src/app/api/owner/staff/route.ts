@@ -1,5 +1,27 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js";
+import { z } from "zod";
 import { OwnerApiError, ownerErrorResponse, requireOwner } from "@/lib/owner-api";
+import { assertSameOrigin } from "@/lib/device-auth";
+
+const usernameSchema = z.string().trim().toLowerCase().min(3).max(40).regex(
+  /^(?!.*\.\.)[a-z0-9][a-z0-9._-]*[a-z0-9_-]$/,
+  "Username hanya boleh berisi huruf kecil, angka, titik, garis bawah, atau tanda hubung.",
+);
+
+const createStaffSchema = z.object({
+  username: usernameSchema,
+  name: z.string().trim().min(2, "Nama staf minimal 2 karakter.").max(150),
+  password: z.string().min(6, "Password minimal 6 karakter.").max(72),
+  role: z.enum(["KASIR", "DAPUR"]),
+});
+
+const updateStaffSchema = z.object({
+  id: z.string().uuid(),
+  password: z.string().min(6, "Password minimal 6 karakter.").max(72).optional(),
+  isActive: z.boolean().optional(),
+}).refine((value) => value.password !== undefined || value.isActive !== undefined, {
+  message: "Tidak ada perubahan akun staf.",
+});
 
 type StaffMember = {
   id: string;
@@ -91,22 +113,17 @@ async function ensureStaffAuthUser(admin: SupabaseClient, warkopId: string, memb
 
 export async function POST(request: Request) {
   try {
+    assertSameOrigin(request);
     const { admin, warkopId } = await requireOwner(request);
-    const body = await request.json();
-    const username = String(body.username || "").trim().toLowerCase().replace(/[^a-z0-9_-]/g, "");
-    const password = String(body.password || "");
-    const role = String(body.role || "").toUpperCase();
-    if (username.length < 3 || password.length < 6 || !["KASIR", "DAPUR"].includes(role)) {
-      return Response.json({ error: "Username minimal 3 karakter, password minimal 6 karakter, dan peran wajib valid." }, { status: 400 });
-    }
+    const input = createStaffSchema.parse(await request.json());
 
     const { data: profile, error: profileError } = await admin.from("warkops").select("slug").eq("id", warkopId).single();
     if (profileError) throw profileError;
-    const email = `${username}@okesih.local`;
+    const email = `${input.username}@okesih.local`;
     const { data: auth, error: authError } = await admin.auth.admin.createUser({
-      email, password, email_confirm: true,
-      app_metadata: { role, warkop_id: warkopId },
-      user_metadata: { role, warkop_id: warkopId, warkop_slug: profile.slug },
+      email, password: input.password, email_confirm: true,
+      app_metadata: { role: input.role, warkop_id: warkopId },
+      user_metadata: { role: input.role, warkop_id: warkopId, warkop_slug: profile.slug },
     });
     if (authError || !auth.user) {
       const duplicate = authError?.message.toLowerCase().includes("already") || authError?.message.toLowerCase().includes("registered");
@@ -114,30 +131,35 @@ export async function POST(request: Request) {
     }
 
     const { data, error } = await admin.from("warkop_members").insert({
-      warkop_id: warkopId, user_id: auth.user.id, username, display_name: String(body.name || username).trim(), role, is_active: true,
+      warkop_id: warkopId, user_id: auth.user.id, username: input.username, display_name: input.name, role: input.role, is_active: true,
     }).select().single();
     if (error) {
       await admin.auth.admin.deleteUser(auth.user.id);
+      if (error.code === "23505") throw new OwnerApiError("Username tersebut sudah digunakan. Pilih username lain.", 409);
       throw error;
     }
     return Response.json({ data });
-  } catch (error) { return ownerErrorResponse(error); }
+  } catch (error) {
+    if (error instanceof z.ZodError) return Response.json({ error: error.issues[0]?.message || "Data akun staf tidak valid." }, { status: 400 });
+    return ownerErrorResponse(error);
+  }
 }
 
 export async function PATCH(request: Request) {
   try {
+    assertSameOrigin(request);
     const { admin, warkopId } = await requireOwner(request);
-    const body = await request.json();
-    const { data: member, error: memberError } = await admin.from("warkop_members").select("id,user_id,username,display_name,role,is_active").eq("id", body.id).eq("warkop_id", warkopId).in("role", ["KASIR", "DAPUR"]).single();
+    const input = updateStaffSchema.parse(await request.json());
+    const { data: member, error: memberError } = await admin.from("warkop_members").select("id,user_id,username,display_name,role,is_active").eq("id", input.id).eq("warkop_id", warkopId).in("role", ["KASIR", "DAPUR"]).maybeSingle();
     if (memberError) throw memberError;
+    if (!member) throw new OwnerApiError("Akun staf tidak ditemukan.", 404);
     const staffMember = member as StaffMember;
     let authUserId = staffMember.user_id;
-    if (body.password) {
-      if (String(body.password).length < 6) return Response.json({ error: "Password minimal 6 karakter." }, { status: 400 });
-      authUserId = await ensureStaffAuthUser(admin, warkopId, staffMember, String(body.password));
+    if (input.password) {
+      authUserId = await ensureStaffAuthUser(admin, warkopId, staffMember, input.password);
     }
-    if (body.isActive !== undefined) {
-      const active = Boolean(body.isActive);
+    if (input.isActive !== undefined) {
+      const active = input.isActive;
       if (!active) {
         const { data: openShift, error: shiftError } = await admin.from("shifts").select("id").eq("opened_by", member.id).eq("status", "OPEN").maybeSingle();
         if (shiftError) throw shiftError;
@@ -150,5 +172,8 @@ export async function PATCH(request: Request) {
       if (error) throw error;
     }
     return Response.json({ success: true });
-  } catch (error) { return ownerErrorResponse(error); }
+  } catch (error) {
+    if (error instanceof z.ZodError) return Response.json({ error: error.issues[0]?.message || "Data akun staf tidak valid." }, { status: 400 });
+    return ownerErrorResponse(error);
+  }
 }

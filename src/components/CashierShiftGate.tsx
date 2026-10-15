@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { createCashierClient } from "@/lib/supabase/client";
 import PwaInstallButton from "@/components/PwaInstallButton";
 import "./cashier-shift.css";
 
@@ -23,7 +23,7 @@ type SessionState = {
 };
 
 async function accessToken() {
-  const supabase = createClient();
+  const supabase = createCashierClient();
   const { data } = await supabase.auth.getSession();
   return data.session?.access_token || "";
 }
@@ -77,7 +77,7 @@ export default function CashierShiftGate({ tenant, pendingCount, onShiftChanged,
   const login = async (event: React.FormEvent) => {
     event.preventDefault();
     setBusy(true); setError("");
-    const supabase = createClient();
+    const supabase = createCashierClient();
     try {
       const email = username.includes("@") ? username.trim().toLowerCase() : `${username.trim().toLowerCase()}@okesih.local`;
       const { error: loginError } = await supabase.auth.signInWithPassword({ email, password });
@@ -117,7 +117,7 @@ export default function CashierShiftGate({ tenant, pendingCount, onShiftChanged,
   };
 
   const changeAccount = async () => {
-    await createClient().auth.signOut();
+    await createCashierClient().auth.signOut();
     setSession((current) => ({ authenticated: false, shift: current?.shift || null }));
     setError("");
   };
@@ -129,7 +129,7 @@ export default function CashierShiftGate({ tenant, pendingCount, onShiftChanged,
       return;
     }
     setBusy(true); setError("");
-    const supabase = createClient();
+    const supabase = createCashierClient();
     try {
       await cashierRequest("/api/device/cashier-session", {
         method: "POST",

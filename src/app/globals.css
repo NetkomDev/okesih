@@ -2312,6 +2312,8 @@ button {
 .owner-shell .owner-modal header,
 [data-theme="light"] .owner-shell .owner-modal header { background: transparent !important; border: 0 !important; }
 .owner-modal header button { color: var(--ow-muted); }
+.owner-staff-form label { display: grid; gap: 7px; color: var(--ow-text); font-size: 12px; font-weight: 800; }
+.owner-staff-form label > small { color: var(--ow-muted); font-size: 10px; font-weight: 500; line-height: 1.4; }
 
 @media (max-width: 720px) {
   .owner-sidebar { background: color-mix(in srgb, var(--ow-sidebar) 96%, transparent); border-top: 1px solid rgba(255, 255, 255, 0.08); }
