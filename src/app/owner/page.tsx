@@ -422,6 +422,7 @@ export default function TenantOwnerDashboardPage() {
           )}
           <div className="owner-actions"><ThemeToggle/><PwaInstallButton label="Install Owner" compact onInstalled={() => void onboardingAction({ action: "pwa_installed" })}/><Link href="/pos" className="btn-secondary">Layar Kasir</Link><Link href="/kds" className="btn-secondary">Layar Dapur</Link></div>
         </header>
+        {view === "overview" && <div className="owner-home-divider" aria-hidden="true" />}
 
         <main className="owner-main">
           {error && <div className="owner-error">{error}<button onClick={() => setError("")}>×</button></div>}
