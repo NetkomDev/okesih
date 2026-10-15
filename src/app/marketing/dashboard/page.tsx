@@ -7,6 +7,7 @@ import { INDONESIA_PROVINCES } from "@/lib/indonesia-regions";
 import { logoutUser } from "@/lib/auth-helpers";
 import PwaRoleInstallModal from "@/components/PwaRoleInstallModal";
 import { useMarketingData } from "./MarketingContext";
+import MarketingLoading from "./MarketingLoading";
 import "./marketing-dashboard.css";
 
 const money = (value: number) => `Rp ${value.toLocaleString("id-ID")}`;
@@ -50,19 +51,7 @@ export default function MarketingDashboardPage() {
   };
 
   if (loading || !isAuthorized || !data) {
-    return (
-      <main className="mkt-loading">
-        <Image
-          src="/okesih-logo-animated.svg"
-          alt="OKESIH.COM"
-          width={110}
-          height={110}
-          priority
-          unoptimized
-        />
-        <span className="mkt-splash-text">{contextError || error || "Dashboard marketing"}</span>
-      </main>
-    );
+    return <MarketingLoading error={contextError || error} />;
   }
 
   const unpaidCount = data.totals.unpaidTenants ?? data.tenants.filter((t) => t.paymentStatus === "UNPAID").length;

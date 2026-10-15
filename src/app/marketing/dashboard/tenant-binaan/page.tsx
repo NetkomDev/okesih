@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useMarketingData } from "../MarketingContext";
+import MarketingLoading from "../MarketingLoading";
 import "../marketing-dashboard.css";
 
 const money = (value: number) => `Rp ${value.toLocaleString("id-ID")}`;
@@ -13,11 +14,7 @@ export default function MarketingTenantBinaanPage() {
   const [search, setSearch] = useState("");
 
   if (loading || !isAuthorized || !data) {
-    return (
-      <main className="mkt-loading">
-        <span className="mkt-splash-text">{error || "Dashboard marketing"}</span>
-      </main>
-    );
+    return <MarketingLoading error={error} />;
   }
 
   const filteredTenants = data.tenants.filter((tenant) => {
