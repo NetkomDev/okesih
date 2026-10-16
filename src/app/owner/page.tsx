@@ -662,6 +662,7 @@ export default function TenantOwnerDashboardPage() {
   const navItems = [
     { icon: "⌂", label: "Home", mobileLabel: "Home", href: "/owner", itemView: "overview" },
     { icon: "♟", label: "Akun Staf", mobileLabel: "Staf", href: "/owner/staff", itemView: "staff" },
+    { icon: "♙", label: "Waiter", mobileLabel: "Waiter", href: "/owner/waiters", itemView: "waiters" },
     { icon: "◫", label: "Katalog Menu", mobileLabel: "Katalog", href: "/owner/menu", itemView: "menu" },
     { icon: "⌁", label: "Perangkat", mobileLabel: "Perangkat", href: "/owner/devices", itemView: "devices" },
     { icon: "▣", label: "QRIS & Meja", mobileLabel: "Qris & Meja", href: "/owner/qris-tables", itemView: "qris-tables" },

@@ -51,7 +51,7 @@
 .owner-settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}.owner-qris-preview,.owner-qris-placeholder{width:170px;height:170px;object-fit:contain;background:#fff;border-radius:12px;margin:18px auto;display:flex;align-items:center;justify-content:center;color:#64748b}.owner-panel label{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--text-muted);margin:12px 0}.owner-panel input,.owner-panel textarea,.owner-panel select,.owner-modal input,.owner-modal textarea,.owner-modal select{width:100%;padding:11px 12px;border-radius:8px;border:1px solid var(--border-subtle);background:var(--bg-surface-1);color:#fff}.owner-table-input{display:grid;grid-template-columns:1fr auto;gap:10px;margin:16px 0}.owner-table-chips{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 18px}.owner-table-chips span{display:flex;align-items:center;border:1px solid var(--border-subtle);border-radius:999px;overflow:hidden;background:rgba(255,255,255,.04)}.owner-table-chips a{color:#fff;text-decoration:none;padding:7px 4px 7px 11px;font-size:12px}.owner-table-chips button{border:0;background:none;color:#fca5a5;padding:7px 9px;cursor:pointer}
 .owner-modal-backdrop{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.82);display:grid;place-items:center;padding:16px}.owner-modal{width:min(460px,100%);background:#111827;border:1px solid var(--border-subtle);border-radius:16px;padding:20px}.owner-modal header{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px}.owner-modal header button{border:0;background:none;color:#fff;font-size:25px;cursor:pointer}.owner-modal form{display:flex;flex-direction:column;gap:12px}
 @media(max-width:1000px){.owner-metrics{grid-template-columns:repeat(2,1fr)}.owner-settings-grid{grid-template-columns:1fr}.owner-status{display:none}}
-@media(max-width:720px){.owner-shell,.owner-shell.sidebar-open,.owner-shell.sidebar-closed{grid-template-columns:1fr}.owner-sidebar{position:fixed;left:0;bottom:0;top:auto;width:100%;height:58px;flex-direction:row;padding:6px;z-index:60}.owner-sidebar-toggle,.owner-autohide{display:none}.owner-sidebar nav{margin:0;display:grid;grid-template-columns:repeat(5,1fr);width:100%;gap:3px}.owner-sidebar nav a{height:46px;padding:0;justify-content:center}.owner-sidebar nav a b{display:none}.owner-topbar{padding:14px 16px 20px}.owner-brand img{width:48px;height:48px}.owner-brand strong{font-size:18px}.owner-actions a{display:none}.owner-main{padding:18px 12px 76px}.owner-section-heading{align-items:flex-start;flex-direction:column}.owner-metrics{grid-template-columns:1fr}.owner-settings-grid{display:block}.owner-settings-grid article{margin-bottom:16px}.owner-table-input{grid-template-columns:1fr}}
+@media(max-width:720px){.owner-shell,.owner-shell.sidebar-open,.owner-shell.sidebar-closed{grid-template-columns:1fr}.owner-sidebar{position:fixed;left:0;bottom:0;top:auto;width:100%;height:58px;flex-direction:row;padding:6px;z-index:60}.owner-sidebar-toggle,.owner-autohide{display:none}.owner-sidebar nav{margin:0;display:grid;grid-template-columns:repeat(6,1fr);width:100%;gap:3px}.owner-sidebar nav a{height:46px;padding:0;justify-content:center}.owner-sidebar nav a b{display:none}.owner-topbar{padding:14px 16px 20px}.owner-brand img{width:48px;height:48px}.owner-brand strong{font-size:18px}.owner-actions a{display:none}.owner-main{padding:18px 12px 76px}.owner-section-heading{align-items:flex-start;flex-direction:column}.owner-metrics{grid-template-columns:1fr}.owner-settings-grid{display:block}.owner-settings-grid article{margin-bottom:16px}.owner-table-input{grid-template-columns:1fr}}
 
 /* Super Admin Command Center
    A calm, dense operations workspace that keeps the OKESIH orange accent while
@@ -2003,7 +2003,7 @@ button {
   border: 1px solid transparent;
   transition: background 0.16s ease, color 0.16s ease, border-color 0.16s ease;
 }
-.owner-sidebar nav a span { color: inherit; font-size: 20px; }
+.owner-sidebar nav a span { width: 24px; height: 24px; display: grid; place-items: center; flex: 0 0 24px; color: inherit; font-size: 24px; line-height: 1; }
 .owner-sidebar nav a b { color: inherit !important; font-size: 13px; }
 .owner-sidebar nav a .owner-nav-mobile-label { display: none !important; }
 .owner-sidebar nav a:hover { background: rgba(255, 255, 255, 0.05); color: #f8fafc !important; }
@@ -3621,7 +3621,7 @@ button {
   .owner-section-heading h1{font-size:21px !important;margin-bottom:2px !important}
   .owner-section-heading p{font-size:12px !important}
   .owner-sidebar{height:calc(66px + env(safe-area-inset-bottom));padding:6px 6px env(safe-area-inset-bottom)}
-  .owner-sidebar nav{grid-template-columns:repeat(5, 1fr)!important;gap:3px!important}
+  .owner-sidebar nav{grid-template-columns:repeat(6, 1fr)!important;gap:2px!important}
   .owner-sidebar nav a{height:52px;flex-direction:column;gap:2px;padding:4px 1px}
   .owner-sidebar nav a span{font-size:18px}
   .owner-sidebar nav a .owner-nav-desktop-label{display:none!important}
