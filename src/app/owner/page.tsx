@@ -24,6 +24,31 @@ type ActiveCashier = { shiftId: string; memberId: string; name: string; deviceNa
 type DashboardData = { profile: Profile; menus: MenuItem[]; staff: Staff[]; waiters: Waiter[]; tables: BusinessTable[]; metrics: Metrics; activeCashier: ActiveCashier | null };
 type DeviceInstallation = { id: string; device_type: "POS" | "KDS"; device_name: string; status: "ACTIVE" | "REVOKED" | "EXPIRED"; paired_at: string; last_seen_at: string; expires_at: string; revoked_at: string | null };
 type OwnerOnboarding = { password_changed_at: string | null; owner_pwa_installed_at: string | null; completed_at: string | null };
+type StickerConfig = {
+  qrSize: number;
+  businessNameSize: number;
+  tableLabelSize: number;
+  tablePosition: "top" | "bottom";
+  tableOffset: number;
+  showBusinessName: boolean;
+  showInstruction: boolean;
+  instructionSize: number;
+  instructionText: string;
+  selectedTableId: string;
+};
+
+const DEFAULT_STICKER_CONFIG: StickerConfig = {
+  qrSize: 180,
+  businessNameSize: 18,
+  tableLabelSize: 28,
+  tablePosition: "top",
+  tableOffset: 4,
+  showBusinessName: true,
+  showInstruction: true,
+  instructionSize: 12,
+  instructionText: "Scan untuk melihat menu & memesan",
+  selectedTableId: "",
+};
 
 const ownerDashboardCache = new Map<string, DashboardData>();
 
@@ -86,6 +111,48 @@ export default function TenantOwnerDashboardPage() {
   const [revenueLoading, setRevenueLoading] = useState(false);
   const qrisInput = useRef<HTMLInputElement>(null);
   const logoInput = useRef<HTMLInputElement>(null);
+  const [stickerConfig, setStickerConfig] = useState<StickerConfig>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("okesih_sticker_config");
+        if (saved) return { ...DEFAULT_STICKER_CONFIG, ...JSON.parse(saved) };
+      } catch {}
+    }
+    return DEFAULT_STICKER_CONFIG;
+  });
+  const [previewQrUrl, setPreviewQrUrl] = useState<string>("");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("okesih_sticker_config", JSON.stringify(stickerConfig));
+      } catch {}
+    }
+  }, [stickerConfig]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const generatePreview = async () => {
+      const slug = data?.profile?.slug || "sample";
+      const selectedTable = data?.tables?.find(t => t.id === stickerConfig.selectedTableId) || data?.tables?.[0];
+      const tableId = selectedTable?.id || "sample-01";
+      const origin = typeof window !== "undefined" ? window.location.origin : "https://okesih.com";
+      const url = `${origin}/menu/${slug}?tableId=${encodeURIComponent(tableId)}`;
+      try {
+        // errorCorrectionLevel: "L" untuk QR Code paling simpel & minim kotak-kotak (mudah discan bahkan saat print non-HD)
+        const qr = await QRCode.toDataURL(url, {
+          width: Math.max(200, stickerConfig.qrSize * 2),
+          margin: 1,
+          errorCorrectionLevel: "L",
+        });
+        if (isMounted) setPreviewQrUrl(qr);
+      } catch (e) {
+        console.error("Gagal generate preview QR:", e);
+      }
+    };
+    void generatePreview();
+    return () => { isMounted = false; };
+  }, [data?.profile?.slug, data?.tables, stickerConfig.selectedTableId, stickerConfig.qrSize]);
 
   const loadDashboard = async () => {
     try {
@@ -328,15 +395,125 @@ export default function TenantOwnerDashboardPage() {
     }, "Nama meja berhasil diperbarui.");
   };
 
-  const printTableStickers = async () => {
+  const printTableStickers = async (singleTableId?: string) => {
     if (!data?.tables.length) return setError("Tambahkan meja terlebih dahulu.");
-    const cards = await Promise.all(data.tables.map(async (table) => {
-      const url = `${window.location.origin}/menu/${data.profile.slug}?tableId=${encodeURIComponent(table.id)}`;
-      return { table, url, qr: await QRCode.toDataURL(url, { width: 320, margin: 1, errorCorrectionLevel: "H" }) };
-    }));
+    const tablesToPrint = singleTableId
+      ? data.tables.filter((t) => t.id === singleTableId)
+      : data.tables;
+    if (!tablesToPrint.length) return setError("Meja yang dipilih tidak ditemukan.");
+
+    const cards = await Promise.all(
+      tablesToPrint.map(async (table) => {
+        const url = `${window.location.origin}/menu/${data.profile.slug}?tableId=${encodeURIComponent(table.id)}`;
+        return {
+          table,
+          url,
+          qr: await QRCode.toDataURL(url, {
+            width: Math.max(260, stickerConfig.qrSize * 2),
+            margin: 1,
+            errorCorrectionLevel: "L", // Level L (Low) menghasilkan QR Code paling simpel & minim kotak-kotak agar mudah discan HP walau cetak non-HD
+          }),
+        };
+      })
+    );
+
     const popup = window.open("", "_blank");
     if (!popup) return setError("Izinkan pop-up browser untuk mencetak stiker meja.");
-    popup.document.write(`<!doctype html><html><head><title>Stiker Meja ${escapeHtml(data.profile.nama)}</title><style>body{font-family:Arial;margin:24px}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}.card{border:2px solid #111;border-radius:16px;padding:18px;text-align:center;break-inside:avoid}.card img{width:190px;height:190px}.name{font-size:18px;font-weight:800}.table{font-size:26px;font-weight:900;margin:8px}.url{font-size:10px;word-break:break-all}@media print{button{display:none}}</style></head><body><button onclick="window.print()">Cetak</button><div class="grid">${cards.map(({ table, url, qr }) => `<div class="card"><div class="name">${escapeHtml(data.profile.nama)}</div><div class="table">Meja ${escapeHtml(table.label)}</div><img src="${qr}" alt="QR Meja ${escapeHtml(table.label)}"/><div>Scan untuk melihat menu & memesan</div><div class="url">${escapeHtml(url)}</div></div>`).join("")}</div><script>window.onload=()=>window.print()</script></body></html>`);
+
+    const isTop = stickerConfig.tablePosition === "top";
+    const showBiz = stickerConfig.showBusinessName;
+    const showInst = stickerConfig.showInstruction;
+
+    popup.document.write(`<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Stiker Meja ${escapeHtml(data.profile.nama)}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 20px; background: #fff; color: #0f172a; }
+    .toolbar { margin-bottom: 20px; display: flex; gap: 12px; align-items: center; }
+    .print-btn { background: #ea580c; color: #fff; border: 0; padding: 10px 20px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 14px; }
+    .toolbar span { font-size: 13px; color: #64748b; }
+    .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+    .card {
+      border: 2px solid #0f172a;
+      border-radius: 16px;
+      padding: 18px;
+      text-align: center;
+      break-inside: avoid;
+      background: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+    }
+    .biz-name {
+      font-size: ${stickerConfig.businessNameSize}px;
+      font-weight: 800;
+      color: #0f172a;
+      margin-bottom: 4px;
+      line-height: 1.2;
+    }
+    .table-label {
+      font-size: ${stickerConfig.tableLabelSize}px;
+      font-weight: 900;
+      color: #0f172a;
+      margin-top: ${stickerConfig.tableOffset}px;
+      margin-bottom: ${stickerConfig.tableOffset}px;
+      line-height: 1.1;
+      letter-spacing: -0.5px;
+    }
+    .qr-img {
+      width: ${stickerConfig.qrSize}px;
+      height: ${stickerConfig.qrSize}px;
+      display: block;
+      margin: 4px auto;
+    }
+    .instruction {
+      font-size: ${stickerConfig.instructionSize}px;
+      font-weight: 600;
+      color: #334155;
+      margin-top: 6px;
+    }
+    .url {
+      font-size: 9px;
+      color: #64748b;
+      margin-top: 4px;
+      word-break: break-all;
+    }
+    @media print {
+      body { margin: 0; }
+      .toolbar { display: none; }
+      .grid { gap: 14px; }
+      .card { page-break-inside: avoid; border: 2px solid #000; }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <button class="print-btn" onclick="window.print()">🖨️ Cetak Stiker Meja</button>
+    <span>(Format sesuai hasil preview live di Dashboard Owner)</span>
+  </div>
+  <div class="grid">
+    ${cards
+      .map(
+        ({ table, url, qr }) => `
+      <div class="card">
+        ${showBiz ? `<div class="biz-name">${escapeHtml(data.profile.nama)}</div>` : ""}
+        ${isTop ? `<div class="table-label">Meja ${escapeHtml(table.label)}</div>` : ""}
+        <img class="qr-img" src="${qr}" alt="QR Meja ${escapeHtml(table.label)}"/>
+        ${!isTop ? `<div class="table-label">Meja ${escapeHtml(table.label)}</div>` : ""}
+        ${showInst ? `<div class="instruction">${escapeHtml(stickerConfig.instructionText || "Scan untuk melihat menu & memesan")}</div>` : ""}
+        <div class="url">${escapeHtml(url)}</div>
+      </div>
+    `
+      )
+      .join("")}
+  </div>
+  <script>window.onload=()=>window.print()</script>
+</body>
+</html>`);
     popup.document.close();
   };
 
@@ -742,6 +919,254 @@ export default function TenantOwnerDashboardPage() {
               <div className="owner-table-input"><textarea rows={3} value={tableInput} onChange={(event) => setTableInput(event.target.value)} placeholder="Contoh: 01, 02, Teras 1, VIP"/><button disabled={busy || !tableInput.trim()} className="btn-primary" onClick={addTables}>Tambah Meja</button></div>
               <div className="owner-table-chips">{data.tables.map((table) => <span key={table.id}><Link target="_blank" href={`/menu/${profile.slug}?tableId=${encodeURIComponent(table.id)}`}>Meja {table.label}</Link><button aria-label={`Edit meja ${table.label}`} onClick={() => setEditingTable(table)}>✎</button><button aria-label={`Hapus meja ${table.label}`} onClick={() => confirm(`Hapus meja ${table.label}?`) && void mutate(() => ownerFetch(`/api/owner/tables?id=${table.id}`, { method: "DELETE" }), "Meja berhasil dihapus.")}>×</button></span>)}</div>
               <button className="btn-primary" disabled={!data.tables.length} onClick={() => void printTableStickers()}>🖨️ Cetak Semua Stiker QR Meja</button>
+            </article>
+
+            <article className="owner-panel owner-sticker-preview-card">
+              <div className="owner-sticker-header">
+                <div>
+                  <h2>Preview &amp; Desain Stiker QR Meja</h2>
+                  <p>QR code otomatis dibuat simpel agar mudah discan HP walau diprint non-HD. Geser kontrol di bawah untuk melihat perubahan secara live.</p>
+                </div>
+                <button
+                  type="button"
+                  className="owner-btn-reset-sticker"
+                  onClick={() => setStickerConfig({ ...DEFAULT_STICKER_CONFIG, selectedTableId: stickerConfig.selectedTableId })}
+                  title="Kembalikan ukuran dan posisi ke pengaturan default"
+                >
+                  ↺ Reset Desain
+                </button>
+              </div>
+
+              {/* Selector Meja Sampel */}
+              <div className="owner-sticker-sample-bar">
+                <label>
+                  <span>Pilih Meja Contoh:</span>
+                  <select
+                    value={stickerConfig.selectedTableId}
+                    onChange={(e) => setStickerConfig({ ...stickerConfig, selectedTableId: e.target.value })}
+                  >
+                    {data.tables.length === 0 ? (
+                      <option value="">(Contoh Meja 01)</option>
+                    ) : (
+                      data.tables.map((table) => (
+                        <option key={table.id} value={table.id}>
+                          Meja {table.label}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </label>
+              </div>
+
+              {/* Live Preview Display Box */}
+              <div className="owner-sticker-preview-viewport">
+                <div className="owner-sticker-badge-live">● LIVE PREVIEW</div>
+                <div className="owner-sticker-sheet">
+                  {stickerConfig.showBusinessName && (
+                    <div
+                      className="owner-sticker-biz-name"
+                      style={{ fontSize: `${stickerConfig.businessNameSize}px` }}
+                    >
+                      {businessName || profile.nama}
+                    </div>
+                  )}
+
+                  {stickerConfig.tablePosition === "top" && (
+                    <div
+                      className="owner-sticker-table-label"
+                      style={{
+                        fontSize: `${stickerConfig.tableLabelSize}px`,
+                        marginTop: `${stickerConfig.tableOffset}px`,
+                        marginBottom: `${stickerConfig.tableOffset}px`,
+                      }}
+                    >
+                      Meja {(data.tables.find((t) => t.id === stickerConfig.selectedTableId) || data.tables[0])?.label || "01"}
+                    </div>
+                  )}
+
+                  <div className="owner-sticker-qr-wrapper">
+                    {previewQrUrl ? (
+                      <img
+                        src={previewQrUrl}
+                        alt="QR Code Meja"
+                        style={{
+                          width: `${stickerConfig.qrSize}px`,
+                          height: `${stickerConfig.qrSize}px`,
+                        }}
+                      />
+                    ) : (
+                      <div
+                        className="owner-sticker-qr-loading"
+                        style={{
+                          width: `${stickerConfig.qrSize}px`,
+                          height: `${stickerConfig.qrSize}px`,
+                        }}
+                      >
+                        Membuat QR simpel...
+                      </div>
+                    )}
+                  </div>
+
+                  {stickerConfig.tablePosition === "bottom" && (
+                    <div
+                      className="owner-sticker-table-label"
+                      style={{
+                        fontSize: `${stickerConfig.tableLabelSize}px`,
+                        marginTop: `${stickerConfig.tableOffset}px`,
+                        marginBottom: `${stickerConfig.tableOffset}px`,
+                      }}
+                    >
+                      Meja {(data.tables.find((t) => t.id === stickerConfig.selectedTableId) || data.tables[0])?.label || "01"}
+                    </div>
+                  )}
+
+                  {stickerConfig.showInstruction && (
+                    <div
+                      className="owner-sticker-instruction"
+                      style={{ fontSize: `${stickerConfig.instructionSize}px` }}
+                    >
+                      {stickerConfig.instructionText || "Scan untuk melihat menu & memesan"}
+                    </div>
+                  )}
+
+                  <div className="owner-sticker-url">
+                    {typeof window !== "undefined" ? window.location.origin : "https://okesih.com"}/menu/{profile.slug}?tableId={(data.tables.find((t) => t.id === stickerConfig.selectedTableId) || data.tables[0])?.id || "sample"}
+                  </div>
+                </div>
+              </div>
+
+              {/* Real-time Controls */}
+              <div className="owner-sticker-controls">
+                <div className="owner-sticker-control-group">
+                  <div className="owner-sticker-control-header">
+                    <span>Ukuran QR Code</span>
+                    <b>{stickerConfig.qrSize} px</b>
+                  </div>
+                  <input
+                    type="range"
+                    min="100"
+                    max="260"
+                    step="5"
+                    value={stickerConfig.qrSize}
+                    onChange={(e) => setStickerConfig({ ...stickerConfig, qrSize: Number(e.target.value) })}
+                  />
+                  <div className="owner-sticker-slider-hints"><span>Kecil (100px)</span><span>Besar (260px)</span></div>
+                </div>
+
+                <div className="owner-sticker-control-group">
+                  <div className="owner-sticker-control-header">
+                    <span>Ukuran Nomor Meja</span>
+                    <b>{stickerConfig.tableLabelSize} px</b>
+                  </div>
+                  <input
+                    type="range"
+                    min="16"
+                    max="48"
+                    step="1"
+                    value={stickerConfig.tableLabelSize}
+                    onChange={(e) => setStickerConfig({ ...stickerConfig, tableLabelSize: Number(e.target.value) })}
+                  />
+                  <div className="owner-sticker-slider-hints"><span>Kecil (16px)</span><span>Sangat Besar (48px)</span></div>
+                </div>
+
+                <div className="owner-sticker-control-group">
+                  <div className="owner-sticker-control-header">
+                    <span>Posisi Nomor Meja</span>
+                    <b>{stickerConfig.tablePosition === "top" ? "Di Atas QR Code" : "Di Bawah QR Code"}</b>
+                  </div>
+                  <div className="owner-sticker-position-switch">
+                    <button
+                      type="button"
+                      className={stickerConfig.tablePosition === "top" ? "active" : ""}
+                      onClick={() => setStickerConfig({ ...stickerConfig, tablePosition: "top" })}
+                    >
+                      ▲ Di Atas QR Code
+                    </button>
+                    <button
+                      type="button"
+                      className={stickerConfig.tablePosition === "bottom" ? "active" : ""}
+                      onClick={() => setStickerConfig({ ...stickerConfig, tablePosition: "bottom" })}
+                    >
+                      ▼ Di Bawah QR Code
+                    </button>
+                  </div>
+                </div>
+
+                <div className="owner-sticker-control-group">
+                  <div className="owner-sticker-control-header">
+                    <span>Geser Vertikal Posisi Nomor Meja</span>
+                    <b>{stickerConfig.tableOffset} px</b>
+                  </div>
+                  <input
+                    type="range"
+                    min="-12"
+                    max="30"
+                    step="1"
+                    value={stickerConfig.tableOffset}
+                    onChange={(e) => setStickerConfig({ ...stickerConfig, tableOffset: Number(e.target.value) })}
+                  />
+                  <div className="owner-sticker-slider-hints"><span>Mendekat (-12px)</span><span>Menjauh (+30px)</span></div>
+                </div>
+
+                <div className="owner-sticker-control-group">
+                  <div className="owner-sticker-control-header">
+                    <span>Ukuran Nama Usaha</span>
+                    <b>{stickerConfig.businessNameSize} px</b>
+                  </div>
+                  <input
+                    type="range"
+                    min="12"
+                    max="30"
+                    step="1"
+                    value={stickerConfig.businessNameSize}
+                    onChange={(e) => setStickerConfig({ ...stickerConfig, businessNameSize: Number(e.target.value) })}
+                  />
+                  <div className="owner-sticker-slider-hints"><span>Kecil (12px)</span><span>Besar (30px)</span></div>
+                </div>
+
+                <div className="owner-sticker-toggles">
+                  <label className="owner-sticker-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={stickerConfig.showBusinessName}
+                      onChange={(e) => setStickerConfig({ ...stickerConfig, showBusinessName: e.target.checked })}
+                    />
+                    <span>Tampilkan Nama Usaha</span>
+                  </label>
+                  <label className="owner-sticker-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={stickerConfig.showInstruction}
+                      onChange={(e) => setStickerConfig({ ...stickerConfig, showInstruction: e.target.checked })}
+                    />
+                    <span>Tampilkan Petunjuk Scan</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="owner-sticker-actions">
+                <button
+                  type="button"
+                  className="btn-primary"
+                  disabled={!data.tables.length}
+                  onClick={() => void printTableStickers()}
+                >
+                  🖨️ Cetak Semua Meja ({data.tables.length})
+                </button>
+                {data.tables.length > 0 && (
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => {
+                      const cur = data.tables.find((t) => t.id === stickerConfig.selectedTableId) || data.tables[0];
+                      if (cur) void printTableStickers(cur.id);
+                    }}
+                  >
+                    Cetak Meja {(data.tables.find((t) => t.id === stickerConfig.selectedTableId) || data.tables[0])?.label} Saja
+                  </button>
+                )}
+              </div>
             </article>
           </section>}
 
