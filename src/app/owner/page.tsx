@@ -1873,8 +1873,13 @@ export default function TenantOwnerDashboardPage() {
 
                   {/* Kartu QRIS Pembayaran */}
                   <div className="owner-billing-card" style={{ flex: 1, justifyContent: "space-between", alignItems: "center", textAlign: "center", padding: "12px 14px" }}>
-                    <div style={{ fontSize: "11px", fontWeight: 800, letterSpacing: "0.05em", color: "var(--ow-muted)", textTransform: "uppercase" }}>
-                      Scan QRIS Pembayaran
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", paddingBottom: "2px" }}>
+                      <span style={{ fontSize: "11px", fontWeight: 800, letterSpacing: "0.05em", color: "var(--ow-muted)", textTransform: "uppercase" }}>
+                        Scan QRIS Pembayaran
+                      </span>
+                      <span style={{ fontSize: "10px", color: "#10b981", fontWeight: 700 }}>
+                        ● Siap Scan di Layar
+                      </span>
                     </div>
 
                     {billingData?.centralPayment?.qrisImageUrl && (
@@ -1884,20 +1889,21 @@ export default function TenantOwnerDashboardPage() {
                           alt="QRIS OKESIH"
                           className="owner-billing-qris-frame"
                         />
-                        <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--ow-text)", maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {billingData.centralPayment.qrisMerchantName}
-                        </span>
                       </div>
                     )}
 
-                    <div style={{ display: "flex", gap: "8px", width: "100%", justifyContent: "center", marginTop: "4px" }}>
+                    <div className="owner-billing-qris-footer">
+                      <span style={{ fontSize: "11.5px", fontWeight: 800, color: "var(--ow-text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {billingData?.centralPayment?.qrisMerchantName || "OKESIH PUSAT"}
+                      </span>
                       <button
                         type="button"
                         className="btn-secondary"
                         onClick={() => void saveBillingQris()}
-                        style={{ fontSize: "11px", padding: "6px 12px", width: "100%", justifyContent: "center" }}
+                        style={{ fontSize: "10.5px", padding: "5px 10px", whiteSpace: "nowrap" }}
+                        title="Simpan berkas QRIS ke perangkat bila diperlukan"
                       >
-                        ↓ Simpan QRIS
+                        ↓ Simpan
                       </button>
                     </div>
                   </div>

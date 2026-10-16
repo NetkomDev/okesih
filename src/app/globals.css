@@ -2258,8 +2258,8 @@ button {
 }
 .owner-billing-modal {
   position: relative;
-  width: min(840px, 95vw);
-  max-height: min(90vh, 680px);
+  width: min(890px, 95vw);
+  max-height: min(92vh, 720px);
   padding: 0;
   background: var(--ow-surface, #ffffff);
   border: 1px solid var(--ow-border, #e2e8f0);
@@ -2370,14 +2370,24 @@ button {
 }
 
 .owner-billing-qris-frame {
-  width: 138px;
-  height: 138px;
+  width: 210px;
+  height: 210px;
   object-fit: contain;
   background: #ffffff;
-  padding: 6px;
-  border-radius: 12px;
-  border: 1px solid var(--ow-border, #e2e8f0);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+  padding: 8px;
+  border-radius: 14px;
+  border: 1.5px solid var(--ow-border, #e2e8f0);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+}
+
+.owner-billing-qris-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 250px;
+  gap: 10px;
+  margin-top: 6px;
 }
 
 .owner-billing-dropzone {
@@ -2429,8 +2439,11 @@ button {
     padding: 14px;
   }
   .owner-billing-qris-frame {
-    width: 120px;
-    height: 120px;
+    width: 180px;
+    height: 180px;
+  }
+  .owner-billing-qris-footer {
+    max-width: 100%;
   }
 }
 .metric-icon {
