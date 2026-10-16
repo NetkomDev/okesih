@@ -157,23 +157,235 @@ export default function KdsModulePage() {
   };
 
   const serverNow = new Date(app.data.serverTime).getTime();
-  return <div className="ops-app kds-app">
-    <DevicePwaModal type="KDS" isOpen={pwaModalOpen} onClose={() => setPwaModalOpen(false)}/>
-    <header className="ops-header"><div className="ops-brand">{app.data.profile.logo_url ? <img src={app.data.profile.logo_url} alt={`Logo ${app.data.profile.nama}`}/> : <Image src="/logo.svg?v=2" width={42} height={42} alt="OKESIH"/>}<div><small>OKESIH DAPUR / KDS</small><strong>{app.data.profile.nama}</strong></div></div><div className="ops-actions"><span className={app.online ? "ops-online" : "ops-offline"}>● {app.online ? "Online" : "Offline"}</span>{app.pendingCount > 0 && <span className="ops-sync">{app.pendingCount} antrean sync</span>}<button className="pwa-install compact" onClick={() => setPwaModalOpen(true)} title="Pasang aplikasi Dapur KDS ke Layar Utama (Landscape Fullscreen)">📲 Pasang KDS</button><button onClick={toggleOrTestAudio} title="Klik untuk tes suara bel dapur">🔊 {audioEnabled ? (audioUnlocked ? "Bel Dapur Aktif (Tes)" : "Aktifkan Bel") : "Bel Senyap"}</button><button onClick={() => void app.refresh()}>↻ Sinkronkan</button></div></header>
-    {app.cachedAt && <div className="ops-warning">Mode offline · perubahan status akan dikirim saat koneksi kembali.</div>}
-    {!audioUnlocked && <div className="ops-warning" style={{ background: "#eff6ff", color: "#1d4ed8", cursor: "pointer" }} onClick={() => { const ctx = getAudioContext(); if (ctx) { setAudioUnlocked(true); void ctx.resume(); } }}>🔔 Ketuk layar tablet dapur sekali untuk mengaktifkan dering pesanan siap diantar otomatis.</div>}
-    {app.error && <div className="ops-error">{app.error}<button onClick={() => app.setError("")}>×</button></div>}
-    <main className="kds-board"><section><header><div><small>SEDANG DISIAPKAN</small><h1>{cooking.length} Tiket Aktif</h1></div></header><div className="kds-grid">{cooking.length === 0 && <Empty text="Belum ada pesanan yang perlu disiapkan."/>}{cooking.map((order) => <Ticket key={order.id} now={serverNow} order={order} action="Siap Diantar" busy={busyId === order.id} onAction={() => void transition(order, "READY")}/>)}</div></section><section className="ready-column"><header><div><small>SIAP DIANTAR</small><h2>{ready.length} Tiket</h2></div></header><div className="kds-grid">{ready.length === 0 && <Empty text="Belum ada pesanan siap."/>}{ready.map((order) => <Ticket key={order.id} now={serverNow} order={order} action="Sudah Diambil" busy={busyId === order.id} onAction={() => void transition(order, "DONE")}/>)}</div></section></main>
-  </div>;
+  return (
+    <div className="ops-app kds-app">
+      <DevicePwaModal type="KDS" isOpen={pwaModalOpen} onClose={() => setPwaModalOpen(false)} />
+      
+      <header className="kds-header">
+        <div className="kds-brand">
+          <div className="kds-brand-logo">
+            {app.data.profile.logo_url ? (
+              <img src={app.data.profile.logo_url} alt={`Logo ${app.data.profile.nama}`} />
+            ) : (
+              <Image src="/logo.svg?v=2" width={42} height={42} alt="OKESIH" />
+            )}
+          </div>
+          <div>
+            <small>OKESIH <span>DAPUR · KDS</span></small>
+            <strong>{app.data.profile.nama}</strong>
+          </div>
+        </div>
+
+        <div className="kds-header-actions">
+          <span className={app.online ? "kds-chip kds-online" : "kds-chip kds-offline"}>
+            <i /> {app.online ? "Online" : "Offline"}
+          </span>
+          {app.pendingCount > 0 && (
+            <span className="kds-chip kds-sync">
+              ⚡ {app.pendingCount} antrean sync
+            </span>
+          )}
+          <button
+            type="button"
+            className="kds-btn kds-btn-pwa"
+            onClick={() => setPwaModalOpen(true)}
+            title="Pasang aplikasi Dapur KDS ke Layar Utama (Landscape Fullscreen)"
+          >
+            <span>📲</span>
+            <b>Pasang KDS</b>
+          </button>
+          <button
+            type="button"
+            className={`kds-btn kds-btn-bell ${audioEnabled && audioUnlocked ? "active" : ""}`}
+            onClick={toggleOrTestAudio}
+            title="Klik untuk tes suara bel dapur"
+          >
+            <span>🔔</span>
+            <b>{audioEnabled ? (audioUnlocked ? "Bel Aktif" : "Aktifkan Bel") : "Bel Senyap"}</b>
+          </button>
+          <div className="kds-device-chip" title={app.data.device.name}>
+            <span>KDS</span>
+            <b>{app.data.device.name}</b>
+          </div>
+          <button
+            type="button"
+            className="kds-btn kds-btn-refresh"
+            onClick={() => void app.refresh()}
+            title="Sinkronkan pesanan terbaru"
+          >
+            <span>↻</span>
+            <b>Sinkronkan</b>
+          </button>
+        </div>
+      </header>
+
+      {app.cachedAt && (
+        <div className="kds-notice kds-notice-warning">
+          Mode offline · perubahan status akan dikirim saat koneksi kembali.
+        </div>
+      )}
+      {!audioUnlocked && (
+        <div
+          className="kds-notice kds-notice-audio"
+          onClick={() => {
+            const ctx = getAudioContext();
+            if (ctx) {
+              setAudioUnlocked(true);
+              void ctx.resume();
+            }
+          }}
+        >
+          🔔 Ketuk layar tablet dapur sekali untuk mengaktifkan dering pesanan siap diantar otomatis.
+        </div>
+      )}
+      {app.error && (
+        <div className="kds-notice kds-notice-error">
+          <span>{app.error}</span>
+          <button onClick={() => app.setError("")}>×</button>
+        </div>
+      )}
+
+      <main className="kds-board">
+        {/* Kolom 1: Sedang Disiapkan */}
+        <section className="kds-column kds-column-cooking">
+          <header className="kds-col-header">
+            <div className="kds-col-title">
+              <span className="kds-col-tag cooking">PROSES DAPUR</span>
+              <h1>Sedang Disiapkan</h1>
+            </div>
+            <div className="kds-badge cooking">
+              <b>{cooking.length}</b>
+              <span>Tiket Aktif</span>
+            </div>
+          </header>
+
+          <div className="kds-grid">
+            {cooking.length === 0 ? (
+              <Empty icon="♨" title="Dapur Bersih" text="Belum ada pesanan yang perlu disiapkan." />
+            ) : (
+              cooking.map((order) => (
+                <Ticket
+                  key={order.id}
+                  now={serverNow}
+                  order={order}
+                  action="✓ Siap Diantar"
+                  busy={busyId === order.id}
+                  onAction={() => void transition(order, "READY")}
+                />
+              ))
+            )}
+          </div>
+        </section>
+
+        {/* Kolom 2: Siap Diantar */}
+        <section className="kds-column kds-column-ready">
+          <header className="kds-col-header">
+            <div className="kds-col-title">
+              <span className="kds-col-tag ready">PENGANTARAN</span>
+              <h2>Siap Diantar</h2>
+            </div>
+            <div className="kds-badge ready">
+              <b>{ready.length}</b>
+              <span>Siap Diambil</span>
+            </div>
+          </header>
+
+          <div className="kds-grid">
+            {ready.length === 0 ? (
+              <Empty icon="✓" title="Semua Terantar" text="Belum ada pesanan yang menunggu diambil." />
+            ) : (
+              ready.map((order) => (
+                <Ticket
+                  key={order.id}
+                  now={serverNow}
+                  order={order}
+                  action="★ Sudah Diambil"
+                  busy={busyId === order.id}
+                  onAction={() => void transition(order, "DONE")}
+                />
+              ))
+            )}
+          </div>
+        </section>
+      </main>
+    </div>
+  );
 }
 
-function Ticket({ order, action, busy, onAction, now }: { order: DeviceOrder; action: string; busy: boolean; onAction: () => void; now: number }) {
+function Ticket({
+  order,
+  action,
+  busy,
+  onAction,
+  now,
+}: {
+  order: DeviceOrder;
+  action: string;
+  busy: boolean;
+  onAction: () => void;
+  now: number;
+}) {
   const age = Math.max(0, Math.floor((now - new Date(order.created_at).getTime()) / 60_000));
+  const isCooking = order.status_pesanan === "COOKING";
   const orderedAtCashier = order.waiter_name?.startsWith("Kasir:");
   const paymentLabel = orderedAtCashier
-    ? (order.payment_method === "CASH" ? "TUNAI DITERIMA KASIR" : "QRIS DITERIMA KASIR")
-    : (order.payment_method === "CASH" ? "TUNAI — WAJIB TAGIH" : "QRIS LUNAS");
-  return <article className={`kds-ticket ${age >= 15 ? "late" : age >= 8 ? "warn" : ""}`}><header><div><strong>#{String(order.nomor_antrean).padStart(3, "0")}</strong><b>{order.table_number === "Kasir" ? "PESANAN KASIR" : `Meja ${order.table_number}`}</b></div><span>{age} menit</span></header><div className="kds-ticket-items">{order.items.map((item) => <div key={item.id}><b>{item.qty}×</b><span>{item.nama_menu}{item.notes && <small>Catatan: {item.notes}</small>}</span></div>)}</div><footer><span className={order.payment_method === "CASH" ? "cash" : "qris"}>{paymentLabel}</span><button disabled={busy} onClick={onAction}>{busy ? "Menyimpan..." : action}</button></footer></article>;
+    ? (order.payment_method === "CASH" ? "TUNAI DI KASIR" : "QRIS DI KASIR")
+    : (order.payment_method === "CASH" ? "TUNAI · TAGIH" : "QRIS LUNAS");
+
+  const urgencyClass = age >= 15 ? "urgent" : age >= 8 ? "warn" : "normal";
+
+  return (
+    <article className={`kds-card ${isCooking ? "status-cooking" : "status-ready"} ${urgencyClass}`}>
+      <header className="kds-card-header">
+        <div className="kds-card-id">
+          <strong>#{String(order.nomor_antrean).padStart(3, "0")}</strong>
+          <span className="kds-card-location">
+            {order.table_number === "Kasir" ? "PESANAN KASIR / TAKEAWAY" : `MEJA ${order.table_number}`}
+          </span>
+        </div>
+        <div className={`kds-card-timer ${urgencyClass}`} title="Waktu sejak pesanan masuk">
+          <span className="timer-icon">⏱</span>
+          <b>{age}m</b>
+        </div>
+      </header>
+
+      <div className="kds-card-items">
+        {order.items.map((item) => (
+          <div key={item.id} className="kds-item-row">
+            <span className="kds-item-qty">{item.qty}×</span>
+            <div className="kds-item-desc">
+              <span className="kds-item-name">{item.nama_menu}</span>
+              {item.notes && <span className="kds-item-notes">Catatan: {item.notes}</span>}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <footer className="kds-card-footer">
+        <div className="kds-card-meta">
+          <span className={`kds-payment-pill ${order.payment_method === "CASH" ? "cash" : "qris"}`}>
+            {paymentLabel}
+          </span>
+        </div>
+        <button
+          type="button"
+          className={`kds-action-btn ${isCooking ? "btn-ready" : "btn-done"}`}
+          disabled={busy}
+          onClick={onAction}
+        >
+          {busy ? "Memproses..." : action}
+        </button>
+      </footer>
+    </article>
+  );
 }
 
-function Empty({ text }: { text: string }) { return <div className="ops-empty"><span>✓</span><p>{text}</p></div>; }
+function Empty({ icon, title, text }: { icon: string; title: string; text: string }) {
+  return (
+    <div className="kds-empty-box">
+      <div className="kds-empty-icon">{icon}</div>
+      <h3>{title}</h3>
+      <p>{text}</p>
+    </div>
+  );
+}
