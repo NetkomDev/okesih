@@ -58,7 +58,8 @@ export default function KdsModulePage() {
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const audio = useRef<AudioContext | null>(null);
-  const prevCookingIds = useRef<Set<string> | null>(null);
+  const prevReadyIds = useRef<Set<string> | null>(null);
+  const lastChimedReadyId = useRef<string>("");
 
   const getAudioContext = () => {
     if (!audio.current && typeof window !== "undefined") {
@@ -92,33 +93,43 @@ export default function KdsModulePage() {
 
   useEffect(() => {
     if (!app.data) return;
-    const currentCookingIds = new Set(cooking.map((order) => order.id));
-    if (prevCookingIds.current === null) {
-      prevCookingIds.current = currentCookingIds;
+    const currentReadyIds = new Set(ready.map((order) => order.id));
+    if (prevReadyIds.current === null) {
+      prevReadyIds.current = currentReadyIds;
       return;
     }
 
-    const hasNewCookingOrder = cooking.some((order) => !prevCookingIds.current!.has(order.id));
-    prevCookingIds.current = currentCookingIds;
+    const newReadyOrders = ready.filter((order) => !prevReadyIds.current!.has(order.id));
+    prevReadyIds.current = currentReadyIds;
 
-    if (hasNewCookingOrder && audioEnabled) {
-      const ctx = getAudioContext();
-      if (ctx && ctx.state === "suspended") {
-        void ctx.resume().then(() => {
+    if (newReadyOrders.length > 0 && audioEnabled) {
+      const needsChime = newReadyOrders.some((order) => order.id !== lastChimedReadyId.current);
+      if (needsChime) {
+        const ctx = getAudioContext();
+        if (ctx && ctx.state === "suspended") {
+          void ctx.resume().then(() => {
+            playKitchenSound(ctx);
+          });
+        } else {
           playKitchenSound(ctx);
-        });
-      } else {
-        playKitchenSound(ctx);
+        }
       }
     }
-  }, [app.data, audioEnabled, cooking]);
+  }, [app.data, audioEnabled, ready]);
 
   if (app.authorized === false) return <DevicePairing type="KDS" pairing={app.pairing} error={app.error} onBegin={app.beginPairing}/>;
   if (!app.data) return <div className="device-loading"><Image src="/okesih-logo-animated.svg" width={90} height={90} alt="OKESIH"/><b>{app.error || "Menyiapkan Dapur..."}</b></div>;
 
   const transition = async (order: DeviceOrder, status: "READY" | "DONE") => {
     setBusyId(order.id); app.setError("");
-    try { await app.transitionOrder(order.id, status); }
+    try {
+      await app.transitionOrder(order.id, status);
+      if (status === "READY" && audioEnabled) {
+        lastChimedReadyId.current = order.id;
+        const ctx = getAudioContext();
+        playKitchenSound(ctx);
+      }
+    }
     catch (reason) { app.setError(reason instanceof Error ? reason.message : "Status tiket gagal diperbarui."); }
     finally { setBusyId(""); }
   };
@@ -147,7 +158,7 @@ export default function KdsModulePage() {
   return <div className="ops-app kds-app">
     <header className="ops-header"><div className="ops-brand">{app.data.profile.logo_url ? <img src={app.data.profile.logo_url} alt={`Logo ${app.data.profile.nama}`}/> : <Image src="/logo.svg?v=2" width={42} height={42} alt="OKESIH"/>}<div><small>OKESIH DAPUR / KDS</small><strong>{app.data.profile.nama}</strong></div></div><div className="ops-actions"><span className={app.online ? "ops-online" : "ops-offline"}>● {app.online ? "Online" : "Offline"}</span>{app.pendingCount > 0 && <span className="ops-sync">{app.pendingCount} antrean sync</span>}<PwaInstallButton compact label="Install KDS"/><button onClick={toggleOrTestAudio} title="Klik untuk tes suara bel dapur">🔊 {audioEnabled ? (audioUnlocked ? "Bel Dapur Aktif (Tes)" : "Aktifkan Bel") : "Bel Senyap"}</button><button onClick={() => void app.refresh()}>↻ Sinkronkan</button></div></header>
     {app.cachedAt && <div className="ops-warning">Mode offline · perubahan status akan dikirim saat koneksi kembali.</div>}
-    {!audioUnlocked && <div className="ops-warning" style={{ background: "#eff6ff", color: "#1d4ed8", cursor: "pointer" }} onClick={() => { const ctx = getAudioContext(); if (ctx) { setAudioUnlocked(true); void ctx.resume().then(() => playKitchenBell(ctx)); } }}>🔔 Ketuk layar tablet dapur sekali untuk mengaktifkan bel pesanan masuk otomatis.</div>}
+    {!audioUnlocked && <div className="ops-warning" style={{ background: "#eff6ff", color: "#1d4ed8", cursor: "pointer" }} onClick={() => { const ctx = getAudioContext(); if (ctx) { setAudioUnlocked(true); void ctx.resume(); } }}>🔔 Ketuk layar tablet dapur sekali untuk mengaktifkan dering pesanan siap diantar otomatis.</div>}
     {app.error && <div className="ops-error">{app.error}<button onClick={() => app.setError("")}>×</button></div>}
     <main className="kds-board"><section><header><div><small>SEDANG DISIAPKAN</small><h1>{cooking.length} Tiket Aktif</h1></div></header><div className="kds-grid">{cooking.length === 0 && <Empty text="Belum ada pesanan yang perlu disiapkan."/>}{cooking.map((order) => <Ticket key={order.id} now={serverNow} order={order} action="Siap Diantar" busy={busyId === order.id} onAction={() => void transition(order, "READY")}/>)}</div></section><section className="ready-column"><header><div><small>SIAP DIANTAR</small><h2>{ready.length} Tiket</h2></div></header><div className="kds-grid">{ready.length === 0 && <Empty text="Belum ada pesanan siap."/>}{ready.map((order) => <Ticket key={order.id} now={serverNow} order={order} action="Sudah Diambil" busy={busyId === order.id} onAction={() => void transition(order, "DONE")}/>)}</div></section></main>
   </div>;

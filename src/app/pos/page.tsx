@@ -79,23 +79,30 @@ export default function PosModulePage() {
     };
   }, []);
 
+  const prevPendingIds = useRef<Set<string> | null>(null);
+
   useEffect(() => {
-    if (!audioEnabled || pending.length === 0) return;
-    const triggerChime = () => {
+    if (!app.data) return;
+    const currentPendingIds = new Set(pending.map((order) => order.id));
+    if (prevPendingIds.current === null) {
+      prevPendingIds.current = currentPendingIds;
+      return;
+    }
+
+    const hasNewOrder = pending.some((order) => !prevPendingIds.current!.has(order.id));
+    prevPendingIds.current = currentPendingIds;
+
+    if (hasNewOrder && audioEnabled) {
       const ctx = getAudioContext();
-      if (!ctx) return playCashierSound(null);
-      if (ctx.state === "suspended") {
+      if (ctx && ctx.state === "suspended") {
         void ctx.resume().then(() => {
           playCashierSound(ctx);
         });
       } else {
         playCashierSound(ctx);
       }
-    };
-    triggerChime();
-    const timer = window.setInterval(triggerChime, 3500);
-    return () => window.clearInterval(timer);
-  }, [audioEnabled, pending.length]);
+    }
+  }, [app.data, audioEnabled, pending]);
 
   if (app.authorized === false) return <DevicePairing type="POS" pairing={app.pairing} error={app.error} onBegin={app.beginPairing}/>;
   if (!app.data) return <div className="device-loading"><Image src="/okesih-logo-animated.svg" width={90} height={90} alt="OKESIH"/><b>{app.error || "Menyiapkan Kasir..."}</b></div>;
@@ -135,7 +142,7 @@ export default function PosModulePage() {
   return <CashierShiftGate key={app.data.device.id} tenant={app.data.profile.nama} pendingCount={app.pendingCount} onShiftChanged={() => app.refresh()}><div className="ops-app pos-app">
     <header className="ops-header"><div className="ops-brand">{app.data.profile.logo_url ? <img src={app.data.profile.logo_url} alt={`Logo ${app.data.profile.nama}`}/> : <Image src="/logo.svg?v=2" width={42} height={42} alt="OKESIH"/>}<div><small>OKESIH KASIR</small><strong>{app.data.profile.nama}</strong></div></div><div className="ops-actions"><span className={app.online ? "ops-online" : "ops-offline"}>● {app.online ? "Online" : "Offline"}</span>{app.pendingCount > 0 && <span className="ops-sync">{app.pendingCount} menunggu sinkronisasi</span>}<PwaInstallButton compact label="Install Kasir"/><button onClick={toggleOrTestAudio} title="Klik untuk tes suara bel kasir">🔊 {audioEnabled ? (audioUnlocked ? "Bel Kasir Aktif (Tes)" : "Aktifkan Bel") : "Bel Senyap"}</button></div></header>
     {app.cachedAt && <div className="ops-warning">Mode offline · data terakhir {new Date(app.cachedAt).toLocaleTimeString("id-ID")}. Perubahan akan disinkronkan otomatis.</div>}
-    {!audioUnlocked && <div className="ops-warning" style={{ background: "#eff6ff", color: "#1d4ed8", cursor: "pointer" }} onClick={() => { const ctx = getAudioContext(); if (ctx) { setAudioUnlocked(true); void ctx.resume().then(() => playCashierChime(ctx)); } }}>🔔 Ketuk layar tablet sekali untuk mengaktifkan bel suara pesanan otomatis.</div>}
+    {!audioUnlocked && <div className="ops-warning" style={{ background: "#eff6ff", color: "#1d4ed8", cursor: "pointer" }} onClick={() => { const ctx = getAudioContext(); if (ctx) { setAudioUnlocked(true); void ctx.resume(); } }}>🔔 Ketuk layar tablet sekali untuk mengaktifkan dering pesanan masuk otomatis.</div>}
     {app.error && <div className="ops-error">{app.error}<button onClick={() => app.setError("")}>×</button></div>}
     <main className="ops-main"><section className="ops-summary"><div><small>MENUNGGU KONFIRMASI</small><strong>{pending.length}</strong></div><div><small>SEDANG DIMASAK</small><strong>{app.data.orders.filter((order) => order.status_pesanan === "COOKING").length}</strong></div><div><small>SIAP DIANTAR</small><strong>{app.data.orders.filter((order) => order.status_pesanan === "READY").length}</strong></div><div><small>PERANGKAT</small><strong>{app.data.device.name}</strong></div></section>
       <section className="ops-section"><div className="ops-title"><div><small>TRANSAKSI MASUK</small><h1>Konfirmasi Pesanan</h1></div><button onClick={() => void app.refresh()}>↻ Muat Ulang</button></div><div className="ops-order-grid">{pending.length === 0 && <div className="ops-empty"><span>✓</span><h2>Semua pesanan sudah ditangani</h2><p>Pesanan baru akan muncul otomatis.</p></div>}{pending.map((order) => <OrderCard key={order.id} order={order} onOpen={() => setSelected(order)}/>)}</div></section>
