@@ -11,6 +11,55 @@ import { type DeviceOrder, useDeviceApp } from "@/lib/use-device-app";
 
 type CartLine = { qty: number; notes: string };
 type View = "orders" | "sale" | "history";
+type DateFilterMode = "today" | "this_week" | "this_month" | "this_year" | "custom" | "all";
+
+type DateFilterState = {
+  mode: DateFilterMode;
+  startDate?: string; // YYYY-MM-DD
+  endDate?: string;   // YYYY-MM-DD
+};
+
+function formatIsoDate(d: Date): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getDateRangeForMode(mode: DateFilterMode, customStart?: string, customEnd?: string): { start: Date | null; end: Date | null; label: string } {
+  const now = new Date();
+  if (mode === "today") {
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    return { start, end, label: "HARI INI" };
+  }
+  if (mode === "this_week") {
+    // Senin sebagai awal minggu (Indonesia / ISO)
+    const dayOfWeek = (now.getDay() + 6) % 7; // 0 = Senin, 6 = Minggu
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek, 0, 0, 0, 0);
+    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + (6 - dayOfWeek), 23, 59, 59, 999);
+    return { start, end, label: "MINGGU INI" };
+  }
+  if (mode === "this_month") {
+    const start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    return { start, end, label: "BULAN INI" };
+  }
+  if (mode === "this_year") {
+    const start = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0);
+    const end = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+    return { start, end, label: "TAHUN INI" };
+  }
+  if (mode === "custom" && (customStart || customEnd)) {
+    const start = customStart ? new Date(`${customStart}T00:00:00`) : new Date(2000, 0, 1);
+    const end = customEnd ? new Date(`${customEnd}T23:59:59.999`) : new Date(2099, 11, 31);
+    const label = customStart && customEnd && customStart === customEnd
+      ? new Date(`${customStart}T00:00:00`).toLocaleDateString("id-ID", { day: "numeric", month: "short" })
+      : `${customStart ? new Date(`${customStart}T00:00:00`).toLocaleDateString("id-ID", { day: "numeric", month: "short" }) : "..."} - ${customEnd ? new Date(`${customEnd}T00:00:00`).toLocaleDateString("id-ID", { day: "numeric", month: "short" }) : "..."}`;
+    return { start, end, label: label.toUpperCase() };
+  }
+  return { start: null, end: null, label: "SEMUA WAKTU" };
+}
 
 function CashierShiftBadge() {
   const shift = useCashierShift();
@@ -99,7 +148,10 @@ export default function PosModulePage() {
   const [historySearch, setHistorySearch] = useState("");
   const [historyStatusFilter, setHistoryStatusFilter] = useState("ALL");
   const [historyPaymentFilter, setHistoryPaymentFilter] = useState("ALL");
-  const [historyDateFilter, setHistoryDateFilter] = useState<"today" | "all">("today");
+  const [historyDateFilter, setHistoryDateFilter] = useState<DateFilterState>({ mode: "today" });
+  const [dateModalOpen, setDateModalOpen] = useState(false);
+  const [tempCustomStart, setTempCustomStart] = useState("");
+  const [tempCustomEnd, setTempCustomEnd] = useState("");
 
   const audio = useRef<AudioContext | null>(null);
   const shift = useCashierShift();
@@ -151,13 +203,25 @@ export default function PosModulePage() {
     );
   }, [app.data]);
 
+  // Rentang tanggal aktif
+  const activeDateRange = useMemo(() => {
+    return getDateRangeForMode(
+      historyDateFilter.mode,
+      historyDateFilter.startDate,
+      historyDateFilter.endDate
+    );
+  }, [historyDateFilter]);
+
   // Filtered orders untuk audit owner
   const filteredHistoryOrders = useMemo(() => {
-    const todayStr = new Date().toDateString();
+    const { start, end } = activeDateRange;
+    const startTime = start ? start.getTime() : null;
+    const endTime = end ? end.getTime() : null;
+
     return allOrders.filter((order) => {
-      if (historyDateFilter === "today") {
-        const orderDateStr = new Date(order.created_at).toDateString();
-        if (orderDateStr !== todayStr) return false;
+      if (startTime !== null && endTime !== null) {
+        const orderTime = new Date(order.created_at).getTime();
+        if (orderTime < startTime || orderTime > endTime) return false;
       }
       if (historyStatusFilter !== "ALL" && order.status_pesanan !== historyStatusFilter) {
         return false;
@@ -177,13 +241,19 @@ export default function PosModulePage() {
       }
       return true;
     });
-  }, [allOrders, historyDateFilter, historyStatusFilter, historyPaymentFilter, historySearch, shift?.cashierName]);
+  }, [allOrders, activeDateRange, historyStatusFilter, historyPaymentFilter, historySearch, shift?.cashierName]);
 
   // KPI Metrics Audit
   const auditStats = useMemo(() => {
-    const todayStr = new Date().toDateString();
-    const targetSet = historyDateFilter === "today"
-      ? allOrders.filter((o) => new Date(o.created_at).toDateString() === todayStr)
+    const { start, end } = activeDateRange;
+    const startTime = start ? start.getTime() : null;
+    const endTime = end ? end.getTime() : null;
+
+    const targetSet = startTime !== null && endTime !== null
+      ? allOrders.filter((o) => {
+          const t = new Date(o.created_at).getTime();
+          return t >= startTime && t <= endTime;
+        })
       : allOrders;
 
     const validCompleted = targetSet.filter((o) => o.status_pesanan !== "REJECTED");
@@ -193,7 +263,27 @@ export default function PosModulePage() {
     const qrisTotal = validCompleted.filter((o) => o.payment_method === "QRIS").reduce((sum, o) => sum + Number(o.total_harga || 0), 0);
 
     return { totalOmzet, totalCount, cashTotal, qrisTotal };
-  }, [allOrders, historyDateFilter]);
+  }, [allOrders, activeDateRange]);
+
+  const openDateFilterModal = () => {
+    const todayStr = formatIsoDate(new Date());
+    setTempCustomStart(historyDateFilter.startDate || todayStr);
+    setTempCustomEnd(historyDateFilter.endDate || todayStr);
+    setDateModalOpen(true);
+  };
+
+  const applyCustomDateRange = () => {
+    if (!tempCustomStart && !tempCustomEnd) {
+      setHistoryDateFilter({ mode: "today" });
+    } else {
+      setHistoryDateFilter({
+        mode: "custom",
+        startDate: tempCustomStart || tempCustomEnd,
+        endDate: tempCustomEnd || tempCustomStart,
+      });
+    }
+    setDateModalOpen(false);
+  };
 
   if (app.authorized === false) return <DevicePairing type="POS" pairing={app.pairing} error={app.error} onBegin={app.beginPairing}/>;
   if (!app.data) return <div className="device-loading"><Image src="/okesih-logo-animated.svg" width={90} height={90} alt="OKESIH"/><b>{app.error || "Menyiapkan Kasir..."}</b></div>;
@@ -281,14 +371,27 @@ export default function PosModulePage() {
 
       {/* KPI Audit Card */}
       <section className="pos-audit-stats">
-        <article className="pos-audit-card omzet">
+        <button
+          type="button"
+          className="pos-audit-card omzet pos-card-clickable"
+          onClick={openDateFilterModal}
+          title="Klik untuk memilih rentang waktu filter audit"
+        >
           <div className="pos-audit-icon">💰</div>
           <div>
-            <small>{historyDateFilter === "today" ? "OMZET HARI INI" : "TOTAL OMZET HISTORI"}</small>
+            <small>
+              <span>OMZET</span>
+              <span className="pos-audit-period-tag">{activeDateRange.label}</span>
+            </small>
             <strong>Rp {auditStats.totalOmzet.toLocaleString("id-ID")}</strong>
-            <p>{auditStats.totalCount} transaksi tercatat</p>
+            <p>{auditStats.totalCount} transaksi · Klik untuk ubah filter</p>
           </div>
-        </article>
+          <div className="pos-audit-card-action-hint" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </div>
+        </button>
         <article className="pos-audit-card orders">
           <div className="pos-audit-icon">🧾</div>
           <div>
@@ -330,16 +433,34 @@ export default function PosModulePage() {
         <div className="pos-audit-filters">
           <div className="pos-audit-pill-group">
             <button
-              className={historyDateFilter === "today" ? "active" : ""}
-              onClick={() => setHistoryDateFilter("today")}
+              className={historyDateFilter.mode === "today" ? "active" : ""}
+              onClick={() => setHistoryDateFilter({ mode: "today" })}
             >
               Hari Ini
             </button>
             <button
-              className={historyDateFilter === "all" ? "active" : ""}
-              onClick={() => setHistoryDateFilter("all")}
+              className={historyDateFilter.mode === "this_week" ? "active" : ""}
+              onClick={() => setHistoryDateFilter({ mode: "this_week" })}
             >
-              Semua Waktu
+              Minggu Ini
+            </button>
+            <button
+              className={historyDateFilter.mode === "this_month" ? "active" : ""}
+              onClick={() => setHistoryDateFilter({ mode: "this_month" })}
+            >
+              Bulan Ini
+            </button>
+            <button
+              className={historyDateFilter.mode === "this_year" ? "active" : ""}
+              onClick={() => setHistoryDateFilter({ mode: "this_year" })}
+            >
+              Tahun Ini
+            </button>
+            <button
+              className={historyDateFilter.mode === "custom" || historyDateFilter.mode === "all" ? "active" : ""}
+              onClick={openDateFilterModal}
+            >
+              {historyDateFilter.mode === "custom" ? "Custom 📅" : "Lainnya ▾"}
             </button>
           </div>
 
@@ -490,6 +611,117 @@ export default function PosModulePage() {
         </table>
       </div>
     </main>}
+
+    {/* Popup Modal Filter Rentang Waktu (Omzet Card & Toolbar) */}
+    {dateModalOpen && (
+      <div className="ops-modal-backdrop" onClick={() => setDateModalOpen(false)}>
+        <section className="pos-filter-modal" onClick={(e) => e.stopPropagation()}>
+          <button className="ops-modal-close" onClick={() => setDateModalOpen(false)} aria-label="Tutup">
+            ×
+          </button>
+          <div className="pos-filter-modal-header">
+            <small>FILTER AUDIT OMZET</small>
+            <h2>Pilih Periode Waktu</h2>
+            <p>Filter ringkasan omzet dan daftar transaksi berdasarkan kurun waktu tertentu.</p>
+          </div>
+
+          <div className="pos-filter-preset-grid">
+            <button
+              type="button"
+              className={`pos-preset-option ${historyDateFilter.mode === "today" ? "active" : ""}`}
+              onClick={() => {
+                setHistoryDateFilter({ mode: "today" });
+                setDateModalOpen(false);
+              }}
+            >
+              <b>Hari Ini</b>
+              <span>Transaksi hari ini</span>
+            </button>
+
+            <button
+              type="button"
+              className={`pos-preset-option ${historyDateFilter.mode === "this_week" ? "active" : ""}`}
+              onClick={() => {
+                setHistoryDateFilter({ mode: "this_week" });
+                setDateModalOpen(false);
+              }}
+            >
+              <b>Minggu Ini</b>
+              <span>Senin s/d Minggu ini</span>
+            </button>
+
+            <button
+              type="button"
+              className={`pos-preset-option ${historyDateFilter.mode === "this_month" ? "active" : ""}`}
+              onClick={() => {
+                setHistoryDateFilter({ mode: "this_month" });
+                setDateModalOpen(false);
+              }}
+            >
+              <b>Bulan Ini</b>
+              <span>Bulan berjalan saat ini</span>
+            </button>
+
+            <button
+              type="button"
+              className={`pos-preset-option ${historyDateFilter.mode === "this_year" ? "active" : ""}`}
+              onClick={() => {
+                setHistoryDateFilter({ mode: "this_year" });
+                setDateModalOpen(false);
+              }}
+            >
+              <b>Tahun Ini</b>
+              <span>Tahun {new Date().getFullYear()}</span>
+            </button>
+          </div>
+
+          <div className={`pos-custom-range-card ${historyDateFilter.mode === "custom" ? "active" : ""}`}>
+            <h3>
+              <span>📅</span>
+              <span>Filter Custom Berdasarkan Tanggal</span>
+            </h3>
+            <div className="pos-custom-date-grid">
+              <div className="pos-date-field">
+                <label>Dari Tanggal</label>
+                <input
+                  type="date"
+                  value={tempCustomStart}
+                  onChange={(e) => setTempCustomStart(e.target.value)}
+                />
+              </div>
+              <div className="pos-date-field">
+                <label>Sampai Tanggal</label>
+                <input
+                  type="date"
+                  value={tempCustomEnd}
+                  onChange={(e) => setTempCustomEnd(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="pos-filter-modal-actions">
+            <button
+              type="button"
+              className="pos-filter-btn-cancel"
+              onClick={() => {
+                setHistoryDateFilter({ mode: "all" });
+                setDateModalOpen(false);
+              }}
+            >
+              Reset (Semua Waktu)
+            </button>
+            <button
+              type="button"
+              className="pos-filter-btn-apply"
+              onClick={applyCustomDateRange}
+            >
+              Terapkan Tanggal
+            </button>
+          </div>
+        </section>
+      </div>
+    )}
 
     {selected && <div className="ops-modal-backdrop"><section className="ops-modal"><button className="ops-modal-close" onClick={() => setSelected(null)}>×</button><small>ANTREAN #{String(selected.nomor_antrean).padStart(3, "0")}</small><h2>{selected.table_number === "Kasir" ? "Pesanan Kasir" : `Meja ${selected.table_number}`}</h2>
       <div className="ops-modal-audit-info">
