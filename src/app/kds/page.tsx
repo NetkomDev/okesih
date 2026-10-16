@@ -38,9 +38,40 @@ function playKitchenBell(ctx: AudioContext) {
   });
 }
 
-function playKitchenSound(ctx?: AudioContext | null) {
+function playIncomingChime(ctx: AudioContext) {
+  const now = ctx.currentTime;
+  [{ freq: 587.33, time: 0, dur: 0.14 }, { freq: 880, time: 0.12, dur: 0.2 }, { freq: 1174.66, time: 0.25, dur: 0.4 }].forEach(({ freq, time, dur }) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(freq, now + time);
+    gain.gain.setValueAtTime(0.85, now + time);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + time + dur);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now + time);
+    osc.stop(now + time + dur);
+  });
+}
+
+function playPesananMasukSound(ctx?: AudioContext | null) {
   try {
-    const audio = new Audio("/sound/dingdong-kds.mp3");
+    const audio = new Audio("/sound/pesanan-masuk.mp3");
+    audio.volume = 1.0;
+    const promise = audio.play();
+    if (promise !== undefined) {
+      promise.catch(() => {
+        if (ctx) playIncomingChime(ctx);
+      });
+    }
+  } catch {
+    if (ctx) playIncomingChime(ctx);
+  }
+}
+
+function playPesananSelesaiSound(ctx?: AudioContext | null) {
+  try {
+    const audio = new Audio("/sound/pesanan-selesai.mp3");
     audio.volume = 1.0;
     const promise = audio.play();
     if (promise !== undefined) {
@@ -60,6 +91,7 @@ export default function KdsModulePage() {
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const [pwaModalOpen, setPwaModalOpen] = useState(false);
   const audio = useRef<AudioContext | null>(null);
+  const prevCookingIds = useRef<Set<string> | null>(null);
   const prevReadyIds = useRef<Set<string> | null>(null);
   const lastChimedReadyId = useRef<string>("");
 
@@ -93,6 +125,31 @@ export default function KdsModulePage() {
   const cooking = app.data?.orders.filter((order) => order.status_pesanan === "COOKING") || [];
   const ready = app.data?.orders.filter((order) => order.status_pesanan === "READY") || [];
 
+  // 1. Dering saat ada pesanan masuk dari kasir (COOKING)
+  useEffect(() => {
+    if (!app.data) return;
+    const currentCookingIds = new Set(cooking.map((order) => order.id));
+    if (prevCookingIds.current === null) {
+      prevCookingIds.current = currentCookingIds;
+      return;
+    }
+
+    const newCookingOrders = cooking.filter((order) => !prevCookingIds.current!.has(order.id));
+    prevCookingIds.current = currentCookingIds;
+
+    if (newCookingOrders.length > 0 && audioEnabled) {
+      const ctx = getAudioContext();
+      if (ctx && ctx.state === "suspended") {
+        void ctx.resume().then(() => {
+          playPesananMasukSound(ctx);
+        });
+      } else {
+        playPesananMasukSound(ctx);
+      }
+    }
+  }, [app.data, audioEnabled, cooking]);
+
+  // 2. Dering saat pesanan telah siap diantar (READY)
   useEffect(() => {
     if (!app.data) return;
     const currentReadyIds = new Set(ready.map((order) => order.id));
@@ -110,10 +167,10 @@ export default function KdsModulePage() {
         const ctx = getAudioContext();
         if (ctx && ctx.state === "suspended") {
           void ctx.resume().then(() => {
-            playKitchenSound(ctx);
+            playPesananSelesaiSound(ctx);
           });
         } else {
-          playKitchenSound(ctx);
+          playPesananSelesaiSound(ctx);
         }
       }
     }
@@ -129,7 +186,7 @@ export default function KdsModulePage() {
       if (status === "READY" && audioEnabled) {
         lastChimedReadyId.current = order.id;
         const ctx = getAudioContext();
-        playKitchenSound(ctx);
+        playPesananSelesaiSound(ctx);
       }
     }
     catch (reason) { app.setError(reason instanceof Error ? reason.message : "Status tiket gagal diperbarui."); }
@@ -142,16 +199,16 @@ export default function KdsModulePage() {
       setAudioEnabled(true);
       if (ctx) {
         setAudioUnlocked(true);
-        void ctx.resume().then(() => playKitchenSound(ctx));
+        void ctx.resume().then(() => playPesananMasukSound(ctx));
       } else {
-        playKitchenSound(null);
+        playPesananMasukSound(null);
       }
     } else {
       if (ctx) {
         setAudioUnlocked(true);
-        void ctx.resume().then(() => playKitchenSound(ctx));
+        void ctx.resume().then(() => playPesananMasukSound(ctx));
       } else {
-        playKitchenSound(null);
+        playPesananMasukSound(null);
       }
     }
   };
