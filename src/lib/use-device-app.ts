@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cacheDeviceSnapshot, clearDeviceData, enqueueDeviceOperation, listDeviceOperations, readDeviceSnapshot, removeDeviceOperation } from "@/lib/device-offline";
-import { createClient } from "@/lib/supabase/client";
+import { createCashierClient, createClient } from "@/lib/supabase/client";
 
 export type DeviceOrder = {
   id: string; table_number: string; nomor_antrean: number; total_harga: number; payment_method: "QRIS" | "CASH";
@@ -25,8 +25,9 @@ type Pairing = { pairingId: string; pollSecret: string; code: string; expiresAt:
 
 async function deviceHeaders(type: "POS" | "KDS") {
   if (type !== "POS") return { "Content-Type": "application/json", "X-Device-Type": type };
-  const { data } = await createClient().auth.getSession();
-  const token = data.session?.access_token;
+  const cashierToken = (await createCashierClient().auth.getSession()).data.session?.access_token;
+  const clientToken = (await createClient().auth.getSession()).data.session?.access_token;
+  const token = cashierToken || clientToken;
   return { "Content-Type": "application/json", "X-Device-Type": type, ...(token ? { Authorization: `Bearer ${token}` } : {}) };
 }
 
@@ -88,6 +89,31 @@ export function useDeviceApp(type: "POS" | "KDS") {
     window.addEventListener("online", handleOnline); window.addEventListener("offline", handleOffline);
     return () => { window.clearTimeout(initialTimer); window.clearInterval(timer); window.removeEventListener("online", handleOnline); window.removeEventListener("offline", handleOffline); };
   }, [flushQueue, refresh]);
+
+  useEffect(() => {
+    const profileId = data?.profile?.id;
+    if (!profileId) return;
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`device-orders-${type}-${profileId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "transactions",
+          filter: `warkop_id=eq.${profileId}`,
+        },
+        () => {
+          void refresh(true);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [data?.profile?.id, refresh, type]);
 
   useEffect(() => {
     if (!pairing) return;

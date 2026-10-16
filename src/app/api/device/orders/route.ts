@@ -41,7 +41,9 @@ export async function POST(request: NextRequest) {
         .maybeSingle();
       if (shiftError) throw shiftError;
       if (!shift) throw new DeviceApiError("Shift kasir belum aktif. Masuk dan mulai shift terlebih dahulu.", 409);
-      if (!input.shiftId || input.shiftId !== shift.id) throw new DeviceApiError("Operasi berasal dari shift yang berbeda dan tidak dapat disinkronkan.", 409);
+      if (input.shiftId && input.shiftId !== shift.id) {
+        throw new DeviceApiError("Operasi berasal dari shift yang berbeda dan tidak dapat disinkronkan.", 409);
+      }
       activeShift = shift;
     }
 
