@@ -20,6 +20,7 @@ export type DeviceBootstrap = {
   shift: { id: string; opened_at: string; status: string } | null;
   orders: DeviceOrder[];
   historyOrders?: DeviceOrder[];
+  hasAuditPin?: boolean;
 };
 
 type Pairing = { pairingId: string; pollSecret: string; code: string; expiresAt: string };

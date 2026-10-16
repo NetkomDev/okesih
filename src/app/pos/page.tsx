@@ -153,6 +153,13 @@ export default function PosModulePage() {
   const [tempCustomStart, setTempCustomStart] = useState("");
   const [tempCustomEnd, setTempCustomEnd] = useState("");
 
+  // PIN Gate Keamanan Audit Histori
+  const [historyUnlocked, setHistoryUnlocked] = useState(false);
+  const [pinModalOpen, setPinModalOpen] = useState(false);
+  const [pinInput, setPinInput] = useState("");
+  const [pinError, setPinError] = useState("");
+  const [pinChecking, setPinChecking] = useState(false);
+
   const audio = useRef<AudioContext | null>(null);
   const shift = useCashierShift();
   const pending = app.data?.orders.filter((order) => order.status_pesanan === "AWAITING_CONFIRMATION") || [];
@@ -302,6 +309,50 @@ export default function PosModulePage() {
   const cooking = app.data.orders.filter((order) => order.status_pesanan === "COOKING");
   const ready = app.data.orders.filter((order) => order.status_pesanan === "READY");
 
+  const handleOpenHistory = () => {
+    if (app.data?.hasAuditPin && !historyUnlocked) {
+      setPinInput("");
+      setPinError("");
+      setPinModalOpen(true);
+      return;
+    }
+    setView("history");
+  };
+
+  const verifyAuditPin = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!pinInput.trim()) {
+      setPinError("Masukkan PIN keamanan");
+      return;
+    }
+    setPinChecking(true);
+    setPinError("");
+    try {
+      const res = await fetch("/api/device/audit-pin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pin: pinInput }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.verified) {
+        setPinError(data.error || "PIN tidak sesuai. Hubungi Owner.");
+        return;
+      }
+      setHistoryUnlocked(true);
+      setPinModalOpen(false);
+      setView("history");
+    } catch {
+      setPinError("Gagal memeriksa PIN. Pastikan koneksi terhubung.");
+    } finally {
+      setPinChecking(false);
+    }
+  };
+
+  const lockHistory = () => {
+    setHistoryUnlocked(false);
+    setView("orders");
+  };
+
   return <CashierShiftGate key={app.data.device.id} tenant={app.data.profile.nama} pendingCount={app.pendingCount} onShiftChanged={() => app.refresh()}><div className="ops-app pos-app pos-redesign">
     <DevicePwaModal type="POS" isOpen={pwaModalOpen} onClose={() => setPwaModalOpen(false)}/>
     <header className="pos-header">
@@ -309,7 +360,11 @@ export default function PosModulePage() {
       <nav className="pos-nav" aria-label="Menu kasir">
         <button className={view === "orders" ? "active" : ""} onClick={() => setView("orders")}><Icon name="orders"/>Pesanan Masuk{pending.length > 0 && <b>{pending.length}</b>}</button>
         <button className={view === "sale" ? "active" : ""} onClick={() => setView("sale")}><Icon name="cart"/>Pesanan Langsung{cartCount > 0 && <b>{cartCount}</b>}</button>
-        <button className={view === "history" ? "active" : ""} onClick={() => setView("history")}><Icon name="history"/>Histori Pesanan</button>
+        <button className={view === "history" ? "active" : ""} onClick={handleOpenHistory}>
+          <Icon name="history"/>
+          Histori Pesanan
+          {app.data?.hasAuditPin && !historyUnlocked && <span style={{ fontSize: "11px", opacity: 0.8, marginLeft: "4px" }}>🔒</span>}
+        </button>
       </nav>
       <div className="pos-header-actions">
         <span className={app.online ? "pos-connection online" : "pos-connection offline"}><i/> {app.online ? "Online" : "Offline"}</span>
@@ -366,7 +421,30 @@ export default function PosModulePage() {
           <h1>Histori Pesanan &amp; Audit Kasir</h1>
           <p>Rekap seluruh transaksi, nama kasir pelaksana, dan rincian pembayaran untuk keperluan audit owner.</p>
         </div>
-        <button onClick={() => void app.refresh()}><Icon name="refresh"/> Sinkronkan Data</button>
+        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+          {app.data?.hasAuditPin && (
+            <button
+              type="button"
+              onClick={lockHistory}
+              title="Kunci kembali akses audit"
+              style={{
+                background: "rgba(239, 68, 68, 0.1)",
+                color: "#dc2626",
+                border: "1px solid rgba(239, 68, 68, 0.3)",
+                borderRadius: "10px",
+                padding: "8px 14px",
+                fontWeight: 700,
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px"
+              }}
+            >
+              🔒 Kunci Audit
+            </button>
+          )}
+          <button onClick={() => void app.refresh()}><Icon name="refresh"/> Sinkronkan Data</button>
+        </div>
       </section>
 
       {/* KPI Audit Card */}
@@ -719,6 +797,105 @@ export default function PosModulePage() {
               Terapkan Tanggal
             </button>
           </div>
+        </section>
+      </div>
+    )}
+
+    {/* Modal Input PIN Akses Audit */}
+    {pinModalOpen && (
+      <div className="ops-modal-backdrop">
+        <section className="ops-modal" style={{ maxWidth: "400px", textAlign: "center", padding: "28px 24px" }}>
+          <button
+            className="ops-modal-close"
+            onClick={() => {
+              setPinModalOpen(false);
+              setPinError("");
+              setPinInput("");
+            }}
+          >
+            ×
+          </button>
+          
+          <div style={{
+            width: "56px",
+            height: "56px",
+            borderRadius: "50%",
+            background: "rgba(234, 88, 12, 0.12)",
+            color: "#ea580c",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: "26px",
+            marginBottom: "14px"
+          }}>
+            🔒
+          </div>
+
+          <h2 style={{ fontSize: "20px", fontWeight: 800, margin: "0 0 6px", color: "var(--color-heading, #111827)" }}>
+            Akses Terproteksi
+          </h2>
+          <p style={{ fontSize: "13px", color: "var(--color-muted, #6b7280)", margin: "0 0 20px", lineHeight: "1.5" }}>
+            Halaman Histori Pesanan &amp; Audit dikunci oleh Owner. Masukkan PIN keamanan untuk membuka akses.
+          </p>
+
+          <form onSubmit={verifyAuditPin}>
+            <div style={{ marginBottom: "16px" }}>
+              <input
+                type="password"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={6}
+                value={pinInput}
+                onChange={(e) => {
+                  setPinInput(e.target.value.replace(/\D/g, ""));
+                  setPinError("");
+                }}
+                placeholder="• • • • • •"
+                autoFocus
+                style={{
+                  width: "100%",
+                  fontSize: "28px",
+                  fontWeight: 800,
+                  letterSpacing: "12px",
+                  textAlign: "center",
+                  padding: "12px 16px",
+                  borderRadius: "14px",
+                  border: pinError ? "2px solid #ef4444" : "2px solid #e5e7eb",
+                  background: "var(--color-card, #f9fafb)",
+                  color: "var(--color-heading, #111827)",
+                  outline: "none"
+                }}
+              />
+              {pinError && (
+                <div style={{ color: "#ef4444", fontSize: "12px", fontWeight: 600, marginTop: "8px" }}>
+                  {pinError}
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+              <button
+                type="button"
+                className="pos-filter-btn-cancel"
+                onClick={() => {
+                  setPinModalOpen(false);
+                  setPinError("");
+                  setPinInput("");
+                }}
+                style={{ width: "100%", justifyContent: "center" }}
+              >
+                Batal
+              </button>
+              <button
+                type="submit"
+                disabled={pinChecking || pinInput.length < 4}
+                className="pos-filter-btn-apply"
+                style={{ width: "100%", justifyContent: "center" }}
+              >
+                {pinChecking ? "Memeriksa..." : "Buka Akses"}
+              </button>
+            </div>
+          </form>
         </section>
       </div>
     )}
