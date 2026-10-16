@@ -1013,18 +1013,19 @@ export default function TenantOwnerDashboardPage() {
                   <h2>Preview &amp; Desain Stiker QR Meja</h2>
                   <p>Tata letak stiker otomatis disesuaikan secara live. Klik Simpan Desain agar pengaturan tersimpan permanen untuk cetak ulang kapan saja.</p>
                 </div>
-                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                <div className="owner-sticker-header-actions">
                   <button
                     type="button"
-                    className="owner-btn-save-sticker"
+                    className="owner-sticker-tool-btn primary"
                     onClick={saveStickerSettings}
                     title="Simpan pengaturan desain ini"
                   >
-                    {stickerConfigSaved ? "✓ Tersimpan!" : "💾 Simpan Desain"}
+                    <span className="tool-icon">{stickerConfigSaved ? "✓" : "💾"}</span>
+                    <span>{stickerConfigSaved ? "Tersimpan" : "Simpan"}</span>
                   </button>
                   <button
                     type="button"
-                    className="owner-btn-reset-sticker"
+                    className="owner-sticker-tool-btn"
                     onClick={() => {
                       setStickerConfig({ ...DEFAULT_STICKER_CONFIG, selectedTableId: stickerConfig.selectedTableId });
                       if (typeof window !== "undefined") {
@@ -1037,7 +1038,8 @@ export default function TenantOwnerDashboardPage() {
                     }}
                     title="Kembalikan ukuran dan posisi ke pengaturan default"
                   >
-                    ↺ Reset Desain
+                    <span className="tool-icon">↺</span>
+                    <span>Reset</span>
                   </button>
                 </div>
               </div>

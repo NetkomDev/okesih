@@ -2975,9 +2975,14 @@ button {
 .owner-sticker-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
+  align-items: center;
+  gap: 16px;
   margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.owner-sticker-header > div:first-child {
+  flex: 1 1 240px;
+  min-width: 0;
 }
 .owner-sticker-header h2 {
   font-size: 18px;
@@ -2989,21 +2994,52 @@ button {
   margin: 0;
   line-height: 1.4;
 }
-.owner-btn-reset-sticker {
+.owner-sticker-header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
   flex-shrink: 0;
-  padding: 6px 12px;
+}
+.owner-sticker-tool-btn {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 76px;
+  height: 52px;
+  padding: 4px 6px;
   border-radius: 8px;
+  font-size: 10px;
+  font-weight: 700;
   border: 1px solid var(--border-subtle);
   background: var(--bg-surface-2);
-  color: #f97316;
-  font-size: 12px;
-  font-weight: 700;
+  color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.2s ease;
+  line-height: 1.1;
+  text-align: center;
 }
-.owner-btn-reset-sticker:hover {
-  background: rgba(249, 115, 22, 0.12);
-  border-color: #f97316;
+.owner-sticker-tool-btn span.tool-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+.owner-sticker-tool-btn:hover {
+  background: var(--bg-surface-1);
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateY(-1px);
+}
+.owner-sticker-tool-btn.primary {
+  background: #ea580c;
+  color: #ffffff;
+  border-color: #ea580c;
+  box-shadow: 0 2px 6px rgba(234, 88, 12, 0.3);
+}
+.owner-sticker-tool-btn.primary:hover {
+  background: #c2410c;
+  border-color: #c2410c;
+  color: #ffffff;
 }
 .owner-sticker-sample-bar {
   margin-bottom: 14px;
