@@ -1,10 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import DevicePairing from "@/components/DevicePairing";
 import DevicePwaModal from "@/components/DevicePwaModal";
-import PwaInstallButton from "@/components/PwaInstallButton";
 import { type DeviceOrder, useDeviceApp } from "@/lib/use-device-app";
 
 function playKitchenBell(ctx: AudioContext) {
@@ -122,14 +121,24 @@ export default function KdsModulePage() {
     };
   }, []);
 
-  const cooking = app.data?.orders.filter((order) => order.status_pesanan === "COOKING") || [];
-  const ready = app.data?.orders.filter((order) => order.status_pesanan === "READY") || [];
+  const cooking = useMemo(
+    () => app.data?.orders.filter((order) => order.status_pesanan === "COOKING") || [],
+    [app.data?.orders],
+  );
+  const ready = useMemo(
+    () => app.data?.orders.filter((order) => order.status_pesanan === "READY") || [],
+    [app.data?.orders],
+  );
 
   // Ticker per detik untuk countdown real-time dan evaluasi auto-dismiss
-  const [now, setNow] = useState<number>(Date.now());
+  const [now, setNow] = useState<number>(0);
   useEffect(() => {
+    const initialTimer = window.setTimeout(() => setNow(Date.now()), 0);
     const timer = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(timer);
+    return () => {
+      window.clearTimeout(initialTimer);
+      clearInterval(timer);
+    };
   }, []);
 
   const autoDismissSeconds = Number(app.data?.profile?.queue_dismiss_seconds || 60);
@@ -139,7 +148,8 @@ export default function KdsModulePage() {
   useEffect(() => {
     if (!app.data || ready.length === 0) return;
     const dismissMs = autoDismissSeconds * 1000;
-    const currentMs = Date.now();
+    if (now === 0) return;
+    const currentMs = now;
 
     ready.forEach((order) => {
       if (autoDismissingRef.current.has(order.id)) return;
@@ -148,12 +158,16 @@ export default function KdsModulePage() {
 
       if (elapsed >= dismissMs) {
         autoDismissingRef.current.add(order.id);
-        void transition(order, "DONE").finally(() => {
-          autoDismissingRef.current.delete(order.id);
-        });
+        void app.transitionOrder(order.id, "DONE")
+          .catch((reason) => {
+            app.setError(reason instanceof Error ? reason.message : "Status tiket gagal diperbarui.");
+          })
+          .finally(() => {
+            autoDismissingRef.current.delete(order.id);
+          });
       }
     });
-  }, [ready, now, app.data, autoDismissSeconds]);
+  }, [ready, now, app, autoDismissSeconds]);
 
   // 1. Dering saat ada pesanan masuk dari kasir (COOKING)
   useEffect(() => {
@@ -251,7 +265,7 @@ export default function KdsModulePage() {
         <div className="kds-brand">
           <div className="kds-brand-logo">
             {app.data.profile.logo_url ? (
-              <img src={app.data.profile.logo_url} alt={`Logo ${app.data.profile.nama}`} />
+              <Image src={app.data.profile.logo_url} width={42} height={42} unoptimized alt={`Logo ${app.data.profile.nama}`} />
             ) : (
               <Image src="/logo.svg?v=2" width={42} height={42} alt="OKESIH" />
             )}

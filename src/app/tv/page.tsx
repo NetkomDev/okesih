@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState, useEffect } from "react";
 
 interface ReadyQueueItem {
@@ -40,10 +41,20 @@ export default function TvQueuePage() {
   ];
 
   // Daftar antrean yang SIAP DIAMBIL / DIANTAR (HIJAU)
-  const [readyQueue, setReadyQueue] = useState<ReadyQueueItem[]>([
-    { ticketNumber: 11, tableNumber: "01", readyAt: Date.now() - 35000 },
-    { ticketNumber: 12, tableNumber: "05", readyAt: Date.now() - 5000 },
-  ]);
+  const [readyQueue, setReadyQueue] = useState<ReadyQueueItem[]>([]);
+  const [now, setNow] = useState(0);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const initializedAt = Date.now();
+      setNow(initializedAt);
+      setReadyQueue([
+        { ticketNumber: 11, tableNumber: "01", readyAt: initializedAt - 35000 },
+        { ticketNumber: 12, tableNumber: "05", readyAt: initializedAt - 5000 },
+      ]);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   // Voice calling helper
   const speakQueue = (num: number, table: string) => {
@@ -61,6 +72,7 @@ export default function TvQueuePage() {
   useEffect(() => {
     const interval = setInterval(() => {
       const now = Date.now();
+      setNow(now);
       setReadyQueue((prev) =>
         prev.filter((item) => {
           const elapsedSec = (now - item.readyAt) / 1000;
@@ -109,7 +121,7 @@ export default function TvQueuePage() {
       >
         <div style={{ display: "flex", alignItems: "center", gap: "1.25rem" }}>
           <Link href="/" style={{ fontSize: "1.75rem", fontWeight: 900, display: "flex", alignItems: "center", gap: "0.75rem", textDecoration: "none", color: "inherit" }}>
-            <img
+            <Image
               src="/logo.svg?v=2"
               alt="Logo OKESIH.COM"
               width={48}
@@ -193,7 +205,7 @@ export default function TvQueuePage() {
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "1.5rem" }}>
               {readyQueue.map((item) => {
-                const remainingSec = Math.max(0, Math.ceil(autoDismissSeconds - (Date.now() - item.readyAt) / 1000));
+                const remainingSec = Math.max(0, Math.ceil(autoDismissSeconds - (now - item.readyAt) / 1000));
                 return (
                   <div
                     key={item.ticketNumber}

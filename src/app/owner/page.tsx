@@ -487,7 +487,8 @@ export default function TenantOwnerDashboardPage() {
 
   useEffect(() => {
     if (!isAuthorized) return;
-    void loadAuditPinStatus();
+    const timer = window.setTimeout(() => void loadAuditPinStatus(), 0);
+    return () => window.clearTimeout(timer);
   }, [isAuthorized, pathname]);
 
   useEffect(() => {

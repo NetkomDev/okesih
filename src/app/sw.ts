@@ -170,7 +170,7 @@ const serwist = new Serwist({
 });
 
 // Tangkap semua unhandled error di Serwist agar browser TIDAK PERNAH menampilkan error "This page couldn't load"
-serwist.setCatchHandler(async ({ request, url }) => {
+serwist.setCatchHandler(async ({ request }) => {
   if (request.mode === "navigate" || request.destination === "document") {
     // 1. Coba cari di cache 'pages-navigation' untuk URL yang diminta
     const navCache = await caches.open("pages-navigation");
@@ -207,7 +207,7 @@ self.addEventListener("install", (event) => {
     caches.open("pages-navigation").then(async (cache) => {
       try {
         await cache.addAll(["/~offline"]);
-      } catch (e) {
+      } catch {
         // Abaikan jika saat install sedang offline
       }
     })

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuthGuard, logoutUser } from "@/lib/auth-helpers";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -105,7 +106,6 @@ interface TenantApplication {
 }
 
 interface ToastNotification {
-  id: number;
   title: string;
   message: string;
   type: "success" | "error" | "info";
@@ -131,6 +131,7 @@ interface NewTenantCredentials {
 }
 
 type AnalyticsPeriod = "today" | "week" | "month" | "year";
+type MarketingFilterStatus = "ALL" | "PENDING" | "ACTIVE" | "INACTIVE";
 
 interface AnalyticsData {
   activeTenants: number;
@@ -154,8 +155,10 @@ export default function SuperAdminDashboardPage() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const active = (document.documentElement.getAttribute("data-theme") as "dark" | "light") || "dark";
-      setTheme(active);
+      const initialTimer = window.setTimeout(() => {
+        const active = (document.documentElement.getAttribute("data-theme") as "dark" | "light") || "dark";
+        setTheme(active);
+      }, 0);
 
       const handleThemeChange = () => {
         const t = (document.documentElement.getAttribute("data-theme") as "dark" | "light") || "dark";
@@ -165,6 +168,7 @@ export default function SuperAdminDashboardPage() {
       window.addEventListener("theme-change", handleThemeChange);
       window.addEventListener("storage", handleThemeChange);
       return () => {
+        window.clearTimeout(initialTimer);
         window.removeEventListener("theme-change", handleThemeChange);
         window.removeEventListener("storage", handleThemeChange);
       };
@@ -185,10 +189,13 @@ export default function SuperAdminDashboardPage() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const saved = window.localStorage.getItem("okesih-superadmin-sidebar");
-      if (saved === "collapsed") setSidebarCollapsed(true);
-      const savedAutoHide = window.localStorage.getItem("okesih-superadmin-autohide");
-      if (savedAutoHide === "1") setAutoHideEnabled(true);
+      const timer = window.setTimeout(() => {
+        const saved = window.localStorage.getItem("okesih-superadmin-sidebar");
+        if (saved === "collapsed") setSidebarCollapsed(true);
+        const savedAutoHide = window.localStorage.getItem("okesih-superadmin-autohide");
+        if (savedAutoHide === "1") setAutoHideEnabled(true);
+      }, 0);
+      return () => window.clearTimeout(timer);
     }
   }, []);
 
@@ -220,7 +227,7 @@ export default function SuperAdminDashboardPage() {
   // Toast Notification System
   const [toast, setToast] = useState<ToastNotification | null>(null);
   const showToast = (title: string, message: string, type: "success" | "error" | "info" = "success") => {
-    setToast({ id: Date.now(), title, message, type });
+    setToast({ title, message, type });
   };
 
   useEffect(() => {
@@ -247,7 +254,7 @@ export default function SuperAdminDashboardPage() {
   const [reviewingWithdrawalId, setReviewingWithdrawalId] = useState<string | null>(null);
 
   // Marketing Filter & Search State
-  const [marketingFilterStatus, setMarketingFilterStatus] = useState<"ALL" | "PENDING" | "ACTIVE" | "INACTIVE">("ALL");
+  const [marketingFilterStatus, setMarketingFilterStatus] = useState<MarketingFilterStatus>("ALL");
   const [marketingSearchQuery, setMarketingSearchQuery] = useState<string>("");
 
   const loadMarketingPartners = async () => {
@@ -391,20 +398,26 @@ export default function SuperAdminDashboardPage() {
   };
 
   useEffect(() => {
-    loadTenants();
-    loadMarketingPartners();
-    loadMarketingWithdrawals();
-    loadTenantApplications();
+    const timer = window.setTimeout(() => {
+      void loadTenants();
+      void loadMarketingPartners();
+      void loadMarketingWithdrawals();
+      void loadTenantApplications();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {
-    if (activeTab === "marketing") {
-      loadMarketingPartners();
-      loadMarketingWithdrawals();
-    } else if (activeTab === "tenants") {
-      loadTenants();
-      loadTenantApplications();
-    }
+    const timer = window.setTimeout(() => {
+      if (activeTab === "marketing") {
+        void loadMarketingPartners();
+        void loadMarketingWithdrawals();
+      } else if (activeTab === "tenants") {
+        void loadTenants();
+        void loadTenantApplications();
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [activeTab]);
 
   useEffect(() => {
@@ -434,6 +447,16 @@ export default function SuperAdminDashboardPage() {
   const [isSettingsLoading, setIsSettingsLoading] = useState<boolean>(true);
   const [isSettingsSaving, setIsSettingsSaving] = useState<boolean>(false);
   const [settingsUpdatedAt, setSettingsUpdatedAt] = useState<string | null>(null);
+
+  // State QRIS Pembayaran SaaS Platform (Pusat)
+  const [centralQrisImage, setCentralQrisImage] = useState<string>("https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=00020101021126570014ID.LINKAJA.WWW01189360091100210001000215ID10293847565204549953033605802ID5920OKESIH+SAAS+PUSAT6007JAKARTA61051234062070703A016304");
+  const [centralQrisMerchant, setCentralQrisMerchant] = useState<string>("OKESIH SAAS PUSAT (BANK CENTRAL ASIA)");
+  const [centralBankName, setCentralBankName] = useState<string>("BCA");
+  const [centralBankAccountNumber, setCentralBankAccountNumber] = useState<string>("8001928374");
+  const [centralBankAccountName, setCentralBankAccountName] = useState<string>("PT OKESIH KARYA DIGITAL");
+  const [isCentralQrisSaving, setIsCentralQrisSaving] = useState<boolean>(false);
+  const [isCentralQrisUploading, setIsCentralQrisUploading] = useState<boolean>(false);
+  const qrisFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let active = true;
@@ -488,16 +511,6 @@ export default function SuperAdminDashboardPage() {
       setIsSettingsSaving(false);
     }
   };
-
-  // State QRIS Pembayaran SaaS Platform (Pusat)
-  const [centralQrisImage, setCentralQrisImage] = useState<string>("https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=00020101021126570014ID.LINKAJA.WWW01189360091100210001000215ID10293847565204549953033605802ID5920OKESIH+SAAS+PUSAT6007JAKARTA61051234062070703A016304");
-  const [centralQrisMerchant, setCentralQrisMerchant] = useState<string>("OKESIH SAAS PUSAT (BANK CENTRAL ASIA)");
-  const [centralBankName, setCentralBankName] = useState<string>("BCA");
-  const [centralBankAccountNumber, setCentralBankAccountNumber] = useState<string>("8001928374");
-  const [centralBankAccountName, setCentralBankAccountName] = useState<string>("PT OKESIH KARYA DIGITAL");
-  const [isCentralQrisSaving, setIsCentralQrisSaving] = useState<boolean>(false);
-  const [isCentralQrisUploading, setIsCentralQrisUploading] = useState<boolean>(false);
-  const qrisFileInputRef = useRef<HTMLInputElement>(null);
 
   // State Log Setoran Sewa (OCR AI)
   const [billingLogs, setBillingLogs] = useState<SaasBillingItem[]>([]);
@@ -580,7 +593,8 @@ export default function SuperAdminDashboardPage() {
 
   useEffect(() => {
     if (activeTab === "qris_billing") {
-      void loadSaasBillings();
+      const timer = window.setTimeout(() => void loadSaasBillings(), 0);
+      return () => window.clearTimeout(timer);
     }
   }, [activeTab, loadSaasBillings]);
 
@@ -1068,7 +1082,7 @@ export default function SuperAdminDashboardPage() {
             style={{ cursor: sidebarCollapsed ? "pointer" : "default" }}
             title={sidebarCollapsed ? "Klik untuk memperluas sidebar" : undefined}
           >
-            <img src="/logo.svg?v=2" alt="OKESIH Logo" />
+            <Image src="/logo.svg?v=2" width={42} height={42} alt="OKESIH Logo" />
             <div className="superadmin-sidebar-brand-text" style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
               <div style={{ fontSize: "1.05rem", fontWeight: 900, letterSpacing: "-0.02em", color: isDark ? "#FFFFFF" : "#0F172A", lineHeight: 1.1 }}>
                 OKESIH<span style={{ color: "#0284C7" }}> HQ</span>
@@ -2103,7 +2117,7 @@ export default function SuperAdminDashboardPage() {
                 ].map((tab) => (
                   <button
                     key={tab.key}
-                    onClick={() => setMarketingFilterStatus(tab.key as any)}
+                    onClick={() => setMarketingFilterStatus(tab.key as MarketingFilterStatus)}
                     style={{
                       padding: "0.35rem 0.75rem",
                       borderRadius: "6px",
@@ -2492,8 +2506,11 @@ export default function SuperAdminDashboardPage() {
                     }}
                   >
                     {centralQrisImage ? (
-                      <img
+                      <Image
                         src={centralQrisImage}
+                        width={190}
+                        height={190}
+                        unoptimized
                         alt="QRIS Pusat"
                         style={{ width: "100%", height: "100%", objectFit: "contain" }}
                       />
@@ -2593,8 +2610,11 @@ export default function SuperAdminDashboardPage() {
                           }}
                         >
                           {centralQrisImage ? (
-                            <img
+                            <Image
                               src={centralQrisImage}
+                              width={95}
+                              height={95}
+                              unoptimized
                               alt="QRIS Pusat OKESIH"
                               style={{ width: "100%", height: "100%", objectFit: "contain" }}
                             />
@@ -3230,8 +3250,11 @@ export default function SuperAdminDashboardPage() {
                   }}
                 >
                   {selectedBillingDetail.buktiTransferUrl ? (
-                    <img
+                    <Image
                       src={selectedBillingDetail.buktiTransferUrl}
+                      width={640}
+                      height={360}
+                      unoptimized
                       alt="Struk Transfer"
                       style={{ width: "100%", height: "100%", objectFit: "cover" }}
                     />

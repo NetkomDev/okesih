@@ -53,10 +53,11 @@ export default function DevicePwaModal({ type, isOpen, onClose }: DevicePwaModal
       setIsPortrait(portrait);
     };
 
-    checkOrientation();
+    const initialTimer = window.setTimeout(checkOrientation, 0);
     window.addEventListener("resize", checkOrientation);
     window.addEventListener("orientationchange", checkOrientation);
     return () => {
+      window.clearTimeout(initialTimer);
       window.removeEventListener("resize", checkOrientation);
       window.removeEventListener("orientationchange", checkOrientation);
     };
@@ -65,39 +66,36 @@ export default function DevicePwaModal({ type, isOpen, onClose }: DevicePwaModal
   // Check standalone, iOS, and prompt availability
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const standalone = isStandaloneApp();
-    setIsStandalone(standalone);
-
-    const ua = window.navigator.userAgent.toLowerCase();
-    const isApple = /iphone|ipad|ipod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-    setIsIos(isApple);
-
     const checkPrompt = () => {
       setCanPrompt(Boolean(window.__okesihInstallPrompt));
     };
 
-    checkPrompt();
     window.addEventListener("okesih-install-ready", checkPrompt);
+    const initialTimer = window.setTimeout(() => {
+      const standalone = isStandaloneApp();
+      setIsStandalone(standalone);
 
-    // Auto trigger popup if just paired
-    const justPairedKey = `okesih_just_paired_${type}`;
-    const justPaired = sessionStorage.getItem(justPairedKey) === "true";
-    if (justPaired && !standalone && detectedInstalled !== true) {
-      sessionStorage.removeItem(justPairedKey);
-      setShow(true);
-    }
+      const ua = window.navigator.userAgent.toLowerCase();
+      const isApple = /iphone|ipad|ipod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+      setIsIos(isApple);
+      checkPrompt();
+
+      // Auto trigger popup if just paired
+      const justPairedKey = `okesih_just_paired_${type}`;
+      const justPaired = sessionStorage.getItem(justPairedKey) === "true";
+      if (justPaired && !standalone && detectedInstalled !== true) {
+        sessionStorage.removeItem(justPairedKey);
+        setShow(true);
+      }
+    }, 0);
 
     return () => {
+      window.clearTimeout(initialTimer);
       window.removeEventListener("okesih-install-ready", checkPrompt);
     };
   }, [detectedInstalled, type]);
 
-  // Handle external open trigger
-  useEffect(() => {
-    if (typeof isOpen === "boolean") {
-      setShow(isOpen);
-    }
-  }, [isOpen]);
+  const visible = typeof isOpen === "boolean" ? isOpen : show;
 
   const handleClose = () => {
     setShow(false);
@@ -176,7 +174,7 @@ export default function DevicePwaModal({ type, isOpen, onClose }: DevicePwaModal
       )}
 
       {/* PWA Install Modal */}
-      {show && !isStandalone && detectedInstalled !== true && (
+      {visible && !isStandalone && detectedInstalled !== true && (
         <div className="ops-modal-backdrop" style={{ zIndex: 120 }}>
           <section
             className="ops-modal"
