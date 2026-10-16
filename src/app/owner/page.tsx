@@ -545,7 +545,7 @@ export default function TenantOwnerDashboardPage() {
     .table-label {
       font-size: ${stickerConfig.tableLabelSize}px;
       font-weight: 900;
-      color: #0f172a;
+      color: #ea580c;
       transform: translateX(${stickerConfig.tableOffsetX || 0}px);
       line-height: 1.1;
       letter-spacing: -0.5px;
