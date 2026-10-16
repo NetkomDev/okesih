@@ -187,15 +187,6 @@ export default function KdsModulePage() {
           )}
           <button
             type="button"
-            className="kds-btn kds-btn-pwa"
-            onClick={() => setPwaModalOpen(true)}
-            title="Pasang aplikasi Dapur KDS ke Layar Utama (Landscape Fullscreen)"
-          >
-            <span>📲</span>
-            <b>Pasang KDS</b>
-          </button>
-          <button
-            type="button"
             className={`kds-btn kds-btn-bell ${audioEnabled && audioUnlocked ? "active" : ""}`}
             onClick={toggleOrTestAudio}
             title="Klik untuk tes suara bel dapur"
