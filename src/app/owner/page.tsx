@@ -44,7 +44,7 @@ const DEFAULT_STICKER_CONFIG: StickerConfig = {
   businessNameSize: 18,
   businessNameOffsetX: 0,
   showLogo: true,
-  tableLabelSize: 28,
+  tableLabelSize: 36,
   tableOffset: 4,
   tableOffsetX: 0,
   showBusinessName: true,
@@ -500,12 +500,20 @@ export default function TenantOwnerDashboardPage() {
       justify-content: center;
       box-sizing: border-box;
     }
+    .top-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 12px 18px;
+      width: 100%;
+      margin-bottom: ${stickerConfig.tableOffset}px;
+    }
     .biz-header {
       display: inline-flex;
       align-items: center;
       justify-content: center;
       gap: 8px;
-      margin-bottom: 4px;
       transform: translateX(${stickerConfig.businessNameOffsetX || 0}px);
     }
     .biz-logo {
@@ -525,8 +533,6 @@ export default function TenantOwnerDashboardPage() {
       font-size: ${stickerConfig.tableLabelSize}px;
       font-weight: 900;
       color: #0f172a;
-      margin-top: ${stickerConfig.tableOffset}px;
-      margin-bottom: ${stickerConfig.tableOffset}px;
       transform: translateX(${stickerConfig.tableOffsetX || 0}px);
       line-height: 1.1;
       letter-spacing: -0.5px;
@@ -544,12 +550,6 @@ export default function TenantOwnerDashboardPage() {
       color: #334155;
       margin-top: 6px;
     }
-    .url {
-      font-size: 9px;
-      color: #64748b;
-      margin-top: 4px;
-      word-break: break-all;
-    }
     @media print {
       body { margin: 0; }
       .toolbar { display: none; }
@@ -566,18 +566,19 @@ export default function TenantOwnerDashboardPage() {
   <div class="grid">
     ${cards
       .map(
-        ({ table, url, qr }) => `
+        ({ table, qr }) => `
       <div class="card">
-        ${showBiz ? `
-          <div class="biz-header">
-            ${showLogo ? `<img class="biz-logo" src="${escapeHtml(logoUrl)}" alt="Logo"/>` : ""}
-            <div class="biz-name">${escapeHtml(data.profile.nama)}</div>
-          </div>
-        ` : ""}
-        <div class="table-label">${escapeHtml(table.label)}</div>
+        <div class="top-row">
+          ${showBiz ? `
+            <div class="biz-header">
+              ${showLogo ? `<img class="biz-logo" src="${escapeHtml(logoUrl)}" alt="Logo"/>` : ""}
+              <div class="biz-name">${escapeHtml(data.profile.nama)}</div>
+            </div>
+          ` : ""}
+          <div class="table-label">${escapeHtml(table.label)}</div>
+        </div>
         <img class="qr-img" src="${qr}" alt="QR ${escapeHtml(table.label)}"/>
         ${showInst ? `<div class="instruction">${escapeHtml(stickerConfig.instructionText || "Scan untuk melihat menu & memesan")}</div>` : ""}
-        <div class="url">${escapeHtml(url)}</div>
       </div>
     `
       )
@@ -1053,44 +1054,46 @@ export default function TenantOwnerDashboardPage() {
               <div className="owner-sticker-preview-viewport">
                 <div className="owner-sticker-badge-live">● LIVE PREVIEW</div>
                 <div className="owner-sticker-sheet">
-                  {stickerConfig.showBusinessName && (
+                  <div
+                    className="owner-sticker-top-row"
+                    style={{ marginBottom: `${stickerConfig.tableOffset}px` }}
+                  >
+                    {stickerConfig.showBusinessName && (
+                      <div
+                        className="owner-sticker-biz-header"
+                        style={{
+                          transform: `translateX(${stickerConfig.businessNameOffsetX || 0}px)`,
+                        }}
+                      >
+                        {stickerConfig.showLogo && profile.logo_url && (
+                          <img
+                            src={profile.logo_url}
+                            alt="Logo Usaha"
+                            className="owner-sticker-biz-logo"
+                            style={{
+                              width: `${Math.round(stickerConfig.businessNameSize * 1.35)}px`,
+                              height: `${Math.round(stickerConfig.businessNameSize * 1.35)}px`,
+                            }}
+                          />
+                        )}
+                        <div
+                          className="owner-sticker-biz-name"
+                          style={{ fontSize: `${stickerConfig.businessNameSize}px` }}
+                        >
+                          {businessName || profile.nama}
+                        </div>
+                      </div>
+                    )}
+
                     <div
-                      className="owner-sticker-biz-header"
+                      className="owner-sticker-table-label"
                       style={{
-                        transform: `translateX(${stickerConfig.businessNameOffsetX || 0}px)`,
-                        marginBottom: "4px",
+                        fontSize: `${stickerConfig.tableLabelSize}px`,
+                        transform: `translateX(${stickerConfig.tableOffsetX || 0}px)`,
                       }}
                     >
-                      {stickerConfig.showLogo && profile.logo_url && (
-                        <img
-                          src={profile.logo_url}
-                          alt="Logo Usaha"
-                          className="owner-sticker-biz-logo"
-                          style={{
-                            width: `${Math.round(stickerConfig.businessNameSize * 1.35)}px`,
-                            height: `${Math.round(stickerConfig.businessNameSize * 1.35)}px`,
-                          }}
-                        />
-                      )}
-                      <div
-                        className="owner-sticker-biz-name"
-                        style={{ fontSize: `${stickerConfig.businessNameSize}px` }}
-                      >
-                        {businessName || profile.nama}
-                      </div>
+                      {formatTableDisplay((data.tables.find((t) => t.id === stickerConfig.selectedTableId) || data.tables[0])?.label || "01")}
                     </div>
-                  )}
-
-                  <div
-                    className="owner-sticker-table-label"
-                    style={{
-                      fontSize: `${stickerConfig.tableLabelSize}px`,
-                      marginTop: `${stickerConfig.tableOffset}px`,
-                      marginBottom: `${stickerConfig.tableOffset}px`,
-                      transform: `translateX(${stickerConfig.tableOffsetX || 0}px)`,
-                    }}
-                  >
-                    {formatTableDisplay((data.tables.find((t) => t.id === stickerConfig.selectedTableId) || data.tables[0])?.label || "01")}
                   </div>
 
                   <div className="owner-sticker-qr-wrapper">
@@ -1124,10 +1127,6 @@ export default function TenantOwnerDashboardPage() {
                       {stickerConfig.instructionText || "Scan untuk melihat menu & memesan"}
                     </div>
                   )}
-
-                  <div className="owner-sticker-url">
-                    {typeof window !== "undefined" ? window.location.origin : "https://okesih.com"}/menu/{profile.slug}?t={encodeURIComponent((data.tables.find((t) => t.id === stickerConfig.selectedTableId) || data.tables[0])?.label || "01")}
-                  </div>
                 </div>
               </div>
 
@@ -1174,7 +1173,7 @@ export default function TenantOwnerDashboardPage() {
                   </div>
                 </div>
 
-                {/* 2. Pengaturan Nomor Meja / Kursi: Ukuran & Geser Horisontal Kiri-Kanan */}
+                {/* 2. Pengaturan Nomor Meja / Kursi: Ukuran (min 30px, max 70px) & Geser Horisontal Kiri-Kanan */}
                 <div className="owner-sticker-control-row">
                   <div className="owner-sticker-control-group">
                     <div className="owner-sticker-control-header">
@@ -1183,13 +1182,13 @@ export default function TenantOwnerDashboardPage() {
                     </div>
                     <input
                       type="range"
-                      min="16"
-                      max="48"
+                      min="30"
+                      max="70"
                       step="1"
                       value={stickerConfig.tableLabelSize}
                       onChange={(e) => setStickerConfig({ ...stickerConfig, tableLabelSize: Number(e.target.value) })}
                     />
-                    <div className="owner-sticker-slider-hints"><span>Kecil (16px)</span><span>Sangat Besar (48px)</span></div>
+                    <div className="owner-sticker-slider-hints"><span>Kecil (30px)</span><span>Besar (70px)</span></div>
                   </div>
 
                   <div className="owner-sticker-control-group">

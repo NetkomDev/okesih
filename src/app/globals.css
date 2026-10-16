@@ -3068,6 +3068,15 @@ button {
   justify-content: center;
   transition: padding 0.15s ease;
 }
+.owner-sticker-top-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 12px 18px;
+  width: 100%;
+  max-width: 100%;
+}
 .owner-sticker-biz-header {
   display: inline-flex;
   align-items: center;
