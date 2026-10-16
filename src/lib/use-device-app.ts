@@ -23,6 +23,12 @@ export type DeviceBootstrap = {
 
 type Pairing = { pairingId: string; pollSecret: string; code: string; expiresAt: string };
 
+export type CashierOrderInput = {
+  tableNumber: string;
+  paymentMethod: "QRIS" | "CASH";
+  items: { menuId: string; qty: number; notes: string }[];
+};
+
 async function deviceHeaders(type: "POS" | "KDS") {
   if (type !== "POS") return { "Content-Type": "application/json", "X-Device-Type": type };
   const cashierToken = (await createCashierClient().auth.getSession()).data.session?.access_token;
@@ -161,5 +167,18 @@ export function useDeviceApp(type: "POS" | "KDS") {
     await refresh(true);
   };
 
-  return { data, authorized, pairing, online, cachedAt, pendingCount, error, setError, beginPairing, transitionOrder, refresh };
+  const createCashierOrder = async (input: CashierOrderInput) => {
+    if (!navigator.onLine) throw new Error("Pesanan langsung memerlukan koneksi agar segera masuk ke layar dapur.");
+    const response = await fetch("/api/device/cashier-orders", {
+      method: "POST",
+      headers: await deviceHeaders(type),
+      body: JSON.stringify({ ...input, idempotencyKey: crypto.randomUUID() }),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || "Pesanan kasir gagal disimpan.");
+    await refresh(true);
+    return result.order as { id: string; nomor_antrean: number; total_harga: number; status_pesanan: string };
+  };
+
+  return { data, authorized, pairing, online, cachedAt, pendingCount, error, setError, beginPairing, transitionOrder, createCashierOrder, refresh };
 }

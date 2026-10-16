@@ -3,9 +3,14 @@
 import { useEffect, useState } from "react";
 import { installationKind } from "@/lib/pwa-routing";
 import { requestPwaInstallation } from "@/lib/pwa-install";
+import { usePwaInstallStatus } from "@/lib/use-pwa-install-status";
 
 export default function PwaInstallButton({ label = "Install Aplikasi", compact = false, onInstalled }: { label?: string; compact?: boolean; onInstalled?: () => void }) {
   const [available, setAvailable] = useState(false);
+  const pathname = typeof window !== "undefined" ? window.location.pathname : "";
+  const detectedInstalled = usePwaInstallStatus(pathname.startsWith("/pos")
+    ? "/pos/manifest.webmanifest"
+    : pathname.startsWith("/kds") ? "/kds/manifest.webmanifest" : "/manifest.webmanifest");
   const [installed, setInstalled] = useState(false);
 
   useEffect(() => {
@@ -21,7 +26,7 @@ export default function PwaInstallButton({ label = "Install Aplikasi", compact =
     return () => { window.clearTimeout(initialTimer); window.removeEventListener("okesih-install-ready", installReady); window.removeEventListener("appinstalled", appInstalled); };
   }, [onInstalled]);
 
-  if (installed) return null;
+  if (installed || detectedInstalled) return null;
   return <button className={compact ? "pwa-install compact" : "pwa-install"} onClick={async () => {
     const currentKind = installationKind(window.location.pathname);
     if (available && window.__okesihInstallKind !== currentKind) {

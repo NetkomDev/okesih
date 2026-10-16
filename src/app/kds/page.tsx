@@ -169,7 +169,11 @@ export default function KdsModulePage() {
 
 function Ticket({ order, action, busy, onAction, now }: { order: DeviceOrder; action: string; busy: boolean; onAction: () => void; now: number }) {
   const age = Math.max(0, Math.floor((now - new Date(order.created_at).getTime()) / 60_000));
-  return <article className={`kds-ticket ${age >= 15 ? "late" : age >= 8 ? "warn" : ""}`}><header><div><strong>#{String(order.nomor_antrean).padStart(3, "0")}</strong><b>Meja {order.table_number}</b></div><span>{age} menit</span></header><div className="kds-ticket-items">{order.items.map((item) => <div key={item.id}><b>{item.qty}×</b><span>{item.nama_menu}{item.notes && <small>Catatan: {item.notes}</small>}</span></div>)}</div><footer><span className={order.payment_method === "CASH" ? "cash" : "qris"}>{order.payment_method === "CASH" ? "TUNAI — WAJIB TAGIH" : "QRIS LUNAS"}</span><button disabled={busy} onClick={onAction}>{busy ? "Menyimpan..." : action}</button></footer></article>;
+  const orderedAtCashier = order.waiter_name?.startsWith("Kasir:");
+  const paymentLabel = orderedAtCashier
+    ? (order.payment_method === "CASH" ? "TUNAI DITERIMA KASIR" : "QRIS DITERIMA KASIR")
+    : (order.payment_method === "CASH" ? "TUNAI — WAJIB TAGIH" : "QRIS LUNAS");
+  return <article className={`kds-ticket ${age >= 15 ? "late" : age >= 8 ? "warn" : ""}`}><header><div><strong>#{String(order.nomor_antrean).padStart(3, "0")}</strong><b>{order.table_number === "Kasir" ? "PESANAN KASIR" : `Meja ${order.table_number}`}</b></div><span>{age} menit</span></header><div className="kds-ticket-items">{order.items.map((item) => <div key={item.id}><b>{item.qty}×</b><span>{item.nama_menu}{item.notes && <small>Catatan: {item.notes}</small>}</span></div>)}</div><footer><span className={order.payment_method === "CASH" ? "cash" : "qris"}>{paymentLabel}</span><button disabled={busy} onClick={onAction}>{busy ? "Menyimpan..." : action}</button></footer></article>;
 }
 
 function Empty({ text }: { text: string }) { return <div className="ops-empty"><span>✓</span><p>{text}</p></div>; }

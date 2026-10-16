@@ -12,6 +12,10 @@ export function GET() {
     orientation: "landscape",
     background_color: "#f5f7fb",
     theme_color: "#f4512c",
+    related_applications: [
+      { platform: "webapp", url: "/pos/manifest.webmanifest", id: "/pos" },
+    ],
+    prefer_related_applications: false,
     icons: [
       { src: "/icons/pwa-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
       { src: "/icons/pwa-192.png", sizes: "192x192", type: "image/png", purpose: "maskable" },
@@ -20,4 +24,3 @@ export function GET() {
     ],
   }, { headers: { "Content-Type": "application/manifest+json", "Cache-Control": "public, max-age=0, must-revalidate" } });
 }
-

@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { installationKind, isStandaloneApp } from "@/lib/pwa-routing";
 import { requestPwaInstallation } from "@/lib/pwa-install";
+import { usePwaInstallStatus } from "@/lib/use-pwa-install-status";
 
 interface DevicePwaModalProps {
   type: "POS" | "KDS";
@@ -17,6 +18,7 @@ export default function DevicePwaModal({ type, isOpen, onClose }: DevicePwaModal
   const [canPrompt, setCanPrompt] = useState(false);
   const [isPortrait, setIsPortrait] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
+  const detectedInstalled = usePwaInstallStatus(type === "POS" ? "/pos/manifest.webmanifest" : "/kds/manifest.webmanifest");
 
   const title = type === "POS" ? "OKESIH Kasir" : "OKESIH Dapur KDS";
   const desc = type === "POS" ? "Aplikasi Kasir POS Warkop & Resto" : "Layar Antrean Dapur & Barista";
@@ -78,7 +80,7 @@ export default function DevicePwaModal({ type, isOpen, onClose }: DevicePwaModal
     // Auto trigger popup if just paired
     const justPairedKey = `okesih_just_paired_${type}`;
     const justPaired = sessionStorage.getItem(justPairedKey) === "true";
-    if (justPaired && !standalone) {
+    if (justPaired && !standalone && detectedInstalled !== true) {
       sessionStorage.removeItem(justPairedKey);
       setShow(true);
     }
@@ -86,7 +88,7 @@ export default function DevicePwaModal({ type, isOpen, onClose }: DevicePwaModal
     return () => {
       window.removeEventListener("okesih-install-ready", checkPrompt);
     };
-  }, [type]);
+  }, [detectedInstalled, type]);
 
   // Handle external open trigger
   useEffect(() => {
@@ -172,7 +174,7 @@ export default function DevicePwaModal({ type, isOpen, onClose }: DevicePwaModal
       )}
 
       {/* PWA Install Modal */}
-      {show && !isStandalone && (
+      {show && !isStandalone && detectedInstalled !== true && (
         <div className="ops-modal-backdrop" style={{ zIndex: 120 }}>
           <section
             className="ops-modal"
