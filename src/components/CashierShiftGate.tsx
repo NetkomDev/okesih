@@ -131,10 +131,11 @@ export default function CashierShiftGate({ tenant, pendingCount, onShiftChanged,
     setBusy(true); setError("");
     const supabase = createCashierClient();
     try {
+      const numericActualCash = Number(actualCash.replace(/\D/g, "") || 0);
       await cashierRequest("/api/device/cashier-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "end", actualCash: Number(actualCash || 0), notes }),
+        body: JSON.stringify({ action: "end", actualCash: numericActualCash, notes }),
       });
       await supabase.auth.signOut();
       setClosing(false); setActualCash(""); setNotes(""); setPassword("");
@@ -182,7 +183,20 @@ export default function CashierShiftGate({ tenant, pendingCount, onShiftChanged,
       <p>Hitung uang tunai fisik di laci sebelum keluar.</p>
       <div className="cashier-expected"><span>Kas tunai menurut sistem</span><b>Rp {Number(session.shift?.expectedCash || 0).toLocaleString("id-ID")}</b></div>
       <form onSubmit={endShift}>
-        <label>Kas fisik diserahkan (Rp)<input type="number" inputMode="numeric" min="0" value={actualCash} onChange={(event) => setActualCash(event.target.value)} required/></label>
+        <label>
+          Kas fisik diserahkan (Rp)
+          <input
+            type="text"
+            inputMode="numeric"
+            placeholder="Contoh: 50.000"
+            value={actualCash}
+            onChange={(event) => {
+              const digits = event.target.value.replace(/\D/g, "");
+              setActualCash(digits ? Number(digits).toLocaleString("id-ID") : "");
+            }}
+            required
+          />
+        </label>
         <label>Catatan (opsional)<textarea maxLength={500} value={notes} onChange={(event) => setNotes(event.target.value)}/></label>
         {error && <p className="device-pairing-error" role="alert">{error}</p>}
         <button className="primary" type="submit" disabled={busy}>{busy ? "Menutup shift..." : "Simpan, Keluar & Ganti Kasir"}</button>
