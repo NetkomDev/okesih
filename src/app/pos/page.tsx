@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import DevicePairing from "@/components/DevicePairing";
-import CashierShiftGate from "@/components/CashierShiftGate";
+import CashierShiftGate, { useCashierShift } from "@/components/CashierShiftGate";
 import DevicePwaModal from "@/components/DevicePwaModal";
 import { requestPwaInstallation } from "@/lib/pwa-install";
 import { usePwaInstallStatus } from "@/lib/use-pwa-install-status";
@@ -11,6 +11,23 @@ import { type DeviceOrder, useDeviceApp } from "@/lib/use-device-app";
 
 type CartLine = { qty: number; notes: string };
 type View = "orders" | "sale";
+
+function CashierShiftBadge() {
+  const shift = useCashierShift();
+  if (!shift?.cashierName) return null;
+  return (
+    <button
+      type="button"
+      className="pos-cashier-badge"
+      onClick={shift.openEndShiftModal}
+      title={`Shift kasir aktif: ${shift.cashierName} · Klik untuk mengakhiri shift`}
+    >
+      <span className="pos-cashier-dot" aria-hidden="true">●</span>
+      <span className="pos-cashier-name">{shift.cashierName}</span>
+      <b className="pos-cashier-action">Akhiri Shift</b>
+    </button>
+  );
+}
 
 function playCashierChime(ctx: AudioContext) {
   const now = ctx.currentTime;
@@ -117,7 +134,13 @@ export default function PosModulePage() {
     <header className="pos-header">
       <div className="pos-brand"><div className="pos-brand-logo">{app.data.profile.logo_url ? <img src={app.data.profile.logo_url} alt={`Logo ${app.data.profile.nama}`}/> : <Image src="/logo.svg?v=2" width={44} height={44} alt="OKESIH"/>}</div><div><small>OKESIH <span>KASIR</span></small><strong>{app.data.profile.nama}</strong></div></div>
       <nav className="pos-nav" aria-label="Menu kasir"><button className={view === "orders" ? "active" : ""} onClick={() => setView("orders")}><Icon name="orders"/>Pesanan Masuk{pending.length > 0 && <b>{pending.length}</b>}</button><button className={view === "sale" ? "active" : ""} onClick={() => setView("sale")}><Icon name="cart"/>Pesanan Langsung{cartCount > 0 && <b>{cartCount}</b>}</button></nav>
-      <div className="pos-header-actions"><span className={app.online ? "pos-connection online" : "pos-connection offline"}><i/> {app.online ? "Online" : "Offline"}</span>{pwaInstalled === false && <button className="pos-icon-button pos-install-button" title="Pasang aplikasi kasir" onClick={async () => { if (window.__okesihInstallPrompt) { const result = await requestPwaInstallation("POS"); if (result === "unavailable") setPwaModalOpen(true); } else setPwaModalOpen(true); }}><Icon name="install"/><span>Pasang Aplikasi</span></button>}<button className="pos-icon-button" onClick={toggleOrTestAudio} title="Tes bel kasir"><Icon name="bell"/><span>{audioEnabled && audioUnlocked ? "Bel Aktif" : "Aktifkan Bel"}</span></button><button className="pos-device-chip" title={app.data.device.name}><span>POS</span><b>{app.data.device.name}</b></button></div>
+      <div className="pos-header-actions">
+        <span className={app.online ? "pos-connection online" : "pos-connection offline"}><i/> {app.online ? "Online" : "Offline"}</span>
+        {pwaInstalled === false && <button className="pos-icon-button pos-install-button" title="Pasang aplikasi kasir" onClick={async () => { if (window.__okesihInstallPrompt) { const result = await requestPwaInstallation("POS"); if (result === "unavailable") setPwaModalOpen(true); } else setPwaModalOpen(true); }}><Icon name="install"/><span>Pasang Aplikasi</span></button>}
+        <button className="pos-icon-button" onClick={toggleOrTestAudio} title="Tes bel kasir"><Icon name="bell"/><span>{audioEnabled && audioUnlocked ? "Bel Aktif" : "Aktifkan Bel"}</span></button>
+        <button className="pos-device-chip" title={app.data.device.name}><span>POS</span><b>{app.data.device.name}</b></button>
+        <CashierShiftBadge />
+      </div>
     </header>
     {app.cachedAt && <div className="ops-warning">Mode offline · data terakhir {new Date(app.cachedAt).toLocaleTimeString("id-ID")}. Perubahan akan disinkronkan otomatis.</div>}
     {!audioUnlocked && <button className="pos-audio-notice" onClick={toggleOrTestAudio}><Icon name="bell"/> Ketuk untuk mengaktifkan dering pesanan masuk.</button>}
@@ -130,7 +153,29 @@ export default function PosModulePage() {
       <section className="pos-order-section"><div className="pos-section-heading"><div><span>Pesanan terbaru</span><h2>Konfirmasi Pesanan</h2></div><small>{pending.length} pesanan menunggu</small></div><div className="ops-order-grid pos-order-grid">{pending.length === 0 && <div className="pos-empty"><span>✓</span><h2>Semua pesanan sudah ditangani</h2><p>Pesanan baru dari meja akan muncul otomatis di sini.</p><button onClick={() => setView("sale")}>+ Buat Pesanan Langsung</button></div>}{pending.map((order) => <OrderCard key={order.id} order={order} onOpen={() => setSelected(order)}/>)}</div></section>
       {(cooking.length > 0 || ready.length > 0) && <section className="pos-order-section compact-section"><div className="pos-section-heading"><div><span>Proses berjalan</span><h2>Dapur &amp; Pengantaran</h2></div></div><div className="ops-order-grid pos-order-grid">{[...ready, ...cooking].map((order) => <OrderCard key={order.id} order={order} onOpen={() => setSelected(order)}/>)}</div></section>}
     </main> : <main className="pos-sale-page">
-      <section className="pos-menu-panel"><header><div><small>TRANSAKSI BARU</small><h1>Pilih Menu</h1><p>Tambahkan pesanan pelanggan yang datang langsung ke kasir.</p></div><label className="pos-search"><Icon name="search"/><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Cari menu..."/></label></header><div className="pos-categories">{categories.map((item) => <button key={item} className={category === item ? "active" : ""} onClick={() => setCategory(item)}>{item}</button>)}</div>
+      <section className="pos-menu-panel">
+        <div className="pos-menu-toolbar">
+          <label className="pos-search">
+            <Icon name="search"/>
+            <input
+              type="text"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Cari menu berdasarkan nama atau kategori..."
+            />
+            {query && (
+              <button
+                type="button"
+                className="pos-search-clear"
+                onClick={() => setQuery("")}
+                title="Hapus pencarian"
+              >
+                <Icon name="close"/>
+              </button>
+            )}
+          </label>
+        </div>
+        <div className="pos-categories">{categories.map((item) => <button key={item} className={category === item ? "active" : ""} onClick={() => setCategory(item)}>{item}</button>)}</div>
         <div className="pos-menu-grid">{visibleMenus.map((menu) => { const qty = cart[menu.id]?.qty || 0; return <article key={menu.id} className={qty ? "selected" : ""}><div className="pos-menu-art"><span>{menu.kategori?.toLowerCase().includes("minum") ? "☕" : "🍽"}</span>{qty > 0 && <b>{qty}</b>}</div><div className="pos-menu-copy"><small>{menu.kategori || "Menu"}</small><h2>{menu.nama}</h2><p>{menu.desc_menu || "Siap dipesan langsung dari kasir."}</p><strong>Rp {Number(menu.harga).toLocaleString("id-ID")}</strong></div>{qty === 0 ? <button className="pos-add-menu" onClick={() => changeQty(menu.id, 1)}><Icon name="plus"/> Tambah</button> : <div className="pos-menu-qty"><button onClick={() => changeQty(menu.id, -1)}><Icon name="minus"/></button><b>{qty}</b><button onClick={() => changeQty(menu.id, 1)}><Icon name="plus"/></button></div>}</article>; })}{visibleMenus.length === 0 && <div className="pos-menu-empty">Menu tidak ditemukan.</div>}</div>
       </section>
       <aside className="pos-cart-panel"><header><div><small>PESANAN LANGSUNG</small><h2>Keranjang</h2></div><span>{cartCount} item</span></header><label className="pos-field">Lokasi pesanan<select value={tableNumber} onChange={(event) => setTableNumber(event.target.value)}><option value="Kasir">Kasir / Bawa pulang</option>{app.data.tables.map((table) => <option key={table.id} value={table.label}>Meja {table.label}</option>)}</select></label>

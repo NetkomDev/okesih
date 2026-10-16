@@ -1,9 +1,22 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { createCashierClient } from "@/lib/supabase/client";
 import PwaInstallButton from "@/components/PwaInstallButton";
 import "./cashier-shift.css";
+
+export type CashierShiftContextType = {
+  cashierName?: string;
+  cashierUsername?: string;
+  expectedCash: number;
+  openEndShiftModal: () => void;
+};
+
+export const CashierShiftContext = createContext<CashierShiftContextType | null>(null);
+
+export function useCashierShift() {
+  return useContext(CashierShiftContext);
+}
 
 type ActiveShift = {
   id: string;
@@ -172,35 +185,44 @@ export default function CashierShiftGate({ tenant, pendingCount, onShiftChanged,
     </section></main>;
   }
 
-  return <>
-    {children}
-    <button className="cashier-shift-button" onClick={() => { setError(""); setClosing(true); }}>
-      <span>● {session.cashier?.name}</span><b>Akhiri Shift</b>
-    </button>
-    {closing && <div className="ops-modal-backdrop"><section className="ops-modal cashier-close-modal">
-      <button className="ops-modal-close" onClick={() => setClosing(false)}>×</button>
-      <small>PERGANTIAN KASIR</small><h2>Akhiri Shift</h2>
-      <p>Hitung uang tunai fisik di laci sebelum keluar.</p>
-      <div className="cashier-expected"><span>Kas tunai menurut sistem</span><b>Rp {Number(session.shift?.expectedCash || 0).toLocaleString("id-ID")}</b></div>
-      <form onSubmit={endShift}>
-        <label>
-          Kas fisik diserahkan (Rp)
-          <input
-            type="text"
-            inputMode="numeric"
-            placeholder="Contoh: 50.000"
-            value={actualCash}
-            onChange={(event) => {
-              const digits = event.target.value.replace(/\D/g, "");
-              setActualCash(digits ? Number(digits).toLocaleString("id-ID") : "");
-            }}
-            required
-          />
-        </label>
-        <label>Catatan (opsional)<textarea maxLength={500} value={notes} onChange={(event) => setNotes(event.target.value)}/></label>
-        {error && <p className="device-pairing-error" role="alert">{error}</p>}
-        <button className="primary" type="submit" disabled={busy}>{busy ? "Menutup shift..." : "Simpan, Keluar & Ganti Kasir"}</button>
-      </form>
-    </section></div>}
-  </>;
+  return (
+    <CashierShiftContext.Provider
+      value={{
+        cashierName: session.cashier?.name,
+        cashierUsername: session.cashier?.username,
+        expectedCash: session.shift?.expectedCash || 0,
+        openEndShiftModal: () => {
+          setError("");
+          setClosing(true);
+        },
+      }}
+    >
+      {children}
+      {closing && <div className="ops-modal-backdrop"><section className="ops-modal cashier-close-modal">
+        <button className="ops-modal-close" onClick={() => setClosing(false)}>×</button>
+        <small>PERGANTIAN KASIR</small><h2>Akhiri Shift</h2>
+        <p>Hitung uang tunai fisik di laci sebelum keluar.</p>
+        <div className="cashier-expected"><span>Kas tunai menurut sistem</span><b>Rp {Number(session.shift?.expectedCash || 0).toLocaleString("id-ID")}</b></div>
+        <form onSubmit={endShift}>
+          <label>
+            Kas fisik diserahkan (Rp)
+            <input
+              type="text"
+              inputMode="numeric"
+              placeholder="Contoh: 50.000"
+              value={actualCash}
+              onChange={(event) => {
+                const digits = event.target.value.replace(/\D/g, "");
+                setActualCash(digits ? Number(digits).toLocaleString("id-ID") : "");
+              }}
+              required
+            />
+          </label>
+          <label>Catatan (opsional)<textarea maxLength={500} value={notes} onChange={(event) => setNotes(event.target.value)}/></label>
+          {error && <p className="device-pairing-error" role="alert">{error}</p>}
+          <button className="primary" type="submit" disabled={busy}>{busy ? "Menutup shift..." : "Simpan, Keluar & Ganti Kasir"}</button>
+        </form>
+      </section></div>}
+    </CashierShiftContext.Provider>
+  );
 }
