@@ -58,6 +58,14 @@ function formatTableDisplay(label: string) {
   return (label || "").trim();
 }
 
+function renderMultilineBizName(name: string): string[] {
+  const trimmed = (name || "").trim();
+  if (!trimmed) return [];
+  const words = trimmed.split(/\s+/).filter(Boolean);
+  if (words.length <= 1) return [trimmed];
+  return words;
+}
+
 const ownerDashboardCache = new Map<string, DashboardData>();
 
 async function ownerFetch(path: string, init?: RequestInit) {
@@ -572,7 +580,7 @@ export default function TenantOwnerDashboardPage() {
           ${showBiz ? `
             <div class="biz-header">
               ${showLogo ? `<img class="biz-logo" src="${escapeHtml(logoUrl)}" alt="Logo"/>` : ""}
-              <div class="biz-name">${escapeHtml(data.profile.nama)}</div>
+              <div class="biz-name">${renderMultilineBizName(data.profile.nama).map((w) => `<div>${escapeHtml(w)}</div>`).join("")}</div>
             </div>
           ` : ""}
           <div class="table-label">${escapeHtml(table.label)}</div>
@@ -1080,7 +1088,9 @@ export default function TenantOwnerDashboardPage() {
                           className="owner-sticker-biz-name"
                           style={{ fontSize: `${stickerConfig.businessNameSize}px` }}
                         >
-                          {businessName || profile.nama}
+                          {renderMultilineBizName(businessName || profile.nama).map((line, idx) => (
+                            <div key={idx} style={{ lineHeight: 1.15 }}>{line}</div>
+                          ))}
                         </div>
                       </div>
                     )}
