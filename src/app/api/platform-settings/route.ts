@@ -151,5 +151,16 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "Parameter global gagal disimpan." }, { status: 500 });
   }
 
+  // Terapkan durasi auto-dismiss secara serentak ke seluruh warkop tenant
+  if (body.queueDismissSeconds !== undefined) {
+    const { error: cascadeError } = await admin
+      .from("warkops")
+      .update({ queue_dismiss_seconds: queueDismissSeconds })
+      .not("id", "is", null);
+    if (cascadeError) {
+      console.warn("Peringatan: Gagal cascade queue_dismiss_seconds ke warkops:", cascadeError.message);
+    }
+  }
+
   return NextResponse.json({ data: toResponse(data) });
 }

@@ -3246,6 +3246,64 @@ button {
   font-weight: 950;
 }
 
+/* KDS Auto-Dismiss Timer & Progress */
+.kds-dismiss-chip {
+  background: #f0fdf4 !important;
+  border: 1px solid #86efac !important;
+  color: #166534 !important;
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  border-radius: 99px;
+}
+
+.kds-dismiss-chip b {
+  color: #15803d;
+  font-weight: 900;
+}
+
+.kds-dismiss-progress-container {
+  margin: 10px 0 4px;
+  padding: 8px 10px;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: 8px;
+}
+
+.kds-dismiss-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 800;
+  color: #065f46;
+  margin-bottom: 5px;
+}
+
+.kds-dismiss-label b {
+  font-size: 12.5px;
+  font-weight: 950;
+  color: #047857;
+  font-variant-numeric: tabular-nums;
+}
+
+.kds-progress-track {
+  width: 100%;
+  height: 5px;
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.kds-progress-fill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 1s linear, background-color 0.3s ease;
+}
+
 /* Grids */
 .kds-grid {
   display: grid;

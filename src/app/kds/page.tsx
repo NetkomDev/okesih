@@ -125,6 +125,36 @@ export default function KdsModulePage() {
   const cooking = app.data?.orders.filter((order) => order.status_pesanan === "COOKING") || [];
   const ready = app.data?.orders.filter((order) => order.status_pesanan === "READY") || [];
 
+  // Ticker per detik untuk countdown real-time dan evaluasi auto-dismiss
+  const [now, setNow] = useState<number>(Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const autoDismissSeconds = Number(app.data?.profile?.queue_dismiss_seconds || 60);
+  const autoDismissingRef = useRef<Set<string>>(new Set());
+
+  // Auto-Dismiss pesanan READY setelah melewati durasi parameter master
+  useEffect(() => {
+    if (!app.data || ready.length === 0) return;
+    const dismissMs = autoDismissSeconds * 1000;
+    const currentMs = Date.now();
+
+    ready.forEach((order) => {
+      if (autoDismissingRef.current.has(order.id)) return;
+      const readyTime = new Date(order.updated_at || order.created_at).getTime();
+      const elapsed = currentMs - readyTime;
+
+      if (elapsed >= dismissMs) {
+        autoDismissingRef.current.add(order.id);
+        void transition(order, "DONE").finally(() => {
+          autoDismissingRef.current.delete(order.id);
+        });
+      }
+    });
+  }, [ready, now, app.data, autoDismissSeconds]);
+
   // 1. Dering saat ada pesanan masuk dari kasir (COOKING)
   useEffect(() => {
     if (!app.data) return;
@@ -213,7 +243,6 @@ export default function KdsModulePage() {
     }
   };
 
-  const serverNow = new Date(app.data.serverTime).getTime();
   return (
     <div className="ops-app kds-app">
       <DevicePwaModal type="KDS" isOpen={pwaModalOpen} onClose={() => setPwaModalOpen(false)} />
@@ -242,6 +271,12 @@ export default function KdsModulePage() {
               ⚡ {app.pendingCount} antrean sync
             </span>
           )}
+          <div
+            className="kds-dismiss-chip"
+            title={`Durasi antrean pesanan siap bertahan sebelum otomatis dianggap telah diambil oleh waiter (diatur oleh Super Admin Pusat)`}
+          >
+            <span>⏱ Auto-Dismiss: <b>{autoDismissSeconds}s</b></span>
+          </div>
           <button
             type="button"
             className={`kds-btn kds-btn-bell ${audioEnabled && audioUnlocked ? "active" : ""}`}
@@ -314,11 +349,12 @@ export default function KdsModulePage() {
               cooking.map((order) => (
                 <Ticket
                   key={order.id}
-                  now={serverNow}
+                  now={now}
                   order={order}
                   action="✓ Siap Diantar"
                   busy={busyId === order.id}
                   onAction={() => void transition(order, "READY")}
+                  autoDismissSeconds={autoDismissSeconds}
                 />
               ))
             )}
@@ -345,11 +381,12 @@ export default function KdsModulePage() {
               ready.map((order) => (
                 <Ticket
                   key={order.id}
-                  now={serverNow}
+                  now={now}
                   order={order}
                   action="★ Sudah Diambil"
                   busy={busyId === order.id}
                   onAction={() => void transition(order, "DONE")}
+                  autoDismissSeconds={autoDismissSeconds}
                 />
               ))
             )}
@@ -366,12 +403,14 @@ function Ticket({
   busy,
   onAction,
   now,
+  autoDismissSeconds,
 }: {
   order: DeviceOrder;
   action: string;
   busy: boolean;
   onAction: () => void;
   now: number;
+  autoDismissSeconds?: number;
 }) {
   const age = Math.max(0, Math.floor((now - new Date(order.created_at).getTime()) / 60_000));
   const isCooking = order.status_pesanan === "COOKING";
@@ -381,6 +420,12 @@ function Ticket({
     : (order.payment_method === "CASH" ? "TUNAI · TAGIH" : "QRIS LUNAS");
 
   const urgencyClass = age >= 15 ? "urgent" : age >= 8 ? "warn" : "normal";
+
+  const dismissLimit = autoDismissSeconds || 60;
+  const readyTime = new Date(order.updated_at || order.created_at).getTime();
+  const readyElapsedSec = Math.max(0, Math.floor((now - readyTime) / 1000));
+  const remainingSec = Math.max(0, dismissLimit - readyElapsedSec);
+  const progressPercent = Math.min(100, Math.max(0, (remainingSec / dismissLimit) * 100));
 
   return (
     <article className={`kds-card ${isCooking ? "status-cooking" : "status-ready"} ${urgencyClass}`}>
@@ -408,6 +453,24 @@ function Ticket({
           </div>
         ))}
       </div>
+
+      {!isCooking && (
+        <div className="kds-dismiss-progress-container" title={`Pesanan otomatis dianggap telah diambil oleh waiter dalam ${remainingSec} detik`}>
+          <div className="kds-dismiss-label">
+            <span>⏱ Diambil Waiter</span>
+            <b>{remainingSec}s</b>
+          </div>
+          <div className="kds-progress-track">
+            <div
+              className="kds-progress-fill"
+              style={{
+                width: `${progressPercent}%`,
+                backgroundColor: remainingSec <= 10 ? "#EF4444" : remainingSec <= 25 ? "#F59E0B" : "#10B981",
+              }}
+            />
+          </div>
+        </div>
+      )}
 
       <footer className="kds-card-footer">
         <div className="kds-card-meta">

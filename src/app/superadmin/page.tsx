@@ -3007,10 +3007,10 @@ export default function SuperAdminDashboardPage() {
               }}
             >
               <h3 style={{ fontSize: "1.15rem", fontWeight: 800, color: "#0284C7", marginBottom: "0.5rem" }}>
-                ⏱️ Parameter Master: Auto-Dismiss Antrean TV
+                ⏱️ Parameter Master: Auto-Dismiss Antrean Dapur &amp; TV
               </h3>
               <p style={{ fontSize: "0.825rem", color: isDark ? "#94A3B8" : "#64748B", marginBottom: "1.25rem", lineHeight: 1.5 }}>
-                Berapa lama nomor antrean yang telah berstatus HIJAU (siap diantar) akan bertahan di seluruh Smart TV sebelum otomatis menghilang.
+                Berapa lama pesanan berstatus <strong>HIJAU (Siap Diantar)</strong> bertahan di layar Dapur / TV tenant warkop sebelum otomatis dianggap telah diambil oleh waiter dan dihapus dari antrean.
               </p>
 
               <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", marginBottom: "1rem" }}>
@@ -3036,7 +3036,7 @@ export default function SuperAdminDashboardPage() {
               </div>
 
               <div style={{ fontSize: "0.75rem", color: isDark ? "#34D399" : "#059669", fontWeight: 600 }}>
-                Durasi yang akan diterapkan: {globalDismissDuration} detik untuk seluruh layar TV
+                Durasi yang akan diterapkan: {globalDismissDuration} detik untuk seluruh layar dapur tenant
               </div>
             </div>
 
