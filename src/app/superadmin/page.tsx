@@ -1,13 +1,42 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuthGuard, logoutUser } from "@/lib/auth-helpers";
 import ThemeToggle from "@/components/ThemeToggle";
 import PwaInstallButton from "@/components/PwaInstallButton";
 import PwaRoleInstallModal from "@/components/PwaRoleInstallModal";
 import PwaRoleMismatchModal from "@/components/PwaRoleMismatchModal";
 import { INDONESIA_PROVINCES } from "@/lib/indonesia-regions";
+
+export interface SaasBillingItem {
+  id: string;
+  warkopId: string;
+  warkopName: string;
+  warkopSlug: string;
+  warkopLogo: string | null;
+  tanggal: string;
+  totalTransactions: number;
+  tagihanPokok: number;
+  kodeUnik: number;
+  totalTagihan: number;
+  statusBayar: "UNPAID" | "PAID" | "PENDING_REVIEW";
+  statusBadge: "PAID" | "GRACE_PERIOD" | "PENDING_REVIEW" | "OVERDUE" | "UNPAID";
+  buktiTransferUrl: string | null;
+  ocrRawText: string | null;
+  ocrBank: string;
+  ocrConfidence: number;
+  ocrNotes: string | null;
+  graceUntil: string | null;
+  createdAt: string;
+}
+
+export interface BillingSummary {
+  totalBills: number;
+  paidCount: number;
+  totalPaidAmount: number;
+  pendingCount: number;
+}
 
 
 interface MarketingAgent {
@@ -417,6 +446,11 @@ export default function SuperAdminDashboardPage() {
           setSaasFeePerReceipt(payload.data.saasFeePerReceipt);
           setDefaultCommissionRate(payload.data.defaultMarketingCommission);
           setSettingsUpdatedAt(payload.data.updatedAt);
+          if (payload.data.qrisImageUrl) setCentralQrisImage(payload.data.qrisImageUrl);
+          if (payload.data.qrisMerchantName) setCentralQrisMerchant(payload.data.qrisMerchantName);
+          if (payload.data.bankName) setCentralBankName(payload.data.bankName);
+          if (payload.data.bankAccountNumber) setCentralBankAccountNumber(payload.data.bankAccountNumber);
+          if (payload.data.bankAccountName) setCentralBankAccountName(payload.data.bankAccountName);
         }
       } catch (error) {
         if (active) showToast("Parameter Belum Dimuat", error instanceof Error ? error.message : "Terjadi kesalahan jaringan.", "error");
@@ -455,10 +489,166 @@ export default function SuperAdminDashboardPage() {
   };
 
   // State QRIS Pembayaran SaaS Platform (Pusat)
+  const [centralQrisImage, setCentralQrisImage] = useState<string>("https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=00020101021126570014ID.LINKAJA.WWW01189360091100210001000215ID10293847565204549953033605802ID5920OKESIH+SAAS+PUSAT6007JAKARTA61051234062070703A016304");
   const [centralQrisMerchant, setCentralQrisMerchant] = useState<string>("OKESIH SAAS PUSAT (BANK CENTRAL ASIA)");
   const [centralBankName, setCentralBankName] = useState<string>("BCA");
   const [centralBankAccountNumber, setCentralBankAccountNumber] = useState<string>("8001928374");
   const [centralBankAccountName, setCentralBankAccountName] = useState<string>("PT OKESIH KARYA DIGITAL");
+  const [isCentralQrisSaving, setIsCentralQrisSaving] = useState<boolean>(false);
+  const [isCentralQrisUploading, setIsCentralQrisUploading] = useState<boolean>(false);
+  const qrisFileInputRef = useRef<HTMLInputElement>(null);
+
+  // State Log Setoran Sewa (OCR AI)
+  const [billingLogs, setBillingLogs] = useState<SaasBillingItem[]>([]);
+  const [billingSummary, setBillingSummary] = useState<BillingSummary>({ totalBills: 0, paidCount: 0, totalPaidAmount: 0, pendingCount: 0 });
+  const [isBillingsLoading, setIsBillingsLoading] = useState<boolean>(false);
+  const [billingFilter, setBillingFilter] = useState<"ALL" | "PAID" | "GRACE_PERIOD" | "PENDING_REVIEW" | "UNPAID">("ALL");
+  const [selectedBillingDetail, setSelectedBillingDetail] = useState<SaasBillingItem | null>(null);
+  const [isBillingActionBusy, setIsBillingActionBusy] = useState<string | null>(null);
+
+  // Simpan Konfigurasi QRIS & Rekening Pusat OKESIH
+  const handleSaveCentralQrisSettings = async () => {
+    setIsCentralQrisSaving(true);
+    try {
+      const response = await fetch("/api/platform-settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          qrisImageUrl: centralQrisImage,
+          qrisMerchantName: centralQrisMerchant,
+          bankName: centralBankName,
+          bankAccountNumber: centralBankAccountNumber,
+          bankAccountName: centralBankAccountName,
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Gagal menyimpan konfigurasi QRIS Pusat.");
+      showToast("Konfigurasi Tersimpan", "Pengaturan QRIS dan Rekening Pusat OKESIH berhasil disimpan dan aktif secara global!", "success");
+    } catch (error) {
+      showToast("Gagal Menyimpan", error instanceof Error ? error.message : "Terjadi kesalahan jaringan.", "error");
+    } finally {
+      setIsCentralQrisSaving(false);
+    }
+  };
+
+  // Upload Gambar QRIS Pusat Baru ke Supabase Storage
+  const handleUploadCentralQris = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsCentralQrisUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/superadmin/upload-qris", {
+        method: "POST",
+        body: formData,
+      });
+
+      const payload = await res.json();
+      if (!res.ok) throw new Error(payload.error || "Gagal mengunggah QRIS Pusat.");
+
+      setCentralQrisImage(payload.data.qrisImageUrl);
+      showToast("QRIS Pusat Diperbarui", "Gambar QRIS resmi pusat berhasil diunggah ke storage dan disimpan.", "success");
+    } catch (err) {
+      showToast("Gagal Upload QRIS", err instanceof Error ? err.message : "Terjadi kendala unggah berkas.", "error");
+    } finally {
+      setIsCentralQrisUploading(false);
+      if (qrisFileInputRef.current) qrisFileInputRef.current.value = "";
+    }
+  };
+
+  // Fetch Log Setoran Sewa (OCR AI) dari database
+  const loadSaasBillings = useCallback(async () => {
+    setIsBillingsLoading(true);
+    try {
+      const res = await fetch("/api/superadmin/saas-billings", { cache: "no-store" });
+      const payload = await res.json();
+      if (!res.ok) throw new Error(payload.error || "Gagal memuat log setoran sewa.");
+      setBillingLogs(payload.data?.billings || []);
+      if (payload.data?.summary) setBillingSummary(payload.data.summary);
+    } catch (err) {
+      console.error("Gagal load saas-billings:", err);
+    } finally {
+      setIsBillingsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "qris_billing") {
+      void loadSaasBillings();
+    }
+  }, [activeTab, loadSaasBillings]);
+
+  // Aksi Manual Super Admin: Setujui Setoran (Tandai Lunas)
+  const handleApproveBilling = async (billingId: string, notes?: string) => {
+    setIsBillingActionBusy(billingId);
+    try {
+      const res = await fetch("/api/superadmin/saas-billings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ billingId, action: "APPROVE", notes }),
+      });
+      const payload = await res.json();
+      if (!res.ok) throw new Error(payload.error || "Gagal memverifikasi setoran.");
+      showToast("Setoran Diverifikasi", payload.message || "Setoran warkop berhasil disetujui.", "success");
+      await loadSaasBillings();
+      if (selectedBillingDetail?.id === billingId) {
+        setSelectedBillingDetail((prev) => prev ? { ...prev, statusBayar: "PAID", statusBadge: "PAID" } : null);
+      }
+    } catch (err) {
+      showToast("Gagal Verifikasi", err instanceof Error ? err.message : "Terjadi kendala sistem.", "error");
+    } finally {
+      setIsBillingActionBusy(null);
+    }
+  };
+
+  // Aksi Manual Super Admin: Tolak Setoran (Minta Upload Ulang)
+  const handleRejectBilling = async (billingId: string, notes?: string) => {
+    setIsBillingActionBusy(billingId);
+    try {
+      const res = await fetch("/api/superadmin/saas-billings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ billingId, action: "REJECT", notes }),
+      });
+      const payload = await res.json();
+      if (!res.ok) throw new Error(payload.error || "Gagal memperbarui status.");
+      showToast("Setoran Ditolak", payload.message || "Status setoran ditandai perlu review warkop.", "info");
+      await loadSaasBillings();
+      if (selectedBillingDetail?.id === billingId) {
+        setSelectedBillingDetail((prev) => prev ? { ...prev, statusBayar: "PENDING_REVIEW", statusBadge: "PENDING_REVIEW" } : null);
+      }
+    } catch (err) {
+      showToast("Gagal Memperbarui", err instanceof Error ? err.message : "Terjadi kendala sistem.", "error");
+    } finally {
+      setIsBillingActionBusy(null);
+    }
+  };
+
+  // Aksi Simulasi Verifikasi OCR AI
+  const handleSimulateOcr = async (billingId: string) => {
+    setIsBillingActionBusy(billingId);
+    try {
+      const res = await fetch("/api/superadmin/saas-billings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ billingId }),
+      });
+      const payload = await res.json();
+      if (!res.ok) throw new Error(payload.error || "Gagal menjalankan OCR AI.");
+      showToast("OCR AI Selesai", payload.message || "Bukti transfer berhasil diverifikasi secara cerdas.", "success");
+      await loadSaasBillings();
+      if (selectedBillingDetail?.id === billingId) {
+        setSelectedBillingDetail((prev) => prev ? { ...prev, statusBayar: "PAID", statusBadge: "PAID", ocrConfidence: 98.7 } : null);
+      }
+    } catch (err) {
+      showToast("OCR AI Gagal", err instanceof Error ? err.message : "Gagal memproses gambar.", "error");
+    } finally {
+      setIsBillingActionBusy(null);
+    }
+  };
 
   // Modal: Daftarkan Tenant Baru
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState<boolean>(false);
@@ -2191,37 +2381,66 @@ export default function SuperAdminDashboardPage() {
                 background: isDark ? undefined : "#FFFFFF",
               }}
             >
-              <h2 style={{ fontSize: "1.25rem", fontWeight: 800, color: isDark ? "#FBBF24" : "#D97706", marginBottom: "0.5rem" }}>
-                💳 Pasang QRIS Pembayaran Sewa SaaS Platform (Pusat OKESIH)
-              </h2>
-              <p style={{ fontSize: "0.825rem", color: isDark ? "#94A3B8" : "#64748B", marginBottom: "1.25rem", lineHeight: 1.5 }}>
-                QRIS inilah yang otomatis dimunculkan kepada seluruh Tenant / Owner Warkop saat mereka melakukan penutupan toko/shift untuk menyetorkan biaya sewa Rp {saasFeePerReceipt}/struk + nominal kode unik alokasi mereka.
-              </p>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.5rem" }}>
+                <div>
+                  <h2 style={{ fontSize: "1.25rem", fontWeight: 800, color: isDark ? "#FBBF24" : "#D97706", margin: 0 }}>
+                    💳 Pasang QRIS Pembayaran Sewa SaaS Platform (Pusat OKESIH)
+                  </h2>
+                  <p style={{ fontSize: "0.825rem", color: isDark ? "#94A3B8" : "#64748B", margin: "0.4rem 0 1.25rem", lineHeight: 1.5 }}>
+                    QRIS inilah yang otomatis dimunculkan kepada seluruh Tenant / Owner Warkop saat mereka melakukan penutupan toko/shift untuk menyetorkan biaya sewa Rp {saasFeePerReceipt}/struk + nominal kode unik alokasi mereka.
+                  </p>
+                </div>
+              </div>
 
               <div style={{ display: "flex", gap: "1.5rem", alignItems: "center", marginBottom: "1.5rem" }}>
+                {/* Preview QRIS Pusat */}
                 <div
                   style={{
-                    width: "140px",
-                    height: "140px",
+                    width: "150px",
+                    height: "170px",
                     background: "#FFF",
-                    borderRadius: "10px",
+                    borderRadius: "12px",
                     padding: "8px",
                     display: "flex",
                     flexDirection: "column",
                     alignItems: "center",
                     justifyContent: "center",
-                    boxShadow: "0 4px 15px rgba(0, 0, 0, 0.15)",
+                    boxShadow: "0 6px 20px rgba(0, 0, 0, 0.15)",
+                    border: "2px solid #F59E0B",
+                    position: "relative",
                   }}
                 >
-                  <div style={{ color: "#000", fontSize: "9px", fontWeight: 900, marginBottom: "4px" }}>
+                  <div style={{ color: "#000", fontSize: "9px", fontWeight: 900, marginBottom: "4px", textAlign: "center" }}>
                     QRIS RESMI OKESIH HQ
                   </div>
-                  <div style={{ width: "85px", height: "85px", background: "#000", borderRadius: "4px", margin: "auto" }} />
-                  <div style={{ color: "#555", fontSize: "8px", fontWeight: 700, marginTop: "4px" }}>
+                  <div
+                    style={{
+                      width: "105px",
+                      height: "105px",
+                      background: "#F8FAFC",
+                      borderRadius: "6px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      overflow: "hidden",
+                    }}
+                  >
+                    {centralQrisImage ? (
+                      <img
+                        src={centralQrisImage}
+                        alt="QRIS Pusat OKESIH"
+                        style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                      />
+                    ) : (
+                      <span style={{ fontSize: "11px", color: "#64748B", textAlign: "center" }}>Belum Ada QRIS</span>
+                    )}
+                  </div>
+                  <div style={{ color: "#475569", fontSize: "8px", fontWeight: 700, marginTop: "6px" }}>
                     NMID: ID1029384756520
                   </div>
                 </div>
 
+                {/* Form Data Rekening Pusat */}
                 <div style={{ flex: 1 }}>
                   <div style={{ marginBottom: "0.75rem" }}>
                     <label style={{ display: "block", fontSize: "0.75rem", color: isDark ? "#94A3B8" : "#64748B", fontWeight: 700, marginBottom: "0.25rem" }}>
@@ -2231,6 +2450,7 @@ export default function SuperAdminDashboardPage() {
                       type="text"
                       value={centralQrisMerchant}
                       onChange={(e) => setCentralQrisMerchant(e.target.value)}
+                      placeholder="Contoh: OKESIH SAAS PUSAT (BANK CENTRAL ASIA)"
                       style={{
                         width: "100%",
                         padding: "0.55rem 0.85rem",
@@ -2252,6 +2472,7 @@ export default function SuperAdminDashboardPage() {
                         type="text"
                         value={centralBankName}
                         onChange={(e) => setCentralBankName(e.target.value)}
+                        placeholder="Contoh: BCA"
                         style={{
                           width: "100%",
                           padding: "0.55rem 0.85rem",
@@ -2271,6 +2492,7 @@ export default function SuperAdminDashboardPage() {
                         type="text"
                         value={centralBankAccountNumber}
                         onChange={(e) => setCentralBankAccountNumber(e.target.value)}
+                        placeholder="Contoh: 8001928374"
                         style={{
                           width: "100%",
                           padding: "0.55rem 0.85rem",
@@ -2292,6 +2514,7 @@ export default function SuperAdminDashboardPage() {
                       type="text"
                       value={centralBankAccountName}
                       onChange={(e) => setCentralBankAccountName(e.target.value)}
+                      placeholder="Contoh: PT OKESIH KARYA DIGITAL"
                       style={{
                         width: "100%",
                         padding: "0.55rem 0.85rem",
@@ -2306,25 +2529,49 @@ export default function SuperAdminDashboardPage() {
                 </div>
               </div>
 
+              {/* Input File Tersembunyi untuk Upload QRIS */}
+              <input
+                type="file"
+                ref={qrisFileInputRef}
+                onChange={handleUploadCentralQris}
+                accept="image/png,image/jpeg,image/webp"
+                style={{ display: "none" }}
+              />
+
               <div style={{ display: "flex", gap: "0.75rem" }}>
                 <button
-                  onClick={() => showToast("Upload QRIS Pusat", "Pilih file gambar QRIS resmi dari perangkat Anda untuk diunggah.", "info")}
+                  type="button"
+                  onClick={() => qrisFileInputRef.current?.click()}
+                  disabled={isCentralQrisUploading}
                   className="btn-secondary"
-                  style={{ flex: 1, fontSize: "0.85rem" }}
+                  style={{
+                    flex: 1,
+                    fontSize: "0.85rem",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "6px",
+                  }}
                 >
-                  📷 Upload Gambar QRIS Pusat Baru
+                  {isCentralQrisUploading ? "⏳ Mengunggah QRIS..." : "📷 Upload Gambar QRIS Pusat Baru"}
                 </button>
                 <button
-                  onClick={() => showToast("Konfigurasi Tersimpan", "Pengaturan QRIS dan Rekening Pusat OKESIH berhasil disimpan dan aktif secara global!", "success")}
+                  type="button"
+                  onClick={handleSaveCentralQrisSettings}
+                  disabled={isCentralQrisSaving}
                   className="btn-primary"
                   style={{
                     flex: 1,
                     background: "linear-gradient(135deg, #F59E0B, #D97706)",
                     fontSize: "0.85rem",
                     fontWeight: 800,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "6px",
                   }}
                 >
-                  Simpan Konfigurasi QRIS Pusat
+                  {isCentralQrisSaving ? "💾 Menyimpan..." : "💾 Simpan Konfigurasi QRIS Pusat"}
                 </button>
               </div>
             </section>
@@ -2339,66 +2586,410 @@ export default function SuperAdminDashboardPage() {
                 background: isDark ? undefined : "#FFFFFF",
               }}
             >
-              <h2 style={{ fontSize: "1.25rem", fontWeight: 800, color: "#0284C7", marginBottom: "0.5rem" }}>
-                🤖 Log Verifikasi Setoran Sewa (OCR AI)
-              </h2>
-              <p style={{ fontSize: "0.825rem", color: isDark ? "#94A3B8" : "#64748B", marginBottom: "1rem" }}>
-                Pemeriksaan bukti transfer bank warkop yang dicocokkan otomatis dengan kode unik alokasi.
-              </p>
-
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                <div
-                  style={{
-                    padding: "0.85rem",
-                    borderRadius: "6px",
-                    background: isDark ? "rgba(16, 185, 129, 0.1)" : "#ECFDF5",
-                    border: isDark ? "1px solid rgba(16, 185, 129, 0.3)" : "1px solid #A7F3D0",
-                  }}
-                >
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", fontWeight: 800 }}>
-                    <span style={{ color: isDark ? "#FFF" : "#0F172A" }}>Warkop Giras Nusantara</span>
-                    <span style={{ color: "#059669" }}>✓ Valid (Rp 12.545)</span>
-                  </div>
-                  <div style={{ fontSize: "0.72rem", color: isDark ? "#94A3B8" : "#64748B", marginTop: "3px" }}>
-                    Kode Unik 145 klop • BCA Transfer • OCR Confidence: 98%
-                  </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.75rem" }}>
+                <div>
+                  <h2 style={{ fontSize: "1.25rem", fontWeight: 800, color: "#0284C7", margin: 0 }}>
+                    🤖 Log Verifikasi Setoran Sewa (OCR AI)
+                  </h2>
+                  <p style={{ fontSize: "0.825rem", color: isDark ? "#94A3B8" : "#64748B", margin: "0.3rem 0 0" }}>
+                    Pemeriksaan bukti transfer bank warkop yang dicocokkan otomatis dengan kode unik alokasi.
+                  </p>
                 </div>
-
-                <div
+                <button
+                  type="button"
+                  onClick={() => void loadSaasBillings()}
+                  disabled={isBillingsLoading}
                   style={{
-                    padding: "0.85rem",
-                    borderRadius: "6px",
-                    background: isDark ? "rgba(245, 158, 11, 0.1)" : "#FFFBEB",
-                    border: isDark ? "1px solid rgba(245, 158, 11, 0.3)" : "1px solid #FDE68A",
+                    background: "none",
+                    border: "none",
+                    color: "#0284C7",
+                    fontSize: "0.8rem",
+                    fontWeight: 800,
+                    cursor: "pointer",
+                    padding: "4px 8px",
                   }}
+                  title="Segarkan Log Setoran"
                 >
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", fontWeight: 800 }}>
-                    <span style={{ color: isDark ? "#FFF" : "#0F172A" }}>Warkop Barokah 24 Jam</span>
-                    <span style={{ color: "#D97706" }}>⏳ Masa Tenggang (Grace)</span>
-                  </div>
-                  <div style={{ fontSize: "0.72rem", color: isDark ? "#94A3B8" : "#64748B", marginTop: "3px" }}>
-                    Batas waktu pembayaran: 23:59 WIB malam ini (Kode Unik: 215)
-                  </div>
-                </div>
+                  {isBillingsLoading ? "Memuat..." : "🔄 Refresh"}
+                </button>
+              </div>
 
-                <div
-                  style={{
-                    padding: "0.85rem",
-                    borderRadius: "6px",
-                    background: isDark ? "rgba(16, 185, 129, 0.1)" : "#ECFDF5",
-                    border: isDark ? "1px solid rgba(16, 185, 129, 0.3)" : "1px solid #A7F3D0",
-                  }}
-                >
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", fontWeight: 800 }}>
-                    <span style={{ color: isDark ? "#FFF" : "#0F172A" }}>Warkop Pojok Stadion</span>
-                    <span style={{ color: "#059669" }}>✓ Valid (Rp 10.088)</span>
+              {/* Filter Tabs */}
+              <div style={{ display: "flex", gap: "6px", marginBottom: "1rem", flexWrap: "wrap" }}>
+                {[
+                  { key: "ALL", label: `Semua (${billingLogs.length})` },
+                  { key: "PAID", label: `Valid Lunas (${billingLogs.filter((b) => b.statusBadge === "PAID").length})` },
+                  { key: "GRACE_PERIOD", label: `Masa Tenggang (${billingLogs.filter((b) => b.statusBadge === "GRACE_PERIOD").length})` },
+                  { key: "PENDING_REVIEW", label: `Perlu Review (${billingLogs.filter((b) => b.statusBadge === "PENDING_REVIEW").length})` },
+                  { key: "UNPAID", label: `Belum Bayar (${billingLogs.filter((b) => b.statusBadge === "UNPAID" || b.statusBadge === "OVERDUE").length})` },
+                ].map((tab) => (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => setBillingFilter(tab.key as typeof billingFilter)}
+                    style={{
+                      padding: "4px 10px",
+                      borderRadius: "6px",
+                      fontSize: "0.72rem",
+                      fontWeight: 700,
+                      border: "none",
+                      cursor: "pointer",
+                      background: billingFilter === tab.key ? "#0284C7" : isDark ? "rgba(255,255,255,0.06)" : "#F1F5F9",
+                      color: billingFilter === tab.key ? "#FFF" : isDark ? "#94A3B8" : "#64748B",
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* List Log Setoran */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", maxHeight: "360px", overflowY: "auto", paddingRight: "4px" }}>
+                {isBillingsLoading && billingLogs.length === 0 ? (
+                  <div style={{ padding: "1.5rem", textAlign: "center", color: isDark ? "#94A3B8" : "#64748B", fontSize: "0.85rem" }}>
+                    Sedang memuat data setoran sewa...
                   </div>
-                  <div style={{ fontSize: "0.72rem", color: isDark ? "#94A3B8" : "#64748B", marginTop: "3px" }}>
-                    Kode Unik 338 klop • Mandiri Transfer • OCR Confidence: 99%
+                ) : billingLogs.length === 0 ? (
+                  <div style={{ padding: "1.5rem", textAlign: "center", color: isDark ? "#94A3B8" : "#64748B", fontSize: "0.85rem", background: isDark ? "rgba(255,255,255,0.02)" : "#F8FAFC", borderRadius: "8px" }}>
+                    Belum ada riwayat tagihan sewa warkop saat ini.
                   </div>
-                </div>
+                ) : (
+                  billingLogs
+                    .filter((b) => {
+                      if (billingFilter === "ALL") return true;
+                      if (billingFilter === "PAID") return b.statusBadge === "PAID";
+                      if (billingFilter === "GRACE_PERIOD") return b.statusBadge === "GRACE_PERIOD";
+                      if (billingFilter === "PENDING_REVIEW") return b.statusBadge === "PENDING_REVIEW";
+                      if (billingFilter === "UNPAID") return b.statusBadge === "UNPAID" || b.statusBadge === "OVERDUE";
+                      return true;
+                    })
+                    .map((item) => {
+                      const isPaid = item.statusBadge === "PAID";
+                      const isGrace = item.statusBadge === "GRACE_PERIOD";
+                      const isPending = item.statusBadge === "PENDING_REVIEW";
+
+                      return (
+                        <div
+                          key={item.id}
+                          style={{
+                            padding: "0.85rem 1rem",
+                            borderRadius: "8px",
+                            background: isPaid
+                              ? isDark ? "rgba(16, 185, 129, 0.08)" : "#ECFDF5"
+                              : isGrace
+                              ? isDark ? "rgba(245, 158, 11, 0.08)" : "#FFFBEB"
+                              : isPending
+                              ? isDark ? "rgba(59, 130, 246, 0.08)" : "#EFF6FF"
+                              : isDark ? "rgba(239, 68, 68, 0.08)" : "#FEF2F2",
+                            border: isPaid
+                              ? isDark ? "1px solid rgba(16, 185, 129, 0.3)" : "1px solid #A7F3D0"
+                              : isGrace
+                              ? isDark ? "1px solid rgba(245, 158, 11, 0.3)" : "1px solid #FDE68A"
+                              : isPending
+                              ? isDark ? "1px solid rgba(59, 130, 246, 0.3)" : "1px solid #BFDBFE"
+                              : isDark ? "1px solid rgba(239, 68, 68, 0.3)" : "1px solid #FECACA",
+                          }}
+                        >
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.825rem", fontWeight: 800 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                              <span style={{ color: isDark ? "#FFF" : "#0F172A" }}>{item.warkopName}</span>
+                              <span style={{ fontSize: "0.72rem", color: isDark ? "#64748B" : "#94A3B8", fontWeight: 600 }}>({item.tanggal})</span>
+                            </div>
+                            <span
+                              style={{
+                                color: isPaid ? "#059669" : isGrace ? "#D97706" : isPending ? "#2563EB" : "#DC2626",
+                                fontSize: "0.78rem",
+                                fontWeight: 800,
+                              }}
+                            >
+                              {isPaid
+                                ? `✓ Valid (Rp ${item.totalTagihan.toLocaleString("id-ID")})`
+                                : isGrace
+                                ? `⏳ Masa Tenggang (Rp ${item.totalTagihan.toLocaleString("id-ID")})`
+                                : isPending
+                                ? `🔍 Perlu Review (Rp ${item.totalTagihan.toLocaleString("id-ID")})`
+                                : `⚠️ Belum Disetor (Rp ${item.totalTagihan.toLocaleString("id-ID")})`}
+                            </span>
+                          </div>
+
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "4px" }}>
+                            <div style={{ fontSize: "0.72rem", color: isDark ? "#94A3B8" : "#64748B" }}>
+                              Kode Unik <b>{item.kodeUnik}</b> klop • {item.ocrBank} • OCR Confidence: <b>{item.ocrConfidence}%</b>
+                              {isGrace && item.graceUntil && (
+                                <span style={{ marginLeft: "6px", color: "#D97706", fontWeight: 600 }}>
+                                  · Batas: {new Date(item.graceUntil).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })} WITA
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Tombol Aksi di setiap Item */}
+                            <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                              <button
+                                type="button"
+                                onClick={() => setSelectedBillingDetail(item)}
+                                style={{
+                                  padding: "3px 8px",
+                                  borderRadius: "5px",
+                                  fontSize: "0.7rem",
+                                  fontWeight: 700,
+                                  background: isDark ? "rgba(255,255,255,0.08)" : "#E2E8F0",
+                                  color: isDark ? "#E2E8F0" : "#334155",
+                                  border: "none",
+                                  cursor: "pointer",
+                                }}
+                                title="Lihat rincian dan bukti transfer"
+                              >
+                                🔍 Detail
+                              </button>
+
+                              {!isPaid && (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSimulateOcr(item.id)}
+                                    disabled={isBillingActionBusy === item.id}
+                                    style={{
+                                      padding: "3px 8px",
+                                      borderRadius: "5px",
+                                      fontSize: "0.7rem",
+                                      fontWeight: 800,
+                                      background: "linear-gradient(135deg, #0284C7, #0369A1)",
+                                      color: "#FFF",
+                                      border: "none",
+                                      cursor: "pointer",
+                                    }}
+                                    title="Jalankan verifikasi cerdas OCR AI"
+                                  >
+                                    {isBillingActionBusy === item.id ? "..." : "⚡ Verifikasi OCR"}
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => handleApproveBilling(item.id)}
+                                    disabled={isBillingActionBusy === item.id}
+                                    style={{
+                                      padding: "3px 8px",
+                                      borderRadius: "5px",
+                                      fontSize: "0.7rem",
+                                      fontWeight: 800,
+                                      background: "#059669",
+                                      color: "#FFF",
+                                      border: "none",
+                                      cursor: "pointer",
+                                    }}
+                                    title="Setujui dan tandai lunas manual"
+                                  >
+                                    ✓ Lunas
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                )}
               </div>
             </section>
+          </div>
+        )}
+
+        {/* MODAL DETAIL BUKTI TRANSFER & HASIL OCR AI */}
+        {selectedBillingDetail && (
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0, 0, 0, 0.75)",
+              backdropFilter: "blur(4px)",
+              zIndex: 100,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "1rem",
+            }}
+          >
+            <div
+              className="glass-panel"
+              style={{
+                maxWidth: "520px",
+                width: "100%",
+                padding: "1.75rem",
+                background: isDark ? "#090E17" : "#FFFFFF",
+                border: "2px solid #0284C7",
+                boxShadow: "0 25px 60px rgba(0, 0, 0, 0.3)",
+                borderRadius: "16px",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
+                <div>
+                  <h3 style={{ fontSize: "1.2rem", fontWeight: 800, color: isDark ? "#FFF" : "#0F172A", margin: 0 }}>
+                    Bukti Setoran Sewa &amp; OCR AI
+                  </h3>
+                  <small style={{ color: "#0284C7", fontWeight: 700 }}>
+                    {selectedBillingDetail.warkopName} · {selectedBillingDetail.tanggal}
+                  </small>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedBillingDetail(null)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: isDark ? "#94A3B8" : "#64748B",
+                    fontSize: "1.25rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+
+              {/* Rincian Finansial Tagihan */}
+              <div
+                style={{
+                  background: isDark ? "rgba(255,255,255,0.04)" : "#F8FAFC",
+                  padding: "12px 14px",
+                  borderRadius: "10px",
+                  border: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid #E2E8F0",
+                  marginBottom: "1rem",
+                  fontSize: "0.825rem",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
+                  <span style={{ color: isDark ? "#94A3B8" : "#64748B" }}>Total Transaksi / Struk:</span>
+                  <b>{selectedBillingDetail.totalTransactions} struk</b>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
+                  <span style={{ color: isDark ? "#94A3B8" : "#64748B" }}>Tagihan Pokok Sewa:</span>
+                  <span>Rp {selectedBillingDetail.tagihanPokok.toLocaleString("id-ID")}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
+                  <span style={{ color: isDark ? "#94A3B8" : "#64748B" }}>Kode Unik Alokasi:</span>
+                  <b style={{ color: "#F59E0B" }}>+ Rp {selectedBillingDetail.kodeUnik}</b>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px dashed rgba(255,255,255,0.15)", paddingTop: "6px", fontWeight: 800 }}>
+                  <span>Total Wajib Setor:</span>
+                  <span style={{ color: "#059669", fontSize: "0.95rem" }}>
+                    Rp {selectedBillingDetail.totalTagihan.toLocaleString("id-ID")}
+                  </span>
+                </div>
+              </div>
+
+              {/* Preview Bukti Transfer & Hasil OCR */}
+              <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", gap: "12px", marginBottom: "1.25rem" }}>
+                <div
+                  style={{
+                    height: "140px",
+                    background: "#000",
+                    borderRadius: "8px",
+                    overflow: "hidden",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    border: "1px solid rgba(255,255,255,0.2)",
+                  }}
+                >
+                  {selectedBillingDetail.buktiTransferUrl ? (
+                    <img
+                      src={selectedBillingDetail.buktiTransferUrl}
+                      alt="Struk Transfer"
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    />
+                  ) : (
+                    <div style={{ textAlign: "center", padding: "8px", color: "#94A3B8", fontSize: "10px" }}>
+                      🧾 Struk Belum Diupload
+                    </div>
+                  )}
+                </div>
+
+                <div
+                  style={{
+                    background: isDark ? "rgba(15,23,42,0.6)" : "#F1F5F9",
+                    padding: "10px 12px",
+                    borderRadius: "8px",
+                    fontSize: "0.75rem",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <div>
+                    <div style={{ fontWeight: 800, color: "#0284C7", marginBottom: "4px" }}>🤖 Hasil Analisa OCR AI</div>
+                    <div style={{ color: isDark ? "#CBD5E1" : "#334155", lineHeight: 1.5 }}>
+                      • Bank: <b>{selectedBillingDetail.ocrBank}</b>
+                      <br />
+                      • Kecocokan Kode: <b>{selectedBillingDetail.kodeUnik} (Klop)</b>
+                      <br />
+                      • Skor Akurasi: <b style={{ color: "#059669" }}>{selectedBillingDetail.ocrConfidence}%</b>
+                    </div>
+                  </div>
+                  {selectedBillingDetail.ocrNotes && (
+                    <div style={{ marginTop: "6px", fontSize: "0.7rem", color: isDark ? "#94A3B8" : "#64748B", fontStyle: "italic" }}>
+                      &ldquo;{selectedBillingDetail.ocrNotes}&rdquo;
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Tombol Aksi Modal */}
+              <div style={{ display: "flex", gap: "8px" }}>
+                {selectedBillingDetail.statusBayar !== "PAID" && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => handleSimulateOcr(selectedBillingDetail.id)}
+                      disabled={isBillingActionBusy === selectedBillingDetail.id}
+                      className="btn-secondary"
+                      style={{ flex: 1, fontSize: "0.8rem", fontWeight: 800 }}
+                    >
+                      ⚡ Tes OCR AI
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleApproveBilling(selectedBillingDetail.id)}
+                      disabled={isBillingActionBusy === selectedBillingDetail.id}
+                      className="btn-primary"
+                      style={{ flex: 1, fontSize: "0.8rem", fontWeight: 800, background: "#059669" }}
+                    >
+                      ✓ Setujui Lunas
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleRejectBilling(selectedBillingDetail.id)}
+                      disabled={isBillingActionBusy === selectedBillingDetail.id}
+                      style={{
+                        padding: "8px 12px",
+                        borderRadius: "8px",
+                        fontSize: "0.8rem",
+                        fontWeight: 700,
+                        background: "rgba(239, 68, 68, 0.15)",
+                        color: "#DC2626",
+                        border: "1px solid rgba(239, 68, 68, 0.3)",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Tolak
+                    </button>
+                  </>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setSelectedBillingDetail(null)}
+                  className="btn-secondary"
+                  style={{
+                    padding: "8px 14px",
+                    fontSize: "0.8rem",
+                    fontWeight: 700,
+                    marginLeft: selectedBillingDetail.statusBayar === "PAID" ? "auto" : undefined,
+                  }}
+                >
+                  Tutup
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
