@@ -120,7 +120,14 @@ export function useDeviceApp(type: "POS" | "KDS") {
     const timer = window.setInterval(async () => {
       const response = await fetch("/api/device/pairing", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(pairing) });
       const body = await response.json();
-      if (body.status === "APPROVED") { window.clearInterval(timer); setPairing(null); await refresh(); }
+      if (body.status === "APPROVED") {
+        window.clearInterval(timer);
+        setPairing(null);
+        if (typeof window !== "undefined") {
+          sessionStorage.setItem("okesih_just_paired_" + type, "true");
+        }
+        await refresh();
+      }
       else if (["EXPIRED", "REJECTED"].includes(body.status)) { window.clearInterval(timer); setPairing(null); setError("Kode pairing berakhir. Buat kode baru."); }
     }, 2500);
     return () => window.clearInterval(timer);

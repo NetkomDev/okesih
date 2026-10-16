@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import DevicePairing from "@/components/DevicePairing";
 import CashierShiftGate from "@/components/CashierShiftGate";
+import DevicePwaModal from "@/components/DevicePwaModal";
 import PwaInstallButton from "@/components/PwaInstallButton";
 import { type DeviceOrder, useDeviceApp } from "@/lib/use-device-app";
 
@@ -49,6 +50,7 @@ export default function PosModulePage() {
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const [selected, setSelected] = useState<DeviceOrder | null>(null);
   const [busy, setBusy] = useState(false);
+  const [pwaModalOpen, setPwaModalOpen] = useState(false);
   const audio = useRef<AudioContext | null>(null);
   const pending = app.data?.orders.filter((order) => order.status_pesanan === "AWAITING_CONFIRMATION") || [];
 
@@ -140,7 +142,8 @@ export default function PosModulePage() {
   };
 
   return <CashierShiftGate key={app.data.device.id} tenant={app.data.profile.nama} pendingCount={app.pendingCount} onShiftChanged={() => app.refresh()}><div className="ops-app pos-app">
-    <header className="ops-header"><div className="ops-brand">{app.data.profile.logo_url ? <img src={app.data.profile.logo_url} alt={`Logo ${app.data.profile.nama}`}/> : <Image src="/logo.svg?v=2" width={42} height={42} alt="OKESIH"/>}<div><small>OKESIH KASIR</small><strong>{app.data.profile.nama}</strong></div></div><div className="ops-actions"><span className={app.online ? "ops-online" : "ops-offline"}>● {app.online ? "Online" : "Offline"}</span>{app.pendingCount > 0 && <span className="ops-sync">{app.pendingCount} menunggu sinkronisasi</span>}<PwaInstallButton compact label="Install Kasir"/><button onClick={toggleOrTestAudio} title="Klik untuk tes suara bel kasir">🔊 {audioEnabled ? (audioUnlocked ? "Bel Kasir Aktif (Tes)" : "Aktifkan Bel") : "Bel Senyap"}</button></div></header>
+    <DevicePwaModal type="POS" isOpen={pwaModalOpen} onClose={() => setPwaModalOpen(false)}/>
+    <header className="ops-header"><div className="ops-brand">{app.data.profile.logo_url ? <img src={app.data.profile.logo_url} alt={`Logo ${app.data.profile.nama}`}/> : <Image src="/logo.svg?v=2" width={42} height={42} alt="OKESIH"/>}<div><small>OKESIH KASIR</small><strong>{app.data.profile.nama}</strong></div></div><div className="ops-actions"><span className={app.online ? "ops-online" : "ops-offline"}>● {app.online ? "Online" : "Offline"}</span>{app.pendingCount > 0 && <span className="ops-sync">{app.pendingCount} menunggu sinkronisasi</span>}<button className="pwa-install compact" onClick={() => setPwaModalOpen(true)} title="Pasang aplikasi Kasir ke Layar Utama (Landscape Fullscreen)">📲 Pasang Kasir</button><button onClick={toggleOrTestAudio} title="Klik untuk tes suara bel kasir">🔊 {audioEnabled ? (audioUnlocked ? "Bel Kasir Aktif (Tes)" : "Aktifkan Bel") : "Bel Senyap"}</button></div></header>
     {app.cachedAt && <div className="ops-warning">Mode offline · data terakhir {new Date(app.cachedAt).toLocaleTimeString("id-ID")}. Perubahan akan disinkronkan otomatis.</div>}
     {!audioUnlocked && <div className="ops-warning" style={{ background: "#eff6ff", color: "#1d4ed8", cursor: "pointer" }} onClick={() => { const ctx = getAudioContext(); if (ctx) { setAudioUnlocked(true); void ctx.resume(); } }}>🔔 Ketuk layar tablet sekali untuk mengaktifkan dering pesanan masuk otomatis.</div>}
     {app.error && <div className="ops-error">{app.error}<button onClick={() => app.setError("")}>×</button></div>}

@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import DevicePairing from "@/components/DevicePairing";
+import DevicePwaModal from "@/components/DevicePwaModal";
 import PwaInstallButton from "@/components/PwaInstallButton";
 import { type DeviceOrder, useDeviceApp } from "@/lib/use-device-app";
 
@@ -57,6 +58,7 @@ export default function KdsModulePage() {
   const [busyId, setBusyId] = useState("");
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
+  const [pwaModalOpen, setPwaModalOpen] = useState(false);
   const audio = useRef<AudioContext | null>(null);
   const prevReadyIds = useRef<Set<string> | null>(null);
   const lastChimedReadyId = useRef<string>("");
@@ -156,7 +158,8 @@ export default function KdsModulePage() {
 
   const serverNow = new Date(app.data.serverTime).getTime();
   return <div className="ops-app kds-app">
-    <header className="ops-header"><div className="ops-brand">{app.data.profile.logo_url ? <img src={app.data.profile.logo_url} alt={`Logo ${app.data.profile.nama}`}/> : <Image src="/logo.svg?v=2" width={42} height={42} alt="OKESIH"/>}<div><small>OKESIH DAPUR / KDS</small><strong>{app.data.profile.nama}</strong></div></div><div className="ops-actions"><span className={app.online ? "ops-online" : "ops-offline"}>● {app.online ? "Online" : "Offline"}</span>{app.pendingCount > 0 && <span className="ops-sync">{app.pendingCount} antrean sync</span>}<PwaInstallButton compact label="Install KDS"/><button onClick={toggleOrTestAudio} title="Klik untuk tes suara bel dapur">🔊 {audioEnabled ? (audioUnlocked ? "Bel Dapur Aktif (Tes)" : "Aktifkan Bel") : "Bel Senyap"}</button><button onClick={() => void app.refresh()}>↻ Sinkronkan</button></div></header>
+    <DevicePwaModal type="KDS" isOpen={pwaModalOpen} onClose={() => setPwaModalOpen(false)}/>
+    <header className="ops-header"><div className="ops-brand">{app.data.profile.logo_url ? <img src={app.data.profile.logo_url} alt={`Logo ${app.data.profile.nama}`}/> : <Image src="/logo.svg?v=2" width={42} height={42} alt="OKESIH"/>}<div><small>OKESIH DAPUR / KDS</small><strong>{app.data.profile.nama}</strong></div></div><div className="ops-actions"><span className={app.online ? "ops-online" : "ops-offline"}>● {app.online ? "Online" : "Offline"}</span>{app.pendingCount > 0 && <span className="ops-sync">{app.pendingCount} antrean sync</span>}<button className="pwa-install compact" onClick={() => setPwaModalOpen(true)} title="Pasang aplikasi Dapur KDS ke Layar Utama (Landscape Fullscreen)">📲 Pasang KDS</button><button onClick={toggleOrTestAudio} title="Klik untuk tes suara bel dapur">🔊 {audioEnabled ? (audioUnlocked ? "Bel Dapur Aktif (Tes)" : "Aktifkan Bel") : "Bel Senyap"}</button><button onClick={() => void app.refresh()}>↻ Sinkronkan</button></div></header>
     {app.cachedAt && <div className="ops-warning">Mode offline · perubahan status akan dikirim saat koneksi kembali.</div>}
     {!audioUnlocked && <div className="ops-warning" style={{ background: "#eff6ff", color: "#1d4ed8", cursor: "pointer" }} onClick={() => { const ctx = getAudioContext(); if (ctx) { setAudioUnlocked(true); void ctx.resume(); } }}>🔔 Ketuk layar tablet dapur sekali untuk mengaktifkan dering pesanan siap diantar otomatis.</div>}
     {app.error && <div className="ops-error">{app.error}<button onClick={() => app.setError("")}>×</button></div>}

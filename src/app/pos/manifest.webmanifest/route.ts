@@ -9,7 +9,7 @@ export function GET() {
     start_url: "/pos?pwa=pos",
     scope: "/pos",
     display: "standalone",
-    orientation: "any",
+    orientation: "landscape",
     background_color: "#f5f7fb",
     theme_color: "#f4512c",
     icons: [
