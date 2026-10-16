@@ -48,7 +48,7 @@ const DEFAULT_STICKER_CONFIG: StickerConfig = {
   businessNameAlign: "center",
   showLogo: true,
   logoSize: 28,
-  tableLabelSize: 36,
+  tableLabelSize: 60,
   tableOffset: 4,
   tableOffsetX: 0,
   showBusinessName: true,
@@ -1267,7 +1267,7 @@ export default function TenantOwnerDashboardPage() {
                   </div>
                 </div>
 
-                {/* 2. Pengaturan Nomor Meja / Kursi: Ukuran (min 30px, max 70px) & Geser Horisontal Kiri-Kanan */}
+                {/* 2. Pengaturan Nomor Meja / Kursi: Ukuran (min 50px, max 100px) & Geser Horisontal Kiri-Kanan */}
                 <div className="owner-sticker-control-row">
                   <div className="owner-sticker-control-group">
                     <div className="owner-sticker-control-header">
@@ -1276,13 +1276,13 @@ export default function TenantOwnerDashboardPage() {
                     </div>
                     <input
                       type="range"
-                      min="30"
-                      max="70"
+                      min="50"
+                      max="100"
                       step="1"
                       value={stickerConfig.tableLabelSize}
                       onChange={(e) => setStickerConfig({ ...stickerConfig, tableLabelSize: Number(e.target.value) })}
                     />
-                    <div className="owner-sticker-slider-hints"><span>Kecil (30px)</span><span>Besar (70px)</span></div>
+                    <div className="owner-sticker-slider-hints"><span>Kecil (50px)</span><span>Besar (100px)</span></div>
                   </div>
 
                   <div className="owner-sticker-control-group">
