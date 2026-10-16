@@ -9,21 +9,29 @@ export async function GET(request: NextRequest) {
       : ["COOKING", "READY"];
     const since = new Date(Date.now() - 24 * 60 * 60_000).toISOString();
 
-    const [profileResult, menuResult, tableResult, waiterResult, shiftResult, orderResult] = await Promise.all([
+    const [profileResult, menuResult, tableResult, waiterResult, shiftResult, orderResult, historyResult] = await Promise.all([
       admin.from("warkops").select("id,nama,slug,is_active,logo_url,offline_limit_hours,queue_dismiss_seconds,qris_image_url,qris_merchant_name").eq("id", warkopId).single(),
       admin.from("menus").select("id,nama,harga,kategori,desc_menu,is_available").eq("warkop_id", warkopId).order("kategori").order("nama"),
       admin.from("warkop_tables").select("id,label,sort_order,is_active").eq("warkop_id", warkopId).eq("is_active", true).order("sort_order"),
       admin.from("waiters").select("id,name,phone,is_active").eq("warkop_id", warkopId).eq("is_active", true).order("name"),
       admin.from("shifts").select("id,opened_at,status,opened_by").eq("warkop_id", warkopId).eq("status", "OPEN").order("opened_at", { ascending: false }).limit(1).maybeSingle(),
       admin.from("transactions").select("id,table_number,nomor_antrean,total_harga,payment_method,payment_proof_url,status_pesanan,waiter_name,created_at,updated_at").eq("warkop_id", warkopId).in("status_pesanan", statuses).gte("created_at", since).order("created_at"),
+      deviceType === "POS"
+        ? admin.from("transactions").select("id,table_number,nomor_antrean,total_harga,payment_method,payment_proof_url,status_pesanan,waiter_name,created_at,updated_at").eq("warkop_id", warkopId).order("created_at", { ascending: false }).limit(200)
+        : Promise.resolve({ data: [], error: null }),
     ]);
 
-    const firstError = [profileResult.error, menuResult.error, tableResult.error, waiterResult.error, shiftResult.error, orderResult.error].find(Boolean);
+    const firstError = [profileResult.error, menuResult.error, tableResult.error, waiterResult.error, shiftResult.error, orderResult.error, historyResult.error].find(Boolean);
     if (firstError) throw firstError;
 
-    const orderIds = (orderResult.data || []).map((order) => order.id);
-    const { data: items, error: itemError } = orderIds.length
-      ? await admin.from("transaction_items").select("id,transaction_id,menu_id,nama_menu,harga_satuan,qty,notes").in("transaction_id", orderIds)
+    const allOrdersList = [
+      ...(orderResult.data || []),
+      ...(historyResult.data || []),
+    ];
+    const uniqueOrderIds = [...new Set(allOrdersList.map((order) => order.id))];
+
+    const { data: items, error: itemError } = uniqueOrderIds.length
+      ? await admin.from("transaction_items").select("id,transaction_id,menu_id,nama_menu,harga_satuan,qty,notes").in("transaction_id", uniqueOrderIds)
       : { data: [], error: null };
     if (itemError) throw itemError;
 
@@ -35,7 +43,9 @@ export async function GET(request: NextRequest) {
     }
 
     const signedProofs = new Map<string, string>();
-    await Promise.all((orderResult.data || []).map(async (order) => {
+    const ordersWithProof = allOrdersList.filter((order) => Boolean(order.payment_proof_url));
+    const uniqueProofOrders = [...new Map(ordersWithProof.map((order) => [order.id, order])).values()];
+    await Promise.all(uniqueProofOrders.map(async (order) => {
       if (!order.payment_proof_url) return;
       const { data } = await admin.storage.from("bukti-transfer").createSignedUrl(order.payment_proof_url, 10 * 60);
       if (data?.signedUrl) signedProofs.set(order.id, data.signedUrl);
@@ -50,6 +60,11 @@ export async function GET(request: NextRequest) {
       waiters: waiterResult.data || [],
       shift: shiftResult.data || null,
       orders: (orderResult.data || []).map((order) => ({
+        ...order,
+        payment_proof_url: signedProofs.get(order.id) || null,
+        items: itemsByOrder.get(order.id) || [],
+      })),
+      historyOrders: (historyResult.data || []).map((order) => ({
         ...order,
         payment_proof_url: signedProofs.get(order.id) || null,
         items: itemsByOrder.get(order.id) || [],

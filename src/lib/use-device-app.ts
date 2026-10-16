@@ -19,6 +19,7 @@ export type DeviceBootstrap = {
   waiters: { id: string; name: string }[];
   shift: { id: string; opened_at: string; status: string } | null;
   orders: DeviceOrder[];
+  historyOrders?: DeviceOrder[];
 };
 
 type Pairing = { pairingId: string; pollSecret: string; code: string; expiresAt: string };

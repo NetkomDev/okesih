@@ -71,6 +71,10 @@ export async function POST(request: NextRequest) {
     if (order.status_pesanan === "AWAITING_CONFIRMATION" && input.status === "COOKING") {
       patch.confirmed_at = new Date().toISOString();
       if (activeShift) patch.shift_id = activeShift.id;
+      if (cashier) {
+        const cashierName = cashier.member.display_name || cashier.member.username;
+        patch.waiter_name = `Kasir: ${cashierName}`;
+      }
     }
     const { data: updated, error } = await admin
       .from("transactions")

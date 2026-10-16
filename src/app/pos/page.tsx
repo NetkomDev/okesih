@@ -10,7 +10,7 @@ import { usePwaInstallStatus } from "@/lib/use-pwa-install-status";
 import { type DeviceOrder, useDeviceApp } from "@/lib/use-device-app";
 
 type CartLine = { qty: number; notes: string };
-type View = "orders" | "sale";
+type View = "orders" | "sale" | "history";
 
 function CashierShiftBadge() {
   const shift = useCashierShift();
@@ -50,10 +50,11 @@ function playCashierSound(ctx?: AudioContext | null) {
   } catch { if (ctx) playCashierChime(ctx); }
 }
 
-function Icon({ name }: { name: "orders" | "cart" | "search" | "refresh" | "bell" | "install" | "plus" | "minus" | "close" }) {
+function Icon({ name }: { name: "orders" | "cart" | "history" | "search" | "refresh" | "bell" | "install" | "plus" | "minus" | "close" }) {
   const paths: Record<typeof name, React.ReactNode> = {
     orders: <><path d="M6 4h12v16H6z"/><path d="M9 8h6M9 12h6M9 16h4"/></>,
     cart: <><path d="M3 4h2l2.2 10h9.8l2-7H6"/><circle cx="9" cy="19" r="1"/><circle cx="17" cy="19" r="1"/></>,
+    history: <><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>,
     search: <><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></>,
     refresh: <><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 5v6h-6"/></>,
     bell: <><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></>,
@@ -61,6 +62,23 @@ function Icon({ name }: { name: "orders" | "cart" | "search" | "refresh" | "bell
     plus: <path d="M12 5v14M5 12h14"/>, minus: <path d="M5 12h14"/>, close: <path d="m6 6 12 12M18 6 6 18"/>,
   };
   return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{paths[name]}</svg>;
+}
+
+function getOrderCashier(order: DeviceOrder, currentShiftCashier?: string): string {
+  if (order.waiter_name) {
+    return order.waiter_name.replace(/^Kasir:\s*/i, "").trim();
+  }
+  if (order.table_number === "Kasir" && currentShiftCashier) {
+    return currentShiftCashier;
+  }
+  return "Kasir";
+}
+
+function getCashierInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return "K";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
 }
 
 export default function PosModulePage() {
@@ -78,7 +96,13 @@ export default function PosModulePage() {
   const [tableNumber, setTableNumber] = useState("Kasir");
   const [paymentMethod, setPaymentMethod] = useState<"CASH" | "QRIS">("CASH");
   const [saleMessage, setSaleMessage] = useState("");
+  const [historySearch, setHistorySearch] = useState("");
+  const [historyStatusFilter, setHistoryStatusFilter] = useState("ALL");
+  const [historyPaymentFilter, setHistoryPaymentFilter] = useState("ALL");
+  const [historyDateFilter, setHistoryDateFilter] = useState<"today" | "all">("today");
+
   const audio = useRef<AudioContext | null>(null);
+  const shift = useCashierShift();
   const pending = app.data?.orders.filter((order) => order.status_pesanan === "AWAITING_CONFIRMATION") || [];
 
   const getAudioContext = () => {
@@ -112,6 +136,65 @@ export default function PosModulePage() {
   const cartCount = cartItems.reduce((sum, item) => sum + item.qty, 0);
   const cartTotal = cartItems.reduce((sum, item) => sum + Number(item.menu.harga) * item.qty, 0);
 
+  // Kombinasi pesanan aktif dan histori pesanan agar audit selalu up to date
+  const allOrders = useMemo(() => {
+    if (!app.data) return [];
+    const map = new Map<string, DeviceOrder>();
+    for (const ord of app.data.historyOrders || []) {
+      map.set(ord.id, ord);
+    }
+    for (const ord of app.data.orders || []) {
+      map.set(ord.id, ord);
+    }
+    return Array.from(map.values()).sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+  }, [app.data]);
+
+  // Filtered orders untuk audit owner
+  const filteredHistoryOrders = useMemo(() => {
+    const todayStr = new Date().toDateString();
+    return allOrders.filter((order) => {
+      if (historyDateFilter === "today") {
+        const orderDateStr = new Date(order.created_at).toDateString();
+        if (orderDateStr !== todayStr) return false;
+      }
+      if (historyStatusFilter !== "ALL" && order.status_pesanan !== historyStatusFilter) {
+        return false;
+      }
+      if (historyPaymentFilter !== "ALL" && order.payment_method !== historyPaymentFilter) {
+        return false;
+      }
+      if (historySearch.trim()) {
+        const q = historySearch.toLowerCase();
+        const cashierName = getOrderCashier(order, shift?.cashierName).toLowerCase();
+        const table = (order.table_number || "").toLowerCase();
+        const queue = String(order.nomor_antrean);
+        const itemNames = order.items.map((i) => i.nama_menu).join(" ").toLowerCase();
+        if (!cashierName.includes(q) && !table.includes(q) && !queue.includes(q) && !itemNames.includes(q)) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [allOrders, historyDateFilter, historyStatusFilter, historyPaymentFilter, historySearch, shift?.cashierName]);
+
+  // KPI Metrics Audit
+  const auditStats = useMemo(() => {
+    const todayStr = new Date().toDateString();
+    const targetSet = historyDateFilter === "today"
+      ? allOrders.filter((o) => new Date(o.created_at).toDateString() === todayStr)
+      : allOrders;
+
+    const validCompleted = targetSet.filter((o) => o.status_pesanan !== "REJECTED");
+    const totalOmzet = validCompleted.reduce((sum, o) => sum + Number(o.total_harga || 0), 0);
+    const totalCount = targetSet.length;
+    const cashTotal = validCompleted.filter((o) => o.payment_method === "CASH").reduce((sum, o) => sum + Number(o.total_harga || 0), 0);
+    const qrisTotal = validCompleted.filter((o) => o.payment_method === "QRIS").reduce((sum, o) => sum + Number(o.total_harga || 0), 0);
+
+    return { totalOmzet, totalCount, cashTotal, qrisTotal };
+  }, [allOrders, historyDateFilter]);
+
   if (app.authorized === false) return <DevicePairing type="POS" pairing={app.pairing} error={app.error} onBegin={app.beginPairing}/>;
   if (!app.data) return <div className="device-loading"><Image src="/okesih-logo-animated.svg" width={90} height={90} alt="OKESIH"/><b>{app.error || "Menyiapkan Kasir..."}</b></div>;
 
@@ -133,7 +216,11 @@ export default function PosModulePage() {
     <DevicePwaModal type="POS" isOpen={pwaModalOpen} onClose={() => setPwaModalOpen(false)}/>
     <header className="pos-header">
       <div className="pos-brand"><div className="pos-brand-logo">{app.data.profile.logo_url ? <img src={app.data.profile.logo_url} alt={`Logo ${app.data.profile.nama}`}/> : <Image src="/logo.svg?v=2" width={44} height={44} alt="OKESIH"/>}</div><div><small>OKESIH <span>KASIR</span></small><strong>{app.data.profile.nama}</strong></div></div>
-      <nav className="pos-nav" aria-label="Menu kasir"><button className={view === "orders" ? "active" : ""} onClick={() => setView("orders")}><Icon name="orders"/>Pesanan Masuk{pending.length > 0 && <b>{pending.length}</b>}</button><button className={view === "sale" ? "active" : ""} onClick={() => setView("sale")}><Icon name="cart"/>Pesanan Langsung{cartCount > 0 && <b>{cartCount}</b>}</button></nav>
+      <nav className="pos-nav" aria-label="Menu kasir">
+        <button className={view === "orders" ? "active" : ""} onClick={() => setView("orders")}><Icon name="orders"/>Pesanan Masuk{pending.length > 0 && <b>{pending.length}</b>}</button>
+        <button className={view === "sale" ? "active" : ""} onClick={() => setView("sale")}><Icon name="cart"/>Pesanan Langsung{cartCount > 0 && <b>{cartCount}</b>}</button>
+        <button className={view === "history" ? "active" : ""} onClick={() => setView("history")}><Icon name="history"/>Histori Pesanan</button>
+      </nav>
       <div className="pos-header-actions">
         <span className={app.online ? "pos-connection online" : "pos-connection offline"}><i/> {app.online ? "Online" : "Offline"}</span>
         {pwaInstalled === false && <button className="pos-icon-button pos-install-button" title="Pasang aplikasi kasir" onClick={async () => { if (window.__okesihInstallPrompt) { const result = await requestPwaInstallation("POS"); if (result === "unavailable") setPwaModalOpen(true); } else setPwaModalOpen(true); }}><Icon name="install"/><span>Pasang Aplikasi</span></button>}
@@ -152,7 +239,7 @@ export default function PosModulePage() {
       <section className="pos-stats"><article className="waiting"><span><Icon name="orders"/></span><div><small>PERLU KONFIRMASI</small><strong>{pending.length}</strong><p>Pesanan dari meja</p></div></article><article className="cooking"><span>♨</span><div><small>SEDANG DISIAPKAN</small><strong>{cooking.length}</strong><p>Diproses dapur</p></div></article><article className="ready"><span>✓</span><div><small>SIAP DIANTAR</small><strong>{ready.length}</strong><p>Menunggu pengantaran</p></div></article></section>
       <section className="pos-order-section"><div className="pos-section-heading"><div><span>Pesanan terbaru</span><h2>Konfirmasi Pesanan</h2></div><small>{pending.length} pesanan menunggu</small></div><div className="ops-order-grid pos-order-grid">{pending.length === 0 && <div className="pos-empty"><span>✓</span><h2>Semua pesanan sudah ditangani</h2><p>Pesanan baru dari meja akan muncul otomatis di sini.</p><button onClick={() => setView("sale")}>+ Buat Pesanan Langsung</button></div>}{pending.map((order) => <OrderCard key={order.id} order={order} onOpen={() => setSelected(order)}/>)}</div></section>
       {(cooking.length > 0 || ready.length > 0) && <section className="pos-order-section compact-section"><div className="pos-section-heading"><div><span>Proses berjalan</span><h2>Dapur &amp; Pengantaran</h2></div></div><div className="ops-order-grid pos-order-grid">{[...ready, ...cooking].map((order) => <OrderCard key={order.id} order={order} onOpen={() => setSelected(order)}/>)}</div></section>}
-    </main> : <main className="pos-sale-page">
+    </main> : view === "sale" ? <main className="pos-sale-page">
       <section className="pos-menu-panel">
         <div className="pos-menu-toolbar">
           <label className="pos-search">
@@ -183,9 +270,239 @@ export default function PosModulePage() {
         <div className="pos-payment"><small>METODE PEMBAYARAN</small><div><button className={paymentMethod === "CASH" ? "active" : ""} onClick={() => setPaymentMethod("CASH")}><span>Rp</span><b>Tunai</b></button><button className={paymentMethod === "QRIS" ? "active" : ""} onClick={() => setPaymentMethod("QRIS")}><span>▦</span><b>QRIS</b></button></div></div>
         <footer><div><span>Total pembayaran</span><strong>Rp {cartTotal.toLocaleString("id-ID")}</strong></div><button disabled={!cartItems.length || busy || !app.online} onClick={() => void submitCashierOrder()}>{busy ? "Mengirim..." : <><span>Bayar & Kirim ke Dapur</span><b>→</b></>}</button>{!app.online && <small>Hubungkan internet untuk mengirim pesanan ke KDS.</small>}</footer>
       </aside>
+    </main> : <main className="pos-history-page">
+      <section className="pos-hero-row">
+        <div>
+          <h1>Histori Pesanan &amp; Audit Kasir</h1>
+          <p>Rekap seluruh transaksi, nama kasir pelaksana, dan rincian pembayaran untuk keperluan audit owner.</p>
+        </div>
+        <button onClick={() => void app.refresh()}><Icon name="refresh"/> Sinkronkan Data</button>
+      </section>
+
+      {/* KPI Audit Card */}
+      <section className="pos-audit-stats">
+        <article className="pos-audit-card omzet">
+          <div className="pos-audit-icon">💰</div>
+          <div>
+            <small>{historyDateFilter === "today" ? "OMZET HARI INI" : "TOTAL OMZET HISTORI"}</small>
+            <strong>Rp {auditStats.totalOmzet.toLocaleString("id-ID")}</strong>
+            <p>{auditStats.totalCount} transaksi tercatat</p>
+          </div>
+        </article>
+        <article className="pos-audit-card orders">
+          <div className="pos-audit-icon">🧾</div>
+          <div>
+            <small>TOTAL STRUK</small>
+            <strong>{auditStats.totalCount} Struk</strong>
+            <p>Berhasil &amp; diproses</p>
+          </div>
+        </article>
+        <article className="pos-audit-card cash">
+          <div className="pos-audit-icon">💵</div>
+          <div>
+            <small>TOTAL KAS TUNAI</small>
+            <strong>Rp {auditStats.cashTotal.toLocaleString("id-ID")}</strong>
+            <p>Uang fisik di laci kasir</p>
+          </div>
+        </article>
+        <article className="pos-audit-card qris">
+          <div className="pos-audit-icon">📱</div>
+          <div>
+            <small>TOTAL NON-TUNAI (QRIS)</small>
+            <strong>Rp {auditStats.qrisTotal.toLocaleString("id-ID")}</strong>
+            <p>Masuk rekening usaha</p>
+          </div>
+        </article>
+      </section>
+
+      {/* Toolbar Filter & Pencarian */}
+      <section className="pos-audit-toolbar">
+        <label className="pos-audit-search">
+          <Icon name="search"/>
+          <input
+            type="text"
+            value={historySearch}
+            onChange={(e) => setHistorySearch(e.target.value)}
+            placeholder="Cari kasir, meja, no. antrean, atau nama menu..."
+          />
+        </label>
+
+        <div className="pos-audit-filters">
+          <div className="pos-audit-pill-group">
+            <button
+              className={historyDateFilter === "today" ? "active" : ""}
+              onClick={() => setHistoryDateFilter("today")}
+            >
+              Hari Ini
+            </button>
+            <button
+              className={historyDateFilter === "all" ? "active" : ""}
+              onClick={() => setHistoryDateFilter("all")}
+            >
+              Semua Waktu
+            </button>
+          </div>
+
+          <div className="pos-audit-pill-group">
+            <button
+              className={historyPaymentFilter === "ALL" ? "active" : ""}
+              onClick={() => setHistoryPaymentFilter("ALL")}
+            >
+              Semua Bayar
+            </button>
+            <button
+              className={historyPaymentFilter === "CASH" ? "active" : ""}
+              onClick={() => setHistoryPaymentFilter("CASH")}
+            >
+              Tunai
+            </button>
+            <button
+              className={historyPaymentFilter === "QRIS" ? "active" : ""}
+              onClick={() => setHistoryPaymentFilter("QRIS")}
+            >
+              QRIS
+            </button>
+          </div>
+
+          <div className="pos-audit-pill-group">
+            <button
+              className={historyStatusFilter === "ALL" ? "active" : ""}
+              onClick={() => setHistoryStatusFilter("ALL")}
+            >
+              Semua Status
+            </button>
+            <button
+              className={historyStatusFilter === "DONE" ? "active" : ""}
+              onClick={() => setHistoryStatusFilter("DONE")}
+            >
+              Selesai
+            </button>
+            <button
+              className={historyStatusFilter === "COOKING" ? "active" : ""}
+              onClick={() => setHistoryStatusFilter("COOKING")}
+            >
+              Dapur
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Tabel Histori & Audit Modern */}
+      <div className="pos-history-table-wrapper">
+        <table className="pos-history-table">
+          <thead>
+            <tr>
+              <th>Antrean &amp; Waktu</th>
+              <th>Meja / Lokasi</th>
+              <th>Kasir Penanggung Jawab</th>
+              <th>Ringkasan Menu</th>
+              <th>Pembayaran</th>
+              <th>Status</th>
+              <th>Total Transaksi</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredHistoryOrders.length === 0 ? (
+              <tr>
+                <td colSpan={8} style={{ textAlign: "center", padding: "48px 20px" }}>
+                  <div style={{ color: "#64748b", fontWeight: 750, fontSize: "14px" }}>
+                    Tidak ada transaksi histori yang cocok dengan filter.
+                  </div>
+                </td>
+              </tr>
+            ) : (
+              filteredHistoryOrders.map((order) => {
+                const cashier = getOrderCashier(order, shift?.cashierName);
+                const orderTime = new Date(order.created_at).toLocaleTimeString("id-ID", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                });
+                const orderDate = new Date(order.created_at).toLocaleDateString("id-ID", {
+                  day: "numeric",
+                  month: "short",
+                });
+                const itemCount = order.items.reduce((s, i) => s + i.qty, 0);
+                const itemsSummary = order.items.map((i) => `${i.qty}× ${i.nama_menu}`).join(", ");
+
+                return (
+                  <tr key={order.id}>
+                    <td>
+                      <div className="pos-audit-queue">
+                        <strong>#{String(order.nomor_antrean).padStart(3, "0")}</strong>
+                        <small>{orderDate} · {orderTime}</small>
+                      </div>
+                    </td>
+                    <td>
+                      <span className="pos-audit-table-tag">
+                        {order.table_number === "Kasir" ? "Kasir / Take away" : `Meja ${order.table_number}`}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="pos-audit-cashier-badge" title={`Kasir penanggung jawab: ${cashier}`}>
+                        <span className="pos-cashier-avatar">{getCashierInitials(cashier)}</span>
+                        <span className="pos-cashier-text">{cashier}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <div className="pos-audit-items-desc" title={itemsSummary}>
+                        <b>{itemsSummary || "Pesanan"}</b>
+                        <small>{itemCount} total item dipesan</small>
+                      </div>
+                    </td>
+                    <td>
+                      <span className={`pos-audit-pay-pill ${order.payment_method.toLowerCase()}`}>
+                        {order.payment_method === "CASH" ? "💵 TUNAI" : "📱 QRIS"}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={`pos-audit-status-pill ${order.status_pesanan.toLowerCase()}`}>
+                        {order.status_pesanan === "DONE"
+                          ? "Selesai"
+                          : order.status_pesanan === "READY"
+                          ? "Siap Diantar"
+                          : order.status_pesanan === "COOKING"
+                          ? "Disiapkan"
+                          : order.status_pesanan === "AWAITING_CONFIRMATION"
+                          ? "Menunggu"
+                          : order.status_pesanan === "REJECTED"
+                          ? "Ditolak"
+                          : order.status_pesanan}
+                      </span>
+                    </td>
+                    <td className="pos-audit-total-cell">
+                      Rp {Number(order.total_harga).toLocaleString("id-ID")}
+                    </td>
+                    <td>
+                      <button
+                        className="pos-audit-action-btn"
+                        onClick={() => setSelected(order)}
+                        title="Lihat detail pesanan dan audit"
+                      >
+                        Detail Struk
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
     </main>}
 
-    {selected && <div className="ops-modal-backdrop"><section className="ops-modal"><button className="ops-modal-close" onClick={() => setSelected(null)}>×</button><small>ANTREAN #{String(selected.nomor_antrean).padStart(3, "0")}</small><h2>{selected.table_number === "Kasir" ? "Pesanan Kasir" : `Meja ${selected.table_number}`}</h2><div className={`ops-payment ${selected.payment_method.toLowerCase()}`}>{selected.payment_method === "CASH" ? "BAYAR TUNAI" : "QRIS — VERIFIKASI BUKTI"}</div>{selected.payment_proof_url && <a className="ops-proof" href={selected.payment_proof_url} target="_blank" rel="noreferrer">Buka Bukti Pembayaran</a>}<div className="ops-items">{selected.items.map((item) => <div key={item.id}><span>{item.qty}× {item.nama_menu}{item.notes && <small>{item.notes}</small>}</span><b>Rp {(Number(item.harga_satuan) * item.qty).toLocaleString("id-ID")}</b></div>)}</div><strong className="ops-total">Total Rp {Number(selected.total_harga).toLocaleString("id-ID")}</strong>{selected.status_pesanan === "AWAITING_CONFIRMATION" ? <div className="ops-modal-actions"><button disabled={busy} className="danger" onClick={() => void update(selected, "REJECTED")}>Tolak</button><button disabled={busy} className="primary" onClick={() => void update(selected, "COOKING")}>{busy ? "Menyimpan..." : "Konfirmasi & Kirim ke Dapur"}</button></div> : selected.status_pesanan === "READY" ? <button disabled={busy} className="primary" onClick={() => void update(selected, "DONE")}>Tandai Sudah Diantar</button> : <p>Status: Sedang disiapkan dapur</p>}</section></div>}
+    {selected && <div className="ops-modal-backdrop"><section className="ops-modal"><button className="ops-modal-close" onClick={() => setSelected(null)}>×</button><small>ANTREAN #{String(selected.nomor_antrean).padStart(3, "0")}</small><h2>{selected.table_number === "Kasir" ? "Pesanan Kasir" : `Meja ${selected.table_number}`}</h2>
+      <div className="ops-modal-audit-info">
+        <div>
+          <small>KASIR AUDIT</small>
+          <strong>{getOrderCashier(selected, shift?.cashierName)}</strong>
+        </div>
+        <div>
+          <small>WAKTU TRANSAKSI</small>
+          <strong>{new Date(selected.created_at).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}</strong>
+        </div>
+      </div>
+      <div className={`ops-payment ${selected.payment_method.toLowerCase()}`}>{selected.payment_method === "CASH" ? "BAYAR TUNAI" : "QRIS — VERIFIKASI BUKTI"}</div>{selected.payment_proof_url && <a className="ops-proof" href={selected.payment_proof_url} target="_blank" rel="noreferrer">Buka Bukti Pembayaran</a>}<div className="ops-items">{selected.items.map((item) => <div key={item.id}><span>{item.qty}× {item.nama_menu}{item.notes && <small>{item.notes}</small>}</span><b>Rp {(Number(item.harga_satuan) * item.qty).toLocaleString("id-ID")}</b></div>)}</div><strong className="ops-total">Total Rp {Number(selected.total_harga).toLocaleString("id-ID")}</strong>{selected.status_pesanan === "AWAITING_CONFIRMATION" ? <div className="ops-modal-actions"><button disabled={busy} className="danger" onClick={() => void update(selected, "REJECTED")}>Tolak</button><button disabled={busy} className="primary" onClick={() => void update(selected, "COOKING")}>{busy ? "Menyimpan..." : "Konfirmasi & Kirim ke Dapur"}</button></div> : selected.status_pesanan === "READY" ? <button disabled={busy} className="primary" onClick={() => void update(selected, "DONE")}>Tandai Sudah Diantar</button> : selected.status_pesanan === "DONE" ? <p style={{ color: "#16a34a", fontWeight: 800 }}>✓ Pesanan sudah selesai diantar.</p> : <p>Status: Sedang disiapkan dapur</p>}</section></div>}
   </div></CashierShiftGate>;
 }
 
