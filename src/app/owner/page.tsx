@@ -24,6 +24,39 @@ type ActiveCashier = { shiftId: string; memberId: string; name: string; deviceNa
 type DashboardData = { profile: Profile; menus: MenuItem[]; staff: Staff[]; waiters: Waiter[]; tables: BusinessTable[]; metrics: Metrics; activeCashier: ActiveCashier | null };
 type DeviceInstallation = { id: string; device_type: "POS" | "KDS"; device_name: string; status: "ACTIVE" | "REVOKED" | "EXPIRED"; paired_at: string; last_seen_at: string; expires_at: string; revoked_at: string | null };
 type OwnerOnboarding = { password_changed_at: string | null; owner_pwa_installed_at: string | null; completed_at: string | null };
+
+type OwnerBillingData = {
+  activeBilling: {
+    id: string;
+    tanggal: string;
+    totalTransactions: number;
+    tagihanPokok: number;
+    kodeUnik: number;
+    totalTagihan: number;
+    statusBayar: "UNPAID" | "PAID" | "PENDING_REVIEW";
+    buktiTransferUrl: string | null;
+    graceUntil: string | null;
+    createdAt: string;
+  } | null;
+  recentBillings: Array<{
+    id: string;
+    tanggal: string;
+    totalTransactions: number;
+    tagihanPokok: number;
+    kodeUnik: number;
+    totalTagihan: number;
+    statusBayar: "UNPAID" | "PAID" | "PENDING_REVIEW";
+    buktiTransferUrl: string | null;
+  }>;
+  centralPayment: {
+    qrisImageUrl: string;
+    qrisMerchantName: string;
+    bankName: string;
+    bankAccountNumber: string;
+    bankAccountName: string;
+    saasFeePerReceipt: number;
+  };
+};
 type StickerConfig = {
   qrSize: number;
   businessNameSize: number;
@@ -147,6 +180,91 @@ export default function TenantOwnerDashboardPage() {
   const [auditPinConfirm, setAuditPinConfirm] = useState("");
   const [hasAuditPin, setHasAuditPin] = useState<boolean | null>(null);
   const [auditPinLoading, setAuditPinLoading] = useState(false);
+
+  // State Modal Pembayaran Sewa SaaS OKESIH
+  const [isBillingModalOpen, setIsBillingModalOpen] = useState(false);
+  const [billingData, setBillingData] = useState<OwnerBillingData | null>(null);
+  const [isBillingLoading, setIsBillingLoading] = useState(false);
+  const [isBillingUploading, setIsBillingUploading] = useState(false);
+  const [billingProofFile, setBillingProofFile] = useState<File | null>(null);
+  const [billingProofPreview, setBillingProofPreview] = useState<string | null>(null);
+  const [billingError, setBillingError] = useState("");
+  const [copiedAccount, setCopiedAccount] = useState(false);
+  const [copiedTotal, setCopiedTotal] = useState(false);
+  const billingFileInputRef = useRef<HTMLInputElement>(null);
+
+  const loadOwnerBilling = async () => {
+    setIsBillingLoading(true);
+    setBillingError("");
+    try {
+      const res = await ownerFetch("/api/owner/billing");
+      setBillingData(res.data);
+    } catch (err) {
+      setBillingError(err instanceof Error ? err.message : "Gagal memuat rincian sewa.");
+    } finally {
+      setIsBillingLoading(false);
+    }
+  };
+
+  const handleSelectProofFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
+      setBillingError("Format berkas harus PNG, JPG, atau WebP.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setBillingError("Ukuran berkas maksimal 5 MB.");
+      return;
+    }
+    setBillingProofFile(file);
+    setBillingError("");
+    const reader = new FileReader();
+    reader.onload = () => setBillingProofPreview(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const handleSubmitBillingProof = async () => {
+    if (!billingProofFile) {
+      setBillingError("Pilih foto bukti transfer bank terlebih dahulu.");
+      return;
+    }
+    setIsBillingUploading(true);
+    setBillingError("");
+    try {
+      const form = new FormData();
+      form.append("file", billingProofFile);
+      if (billingData?.activeBilling?.id) {
+        form.append("billingId", billingData.activeBilling.id);
+      }
+      await ownerFetch("/api/owner/billing", {
+        method: "POST",
+        body: form,
+      });
+      setNotice("Bukti transfer berhasil dikirim! Sedang diverifikasi oleh sistem.");
+      setBillingProofFile(null);
+      setBillingProofPreview(null);
+      await loadOwnerBilling();
+      await mutate(() => ownerFetch("/api/owner/dashboard", { cache: "no-store" }));
+    } catch (err) {
+      setBillingError(err instanceof Error ? err.message : "Gagal mengunggah bukti transfer.");
+    } finally {
+      setIsBillingUploading(false);
+    }
+  };
+
+  const copyToClipboard = (text: string, type: "account" | "total") => {
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      void navigator.clipboard.writeText(text);
+      if (type === "account") {
+        setCopiedAccount(true);
+        setTimeout(() => setCopiedAccount(false), 2000);
+      } else {
+        setCopiedTotal(true);
+        setTimeout(() => setCopiedTotal(false), 2000);
+      }
+    }
+  };
 
   const loadAuditPinStatus = async () => {
     try {
@@ -828,7 +946,25 @@ export default function TenantOwnerDashboardPage() {
               <article className="metric-revenue"><span className="metric-icon">↗</span><small>TOTAL OMZET PENJUALAN</small><strong>{money(metrics.total)}</strong><p>{metrics.receiptCount} transaksi hari ini</p></article>
               <article className="metric-payment"><span className="metric-icon">◈</span><small>RINCIAN PEMBAYARAN</small><b>Tunai <em>{money(metrics.cash)}</em></b><b>QRIS <em>{money(metrics.qris)}</em></b></article>
               <article className="metric-cash"><span className="metric-icon">▤</span><small>UANG FISIK DI LACI KASIR</small><strong className="green">{money(metrics.cash)}</strong><p>Nilai berdasarkan pembayaran tunai</p></article>
-              <article className="metric-billing"><span className="metric-icon">◎</span><small>SEWA SAAS OKESIH</small><strong className="yellow">{money(Number(metrics.billing?.total_tagihan || 0))}</strong><p>{metrics.billing?.status_bayar || "Belum ditagihkan"}</p></article>
+              <article
+                className="metric-billing is-clickable"
+                onClick={() => {
+                  setIsBillingModalOpen(true);
+                  void loadOwnerBilling();
+                }}
+                title="Klik untuk rincian tagihan sewa SaaS & konfirmasi pembayaran"
+                style={{ cursor: "pointer" }}
+              >
+                <span className="metric-icon">◎</span>
+                <small>SEWA SAAS OKESIH</small>
+                <strong className="yellow">{money(Number(metrics.billing?.total_tagihan || 0))}</strong>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "4px" }}>
+                  <p style={{ margin: 0 }}>{metrics.billing?.status_bayar || "Belum ditagihkan"}</p>
+                  <span style={{ fontSize: "11px", fontWeight: 700, color: "#f59e0b", background: "rgba(245, 158, 11, 0.14)", padding: "2px 8px", borderRadius: "999px" }}>
+                    Bayar Sewa →
+                  </span>
+                </div>
+              </article>
             </div>
             <section className={`owner-revenue-chart ${revenueLoading ? "is-loading" : ""}`} aria-labelledby="owner-chart-title">
               <header>
@@ -1644,6 +1780,352 @@ export default function TenantOwnerDashboardPage() {
       )}
       {staffModal && <Modal title="Tambah Akun Staf" onClose={() => { if (!busy) setStaffModal(false); }}><form onSubmit={createStaff} className="owner-staff-form"><label>Username<input required minLength={3} maxLength={40} pattern="[a-z0-9][a-z0-9._-]*[a-z0-9_-]" autoCapitalize="none" autoCorrect="off" spellCheck={false} autoComplete="off" placeholder="Contoh: kasir.baru" value={staffForm.username} onChange={(e) => setStaffForm({ ...staffForm, username: e.target.value.toLowerCase() })}/><small>Gunakan huruf kecil, angka, titik, garis bawah, atau tanda hubung.</small></label><label>Nama staf<input required minLength={2} maxLength={150} autoComplete="name" placeholder="Nama lengkap staf" value={staffForm.name} onChange={(e) => setStaffForm({ ...staffForm, name: e.target.value })}/></label><label>Password awal<input required minLength={6} maxLength={72} type="password" autoComplete="new-password" placeholder="Minimal 6 karakter" value={staffForm.password} onChange={(e) => setStaffForm({ ...staffForm, password: e.target.value })}/></label><label>Peran<select value={staffForm.role} onChange={(e) => setStaffForm({ ...staffForm, role: e.target.value })}><option value="KASIR">Kasir POS</option><option value="DAPUR">Barista / Dapur</option></select></label><div className="owner-modal-actions"><button type="button" className="btn-secondary" disabled={busy} onClick={() => setStaffModal(false)}>Batal</button><button disabled={busy} className="btn-primary" type="submit">{busy ? "Membuat akun..." : "Buat Akun"}</button></div></form></Modal>}
       {waiterModal && <Modal title="Tambah Waiter" onClose={() => setWaiterModal(false)}><form onSubmit={createWaiter}><input required placeholder="Nama waiter" value={waiterForm.name} onChange={(e) => setWaiterForm({ ...waiterForm, name: e.target.value })}/><input inputMode="tel" placeholder="Nomor telepon" value={waiterForm.phone} onChange={(e) => setWaiterForm({ ...waiterForm, phone: e.target.value })}/><div className="owner-modal-actions"><button type="button" className="btn-secondary" onClick={() => setWaiterModal(false)}>Batal</button><button disabled={busy} className="btn-primary" type="submit">Oke</button></div></form></Modal>}
+
+      {isBillingModalOpen && (
+        <div
+          className="owner-modal-backdrop"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !isBillingUploading) setIsBillingModalOpen(false);
+          }}
+        >
+          <div className="owner-billing-modal">
+            <header style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "20px" }}>
+              <div>
+                <span style={{ fontSize: "11px", fontWeight: 800, letterSpacing: "0.06em", color: "#f59e0b", textTransform: "uppercase" }}>
+                  Langganan Platform OKESIH
+                </span>
+                <h3 style={{ margin: "4px 0 0", fontSize: "20px", fontWeight: 800 }}>
+                  Pembayaran Sewa SaaS & Bukti Transfer
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsBillingModalOpen(false)}
+                disabled={isBillingUploading}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  fontSize: "24px",
+                  cursor: "pointer",
+                  color: "var(--ow-muted, #94a3b8)",
+                  lineHeight: 1,
+                  padding: "4px 8px"
+                }}
+              >
+                ×
+              </button>
+            </header>
+
+            {billingError && (
+              <div className="owner-error" style={{ marginBottom: "16px" }}>
+                {billingError}
+                <button type="button" onClick={() => setBillingError("")}>×</button>
+              </div>
+            )}
+
+            {isBillingLoading ? (
+              <div style={{ padding: "40px 20px", textAlign: "center", color: "var(--ow-muted, #94a3b8)" }}>
+                <span className="spinner" style={{ display: "inline-block", width: "24px", height: "24px", border: "2px solid rgba(245, 158, 11, 0.2)", borderTopColor: "#f59e0b", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+                <p style={{ marginTop: "12px", fontSize: "13px" }}>Memuat rincian tagihan sewa...</p>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+                {/* Status & Rincian Tagihan */}
+                <div style={{
+                  padding: "18px",
+                  borderRadius: "14px",
+                  background: "color-mix(in srgb, #f59e0b 8%, var(--ow-surface-raised, #f8fafc))",
+                  border: "1px solid color-mix(in srgb, #f59e0b 25%, var(--ow-border, #e2e8f0))"
+                }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                    <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--ow-muted)" }}>
+                      Periode: {billingData?.activeBilling?.tanggal ? new Date(billingData.activeBilling.tanggal).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "Hari Ini"}
+                    </span>
+                    <span style={{
+                      fontSize: "11px",
+                      fontWeight: 800,
+                      padding: "3px 10px",
+                      borderRadius: "999px",
+                      backgroundColor: billingData?.activeBilling?.statusBayar === "PAID" ? "#10b981" : billingData?.activeBilling?.statusBayar === "PENDING_REVIEW" ? "#3b82f6" : "#f59e0b",
+                      color: "#fff"
+                    }}>
+                      {billingData?.activeBilling?.statusBayar === "PAID" ? "LUNAS" : billingData?.activeBilling?.statusBayar === "PENDING_REVIEW" ? "MENUNGGU REVIEW" : "BELUM BAYAR"}
+                    </span>
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "8px", fontSize: "13px", color: "var(--ow-muted)" }}>
+                    <span>Tagihan Pokok Sewa</span>
+                    <strong style={{ color: "var(--ow-text)" }}>{money(billingData?.activeBilling?.tagihanPokok || 20000)}</strong>
+                    
+                    <span>Kode Unik Alokasi (OCR AI)</span>
+                    <strong style={{ color: "#f59e0b" }}>+{money(billingData?.activeBilling?.kodeUnik || 0)}</strong>
+                    
+                    <div style={{ gridColumn: "1 / -1", height: "1px", background: "var(--ow-border)", margin: "4px 0" }} />
+                    
+                    <span style={{ fontSize: "14px", fontWeight: 800, color: "var(--ow-text)", display: "flex", alignItems: "center" }}>
+                      Total Wajib Ditransfer
+                    </span>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span style={{ fontSize: "18px", fontWeight: 900, color: "#f59e0b" }}>
+                        {money(billingData?.activeBilling?.totalTagihan || 20000)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard(String(billingData?.activeBilling?.totalTagihan || 20000), "total")}
+                        style={{
+                          fontSize: "11px",
+                          fontWeight: 700,
+                          padding: "3px 8px",
+                          borderRadius: "6px",
+                          background: copiedTotal ? "#10b981" : "var(--ow-surface-raised, #f1f5f9)",
+                          color: copiedTotal ? "#fff" : "var(--ow-text)",
+                          border: "1px solid var(--ow-border)",
+                          cursor: "pointer"
+                        }}
+                      >
+                        {copiedTotal ? "✓ Disalin" : "Salin Nominal"}
+                      </button>
+                    </div>
+                  </div>
+                  <p style={{ margin: "10px 0 0", fontSize: "11px", color: "var(--ow-muted)", lineHeight: 1.4 }}>
+                    ⚠️ <em>Penting:</em> Transfer nominal <strong>persis sampai digit terakhir</strong> agar OCR AI OKESIH dapat mengenali setoran warkop Anda secara otomatis.
+                  </p>
+                </div>
+
+                {/* Rekening Tujuan & QRIS */}
+                <div style={{
+                  padding: "18px",
+                  borderRadius: "14px",
+                  background: "var(--ow-surface-raised, #f8fafc)",
+                  border: "1px solid var(--ow-border, #e2e8f0)",
+                  display: "grid",
+                  gap: "14px"
+                }}>
+                  <strong style={{ fontSize: "13px", letterSpacing: "0.02em" }}>REKENING BANK TUJUAN RESMI</strong>
+                  
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+                    <div>
+                      <div style={{ fontSize: "11px", color: "var(--ow-muted)", fontWeight: 700 }}>
+                        {billingData?.centralPayment?.bankName || "BANK BCA"}
+                      </div>
+                      <div style={{ fontSize: "18px", fontWeight: 900, letterSpacing: "0.04em", color: "var(--ow-text)" }}>
+                        {billingData?.centralPayment?.bankAccountNumber || "8001928374"}
+                      </div>
+                      <div style={{ fontSize: "12px", color: "var(--ow-muted)" }}>
+                        a.n. {billingData?.centralPayment?.bankAccountName || "PT OKESIH KARYA DIGITAL"}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(billingData?.centralPayment?.bankAccountNumber || "8001928374", "account")}
+                      style={{
+                        padding: "8px 14px",
+                        borderRadius: "8px",
+                        background: copiedAccount ? "#10b981" : "#3b82f6",
+                        color: "#fff",
+                        fontWeight: 700,
+                        fontSize: "12px",
+                        border: "none",
+                        cursor: "pointer"
+                      }}
+                    >
+                      {copiedAccount ? "✓ Rekening Disalin" : "Salin No. Rekening"}
+                    </button>
+                  </div>
+
+                  {billingData?.centralPayment?.qrisImageUrl && (
+                    <div style={{ marginTop: "4px", paddingTop: "12px", borderTop: "1px dashed var(--ow-border)" }}>
+                      <div style={{ fontSize: "12px", fontWeight: 700, marginBottom: "8px" }}>Atau Scan QRIS Pusat OKESIH:</div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+                        <img
+                          src={billingData.centralPayment.qrisImageUrl}
+                          alt="QRIS OKESIH"
+                          style={{ width: "120px", height: "120px", objectFit: "contain", borderRadius: "10px", background: "#fff", padding: "6px", border: "1px solid var(--ow-border)" }}
+                        />
+                        <div style={{ fontSize: "12px", color: "var(--ow-muted)", lineHeight: 1.5 }}>
+                          QRIS resmi platform OKESIH ({billingData.centralPayment.qrisMerchantName}).<br/>
+                          Dapat dipindai dari BCA Mobile, Livin, BRImo, GoPay, OVO, atau ShopeePay.
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Form Upload Bukti Transfer */}
+                <div style={{
+                  padding: "18px",
+                  borderRadius: "14px",
+                  background: "var(--ow-surface-raised, #f8fafc)",
+                  border: "1px solid var(--ow-border, #e2e8f0)",
+                  display: "grid",
+                  gap: "12px"
+                }}>
+                  <strong style={{ fontSize: "13px", letterSpacing: "0.02em" }}>UNGGAH BUKTI TRANSFER</strong>
+                  
+                  <input
+                    type="file"
+                    accept="image/png, image/jpeg, image/webp"
+                    ref={billingFileInputRef}
+                    style={{ display: "none" }}
+                    onChange={handleSelectProofFile}
+                  />
+
+                  {billingProofPreview ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "10px", alignItems: "center", background: "var(--ow-surface)", padding: "14px", borderRadius: "10px", border: "1px dashed var(--ow-border)" }}>
+                      <img
+                        src={billingProofPreview}
+                        alt="Bukti Transfer Preview"
+                        style={{ maxHeight: "200px", maxWidth: "100%", objectFit: "contain", borderRadius: "8px" }}
+                      />
+                      <div style={{ display: "flex", gap: "10px" }}>
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          style={{ fontSize: "12px", padding: "6px 12px" }}
+                          onClick={() => { setBillingProofFile(null); setBillingProofPreview(null); }}
+                        >
+                          Ganti Foto
+                        </button>
+                      </div>
+                    </div>
+                  ) : billingData?.activeBilling?.buktiTransferUrl ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px", background: "var(--ow-surface)", padding: "12px", borderRadius: "10px", border: "1px solid var(--ow-border)" }}>
+                      <img
+                        src={billingData.activeBilling.buktiTransferUrl}
+                        alt="Bukti Terkirim"
+                        style={{ width: "50px", height: "50px", objectFit: "cover", borderRadius: "6px" }}
+                      />
+                      <div style={{ flex: 1 }}>
+                        <span style={{ fontSize: "12px", fontWeight: 700, color: "#10b981", display: "block" }}>Bukti Transfer Sudah Diunggah</span>
+                        <small style={{ fontSize: "11px", color: "var(--ow-muted)" }}>
+                          {billingData.activeBilling.statusBayar === "PAID" ? "Sudah diverifikasi Super Admin" : "Sedang dalam antrean verifikasi OCR AI"}
+                        </small>
+                      </div>
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        style={{ fontSize: "11px", padding: "5px 10px" }}
+                        onClick={() => billingFileInputRef.current?.click()}
+                      >
+                        Unggah Ulang
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => billingFileInputRef.current?.click()}
+                      style={{
+                        padding: "24px 16px",
+                        borderRadius: "10px",
+                        border: "2px dashed var(--ow-border)",
+                        background: "var(--ow-surface)",
+                        color: "var(--ow-muted)",
+                        cursor: "pointer",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: "6px",
+                        transition: "all 0.2s ease"
+                      }}
+                    >
+                      <span style={{ fontSize: "24px" }}>📸</span>
+                      <strong style={{ fontSize: "13px", color: "var(--ow-text)" }}>Pilih Foto / Tangkapan Layar Struk Bank</strong>
+                      <span style={{ fontSize: "11px" }}>Format PNG, JPG, WebP (Maks. 5 MB)</span>
+                    </button>
+                  )}
+
+                  {billingProofFile && (
+                    <button
+                      type="button"
+                      className="btn-primary"
+                      disabled={isBillingUploading}
+                      onClick={() => void handleSubmitBillingProof()}
+                      style={{
+                        padding: "12px",
+                        borderRadius: "10px",
+                        fontWeight: 800,
+                        fontSize: "14px",
+                        background: "#f59e0b",
+                        border: "none",
+                        color: "#000",
+                        cursor: isBillingUploading ? "not-allowed" : "pointer",
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        gap: "8px"
+                      }}
+                    >
+                      {isBillingUploading ? (
+                        <>
+                          <span className="spinner" style={{ display: "inline-block", width: "16px", height: "16px", border: "2px solid #000", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+                          Mengunggah & Memproses AI...
+                        </>
+                      ) : (
+                        "🚀 Kirim Bukti Transfer Sekarang"
+                      )}
+                    </button>
+                  )}
+                </div>
+
+                {/* Riwayat Setoran Sewa Terakhir */}
+                {billingData?.recentBillings && billingData.recentBillings.length > 0 && (
+                  <div style={{ marginTop: "4px" }}>
+                    <h4 style={{ fontSize: "13px", fontWeight: 800, margin: "0 0 10px", color: "var(--ow-muted)", letterSpacing: "0.04em" }}>
+                      RIWAYAT SETORAN SEWA SEBELUMNYA
+                    </h4>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                      {billingData.recentBillings.slice(0, 5).map((b) => (
+                        <div
+                          key={b.id}
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            padding: "10px 14px",
+                            borderRadius: "10px",
+                            background: "var(--ow-surface-raised, #f8fafc)",
+                            border: "1px solid var(--ow-border, #e2e8f0)",
+                            fontSize: "12px"
+                          }}
+                        >
+                          <div>
+                            <strong style={{ display: "block", color: "var(--ow-text)" }}>
+                              {new Date(b.tanggal).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                            </strong>
+                            <small style={{ color: "var(--ow-muted)" }}>{money(Number(b.totalTagihan))}</small>
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            <span style={{
+                              fontSize: "10px",
+                              fontWeight: 800,
+                              padding: "2px 8px",
+                              borderRadius: "999px",
+                              backgroundColor: b.statusBayar === "PAID" ? "#10b981" : b.statusBayar === "PENDING_REVIEW" ? "#3b82f6" : "#f59e0b",
+                              color: "#fff"
+                            }}>
+                              {b.statusBayar === "PAID" ? "LUNAS" : b.statusBayar === "PENDING_REVIEW" ? "MENUNGGU REVIEW" : "BELUM BAYAR"}
+                            </span>
+                            {b.buktiTransferUrl && (
+                              <a
+                                href={b.buktiTransferUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{ fontSize: "11px", color: "#3b82f6", textDecoration: "underline" }}
+                              >
+                                Lihat
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
