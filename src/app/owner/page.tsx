@@ -1404,7 +1404,6 @@ export default function TenantOwnerDashboardPage() {
           </section>}
 
           {view === "devices" && <section className="owner-device-page owner-page-panel">
-            <div className="owner-section-heading" style={{ justifyContent: "flex-end" }}><PwaInstallButton label="Install Aplikasi Owner" onInstalled={() => void onboardingAction({ action: "pwa_installed" })}/></div>
             <div className="owner-device-setup">
               <article className="owner-panel"><span className="device-step">01</span><h2>Buka aplikasi di perangkat tujuan</h2><p>Pada tablet Kasir buka <b>okesih.com/pos</b>. Pada layar dapur buka <b>okesih.com/kds</b>, kemudian pilih Buat Kode Pairing.</p><div className="owner-device-links"><Link href="/pos" target="_blank" rel="noopener noreferrer">Buka Kasir ↗</Link><Link href="/kds" target="_blank" rel="noopener noreferrer">Buka KDS ↗</Link></div></article>
               <article className="owner-panel"><span className="device-step">02</span><h2>Setujui kode pairing</h2><p>Masukkan enam digit yang tampil pada perangkat. Kode hanya berlaku lima menit dan sekali pakai.</p><div className="owner-pair-form"><input inputMode="numeric" maxLength={6} placeholder="000000" value={pairingCode} onChange={(event) => setPairingCode(event.target.value.replace(/\D/g, ""))}/><button className="btn-primary" disabled={busy || pairingCode.length !== 6} onClick={() => void deviceAction({ action: "approve", code: pairingCode })}>{busy ? "Memproses..." : "Setujui Perangkat"}</button></div></article>
