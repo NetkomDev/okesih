@@ -50,6 +50,13 @@ const DEFAULT_STICKER_CONFIG: StickerConfig = {
   selectedTableId: "",
 };
 
+function formatTableDisplay(label: string) {
+  const clean = (label || "").trim();
+  if (!clean) return "Meja";
+  if (/^meja\b/i.test(clean)) return clean;
+  return `Meja ${clean}`;
+}
+
 const ownerDashboardCache = new Map<string, DashboardData>();
 
 async function ownerFetch(path: string, init?: RequestInit) {
@@ -101,6 +108,7 @@ export default function TenantOwnerDashboardPage() {
   const [merchantName, setMerchantName] = useState("");
   const [businessName, setBusinessName] = useState("");
   const [editingTable, setEditingTable] = useState<BusinessTable | null>(null);
+  const [tableEditError, setTableEditError] = useState("");
   const [devices, setDevices] = useState<DeviceInstallation[]>([]);
   const [onboarding, setOnboarding] = useState<OwnerOnboarding | null>(null);
   const [onboardingReady, setOnboardingReady] = useState(false);
@@ -386,13 +394,43 @@ export default function TenantOwnerDashboardPage() {
     "Nama merchant berhasil disimpan."
   );
 
-  const updateTable = (event: React.FormEvent) => {
+  const updateTable = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!editingTable) return;
-    void mutate(async () => {
-      await ownerFetch("/api/owner/tables", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: editingTable.id, label: editingTable.label }) });
+    const cleanLabel = editingTable.label.trim().replace(/^meja\s+/i, "").trim() || editingTable.label.trim();
+    if (!cleanLabel) {
+      setTableEditError("Nama atau nomor meja tidak boleh kosong.");
+      return;
+    }
+
+    setBusy(true);
+    setTableEditError("");
+    setError("");
+    try {
+      await ownerFetch("/api/owner/tables", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: editingTable.id, label: cleanLabel }),
+      });
+
+      ownerDashboardCache.clear();
+
+      setData((prev) => {
+        if (!prev) return prev;
+        const updatedTables = prev.tables
+          .filter((t) => t.id === editingTable.id || t.label.toLowerCase() !== cleanLabel.toLowerCase())
+          .map((t) => (t.id === editingTable.id ? { ...t, label: cleanLabel } : t));
+        return { ...prev, tables: updatedTables };
+      });
+
+      setNotice(`Nama meja berhasil diganti menjadi "${formatTableDisplay(cleanLabel)}".`);
       setEditingTable(null);
-    }, "Nama meja berhasil diperbarui.");
+      await loadDashboard();
+    } catch (err) {
+      setTableEditError(err instanceof Error ? err.message : "Gagal memperbarui nama meja.");
+    } finally {
+      setBusy(false);
+    }
   };
 
   const printTableStickers = async (singleTableId?: string) => {
@@ -501,9 +539,9 @@ export default function TenantOwnerDashboardPage() {
         ({ table, url, qr }) => `
       <div class="card">
         ${showBiz ? `<div class="biz-name">${escapeHtml(data.profile.nama)}</div>` : ""}
-        ${isTop ? `<div class="table-label">Meja ${escapeHtml(table.label)}</div>` : ""}
-        <img class="qr-img" src="${qr}" alt="QR Meja ${escapeHtml(table.label)}"/>
-        ${!isTop ? `<div class="table-label">Meja ${escapeHtml(table.label)}</div>` : ""}
+        ${isTop ? `<div class="table-label">${escapeHtml(formatTableDisplay(table.label))}</div>` : ""}
+        <img class="qr-img" src="${qr}" alt="QR ${escapeHtml(formatTableDisplay(table.label))}"/>
+        ${!isTop ? `<div class="table-label">${escapeHtml(formatTableDisplay(table.label))}</div>` : ""}
         ${showInst ? `<div class="instruction">${escapeHtml(stickerConfig.instructionText || "Scan untuk melihat menu & memesan")}</div>` : ""}
         <div class="url">${escapeHtml(url)}</div>
       </div>
@@ -917,7 +955,7 @@ export default function TenantOwnerDashboardPage() {
             <article className="owner-panel">
               <h2>Cetak Stiker QR Code Meja</h2><p>Masukkan nomor atau nama meja sesuai kondisi nyata, dipisahkan koma atau baris baru.</p>
               <div className="owner-table-input"><textarea rows={3} value={tableInput} onChange={(event) => setTableInput(event.target.value)} placeholder="Contoh: 01, 02, Teras 1, VIP"/><button disabled={busy || !tableInput.trim()} className="btn-primary" onClick={addTables}>Tambah Meja</button></div>
-              <div className="owner-table-chips">{data.tables.map((table) => <span key={table.id}><Link target="_blank" href={`/menu/${profile.slug}?tableId=${encodeURIComponent(table.id)}`}>Meja {table.label}</Link><button aria-label={`Edit meja ${table.label}`} onClick={() => setEditingTable(table)}>✎</button><button aria-label={`Hapus meja ${table.label}`} onClick={() => confirm(`Hapus meja ${table.label}?`) && void mutate(() => ownerFetch(`/api/owner/tables?id=${table.id}`, { method: "DELETE" }), "Meja berhasil dihapus.")}>×</button></span>)}</div>
+              <div className="owner-table-chips">{data.tables.map((table) => <span key={table.id}><Link target="_blank" href={`/menu/${profile.slug}?tableId=${encodeURIComponent(table.id)}`}>{formatTableDisplay(table.label)}</Link><button aria-label={`Edit meja ${table.label}`} onClick={() => { setTableEditError(""); setEditingTable({ ...table, label: table.label.replace(/^meja\s+/i, "") }); }}>✎</button><button aria-label={`Hapus meja ${table.label}`} onClick={() => confirm(`Hapus meja ${table.label}?`) && void mutate(() => ownerFetch(`/api/owner/tables?id=${table.id}`, { method: "DELETE" }), "Meja berhasil dihapus.")}>×</button></span>)}</div>
               <button className="btn-primary" disabled={!data.tables.length} onClick={() => void printTableStickers()}>🖨️ Cetak Semua Stiker QR Meja</button>
             </article>
 
@@ -950,7 +988,7 @@ export default function TenantOwnerDashboardPage() {
                     ) : (
                       data.tables.map((table) => (
                         <option key={table.id} value={table.id}>
-                          Meja {table.label}
+                          {formatTableDisplay(table.label)}
                         </option>
                       ))
                     )}
@@ -980,7 +1018,7 @@ export default function TenantOwnerDashboardPage() {
                         marginBottom: `${stickerConfig.tableOffset}px`,
                       }}
                     >
-                      Meja {(data.tables.find((t) => t.id === stickerConfig.selectedTableId) || data.tables[0])?.label || "01"}
+                      {formatTableDisplay((data.tables.find((t) => t.id === stickerConfig.selectedTableId) || data.tables[0])?.label || "01")}
                     </div>
                   )}
 
@@ -1016,7 +1054,7 @@ export default function TenantOwnerDashboardPage() {
                         marginBottom: `${stickerConfig.tableOffset}px`,
                       }}
                     >
-                      Meja {(data.tables.find((t) => t.id === stickerConfig.selectedTableId) || data.tables[0])?.label || "01"}
+                      {formatTableDisplay((data.tables.find((t) => t.id === stickerConfig.selectedTableId) || data.tables[0])?.label || "01")}
                     </div>
                   )}
 
@@ -1163,7 +1201,7 @@ export default function TenantOwnerDashboardPage() {
                       if (cur) void printTableStickers(cur.id);
                     }}
                   >
-                    Cetak Meja {(data.tables.find((t) => t.id === stickerConfig.selectedTableId) || data.tables[0])?.label} Saja
+                    Cetak {formatTableDisplay((data.tables.find((t) => t.id === stickerConfig.selectedTableId) || data.tables[0])?.label || "01")} Saja
                   </button>
                 )}
               </div>
@@ -1187,7 +1225,51 @@ export default function TenantOwnerDashboardPage() {
 
       {menuModal && <Modal title="Tambah Menu" onClose={() => setMenuModal(false)}><form onSubmit={createMenu}><input required placeholder="Nama menu" value={menuForm.name} onChange={(e) => setMenuForm({ ...menuForm, name: e.target.value })}/><input required min="1" type="number" placeholder="Harga" value={menuForm.price} onChange={(e) => setMenuForm({ ...menuForm, price: e.target.value })}/><label className="owner-category-field">Kategori<input required list="owner-menu-categories" maxLength={50} placeholder="Pilih atau ketik kategori baru" value={menuForm.category} onChange={(e) => setMenuForm({ ...menuForm, category: e.target.value })}/><small>Pilih kategori yang ada atau ketik kategori baru.</small></label><datalist id="owner-menu-categories">{categorySuggestions.map((item) => <option key={item} value={item}/>)}</datalist><textarea placeholder="Deskripsi" value={menuForm.description} onChange={(e) => setMenuForm({ ...menuForm, description: e.target.value })}/><div className="owner-modal-actions"><button type="button" className="btn-secondary" onClick={() => setMenuModal(false)}>Batal</button><button disabled={busy} className="btn-primary" type="submit">Oke</button></div></form></Modal>}
       {editingMenu && <Modal title="Edit Menu" onClose={() => setEditingMenu(null)}><form onSubmit={updateMenu}><label className="owner-category-field">Nama Menu<input required placeholder="Nama menu" value={editingMenu.name} onChange={(e) => setEditingMenu({ ...editingMenu, name: e.target.value })}/></label><label className="owner-category-field">Harga (Rp)<input required min="1" type="number" placeholder="Harga" value={editingMenu.price} onChange={(e) => setEditingMenu({ ...editingMenu, price: e.target.value })}/></label><label className="owner-category-field">Kategori<input required list="owner-menu-categories-edit" maxLength={50} placeholder="Pilih atau ketik kategori baru" value={editingMenu.category} onChange={(e) => setEditingMenu({ ...editingMenu, category: e.target.value })}/><small>Pilih kategori yang ada atau ketik kategori baru.</small></label><datalist id="owner-menu-categories-edit">{categorySuggestions.map((item) => <option key={item} value={item}/>)}</datalist><label className="owner-category-field">Deskripsi<textarea placeholder="Deskripsi menu" value={editingMenu.description} onChange={(e) => setEditingMenu({ ...editingMenu, description: e.target.value })}/></label><label className="owner-category-field" style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: "10px", marginTop: "4px" }}><input type="checkbox" checked={editingMenu.isAvailable} onChange={(e) => setEditingMenu({ ...editingMenu, isAvailable: e.target.checked })} style={{ width: "20px", height: "20px", margin: 0 }}/><span>Status Menu Tersedia untuk Dipesan</span></label><div className="owner-modal-actions"><button type="button" className="btn-secondary" onClick={() => setEditingMenu(null)}>Batal</button><button disabled={busy} className="btn-primary" type="submit">{busy ? "Menyimpan..." : "Oke"}</button></div></form></Modal>}
-      {editingTable && <Modal title="Edit Nama Meja" onClose={() => setEditingTable(null)}><form onSubmit={updateTable}><label className="owner-category-field">Nama / Nomor Meja<input required maxLength={30} value={editingTable.label} onChange={(event) => setEditingTable({ ...editingTable, label: event.target.value })}/></label><div className="owner-modal-actions"><button type="button" className="btn-secondary" onClick={() => setEditingTable(null)}>Batal</button><button disabled={busy || !editingTable.label.trim()} className="btn-primary" type="submit">{busy ? "Menyimpan..." : "Simpan"}</button></div></form></Modal>}
+      {editingTable && (
+        <Modal title="Edit Nama Meja" onClose={() => { setEditingTable(null); setTableEditError(""); }}>
+          <form onSubmit={updateTable}>
+            {tableEditError && (
+              <div className="owner-error" style={{ marginBottom: "12px", padding: "10px 12px", fontSize: "12px" }}>
+                {tableEditError}
+              </div>
+            )}
+            <label className="owner-category-field">
+              Nama / Nomor Meja
+              <input
+                required
+                autoFocus
+                maxLength={30}
+                value={editingTable.label}
+                onChange={(event) => {
+                  setTableEditError("");
+                  setEditingTable({ ...editingTable, label: event.target.value });
+                }}
+                placeholder="Contoh: 01, VIP 1, Teras"
+              />
+              <small style={{ color: "var(--text-muted)", fontSize: "11px", marginTop: "4px" }}>
+                Ketik nomor atau nama saja. Kata &quot;Meja&quot; otomatis ditambahkan pada stiker dan QR code.
+              </small>
+            </label>
+            <div className="owner-modal-actions">
+              <button
+                type="button"
+                className="btn-secondary"
+                disabled={busy}
+                onClick={() => { setEditingTable(null); setTableEditError(""); }}
+              >
+                Batal
+              </button>
+              <button
+                disabled={busy || !editingTable.label.trim()}
+                className="btn-primary"
+                type="submit"
+              >
+                {busy ? "Menyimpan ke Supabase..." : "Simpan Perubahan"}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
       {staffModal && <Modal title="Tambah Akun Staf" onClose={() => { if (!busy) setStaffModal(false); }}><form onSubmit={createStaff} className="owner-staff-form"><label>Username<input required minLength={3} maxLength={40} pattern="[a-z0-9][a-z0-9._-]*[a-z0-9_-]" autoCapitalize="none" autoCorrect="off" spellCheck={false} autoComplete="off" placeholder="Contoh: kasir.baru" value={staffForm.username} onChange={(e) => setStaffForm({ ...staffForm, username: e.target.value.toLowerCase() })}/><small>Gunakan huruf kecil, angka, titik, garis bawah, atau tanda hubung.</small></label><label>Nama staf<input required minLength={2} maxLength={150} autoComplete="name" placeholder="Nama lengkap staf" value={staffForm.name} onChange={(e) => setStaffForm({ ...staffForm, name: e.target.value })}/></label><label>Password awal<input required minLength={6} maxLength={72} type="password" autoComplete="new-password" placeholder="Minimal 6 karakter" value={staffForm.password} onChange={(e) => setStaffForm({ ...staffForm, password: e.target.value })}/></label><label>Peran<select value={staffForm.role} onChange={(e) => setStaffForm({ ...staffForm, role: e.target.value })}><option value="KASIR">Kasir POS</option><option value="DAPUR">Barista / Dapur</option></select></label><div className="owner-modal-actions"><button type="button" className="btn-secondary" disabled={busy} onClick={() => setStaffModal(false)}>Batal</button><button disabled={busy} className="btn-primary" type="submit">{busy ? "Membuat akun..." : "Buat Akun"}</button></div></form></Modal>}
       {waiterModal && <Modal title="Tambah Waiter" onClose={() => setWaiterModal(false)}><form onSubmit={createWaiter}><input required placeholder="Nama waiter" value={waiterForm.name} onChange={(e) => setWaiterForm({ ...waiterForm, name: e.target.value })}/><input inputMode="tel" placeholder="Nomor telepon" value={waiterForm.phone} onChange={(e) => setWaiterForm({ ...waiterForm, phone: e.target.value })}/><div className="owner-modal-actions"><button type="button" className="btn-secondary" onClick={() => setWaiterModal(false)}>Batal</button><button disabled={busy} className="btn-primary" type="submit">Oke</button></div></form></Modal>}
     </div>
