@@ -1804,281 +1804,274 @@ export default function TenantOwnerDashboardPage() {
           }}
         >
           <div className="owner-billing-modal">
-            <header style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "20px" }}>
-              <div>
-                <span style={{ fontSize: "11px", fontWeight: 800, letterSpacing: "0.06em", color: "#f59e0b", textTransform: "uppercase" }}>
-                  Langganan Platform OKESIH
-                </span>
-                <h3 style={{ margin: "4px 0 0", fontSize: "20px", fontWeight: 800 }}>
-                  Pembayaran Sewa SaaS
-                </h3>
-              </div>
+            <header className="owner-billing-modal-header">
+              <h3>
+                Pembayaran Sewa SaaS
+                <span className="owner-billing-modal-tag">Langganan Platform</span>
+              </h3>
               <button
                 type="button"
+                className="owner-billing-modal-close"
                 onClick={() => setIsBillingModalOpen(false)}
                 disabled={isBillingUploading}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  fontSize: "24px",
-                  cursor: "pointer",
-                  color: "var(--ow-muted, #94a3b8)",
-                  lineHeight: 1,
-                  padding: "4px 8px"
-                }}
+                title="Tutup Popup"
               >
                 ×
               </button>
             </header>
 
             {billingError && (
-              <div className="owner-error" style={{ marginBottom: "16px" }}>
+              <div className="owner-error" style={{ margin: "14px 20px 0" }}>
                 {billingError}
                 <button type="button" onClick={() => setBillingError("")}>×</button>
               </div>
             )}
 
             {isBillingLoading ? (
-              <div style={{ padding: "40px 20px", textAlign: "center", color: "var(--ow-muted, #94a3b8)" }}>
-                <span className="spinner" style={{ display: "inline-block", width: "24px", height: "24px", border: "2px solid rgba(245, 158, 11, 0.2)", borderTopColor: "#f59e0b", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+              <div style={{ padding: "60px 20px", textAlign: "center", color: "var(--ow-muted, #94a3b8)" }}>
+                <span className="spinner" style={{ display: "inline-block", width: "26px", height: "26px", border: "2px solid rgba(245, 158, 11, 0.2)", borderTopColor: "#f59e0b", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
                 <p style={{ marginTop: "12px", fontSize: "13px" }}>Memuat rincian tagihan sewa...</p>
               </div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-                {/* Status & Rincian Tagihan */}
-                <div style={{
-                  padding: "18px",
-                  borderRadius: "14px",
-                  background: "color-mix(in srgb, #f59e0b 8%, var(--ow-surface-raised, #f8fafc))",
-                  border: "1px solid color-mix(in srgb, #f59e0b 25%, var(--ow-border, #e2e8f0))"
-                }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-                    <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--ow-muted)" }}>
-                      Periode: {billingData?.activeBilling?.tanggal ? new Date(billingData.activeBilling.tanggal).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "Hari Ini"}
-                    </span>
-                    <span style={{
-                      fontSize: "11px",
-                      fontWeight: 800,
-                      padding: "3px 10px",
-                      borderRadius: "999px",
-                      backgroundColor: billingData?.activeBilling?.statusBayar === "PAID" ? "#10b981" : billingData?.activeBilling?.statusBayar === "PENDING_REVIEW" ? "#3b82f6" : "#f59e0b",
-                      color: "#fff"
-                    }}>
-                      {billingData?.activeBilling?.statusBayar === "PAID" ? "LUNAS" : billingData?.activeBilling?.statusBayar === "PENDING_REVIEW" ? "MENUNGGU REVIEW" : "BELUM BAYAR"}
-                    </span>
-                  </div>
-
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
-                    <div>
-                      <span style={{ display: "block", fontSize: "11px", fontWeight: 800, color: "var(--ow-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Total Wajib Ditransfer</span>
-                      <span style={{ display: "block", marginTop: "3px", fontSize: "24px", fontWeight: 900, color: "#f59e0b" }}>
-                        {money(billingData?.activeBilling?.totalTagihan || 20000)}
+              <div className="owner-billing-modal-grid">
+                {/* Kolom Kiri: Tagihan & QRIS */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  {/* Kartu Nominal Wajib Ditransfer */}
+                  <div className="owner-billing-card is-highlight">
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                      <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--ow-muted)" }}>
+                        Periode: {billingData?.activeBilling?.tanggal ? new Date(billingData.activeBilling.tanggal).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "Hari Ini"}
+                      </span>
+                      <span className={`owner-billing-status-badge ${billingData?.activeBilling?.statusBayar === "PAID" ? "paid" : billingData?.activeBilling?.statusBayar === "PENDING_REVIEW" ? "pending" : "unpaid"}`}>
+                        {billingData?.activeBilling?.statusBayar === "PAID" ? "LUNAS" : billingData?.activeBilling?.statusBayar === "PENDING_REVIEW" ? "MENUNGGU REVIEW" : "BELUM BAYAR"}
                       </span>
                     </div>
-                    <button type="button" className="btn-secondary" onClick={() => copyToClipboard(String(billingData?.activeBilling?.totalTagihan || 20000))} style={{ fontSize: "11px", padding: "7px 10px" }}>{copiedTotal ? "✓ Nominal Disalin" : "Salin Nominal"}</button>
-                  </div>
-                  <p style={{ margin: "8px 0 0", fontSize: "11px", color: "var(--ow-muted)", lineHeight: 1.4 }}>
-                    Transfer nominal persis sampai digit terakhir agar bukti dapat diverifikasi otomatis.
-                  </p>
-                </div>
 
-                {/* QRIS Pembayaran */}
-                <div style={{
-                  padding: "16px",
-                  borderRadius: "14px",
-                  background: "var(--ow-surface-raised, #f8fafc)",
-                  border: "1px solid var(--ow-border, #e2e8f0)",
-                  display: "grid",
-                  justifyItems: "center",
-                  gap: "9px"
-                }}>
-                  {billingData?.centralPayment?.qrisImageUrl && (
-                    <>
-                      <strong style={{ fontSize: "12px", letterSpacing: "0.04em" }}>SCAN QRIS PEMBAYARAN</strong>
-                        <img
-                          src={billingData.centralPayment.qrisImageUrl}
-                          alt="QRIS OKESIH"
-                          style={{ width: "168px", height: "168px", objectFit: "contain", borderRadius: "12px", background: "#fff", padding: "8px", border: "1px solid var(--ow-border)" }}
-                        />
-                      <span style={{ fontSize: "11px", color: "var(--ow-muted)", textAlign: "center" }}>{billingData.centralPayment.qrisMerchantName}</span>
-                      <button type="button" className="btn-secondary" onClick={() => void saveBillingQris()} style={{ fontSize: "11px", padding: "7px 12px" }}>↓ Simpan QRIS</button>
-                    </>
-                  )}
-                </div>
-
-                {/* Form Upload Bukti Transfer */}
-                <div style={{
-                  padding: "18px",
-                  borderRadius: "14px",
-                  background: "var(--ow-surface-raised, #f8fafc)",
-                  border: "1px solid var(--ow-border, #e2e8f0)",
-                  display: "grid",
-                  gap: "12px"
-                }}>
-                  <strong style={{ fontSize: "13px", letterSpacing: "0.02em" }}>UNGGAH BUKTI TRANSFER</strong>
-                  
-                  <input
-                    type="file"
-                    accept="image/png, image/jpeg, image/webp"
-                    ref={billingFileInputRef}
-                    style={{ display: "none" }}
-                    onChange={handleSelectProofFile}
-                  />
-
-                  {billingProofPreview ? (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "10px", alignItems: "center", background: "var(--ow-surface)", padding: "14px", borderRadius: "10px", border: "1px dashed var(--ow-border)" }}>
-                      <img
-                        src={billingProofPreview}
-                        alt="Bukti Transfer Preview"
-                        style={{ maxHeight: "200px", maxWidth: "100%", objectFit: "contain", borderRadius: "8px" }}
-                      />
-                      <div style={{ display: "flex", gap: "10px" }}>
-                        <button
-                          type="button"
-                          className="btn-secondary"
-                          style={{ fontSize: "12px", padding: "6px 12px" }}
-                          onClick={() => { setBillingProofFile(null); setBillingProofPreview(null); }}
-                        >
-                          Ganti Foto
-                        </button>
-                      </div>
-                    </div>
-                  ) : billingData?.activeBilling?.buktiTransferUrl ? (
-                    <div style={{ display: "flex", alignItems: "center", gap: "12px", background: "var(--ow-surface)", padding: "12px", borderRadius: "10px", border: "1px solid var(--ow-border)" }}>
-                      <img
-                        src={billingData.activeBilling.buktiTransferUrl}
-                        alt="Bukti Terkirim"
-                        style={{ width: "50px", height: "50px", objectFit: "cover", borderRadius: "6px" }}
-                      />
-                      <div style={{ flex: 1 }}>
-                        <span style={{ fontSize: "12px", fontWeight: 700, color: "#10b981", display: "block" }}>Bukti Transfer Sudah Diunggah</span>
-                        <small style={{ fontSize: "11px", color: "var(--ow-muted)" }}>
-                          {billingData.activeBilling.statusBayar === "PAID" ? "Nominal sudah diverifikasi OCR" : "Menunggu verifikasi"}
-                        </small>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: "10px" }}>
+                      <div>
+                        <span style={{ display: "block", fontSize: "10px", fontWeight: 800, color: "var(--ow-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                          Total Wajib Ditransfer
+                        </span>
+                        <strong style={{ display: "block", marginTop: "2px", fontSize: "24px", fontWeight: 900, color: "#f59e0b", letterSpacing: "-0.02em" }}>
+                          {money(billingData?.activeBilling?.totalTagihan || 20000)}
+                        </strong>
                       </div>
                       <button
                         type="button"
                         className="btn-secondary"
-                        style={{ fontSize: "11px", padding: "5px 10px" }}
-                        onClick={() => billingFileInputRef.current?.click()}
+                        onClick={() => copyToClipboard(String(billingData?.activeBilling?.totalTagihan || 20000))}
+                        style={{ fontSize: "11px", padding: "6px 10px", height: "fit-content", borderRadius: "8px" }}
                       >
-                        Unggah Ulang
+                        {copiedTotal ? "✓ Disalin" : "Salin Nominal"}
                       </button>
                     </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => billingFileInputRef.current?.click()}
-                      style={{
-                        padding: "24px 16px",
-                        borderRadius: "10px",
-                        border: "2px dashed var(--ow-border)",
-                        background: "var(--ow-surface)",
-                        color: "var(--ow-muted)",
-                        cursor: "pointer",
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        gap: "6px",
-                        transition: "all 0.2s ease"
-                      }}
-                    >
-                      <span style={{ fontSize: "24px" }}>📸</span>
-                      <strong style={{ fontSize: "13px", color: "var(--ow-text)" }}>Pilih Foto / Tangkapan Layar Struk Bank</strong>
-                      <span style={{ fontSize: "11px" }}>Format PNG, JPG, WebP (Maks. 5 MB)</span>
-                    </button>
-                  )}
 
-                  {billingProofFile && (
-                    <button
-                      type="button"
-                      className="btn-primary"
-                      disabled={isBillingUploading}
-                      onClick={() => void handleSubmitBillingProof()}
-                      style={{
-                        padding: "12px",
-                        borderRadius: "10px",
-                        fontWeight: 800,
-                        fontSize: "14px",
-                        background: "#f59e0b",
-                        border: "none",
-                        color: "#000",
-                        cursor: isBillingUploading ? "not-allowed" : "pointer",
-                        display: "flex",
-                        justifyContent: "center",
-                        alignItems: "center",
-                        gap: "8px"
-                      }}
-                    >
-                      {isBillingUploading ? (
-                        <>
-                          <span className="spinner" style={{ display: "inline-block", width: "16px", height: "16px", border: "2px solid #000", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
-                          Menganalisis bukti...
-                        </>
-                      ) : (
-                        "Analisis & Verifikasi Bukti"
-                      )}
-                    </button>
-                  )}
-                  <small style={{ color: "var(--ow-muted)", fontSize: "10px", lineHeight: 1.45, textAlign: "center" }}>
-                    Bukti hanya disimpan setelah nominal lolos OCR dan dihapus permanen setelah {billingData?.proofRetentionDays || 90} hari.
-                  </small>
-                </div>
+                    <p style={{ margin: "8px 0 0", fontSize: "10.5px", color: "var(--ow-muted)", lineHeight: 1.35 }}>
+                      Transfer nominal <strong>persis sampai digit terakhir</strong> agar struk otomatis diverifikasi AI.
+                    </p>
+                  </div>
 
-                {/* Riwayat Setoran Sewa Terakhir */}
-                {billingData?.recentBillings && billingData.recentBillings.length > 0 && (
-                  <div style={{ marginTop: "4px" }}>
-                    <h4 style={{ fontSize: "13px", fontWeight: 800, margin: "0 0 10px", color: "var(--ow-muted)", letterSpacing: "0.04em" }}>
-                      RIWAYAT SETORAN SEWA SEBELUMNYA
-                    </h4>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                      {billingData.recentBillings.slice(0, 5).map((b) => (
-                        <div
-                          key={b.id}
-                          style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            padding: "10px 14px",
-                            borderRadius: "10px",
-                            background: "var(--ow-surface-raised, #f8fafc)",
-                            border: "1px solid var(--ow-border, #e2e8f0)",
-                            fontSize: "12px"
-                          }}
-                        >
-                          <div>
-                            <strong style={{ display: "block", color: "var(--ow-text)" }}>
-                              {new Date(b.tanggal).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
-                            </strong>
-                            <small style={{ color: "var(--ow-muted)" }}>{money(Number(b.totalTagihan))}</small>
-                          </div>
-                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                            <span style={{
-                              fontSize: "10px",
-                              fontWeight: 800,
-                              padding: "2px 8px",
-                              borderRadius: "999px",
-                              backgroundColor: b.statusBayar === "PAID" ? "#10b981" : b.statusBayar === "PENDING_REVIEW" ? "#3b82f6" : "#f59e0b",
-                              color: "#fff"
-                            }}>
-                              {b.statusBayar === "PAID" ? "LUNAS" : b.statusBayar === "PENDING_REVIEW" ? "MENUNGGU REVIEW" : "BELUM BAYAR"}
-                            </span>
-                            {b.buktiTransferUrl && (
-                              <a
-                                href={b.buktiTransferUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                style={{ fontSize: "11px", color: "#3b82f6", textDecoration: "underline" }}
-                              >
-                                Lihat
-                              </a>
-                            )}
-                          </div>
-                        </div>
-                      ))}
+                  {/* Kartu QRIS Pembayaran */}
+                  <div className="owner-billing-card" style={{ flex: 1, justifyContent: "space-between", alignItems: "center", textAlign: "center", padding: "12px 14px" }}>
+                    <div style={{ fontSize: "11px", fontWeight: 800, letterSpacing: "0.05em", color: "var(--ow-muted)", textTransform: "uppercase" }}>
+                      Scan QRIS Pembayaran
+                    </div>
+
+                    {billingData?.centralPayment?.qrisImageUrl && (
+                      <div className="owner-billing-qris-box">
+                        <img
+                          src={billingData.centralPayment.qrisImageUrl}
+                          alt="QRIS OKESIH"
+                          className="owner-billing-qris-frame"
+                        />
+                        <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--ow-text)", maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {billingData.centralPayment.qrisMerchantName}
+                        </span>
+                      </div>
+                    )}
+
+                    <div style={{ display: "flex", gap: "8px", width: "100%", justifyContent: "center", marginTop: "4px" }}>
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        onClick={() => void saveBillingQris()}
+                        style={{ fontSize: "11px", padding: "6px 12px", width: "100%", justifyContent: "center" }}
+                      >
+                        ↓ Simpan QRIS
+                      </button>
                     </div>
                   </div>
-                )}
+                </div>
+
+                {/* Kolom Kanan: Upload Bukti & Riwayat */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  {/* Kartu Upload Bukti */}
+                  <div className="owner-billing-card" style={{ gap: "10px" }}>
+                    <div style={{ fontSize: "11px", fontWeight: 800, letterSpacing: "0.05em", color: "var(--ow-muted)", textTransform: "uppercase" }}>
+                      Unggah Bukti Transfer
+                    </div>
+
+                    <input
+                      type="file"
+                      accept="image/png, image/jpeg, image/webp"
+                      ref={billingFileInputRef}
+                      style={{ display: "none" }}
+                      onChange={handleSelectProofFile}
+                    />
+
+                    {billingProofPreview ? (
+                      <div style={{ display: "flex", alignItems: "center", gap: "12px", background: "var(--ow-surface)", padding: "10px", borderRadius: "10px", border: "1px dashed #f59e0b" }}>
+                        <img
+                          src={billingProofPreview}
+                          alt="Bukti Preview"
+                          style={{ width: "48px", height: "48px", objectFit: "cover", borderRadius: "6px" }}
+                        />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <span style={{ fontSize: "11px", fontWeight: 700, display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {billingProofFile?.name || "Foto struk transfer"}
+                          </span>
+                          <small style={{ fontSize: "10px", color: "var(--ow-muted)" }}>Siap dianalisis sistem</small>
+                        </div>
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          style={{ fontSize: "10px", padding: "4px 8px" }}
+                          onClick={() => { setBillingProofFile(null); setBillingProofPreview(null); }}
+                        >
+                          Ganti
+                        </button>
+                      </div>
+                    ) : billingData?.activeBilling?.buktiTransferUrl ? (
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px", background: "var(--ow-surface)", padding: "8px 10px", borderRadius: "10px", border: "1px solid var(--ow-border)" }}>
+                        <img
+                          src={billingData.activeBilling.buktiTransferUrl}
+                          alt="Bukti Terkirim"
+                          style={{ width: "42px", height: "42px", objectFit: "cover", borderRadius: "6px" }}
+                        />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <span style={{ fontSize: "11px", fontWeight: 700, color: "#10b981", display: "block" }}>Bukti Telah Diunggah</span>
+                          <small style={{ fontSize: "10px", color: "var(--ow-muted)" }}>
+                            {billingData.activeBilling.statusBayar === "PAID" ? "Lolos verifikasi" : "Dalam antrean verifikasi"}
+                          </small>
+                        </div>
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          style={{ fontSize: "10px", padding: "4px 8px" }}
+                          onClick={() => billingFileInputRef.current?.click()}
+                        >
+                          Ganti
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        className="owner-billing-dropzone"
+                        onClick={() => billingFileInputRef.current?.click()}
+                      >
+                        <span style={{ fontSize: "20px" }}>📸</span>
+                        <strong style={{ fontSize: "12px", color: "var(--ow-text)" }}>Pilih Foto / Screenshot Struk</strong>
+                        <span style={{ fontSize: "10px", color: "var(--ow-muted)" }}>Format PNG, JPG, WebP (Maks. 5 MB)</span>
+                      </button>
+                    )}
+
+                    {billingProofFile && (
+                      <button
+                        type="button"
+                        className="btn-primary"
+                        disabled={isBillingUploading}
+                        onClick={() => void handleSubmitBillingProof()}
+                        style={{
+                          padding: "10px",
+                          borderRadius: "10px",
+                          fontWeight: 800,
+                          fontSize: "12px",
+                          background: "#f59e0b",
+                          border: "none",
+                          color: "#000",
+                          cursor: isBillingUploading ? "not-allowed" : "pointer",
+                          display: "flex",
+                          justifyContent: "center",
+                          alignItems: "center",
+                          gap: "8px"
+                        }}
+                      >
+                        {isBillingUploading ? (
+                          <>
+                            <span className="spinner" style={{ display: "inline-block", width: "14px", height: "14px", border: "2px solid #000", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+                            Menganalisis Bukti...
+                          </>
+                        ) : (
+                          "Analisis & Verifikasi Bukti"
+                        )}
+                      </button>
+                    )}
+
+                    <small style={{ color: "var(--ow-muted)", fontSize: "9.5px", lineHeight: 1.35, textAlign: "center" }}>
+                      Bukti disimpan aman setelah lolos verifikasi & dihapus permanen dalam {billingData?.proofRetentionDays || 90} hari.
+                    </small>
+                  </div>
+
+                  {/* Kartu Riwayat Setoran Sewa Sebelumnya */}
+                  <div className="owner-billing-card" style={{ flex: 1, gap: "8px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontSize: "11px", fontWeight: 800, letterSpacing: "0.05em", color: "var(--ow-muted)", textTransform: "uppercase" }}>
+                        Riwayat Setoran
+                      </span>
+                      {billingData?.recentBillings && (
+                        <span style={{ fontSize: "10px", color: "var(--ow-muted)", fontWeight: 700 }}>
+                          {billingData.recentBillings.length} transaksi
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="owner-billing-history-scroll">
+                      {billingData?.recentBillings && billingData.recentBillings.length > 0 ? (
+                        billingData.recentBillings.slice(0, 4).map((b) => (
+                          <div
+                            key={b.id}
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              padding: "6px 8px",
+                              borderRadius: "8px",
+                              background: "var(--ow-surface, #ffffff)",
+                              border: "1px solid var(--ow-border, #e2e8f0)",
+                              fontSize: "11px"
+                            }}
+                          >
+                            <div>
+                              <strong style={{ display: "block", color: "var(--ow-text)", fontSize: "11px" }}>
+                                {new Date(b.tanggal).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}
+                              </strong>
+                              <span style={{ color: "var(--ow-muted)", fontSize: "10px" }}>{money(Number(b.totalTagihan))}</span>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                              <span className={`owner-billing-status-badge ${b.statusBayar === "PAID" ? "paid" : b.statusBayar === "PENDING_REVIEW" ? "pending" : "unpaid"}`} style={{ fontSize: "9.5px", padding: "2px 6px" }}>
+                                {b.statusBayar === "PAID" ? "LUNAS" : b.statusBayar === "PENDING_REVIEW" ? "MENUNGGU" : "BELUM"}
+                              </span>
+                              {b.buktiTransferUrl && (
+                                <a
+                                  href={b.buktiTransferUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  style={{ fontSize: "10px", color: "#3b82f6", textDecoration: "underline" }}
+                                >
+                                  Bukti
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div style={{ padding: "12px", textAlign: "center", color: "var(--ow-muted)", fontSize: "11px" }}>
+                          Belum ada riwayat setoran sebelumnya.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </div>
