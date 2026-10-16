@@ -10,6 +10,13 @@ const withSerwist = withSerwistInit({
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  outputFileTracingIncludes: {
+    "/api/owner/billing": [
+      "./node_modules/tesseract.js/src/worker-script/node/**/*",
+      "./node_modules/tesseract.js-core/**/*",
+      "./node_modules/@tesseract.js-data/eng/**/*",
+    ],
+  },
 };
 
 export default withSerwist(nextConfig);

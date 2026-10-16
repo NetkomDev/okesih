@@ -56,6 +56,7 @@ type OwnerBillingData = {
     bankAccountName: string;
     saasFeePerReceipt: number;
   };
+  proofRetentionDays: number;
 };
 type StickerConfig = {
   qrSize: number;
@@ -189,7 +190,6 @@ export default function TenantOwnerDashboardPage() {
   const [billingProofFile, setBillingProofFile] = useState<File | null>(null);
   const [billingProofPreview, setBillingProofPreview] = useState<string | null>(null);
   const [billingError, setBillingError] = useState("");
-  const [copiedAccount, setCopiedAccount] = useState(false);
   const [copiedTotal, setCopiedTotal] = useState(false);
   const billingFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -241,7 +241,7 @@ export default function TenantOwnerDashboardPage() {
         method: "POST",
         body: form,
       });
-      setNotice("Bukti transfer berhasil dikirim! Sedang diverifikasi oleh sistem.");
+      setNotice("Bukti transfer lolos verifikasi OCR dan pembayaran sudah ditandai lunas.");
       setBillingProofFile(null);
       setBillingProofPreview(null);
       await loadOwnerBilling();
@@ -253,16 +253,30 @@ export default function TenantOwnerDashboardPage() {
     }
   };
 
-  const copyToClipboard = (text: string, type: "account" | "total") => {
+  const copyToClipboard = (text: string) => {
     if (typeof navigator !== "undefined" && navigator.clipboard) {
       void navigator.clipboard.writeText(text);
-      if (type === "account") {
-        setCopiedAccount(true);
-        setTimeout(() => setCopiedAccount(false), 2000);
-      } else {
-        setCopiedTotal(true);
-        setTimeout(() => setCopiedTotal(false), 2000);
-      }
+      setCopiedTotal(true);
+      setTimeout(() => setCopiedTotal(false), 2000);
+    }
+  };
+
+  const saveBillingQris = async () => {
+    const url = billingData?.centralPayment?.qrisImageUrl;
+    if (!url) return;
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("QRIS tidak dapat diunduh.");
+      const blobUrl = URL.createObjectURL(await response.blob());
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = "QRIS-OKESIH.png";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(blobUrl);
+    } catch {
+      window.open(url, "_blank", "noopener,noreferrer");
     }
   };
 
@@ -1795,7 +1809,7 @@ export default function TenantOwnerDashboardPage() {
                   Langganan Platform OKESIH
                 </span>
                 <h3 style={{ margin: "4px 0 0", fontSize: "20px", fontWeight: 800 }}>
-                  Pembayaran Sewa SaaS & Bukti Transfer
+                  Pembayaran Sewa SaaS
                 </h3>
               </div>
               <button
@@ -1829,7 +1843,7 @@ export default function TenantOwnerDashboardPage() {
                 <p style={{ marginTop: "12px", fontSize: "13px" }}>Memuat rincian tagihan sewa...</p>
               </div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
                 {/* Status & Rincian Tagihan */}
                 <div style={{
                   padding: "18px",
@@ -1853,101 +1867,41 @@ export default function TenantOwnerDashboardPage() {
                     </span>
                   </div>
 
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "8px", fontSize: "13px", color: "var(--ow-muted)" }}>
-                    <span>Tagihan Pokok Sewa</span>
-                    <strong style={{ color: "var(--ow-text)" }}>{money(billingData?.activeBilling?.tagihanPokok || 20000)}</strong>
-                    
-                    <span>Kode Unik Alokasi (OCR AI)</span>
-                    <strong style={{ color: "#f59e0b" }}>+{money(billingData?.activeBilling?.kodeUnik || 0)}</strong>
-                    
-                    <div style={{ gridColumn: "1 / -1", height: "1px", background: "var(--ow-border)", margin: "4px 0" }} />
-                    
-                    <span style={{ fontSize: "14px", fontWeight: 800, color: "var(--ow-text)", display: "flex", alignItems: "center" }}>
-                      Total Wajib Ditransfer
-                    </span>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <span style={{ fontSize: "18px", fontWeight: 900, color: "#f59e0b" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+                    <div>
+                      <span style={{ display: "block", fontSize: "11px", fontWeight: 800, color: "var(--ow-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Total Wajib Ditransfer</span>
+                      <span style={{ display: "block", marginTop: "3px", fontSize: "24px", fontWeight: 900, color: "#f59e0b" }}>
                         {money(billingData?.activeBilling?.totalTagihan || 20000)}
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => copyToClipboard(String(billingData?.activeBilling?.totalTagihan || 20000), "total")}
-                        style={{
-                          fontSize: "11px",
-                          fontWeight: 700,
-                          padding: "3px 8px",
-                          borderRadius: "6px",
-                          background: copiedTotal ? "#10b981" : "var(--ow-surface-raised, #f1f5f9)",
-                          color: copiedTotal ? "#fff" : "var(--ow-text)",
-                          border: "1px solid var(--ow-border)",
-                          cursor: "pointer"
-                        }}
-                      >
-                        {copiedTotal ? "✓ Disalin" : "Salin Nominal"}
-                      </button>
                     </div>
+                    <button type="button" className="btn-secondary" onClick={() => copyToClipboard(String(billingData?.activeBilling?.totalTagihan || 20000))} style={{ fontSize: "11px", padding: "7px 10px" }}>{copiedTotal ? "✓ Nominal Disalin" : "Salin Nominal"}</button>
                   </div>
-                  <p style={{ margin: "10px 0 0", fontSize: "11px", color: "var(--ow-muted)", lineHeight: 1.4 }}>
-                    ⚠️ <em>Penting:</em> Transfer nominal <strong>persis sampai digit terakhir</strong> agar OCR AI OKESIH dapat mengenali setoran warkop Anda secara otomatis.
+                  <p style={{ margin: "8px 0 0", fontSize: "11px", color: "var(--ow-muted)", lineHeight: 1.4 }}>
+                    Transfer nominal persis sampai digit terakhir agar bukti dapat diverifikasi otomatis.
                   </p>
                 </div>
 
-                {/* Rekening Tujuan & QRIS */}
+                {/* QRIS Pembayaran */}
                 <div style={{
-                  padding: "18px",
+                  padding: "16px",
                   borderRadius: "14px",
                   background: "var(--ow-surface-raised, #f8fafc)",
                   border: "1px solid var(--ow-border, #e2e8f0)",
                   display: "grid",
-                  gap: "14px"
+                  justifyItems: "center",
+                  gap: "9px"
                 }}>
-                  <strong style={{ fontSize: "13px", letterSpacing: "0.02em" }}>REKENING BANK TUJUAN RESMI</strong>
-                  
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
-                    <div>
-                      <div style={{ fontSize: "11px", color: "var(--ow-muted)", fontWeight: 700 }}>
-                        {billingData?.centralPayment?.bankName || "BANK BCA"}
-                      </div>
-                      <div style={{ fontSize: "18px", fontWeight: 900, letterSpacing: "0.04em", color: "var(--ow-text)" }}>
-                        {billingData?.centralPayment?.bankAccountNumber || "8001928374"}
-                      </div>
-                      <div style={{ fontSize: "12px", color: "var(--ow-muted)" }}>
-                        a.n. {billingData?.centralPayment?.bankAccountName || "PT OKESIH KARYA DIGITAL"}
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => copyToClipboard(billingData?.centralPayment?.bankAccountNumber || "8001928374", "account")}
-                      style={{
-                        padding: "8px 14px",
-                        borderRadius: "8px",
-                        background: copiedAccount ? "#10b981" : "#3b82f6",
-                        color: "#fff",
-                        fontWeight: 700,
-                        fontSize: "12px",
-                        border: "none",
-                        cursor: "pointer"
-                      }}
-                    >
-                      {copiedAccount ? "✓ Rekening Disalin" : "Salin No. Rekening"}
-                    </button>
-                  </div>
-
                   {billingData?.centralPayment?.qrisImageUrl && (
-                    <div style={{ marginTop: "4px", paddingTop: "12px", borderTop: "1px dashed var(--ow-border)" }}>
-                      <div style={{ fontSize: "12px", fontWeight: 700, marginBottom: "8px" }}>Atau Scan QRIS Pusat OKESIH:</div>
-                      <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+                    <>
+                      <strong style={{ fontSize: "12px", letterSpacing: "0.04em" }}>SCAN QRIS PEMBAYARAN</strong>
                         <img
                           src={billingData.centralPayment.qrisImageUrl}
                           alt="QRIS OKESIH"
-                          style={{ width: "120px", height: "120px", objectFit: "contain", borderRadius: "10px", background: "#fff", padding: "6px", border: "1px solid var(--ow-border)" }}
+                          style={{ width: "168px", height: "168px", objectFit: "contain", borderRadius: "12px", background: "#fff", padding: "8px", border: "1px solid var(--ow-border)" }}
                         />
-                        <div style={{ fontSize: "12px", color: "var(--ow-muted)", lineHeight: 1.5 }}>
-                          QRIS resmi platform OKESIH ({billingData.centralPayment.qrisMerchantName}).<br/>
-                          Dapat dipindai dari BCA Mobile, Livin, BRImo, GoPay, OVO, atau ShopeePay.
-                        </div>
-                      </div>
-                    </div>
+                      <span style={{ fontSize: "11px", color: "var(--ow-muted)", textAlign: "center" }}>{billingData.centralPayment.qrisMerchantName}</span>
+                      <button type="button" className="btn-secondary" onClick={() => void saveBillingQris()} style={{ fontSize: "11px", padding: "7px 12px" }}>↓ Simpan QRIS</button>
+                    </>
                   )}
                 </div>
 
@@ -1998,7 +1952,7 @@ export default function TenantOwnerDashboardPage() {
                       <div style={{ flex: 1 }}>
                         <span style={{ fontSize: "12px", fontWeight: 700, color: "#10b981", display: "block" }}>Bukti Transfer Sudah Diunggah</span>
                         <small style={{ fontSize: "11px", color: "var(--ow-muted)" }}>
-                          {billingData.activeBilling.statusBayar === "PAID" ? "Sudah diverifikasi Super Admin" : "Sedang dalam antrean verifikasi OCR AI"}
+                          {billingData.activeBilling.statusBayar === "PAID" ? "Nominal sudah diverifikasi OCR" : "Menunggu verifikasi"}
                         </small>
                       </div>
                       <button
@@ -2058,13 +2012,16 @@ export default function TenantOwnerDashboardPage() {
                       {isBillingUploading ? (
                         <>
                           <span className="spinner" style={{ display: "inline-block", width: "16px", height: "16px", border: "2px solid #000", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
-                          Mengunggah & Memproses AI...
+                          Menganalisis bukti...
                         </>
                       ) : (
-                        "🚀 Kirim Bukti Transfer Sekarang"
+                        "Analisis & Verifikasi Bukti"
                       )}
                     </button>
                   )}
+                  <small style={{ color: "var(--ow-muted)", fontSize: "10px", lineHeight: 1.45, textAlign: "center" }}>
+                    Bukti hanya disimpan setelah nominal lolos OCR dan dihapus permanen setelah {billingData?.proofRetentionDays || 90} hari.
+                  </small>
                 </div>
 
                 {/* Riwayat Setoran Sewa Terakhir */}

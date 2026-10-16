@@ -1,6 +1,11 @@
 import { assertSameOrigin } from "@/lib/device-auth";
 import { OwnerApiError, ownerErrorResponse, requireOwner } from "@/lib/owner-api";
 import { randomUUID } from "node:crypto";
+import { billingProofStoragePath, BILLING_PROOF_RETENTION_DAYS, deleteExpiredBillingProofs } from "@/lib/billing-proof-retention";
+import { verifyBillingProof } from "@/lib/billing-proof-ocr";
+
+export const runtime = "nodejs";
+export const maxDuration = 60;
 
 const MAX_PROOF_SIZE = 5 * 1024 * 1024; // 5 MB
 const ALLOWED_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
@@ -10,6 +15,11 @@ export async function GET(request: Request) {
   try {
     assertSameOrigin(request);
     const { admin, warkopId } = await requireOwner(request);
+    try {
+      await deleteExpiredBillingProofs(admin, warkopId);
+    } catch (cleanupError) {
+      console.error("Pembersihan bukti billing tenant tertunda:", cleanupError);
+    }
 
     const [platformRes, billingsRes, warkopRes] = await Promise.all([
       admin.from("platform_settings").select("*").eq("id", "global").maybeSingle(),
@@ -65,6 +75,7 @@ export async function GET(request: Request) {
           bankAccountName: platform?.bank_account_name || "PT OKESIH KARYA DIGITAL",
           saasFeePerReceipt: Number(platform?.saas_fee_per_receipt || 100),
         },
+        proofRetentionDays: BILLING_PROOF_RETENTION_DAYS,
       },
     });
   } catch (error) {
@@ -106,7 +117,7 @@ export async function POST(request: Request) {
     // Pastikan billing tersebut memang milik warkop ini
     const { data: billing, error: billingError } = await admin
       .from("saas_billings")
-      .select("id, status_bayar, tanggal, total_tagihan")
+      .select("id, status_bayar, tanggal, total_tagihan, kode_unik, bukti_transfer_url")
       .eq("id", targetBillingId)
       .eq("warkop_id", warkopId)
       .single();
@@ -115,13 +126,20 @@ export async function POST(request: Request) {
       throw new OwnerApiError("Tagihan sewa tidak ditemukan.", 404);
     }
 
-    // Unggah file ke bucket bukti-transfer
+    // OCR berjalan sebelum berkas atau hasilnya disimpan ke Supabase.
+    const image = Buffer.from(await file.arrayBuffer());
+    const ocr = await verifyBillingProof(image, Number(billing.total_tagihan));
+    if (!ocr.verified) {
+      throw new OwnerApiError(`${ocr.reason} Pastikan foto jelas dan menampilkan nominal transfer lengkap.`, 422);
+    }
+
+    // Setelah lolos OCR, unggah file ke bucket bukti-transfer.
     const ext = EXTENSIONS[file.type] || "jpg";
     const storagePath = `saas-billings/${warkopId}/${billing.id}_${randomUUID()}.${ext}`;
 
     const { error: uploadError } = await admin.storage
       .from("bukti-transfer")
-      .upload(storagePath, file, {
+      .upload(storagePath, image, {
         upsert: true,
         contentType: file.type,
       });
@@ -131,25 +149,37 @@ export async function POST(request: Request) {
       throw new OwnerApiError("Gagal menyimpan berkas bukti transfer ke storage.", 500);
     }
 
-    // Buat signed URL yang berlaku untuk ditampilkan
-    const { data: signedData } = await admin.storage
-      .from("bukti-transfer")
-      .createSignedUrl(storagePath, 60 * 60 * 24 * 30); // 30 hari
-
-    const finalUrl = signedData?.signedUrl || storagePath;
-
-    // Perbarui record saas_billings
+    // Simpan path permanen, bukan signed URL sementara.
     const { data: updated, error: updateError } = await admin
       .from("saas_billings")
       .update({
-        bukti_transfer_url: finalUrl,
-        status_bayar: "PENDING_REVIEW",
+        bukti_transfer_url: storagePath,
+        status_bayar: "PAID",
+        ocr_raw_text: JSON.stringify({
+          engine: "tesseract-lstm",
+          confidence: ocr.confidence,
+          extractedAmount: Number(billing.total_tagihan),
+          extractedAmounts: ocr.extractedAmounts,
+          uniqueCodeMatch: true,
+          matchedUniqueCode: Number(billing.kode_unik),
+          verifiedAt: new Date().toISOString(),
+          matchNotes: `Nominal transfer cocok persis Rp ${Number(billing.total_tagihan).toLocaleString("id-ID")}.`,
+          rawText: ocr.rawText,
+        }),
       })
       .eq("id", billing.id)
       .select("id, status_bayar, bukti_transfer_url, total_tagihan, tanggal")
       .single();
 
-    if (updateError) throw updateError;
+    if (updateError) {
+      await admin.storage.from("bukti-transfer").remove([storagePath]);
+      throw updateError;
+    }
+
+    const previousPath = billing.bukti_transfer_url ? billingProofStoragePath(billing.bukti_transfer_url) : null;
+    if (previousPath && previousPath !== storagePath) {
+      await admin.storage.from("bukti-transfer").remove([previousPath]);
+    }
 
     // Catat ke audit_logs
     await admin.from("audit_logs").insert({
@@ -162,11 +192,14 @@ export async function POST(request: Request) {
         total_tagihan: billing.total_tagihan,
         tanggal: billing.tanggal,
         file_path: storagePath,
+        ocr_confidence: ocr.confidence,
+        retention_days: BILLING_PROOF_RETENTION_DAYS,
       },
     });
 
     return Response.json({
       success: true,
+      message: "Bukti transfer terverifikasi OCR dan pembayaran ditandai lunas.",
       data: updated,
     });
   } catch (error) {
