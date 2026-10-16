@@ -83,8 +83,8 @@ function CustomerMenuContent() {
   const urlParams = useParams();
   const searchParams = useSearchParams();
   const warkopId = (urlParams?.warkopId as string) || "";
-  const paramTableId = searchParams.get("tableId") || "";
-  const paramTable = searchParams.get("table") || "";
+  const paramTableId = searchParams.get("tableId") || searchParams.get("tid") || "";
+  const paramTable = searchParams.get("t") || searchParams.get("table") || "";
 
   const [payload, setPayload] = useState<MenuPayload | null>(null);
   const [tableId, setTableId] = useState(paramTableId);
@@ -108,8 +108,9 @@ function CustomerMenuContent() {
         const body = await response.json();
         if (!response.ok) throw new Error(body.error || "Menu gagal dimuat.");
         
-        let matchedTable = body.tables.find((table: BusinessTable) => table.id === paramTableId)
-          || body.tables.find((table: BusinessTable) => table.label === paramTable);
+        const cleanParamTable = paramTable.trim().toLowerCase();
+        let matchedTable = (paramTableId ? body.tables.find((table: BusinessTable) => table.id === paramTableId) : null)
+          || (cleanParamTable ? body.tables.find((table: BusinessTable) => table.label.trim().toLowerCase() === cleanParamTable) : null);
 
         if (!matchedTable && typeof window !== "undefined") {
           try {
@@ -200,12 +201,11 @@ function CustomerMenuContent() {
         {payload.profile.logo_url ? <img className="customer-business-logo" src={payload.profile.logo_url} alt={`Logo ${payload.profile.nama}`} /> : <Image src="/logo.svg?v=2" width={40} height={40} alt="OKESIH" />}
         <div><small>MENU DIGITAL</small><h1>{payload.profile.nama}</h1></div>
       </div>
-      <p>Pesan santai dari meja. Kami siapkan untuk Anda.</p>
+      <p>Pesan santai langsung dari tempat Anda. Kami siapkan untuk Anda.</p>
       {tableId ? (
-        <div className="customer-table-tag" aria-label={`Nomor Meja ${formatTableNumber(tableNumber)}`}>
-          <span className="customer-table-tag-label">MEJA</span>
+        <div className="customer-table-tag" aria-label={`Nomor ${tableNumber}`}>
           <div className="customer-table-tag-box">
-            <b>{formatTableNumber(tableNumber)}</b>
+            <b>{tableNumber}</b>
           </div>
         </div>
       ) : (
@@ -219,7 +219,7 @@ function CustomerMenuContent() {
     </div>
     <main className="customer-menu-list">{visibleMenus.length ? visibleMenus.map((menu) => { const qty = cart[menu.id]?.qty || 0; return <article key={menu.id} className={qty ? "selected" : ""}><div className="customer-menu-icon" aria-hidden="true">{categoryIcon(menu.kategori)}</div><div className="customer-menu-copy"><small>{menu.kategori}</small><h2>{menu.nama}</h2>{menu.desc_menu && <p>{menu.desc_menu}</p>}<b>Rp {Number(menu.harga).toLocaleString("id-ID")}</b></div><div className="customer-qty">{qty > 0 ? <><button aria-label={`Kurangi ${menu.nama}`} onClick={() => changeQty(menu, -1)}>−</button><strong>{qty}</strong><button aria-label={`Tambah ${menu.nama}`} onClick={() => changeQty(menu, 1)}>+</button></> : <button className="add" aria-label={`Tambah ${menu.nama}`} onClick={() => changeQty(menu, 1)}>+</button>}</div></article>; }) : <div className="customer-menu-empty"><span>⌕</span><b>Menu tidak ditemukan</b><p>Coba kata kunci atau kategori lainnya.</p></div>}</main>
     {count > 0 && <button className="customer-cart-bar" onClick={() => setCheckout(true)}><span className="customer-cart-count">{count}</span><span><small>Pesanan Anda</small><b>Rp {total.toLocaleString("id-ID")}</b></span><strong>Lihat pesanan <i>→</i></strong></button>}
-    {checkout && <div className="customer-checkout-backdrop"><section className="customer-checkout"><header><div><small>RINGKASAN PESANAN</small><h2>Periksa pesanan Anda</h2><p>{tableNumber ? `Meja ${formatTableNumber(tableNumber)}` : "⚠️ Lokasi meja belum terdeteksi"}</p></div><button className="customer-close" onClick={() => setCheckout(false)} aria-label="Tutup">×</button></header><div className="customer-checkout-items">{Object.values(cart).map(({ menu, qty, notes }) => <div className="customer-checkout-item" key={menu.id}><div><b>{menu.nama}</b><span>Rp {(Number(menu.harga) * qty).toLocaleString("id-ID")}</span></div><div className="customer-checkout-qty"><button onClick={() => changeQty(menu, -1)}>−</button><strong>{qty}</strong><button onClick={() => changeQty(menu, 1)}>+</button></div><input value={notes} onChange={(event) => changeNote(menu.id, event.target.value)} placeholder="Catatan, mis. tanpa gula" maxLength={300} /></div>)}</div><div className="customer-payment"><button className={paymentMethod === "QRIS" ? "active" : ""} onClick={() => setPaymentMethod("QRIS")}><span>▣</span> QRIS</button><button className={paymentMethod === "CASH" ? "active" : ""} onClick={() => setPaymentMethod("CASH")}><span>●</span> Tunai</button></div>{paymentMethod === "QRIS" && <div className="customer-qris">{payload.profile.qris_image_url && <img src={payload.profile.qris_image_url} alt={`QRIS ${payload.profile.qris_merchant_name || payload.profile.nama}`}/>}<b>{payload.profile.qris_merchant_name || payload.profile.nama}</b><label className="customer-proof-upload">Unggah bukti pembayaran<input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => readProof(event.target.files?.[0])}/></label>{proofImage && <span>✓ Bukti pembayaran siap dikirim</span>}</div>}<footer><div><small>Total pembayaran</small><strong>Rp {total.toLocaleString("id-ID")}</strong></div><button className="btn-primary" disabled={busy} onClick={() => void submitOrder()}>{busy ? "Menyimpan..." : (tableId ? "Kirim Pesanan →" : "Scan QR Meja untuk Memesan")}</button></footer></section></div>}
+    {checkout && <div className="customer-checkout-backdrop"><section className="customer-checkout"><header><div><small>RINGKASAN PESANAN</small><h2>Periksa pesanan Anda</h2><p>{tableNumber ? `${tableNumber}` : "⚠️ Lokasi belum terdeteksi"}</p></div><button className="customer-close" onClick={() => setCheckout(false)} aria-label="Tutup">×</button></header><div className="customer-checkout-items">{Object.values(cart).map(({ menu, qty, notes }) => <div className="customer-checkout-item" key={menu.id}><div><b>{menu.nama}</b><span>Rp {(Number(menu.harga) * qty).toLocaleString("id-ID")}</span></div><div className="customer-checkout-qty"><button onClick={() => changeQty(menu, -1)}>−</button><strong>{qty}</strong><button onClick={() => changeQty(menu, 1)}>+</button></div><input value={notes} onChange={(event) => changeNote(menu.id, event.target.value)} placeholder="Catatan, mis. tanpa gula" maxLength={300} /></div>)}</div><div className="customer-payment"><button className={paymentMethod === "QRIS" ? "active" : ""} onClick={() => setPaymentMethod("QRIS")}><span>▣</span> QRIS</button><button className={paymentMethod === "CASH" ? "active" : ""} onClick={() => setPaymentMethod("CASH")}><span>●</span> Tunai</button></div>{paymentMethod === "QRIS" && <div className="customer-qris">{payload.profile.qris_image_url && <img src={payload.profile.qris_image_url} alt={`QRIS ${payload.profile.qris_merchant_name || payload.profile.nama}`}/>}<b>{payload.profile.qris_merchant_name || payload.profile.nama}</b><label className="customer-proof-upload">Unggah bukti pembayaran<input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => readProof(event.target.files?.[0])}/></label>{proofImage && <span>✓ Bukti pembayaran siap dikirim</span>}</div>}<footer><div><small>Total pembayaran</small><strong>Rp {total.toLocaleString("id-ID")}</strong></div><button className="btn-primary" disabled={busy} onClick={() => void submitOrder()}>{busy ? "Menyimpan..." : (tableId ? "Kirim Pesanan →" : "Scan QR Meja untuk Memesan")}</button></footer></section></div>}
   </div>;
 }
 

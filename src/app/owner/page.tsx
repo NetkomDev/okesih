@@ -30,6 +30,7 @@ type StickerConfig = {
   tableLabelSize: number;
   tablePosition: "top" | "bottom";
   tableOffset: number;
+  tableOffsetX: number;
   showBusinessName: boolean;
   showInstruction: boolean;
   instructionSize: number;
@@ -43,6 +44,7 @@ const DEFAULT_STICKER_CONFIG: StickerConfig = {
   tableLabelSize: 28,
   tablePosition: "top",
   tableOffset: 4,
+  tableOffsetX: 0,
   showBusinessName: true,
   showInstruction: true,
   instructionSize: 12,
@@ -51,10 +53,7 @@ const DEFAULT_STICKER_CONFIG: StickerConfig = {
 };
 
 function formatTableDisplay(label: string) {
-  const clean = (label || "").trim();
-  if (!clean) return "Meja";
-  if (/^meja\b/i.test(clean)) return clean;
-  return `Meja ${clean}`;
+  return (label || "").trim();
 }
 
 const ownerDashboardCache = new Map<string, DashboardData>();
@@ -143,15 +142,15 @@ export default function TenantOwnerDashboardPage() {
     const generatePreview = async () => {
       const slug = data?.profile?.slug || "sample";
       const selectedTable = data?.tables?.find(t => t.id === stickerConfig.selectedTableId) || data?.tables?.[0];
-      const tableId = selectedTable?.id || "sample-01";
+      const tableLabel = selectedTable?.label || "01";
       const origin = typeof window !== "undefined" ? window.location.origin : "https://okesih.com";
-      const url = `${origin}/menu/${slug}?tableId=${encodeURIComponent(tableId)}`;
+      // URL ringkas ?t= menghasilkan QR code Version 2 (25x25) dengan kotak-kotak yang jauh lebih besar & simpel
+      const url = `${origin}/menu/${slug}?t=${encodeURIComponent(tableLabel)}`;
       try {
-        // errorCorrectionLevel: "L" untuk QR Code paling simpel & minim kotak-kotak (mudah discan bahkan saat print non-HD)
         const qr = await QRCode.toDataURL(url, {
-          width: Math.max(200, stickerConfig.qrSize * 2),
+          width: Math.max(260, stickerConfig.qrSize * 2),
           margin: 1,
-          errorCorrectionLevel: "L",
+          errorCorrectionLevel: "L", // Level L (Low) menghasilkan matriks paling renggang dengan modul kotak paling besar
         });
         if (isMounted) setPreviewQrUrl(qr);
       } catch (e) {
@@ -442,7 +441,8 @@ export default function TenantOwnerDashboardPage() {
 
     const cards = await Promise.all(
       tablesToPrint.map(async (table) => {
-        const url = `${window.location.origin}/menu/${data.profile.slug}?tableId=${encodeURIComponent(table.id)}`;
+        // Gunakan URL ringkas ?t= agar modul QR Code berukuran paling besar dan simpel tanpa kotak rapat
+        const url = `${window.location.origin}/menu/${data.profile.slug}?t=${encodeURIComponent(table.label)}`;
         return {
           table,
           url,
@@ -466,7 +466,7 @@ export default function TenantOwnerDashboardPage() {
 <html>
 <head>
   <meta charset="utf-8"/>
-  <title>Stiker Meja ${escapeHtml(data.profile.nama)}</title>
+  <title>Stiker QR ${escapeHtml(data.profile.nama)}</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 20px; background: #fff; color: #0f172a; }
     .toolbar { margin-bottom: 20px; display: flex; gap: 12px; align-items: center; }
@@ -499,6 +499,7 @@ export default function TenantOwnerDashboardPage() {
       color: #0f172a;
       margin-top: ${stickerConfig.tableOffset}px;
       margin-bottom: ${stickerConfig.tableOffset}px;
+      transform: translateX(${stickerConfig.tableOffsetX || 0}px);
       line-height: 1.1;
       letter-spacing: -0.5px;
     }
@@ -507,6 +508,7 @@ export default function TenantOwnerDashboardPage() {
       height: ${stickerConfig.qrSize}px;
       display: block;
       margin: 4px auto;
+      image-rendering: pixelated;
     }
     .instruction {
       font-size: ${stickerConfig.instructionSize}px;
@@ -530,7 +532,7 @@ export default function TenantOwnerDashboardPage() {
 </head>
 <body>
   <div class="toolbar">
-    <button class="print-btn" onclick="window.print()">🖨️ Cetak Stiker Meja</button>
+    <button class="print-btn" onclick="window.print()">🖨️ Cetak Stiker</button>
     <span>(Format sesuai hasil preview live di Dashboard Owner)</span>
   </div>
   <div class="grid">
@@ -539,9 +541,9 @@ export default function TenantOwnerDashboardPage() {
         ({ table, url, qr }) => `
       <div class="card">
         ${showBiz ? `<div class="biz-name">${escapeHtml(data.profile.nama)}</div>` : ""}
-        ${isTop ? `<div class="table-label">${escapeHtml(formatTableDisplay(table.label))}</div>` : ""}
-        <img class="qr-img" src="${qr}" alt="QR ${escapeHtml(formatTableDisplay(table.label))}"/>
-        ${!isTop ? `<div class="table-label">${escapeHtml(formatTableDisplay(table.label))}</div>` : ""}
+        ${isTop ? `<div class="table-label">${escapeHtml(table.label)}</div>` : ""}
+        <img class="qr-img" src="${qr}" alt="QR ${escapeHtml(table.label)}"/>
+        ${!isTop ? `<div class="table-label">${escapeHtml(table.label)}</div>` : ""}
         ${showInst ? `<div class="instruction">${escapeHtml(stickerConfig.instructionText || "Scan untuk melihat menu & memesan")}</div>` : ""}
         <div class="url">${escapeHtml(url)}</div>
       </div>
@@ -1016,6 +1018,7 @@ export default function TenantOwnerDashboardPage() {
                         fontSize: `${stickerConfig.tableLabelSize}px`,
                         marginTop: `${stickerConfig.tableOffset}px`,
                         marginBottom: `${stickerConfig.tableOffset}px`,
+                        transform: `translateX(${stickerConfig.tableOffsetX || 0}px)`,
                       }}
                     >
                       {formatTableDisplay((data.tables.find((t) => t.id === stickerConfig.selectedTableId) || data.tables[0])?.label || "01")}
@@ -1052,6 +1055,7 @@ export default function TenantOwnerDashboardPage() {
                         fontSize: `${stickerConfig.tableLabelSize}px`,
                         marginTop: `${stickerConfig.tableOffset}px`,
                         marginBottom: `${stickerConfig.tableOffset}px`,
+                        transform: `translateX(${stickerConfig.tableOffsetX || 0}px)`,
                       }}
                     >
                       {formatTableDisplay((data.tables.find((t) => t.id === stickerConfig.selectedTableId) || data.tables[0])?.label || "01")}
@@ -1068,7 +1072,7 @@ export default function TenantOwnerDashboardPage() {
                   )}
 
                   <div className="owner-sticker-url">
-                    {typeof window !== "undefined" ? window.location.origin : "https://okesih.com"}/menu/{profile.slug}?tableId={(data.tables.find((t) => t.id === stickerConfig.selectedTableId) || data.tables[0])?.id || "sample"}
+                    {typeof window !== "undefined" ? window.location.origin : "https://okesih.com"}/menu/{profile.slug}?t={encodeURIComponent((data.tables.find((t) => t.id === stickerConfig.selectedTableId) || data.tables[0])?.label || "01")}
                   </div>
                 </div>
               </div>
@@ -1093,7 +1097,7 @@ export default function TenantOwnerDashboardPage() {
 
                 <div className="owner-sticker-control-group">
                   <div className="owner-sticker-control-header">
-                    <span>Ukuran Nomor Meja</span>
+                    <span>Ukuran Nomor Meja / Kursi</span>
                     <b>{stickerConfig.tableLabelSize} px</b>
                   </div>
                   <input
@@ -1109,7 +1113,7 @@ export default function TenantOwnerDashboardPage() {
 
                 <div className="owner-sticker-control-group">
                   <div className="owner-sticker-control-header">
-                    <span>Posisi Nomor Meja</span>
+                    <span>Posisi Nomor Meja / Kursi</span>
                     <b>{stickerConfig.tablePosition === "top" ? "Di Atas QR Code" : "Di Bawah QR Code"}</b>
                   </div>
                   <div className="owner-sticker-position-switch">
@@ -1127,6 +1131,28 @@ export default function TenantOwnerDashboardPage() {
                     >
                       ▼ Di Bawah QR Code
                     </button>
+                  </div>
+                </div>
+
+                <div className="owner-sticker-control-group">
+                  <div className="owner-sticker-control-header">
+                    <span>Geser Posisi Horisontal (Kiri - Kanan)</span>
+                    <b style={{ color: (stickerConfig.tableOffsetX || 0) === 0 ? "var(--accent)" : "inherit" }}>
+                      {(stickerConfig.tableOffsetX || 0) === 0 ? "0 px (Center / Tengah)" : `${(stickerConfig.tableOffsetX || 0) > 0 ? "+" : ""}${stickerConfig.tableOffsetX || 0} px`}
+                    </b>
+                  </div>
+                  <input
+                    type="range"
+                    min="-50"
+                    max="50"
+                    step="1"
+                    value={stickerConfig.tableOffsetX || 0}
+                    onChange={(e) => setStickerConfig({ ...stickerConfig, tableOffsetX: Number(e.target.value) })}
+                  />
+                  <div className="owner-sticker-slider-hints">
+                    <span>◄ Kiri (-50)</span>
+                    <span style={{ fontWeight: 800, color: (stickerConfig.tableOffsetX || 0) === 0 ? "var(--accent)" : "var(--text-muted)" }}>0 (Center)</span>
+                    <span>Kanan (+50) ►</span>
                   </div>
                 </div>
 
@@ -1226,7 +1252,7 @@ export default function TenantOwnerDashboardPage() {
       {menuModal && <Modal title="Tambah Menu" onClose={() => setMenuModal(false)}><form onSubmit={createMenu}><input required placeholder="Nama menu" value={menuForm.name} onChange={(e) => setMenuForm({ ...menuForm, name: e.target.value })}/><input required min="1" type="number" placeholder="Harga" value={menuForm.price} onChange={(e) => setMenuForm({ ...menuForm, price: e.target.value })}/><label className="owner-category-field">Kategori<input required list="owner-menu-categories" maxLength={50} placeholder="Pilih atau ketik kategori baru" value={menuForm.category} onChange={(e) => setMenuForm({ ...menuForm, category: e.target.value })}/><small>Pilih kategori yang ada atau ketik kategori baru.</small></label><datalist id="owner-menu-categories">{categorySuggestions.map((item) => <option key={item} value={item}/>)}</datalist><textarea placeholder="Deskripsi" value={menuForm.description} onChange={(e) => setMenuForm({ ...menuForm, description: e.target.value })}/><div className="owner-modal-actions"><button type="button" className="btn-secondary" onClick={() => setMenuModal(false)}>Batal</button><button disabled={busy} className="btn-primary" type="submit">Oke</button></div></form></Modal>}
       {editingMenu && <Modal title="Edit Menu" onClose={() => setEditingMenu(null)}><form onSubmit={updateMenu}><label className="owner-category-field">Nama Menu<input required placeholder="Nama menu" value={editingMenu.name} onChange={(e) => setEditingMenu({ ...editingMenu, name: e.target.value })}/></label><label className="owner-category-field">Harga (Rp)<input required min="1" type="number" placeholder="Harga" value={editingMenu.price} onChange={(e) => setEditingMenu({ ...editingMenu, price: e.target.value })}/></label><label className="owner-category-field">Kategori<input required list="owner-menu-categories-edit" maxLength={50} placeholder="Pilih atau ketik kategori baru" value={editingMenu.category} onChange={(e) => setEditingMenu({ ...editingMenu, category: e.target.value })}/><small>Pilih kategori yang ada atau ketik kategori baru.</small></label><datalist id="owner-menu-categories-edit">{categorySuggestions.map((item) => <option key={item} value={item}/>)}</datalist><label className="owner-category-field">Deskripsi<textarea placeholder="Deskripsi menu" value={editingMenu.description} onChange={(e) => setEditingMenu({ ...editingMenu, description: e.target.value })}/></label><label className="owner-category-field" style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: "10px", marginTop: "4px" }}><input type="checkbox" checked={editingMenu.isAvailable} onChange={(e) => setEditingMenu({ ...editingMenu, isAvailable: e.target.checked })} style={{ width: "20px", height: "20px", margin: 0 }}/><span>Status Menu Tersedia untuk Dipesan</span></label><div className="owner-modal-actions"><button type="button" className="btn-secondary" onClick={() => setEditingMenu(null)}>Batal</button><button disabled={busy} className="btn-primary" type="submit">{busy ? "Menyimpan..." : "Oke"}</button></div></form></Modal>}
       {editingTable && (
-        <Modal title="Edit Nama Meja" onClose={() => { setEditingTable(null); setTableEditError(""); }}>
+        <Modal title="Edit Nama Meja / Kursi" onClose={() => { setEditingTable(null); setTableEditError(""); }}>
           <form onSubmit={updateTable}>
             {tableEditError && (
               <div className="owner-error" style={{ marginBottom: "12px", padding: "10px 12px", fontSize: "12px" }}>
@@ -1234,7 +1260,7 @@ export default function TenantOwnerDashboardPage() {
               </div>
             )}
             <label className="owner-category-field">
-              Nama / Nomor Meja
+              Nama / Nomor Urut
               <input
                 required
                 autoFocus
@@ -1244,10 +1270,10 @@ export default function TenantOwnerDashboardPage() {
                   setTableEditError("");
                   setEditingTable({ ...editingTable, label: event.target.value });
                 }}
-                placeholder="Contoh: 01, VIP 1, Teras"
+                placeholder="Contoh: 01, Kursi 01, Meja 1, VIP 1"
               />
               <small style={{ color: "var(--text-muted)", fontSize: "11px", marginTop: "4px" }}>
-                Ketik nomor atau nama saja. Kata &quot;Meja&quot; otomatis ditambahkan pada stiker dan QR code.
+                Ketik nama atau nomor secara langsung sesuai keinginan Anda. Sistem akan menampilkan persis apa yang Anda tulis.
               </small>
             </label>
             <div className="owner-modal-actions">

@@ -8,14 +8,11 @@ export async function POST(request: Request) {
     const body = await request.json();
     const labels: unknown[] = Array.isArray(body.labels) ? body.labels : [body.label];
     const normalized = labels
-      .map((value: unknown) => {
-        const str = String(value || "").trim();
-        return str.replace(/^meja\s+/i, "").trim() || str;
-      })
+      .map((value: unknown) => String(value || "").trim())
       .filter(Boolean);
-    if (normalized.some((value) => value.length > 30)) throw new OwnerApiError("Nama meja maksimal 30 karakter.", 400);
+    if (normalized.some((value) => value.length > 30)) throw new OwnerApiError("Nama nomor meja/kursi maksimal 30 karakter.", 400);
     const clean = [...new Set(normalized)].slice(0, 100);
-    if (!clean.length) return Response.json({ error: "Masukkan minimal satu nama/nomor meja." }, { status: 400 });
+    if (!clean.length) return Response.json({ error: "Masukkan minimal satu nama/nomor meja atau kursi." }, { status: 400 });
 
     const { data: existingTables } = await admin
       .from("warkop_tables")
@@ -43,11 +40,9 @@ export async function PATCH(request: Request) {
     const { admin, warkopId } = await requireOwner(request);
     const body = await request.json();
     const id = String(body.id || "").trim();
-    let label = String(body.label || "").trim();
-    const cleanedLabel = label.replace(/^meja\s+/i, "").trim();
-    if (cleanedLabel) label = cleanedLabel;
+    const label = String(body.label || "").trim();
 
-    if (!id || !label || label.length > 30) throw new OwnerApiError("Nama meja wajib diisi, maksimal 30 karakter.", 400);
+    if (!id || !label || label.length > 30) throw new OwnerApiError("Nama/nomor meja atau kursi wajib diisi, maksimal 30 karakter.", 400);
 
     const { data: targetTable, error: targetError } = await admin
       .from("warkop_tables")
