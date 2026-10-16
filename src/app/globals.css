@@ -3068,12 +3068,22 @@ button {
   justify-content: center;
   transition: padding 0.15s ease;
 }
+.owner-sticker-biz-header {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  max-width: 100%;
+}
+.owner-sticker-biz-logo {
+  object-fit: contain;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
 .owner-sticker-biz-name {
   font-weight: 800;
   color: #0f172a;
   line-height: 1.2;
-  margin-bottom: 2px;
-  max-width: 260px;
   word-break: break-word;
 }
 .owner-sticker-table-label {
@@ -3119,11 +3129,23 @@ button {
   margin-top: 16px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
   background: rgba(255, 255, 255, 0.02);
   padding: 14px;
   border-radius: 12px;
   border: 1px solid var(--border-subtle);
+}
+.owner-sticker-control-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-items: start;
+}
+@media (max-width: 640px) {
+  .owner-sticker-control-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
 }
 .owner-sticker-control-group {
   display: flex;
@@ -3177,35 +3199,12 @@ button {
   font-size: 10px;
   color: #64748b;
 }
-.owner-sticker-position-switch {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-  margin-top: 4px;
-}
-.owner-sticker-position-switch button {
-  padding: 8px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 700;
-  border: 1px solid var(--border-subtle);
-  background: var(--bg-surface-1);
-  color: #cbd5e1;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-.owner-sticker-position-switch button.active {
-  background: #ea580c;
-  color: #fff;
-  border-color: #ea580c;
-  box-shadow: 0 2px 8px rgba(234, 88, 12, 0.3);
-}
 .owner-sticker-toggles {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin-top: 4px;
-  padding-top: 8px;
+  margin-top: 2px;
+  padding-top: 10px;
   border-top: 1px dashed var(--border-subtle);
 }
 .owner-sticker-checkbox {
@@ -3225,6 +3224,25 @@ button {
   padding: 0 !important;
   accent-color: #ea580c;
   cursor: pointer;
+}
+.owner-btn-save-sticker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  background: #ea580c;
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.owner-btn-save-sticker:hover {
+  background: #c2410c;
+  transform: translateY(-1px);
 }
 .owner-sticker-actions {
   display: flex;

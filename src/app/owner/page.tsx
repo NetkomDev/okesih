@@ -27,8 +27,9 @@ type OwnerOnboarding = { password_changed_at: string | null; owner_pwa_installed
 type StickerConfig = {
   qrSize: number;
   businessNameSize: number;
+  businessNameOffsetX: number;
+  showLogo: boolean;
   tableLabelSize: number;
-  tablePosition: "top" | "bottom";
   tableOffset: number;
   tableOffsetX: number;
   showBusinessName: boolean;
@@ -41,8 +42,9 @@ type StickerConfig = {
 const DEFAULT_STICKER_CONFIG: StickerConfig = {
   qrSize: 180,
   businessNameSize: 18,
+  businessNameOffsetX: 0,
+  showLogo: true,
   tableLabelSize: 28,
-  tablePosition: "top",
   tableOffset: 4,
   tableOffsetX: 0,
   showBusinessName: true,
@@ -127,6 +129,7 @@ export default function TenantOwnerDashboardPage() {
     }
     return DEFAULT_STICKER_CONFIG;
   });
+  const [stickerConfigSaved, setStickerConfigSaved] = useState(false);
   const [previewQrUrl, setPreviewQrUrl] = useState<string>("");
 
   useEffect(() => {
@@ -136,6 +139,16 @@ export default function TenantOwnerDashboardPage() {
       } catch {}
     }
   }, [stickerConfig]);
+
+  const saveStickerSettings = () => {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("okesih_sticker_config", JSON.stringify(stickerConfig));
+      } catch {}
+    }
+    setStickerConfigSaved(true);
+    setTimeout(() => setStickerConfigSaved(false), 2500);
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -458,9 +471,10 @@ export default function TenantOwnerDashboardPage() {
     const popup = window.open("", "_blank");
     if (!popup) return setError("Izinkan pop-up browser untuk mencetak stiker meja.");
 
-    const isTop = stickerConfig.tablePosition === "top";
     const showBiz = stickerConfig.showBusinessName;
+    const showLogo = stickerConfig.showLogo && Boolean(data.profile.logo_url);
     const showInst = stickerConfig.showInstruction;
+    const logoUrl = data.profile.logo_url || "";
 
     popup.document.write(`<!doctype html>
 <html>
@@ -486,11 +500,25 @@ export default function TenantOwnerDashboardPage() {
       justify-content: center;
       box-sizing: border-box;
     }
+    .biz-header {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 4px;
+      transform: translateX(${stickerConfig.businessNameOffsetX || 0}px);
+    }
+    .biz-logo {
+      width: ${Math.round(stickerConfig.businessNameSize * 1.35)}px;
+      height: ${Math.round(stickerConfig.businessNameSize * 1.35)}px;
+      object-fit: contain;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
     .biz-name {
       font-size: ${stickerConfig.businessNameSize}px;
       font-weight: 800;
       color: #0f172a;
-      margin-bottom: 4px;
       line-height: 1.2;
     }
     .table-label {
@@ -540,10 +568,14 @@ export default function TenantOwnerDashboardPage() {
       .map(
         ({ table, url, qr }) => `
       <div class="card">
-        ${showBiz ? `<div class="biz-name">${escapeHtml(data.profile.nama)}</div>` : ""}
-        ${isTop ? `<div class="table-label">${escapeHtml(table.label)}</div>` : ""}
+        ${showBiz ? `
+          <div class="biz-header">
+            ${showLogo ? `<img class="biz-logo" src="${escapeHtml(logoUrl)}" alt="Logo"/>` : ""}
+            <div class="biz-name">${escapeHtml(data.profile.nama)}</div>
+          </div>
+        ` : ""}
+        <div class="table-label">${escapeHtml(table.label)}</div>
         <img class="qr-img" src="${qr}" alt="QR ${escapeHtml(table.label)}"/>
-        ${!isTop ? `<div class="table-label">${escapeHtml(table.label)}</div>` : ""}
         ${showInst ? `<div class="instruction">${escapeHtml(stickerConfig.instructionText || "Scan untuk melihat menu & memesan")}</div>` : ""}
         <div class="url">${escapeHtml(url)}</div>
       </div>
@@ -965,16 +997,35 @@ export default function TenantOwnerDashboardPage() {
               <div className="owner-sticker-header">
                 <div>
                   <h2>Preview &amp; Desain Stiker QR Meja</h2>
-                  <p>QR code otomatis dibuat simpel agar mudah discan HP walau diprint non-HD. Geser kontrol di bawah untuk melihat perubahan secara live.</p>
+                  <p>Tata letak stiker otomatis disesuaikan secara live. Klik Simpan Desain agar pengaturan tersimpan permanen untuk cetak ulang kapan saja.</p>
                 </div>
-                <button
-                  type="button"
-                  className="owner-btn-reset-sticker"
-                  onClick={() => setStickerConfig({ ...DEFAULT_STICKER_CONFIG, selectedTableId: stickerConfig.selectedTableId })}
-                  title="Kembalikan ukuran dan posisi ke pengaturan default"
-                >
-                  ↺ Reset Desain
-                </button>
+                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                  <button
+                    type="button"
+                    className="owner-btn-save-sticker"
+                    onClick={saveStickerSettings}
+                    title="Simpan pengaturan desain ini"
+                  >
+                    {stickerConfigSaved ? "✓ Tersimpan!" : "💾 Simpan Desain"}
+                  </button>
+                  <button
+                    type="button"
+                    className="owner-btn-reset-sticker"
+                    onClick={() => {
+                      setStickerConfig({ ...DEFAULT_STICKER_CONFIG, selectedTableId: stickerConfig.selectedTableId });
+                      if (typeof window !== "undefined") {
+                        try {
+                          localStorage.setItem("okesih_sticker_config", JSON.stringify({ ...DEFAULT_STICKER_CONFIG, selectedTableId: stickerConfig.selectedTableId }));
+                        } catch {}
+                      }
+                      setStickerConfigSaved(true);
+                      setTimeout(() => setStickerConfigSaved(false), 2000);
+                    }}
+                    title="Kembalikan ukuran dan posisi ke pengaturan default"
+                  >
+                    ↺ Reset Desain
+                  </button>
+                </div>
               </div>
 
               {/* Selector Meja Sampel */}
@@ -1004,26 +1055,43 @@ export default function TenantOwnerDashboardPage() {
                 <div className="owner-sticker-sheet">
                   {stickerConfig.showBusinessName && (
                     <div
-                      className="owner-sticker-biz-name"
-                      style={{ fontSize: `${stickerConfig.businessNameSize}px` }}
+                      className="owner-sticker-biz-header"
+                      style={{
+                        transform: `translateX(${stickerConfig.businessNameOffsetX || 0}px)`,
+                        marginBottom: "4px",
+                      }}
                     >
-                      {businessName || profile.nama}
+                      {stickerConfig.showLogo && profile.logo_url && (
+                        <img
+                          src={profile.logo_url}
+                          alt="Logo Usaha"
+                          className="owner-sticker-biz-logo"
+                          style={{
+                            width: `${Math.round(stickerConfig.businessNameSize * 1.35)}px`,
+                            height: `${Math.round(stickerConfig.businessNameSize * 1.35)}px`,
+                          }}
+                        />
+                      )}
+                      <div
+                        className="owner-sticker-biz-name"
+                        style={{ fontSize: `${stickerConfig.businessNameSize}px` }}
+                      >
+                        {businessName || profile.nama}
+                      </div>
                     </div>
                   )}
 
-                  {stickerConfig.tablePosition === "top" && (
-                    <div
-                      className="owner-sticker-table-label"
-                      style={{
-                        fontSize: `${stickerConfig.tableLabelSize}px`,
-                        marginTop: `${stickerConfig.tableOffset}px`,
-                        marginBottom: `${stickerConfig.tableOffset}px`,
-                        transform: `translateX(${stickerConfig.tableOffsetX || 0}px)`,
-                      }}
-                    >
-                      {formatTableDisplay((data.tables.find((t) => t.id === stickerConfig.selectedTableId) || data.tables[0])?.label || "01")}
-                    </div>
-                  )}
+                  <div
+                    className="owner-sticker-table-label"
+                    style={{
+                      fontSize: `${stickerConfig.tableLabelSize}px`,
+                      marginTop: `${stickerConfig.tableOffset}px`,
+                      marginBottom: `${stickerConfig.tableOffset}px`,
+                      transform: `translateX(${stickerConfig.tableOffsetX || 0}px)`,
+                    }}
+                  >
+                    {formatTableDisplay((data.tables.find((t) => t.id === stickerConfig.selectedTableId) || data.tables[0])?.label || "01")}
+                  </div>
 
                   <div className="owner-sticker-qr-wrapper">
                     {previewQrUrl ? (
@@ -1048,20 +1116,6 @@ export default function TenantOwnerDashboardPage() {
                     )}
                   </div>
 
-                  {stickerConfig.tablePosition === "bottom" && (
-                    <div
-                      className="owner-sticker-table-label"
-                      style={{
-                        fontSize: `${stickerConfig.tableLabelSize}px`,
-                        marginTop: `${stickerConfig.tableOffset}px`,
-                        marginBottom: `${stickerConfig.tableOffset}px`,
-                        transform: `translateX(${stickerConfig.tableOffsetX || 0}px)`,
-                      }}
-                    >
-                      {formatTableDisplay((data.tables.find((t) => t.id === stickerConfig.selectedTableId) || data.tables[0])?.label || "01")}
-                    </div>
-                  )}
-
                   {stickerConfig.showInstruction && (
                     <div
                       className="owner-sticker-instruction"
@@ -1079,132 +1133,152 @@ export default function TenantOwnerDashboardPage() {
 
               {/* Real-time Controls */}
               <div className="owner-sticker-controls">
-                <div className="owner-sticker-control-group">
-                  <div className="owner-sticker-control-header">
-                    <span>Ukuran QR Code</span>
-                    <b>{stickerConfig.qrSize} px</b>
+                {/* 1. Pengaturan Nama Usaha: Ukuran & Geser Horisontal Kiri-Kanan */}
+                <div className="owner-sticker-control-row">
+                  <div className="owner-sticker-control-group">
+                    <div className="owner-sticker-control-header">
+                      <span>Ukuran Nama Usaha</span>
+                      <b>{stickerConfig.businessNameSize} px</b>
+                    </div>
+                    <input
+                      type="range"
+                      min="12"
+                      max="30"
+                      step="1"
+                      value={stickerConfig.businessNameSize}
+                      onChange={(e) => setStickerConfig({ ...stickerConfig, businessNameSize: Number(e.target.value) })}
+                    />
+                    <div className="owner-sticker-slider-hints"><span>Kecil (12px)</span><span>Besar (30px)</span></div>
                   </div>
-                  <input
-                    type="range"
-                    min="100"
-                    max="260"
-                    step="5"
-                    value={stickerConfig.qrSize}
-                    onChange={(e) => setStickerConfig({ ...stickerConfig, qrSize: Number(e.target.value) })}
-                  />
-                  <div className="owner-sticker-slider-hints"><span>Kecil (100px)</span><span>Besar (260px)</span></div>
-                </div>
 
-                <div className="owner-sticker-control-group">
-                  <div className="owner-sticker-control-header">
-                    <span>Ukuran Nomor Meja / Kursi</span>
-                    <b>{stickerConfig.tableLabelSize} px</b>
-                  </div>
-                  <input
-                    type="range"
-                    min="16"
-                    max="48"
-                    step="1"
-                    value={stickerConfig.tableLabelSize}
-                    onChange={(e) => setStickerConfig({ ...stickerConfig, tableLabelSize: Number(e.target.value) })}
-                  />
-                  <div className="owner-sticker-slider-hints"><span>Kecil (16px)</span><span>Sangat Besar (48px)</span></div>
-                </div>
-
-                <div className="owner-sticker-control-group">
-                  <div className="owner-sticker-control-header">
-                    <span>Posisi Nomor Meja / Kursi</span>
-                    <b>{stickerConfig.tablePosition === "top" ? "Di Atas QR Code" : "Di Bawah QR Code"}</b>
-                  </div>
-                  <div className="owner-sticker-position-switch">
-                    <button
-                      type="button"
-                      className={stickerConfig.tablePosition === "top" ? "active" : ""}
-                      onClick={() => setStickerConfig({ ...stickerConfig, tablePosition: "top" })}
-                    >
-                      ▲ Di Atas QR Code
-                    </button>
-                    <button
-                      type="button"
-                      className={stickerConfig.tablePosition === "bottom" ? "active" : ""}
-                      onClick={() => setStickerConfig({ ...stickerConfig, tablePosition: "bottom" })}
-                    >
-                      ▼ Di Bawah QR Code
-                    </button>
+                  <div className="owner-sticker-control-group">
+                    <div className="owner-sticker-control-header">
+                      <span>Geser Posisi Horisontal Nama Usaha</span>
+                      <b style={{ color: (stickerConfig.businessNameOffsetX || 0) === 0 ? "var(--accent)" : "inherit" }}>
+                        {(stickerConfig.businessNameOffsetX || 0) === 0 ? "0 px (Center)" : `${(stickerConfig.businessNameOffsetX || 0) > 0 ? "+" : ""}${stickerConfig.businessNameOffsetX || 0} px`}
+                      </b>
+                    </div>
+                    <input
+                      type="range"
+                      min="-50"
+                      max="50"
+                      step="1"
+                      value={stickerConfig.businessNameOffsetX || 0}
+                      onChange={(e) => setStickerConfig({ ...stickerConfig, businessNameOffsetX: Number(e.target.value) })}
+                    />
+                    <div className="owner-sticker-slider-hints">
+                      <span>◄ Kiri (-50)</span>
+                      <span style={{ fontWeight: 800, color: (stickerConfig.businessNameOffsetX || 0) === 0 ? "var(--accent)" : "var(--text-muted)" }}>0 (Center)</span>
+                      <span>Kanan (+50) ►</span>
+                    </div>
                   </div>
                 </div>
 
-                <div className="owner-sticker-control-group">
-                  <div className="owner-sticker-control-header">
-                    <span>Geser Posisi Horisontal (Kiri - Kanan)</span>
-                    <b style={{ color: (stickerConfig.tableOffsetX || 0) === 0 ? "var(--accent)" : "inherit" }}>
-                      {(stickerConfig.tableOffsetX || 0) === 0 ? "0 px (Center / Tengah)" : `${(stickerConfig.tableOffsetX || 0) > 0 ? "+" : ""}${stickerConfig.tableOffsetX || 0} px`}
-                    </b>
+                {/* 2. Pengaturan Nomor Meja / Kursi: Ukuran & Geser Horisontal Kiri-Kanan */}
+                <div className="owner-sticker-control-row">
+                  <div className="owner-sticker-control-group">
+                    <div className="owner-sticker-control-header">
+                      <span>Ukuran Nomor Meja / Kursi</span>
+                      <b>{stickerConfig.tableLabelSize} px</b>
+                    </div>
+                    <input
+                      type="range"
+                      min="16"
+                      max="48"
+                      step="1"
+                      value={stickerConfig.tableLabelSize}
+                      onChange={(e) => setStickerConfig({ ...stickerConfig, tableLabelSize: Number(e.target.value) })}
+                    />
+                    <div className="owner-sticker-slider-hints"><span>Kecil (16px)</span><span>Sangat Besar (48px)</span></div>
                   </div>
-                  <input
-                    type="range"
-                    min="-50"
-                    max="50"
-                    step="1"
-                    value={stickerConfig.tableOffsetX || 0}
-                    onChange={(e) => setStickerConfig({ ...stickerConfig, tableOffsetX: Number(e.target.value) })}
-                  />
-                  <div className="owner-sticker-slider-hints">
-                    <span>◄ Kiri (-50)</span>
-                    <span style={{ fontWeight: 800, color: (stickerConfig.tableOffsetX || 0) === 0 ? "var(--accent)" : "var(--text-muted)" }}>0 (Center)</span>
-                    <span>Kanan (+50) ►</span>
+
+                  <div className="owner-sticker-control-group">
+                    <div className="owner-sticker-control-header">
+                      <span>Geser Posisi Horisontal Nomor Meja</span>
+                      <b style={{ color: (stickerConfig.tableOffsetX || 0) === 0 ? "var(--accent)" : "inherit" }}>
+                        {(stickerConfig.tableOffsetX || 0) === 0 ? "0 px (Center)" : `${(stickerConfig.tableOffsetX || 0) > 0 ? "+" : ""}${stickerConfig.tableOffsetX || 0} px`}
+                      </b>
+                    </div>
+                    <input
+                      type="range"
+                      min="-50"
+                      max="50"
+                      step="1"
+                      value={stickerConfig.tableOffsetX || 0}
+                      onChange={(e) => setStickerConfig({ ...stickerConfig, tableOffsetX: Number(e.target.value) })}
+                    />
+                    <div className="owner-sticker-slider-hints">
+                      <span>◄ Kiri (-50)</span>
+                      <span style={{ fontWeight: 800, color: (stickerConfig.tableOffsetX || 0) === 0 ? "var(--accent)" : "var(--text-muted)" }}>0 (Center)</span>
+                      <span>Kanan (+50) ►</span>
+                    </div>
                   </div>
                 </div>
 
-                <div className="owner-sticker-control-group">
-                  <div className="owner-sticker-control-header">
-                    <span>Geser Vertikal Posisi Nomor Meja</span>
-                    <b>{stickerConfig.tableOffset} px</b>
+                {/* 3. Pengaturan Jarak Vertikal & Ukuran QR Code */}
+                <div className="owner-sticker-control-row">
+                  <div className="owner-sticker-control-group">
+                    <div className="owner-sticker-control-header">
+                      <span>Jarak Vertikal Meja ke QR Code</span>
+                      <b>{stickerConfig.tableOffset} px</b>
+                    </div>
+                    <input
+                      type="range"
+                      min="-12"
+                      max="30"
+                      step="1"
+                      value={stickerConfig.tableOffset}
+                      onChange={(e) => setStickerConfig({ ...stickerConfig, tableOffset: Number(e.target.value) })}
+                    />
+                    <div className="owner-sticker-slider-hints"><span>Mendekat (-12px)</span><span>Menjauh (+30px)</span></div>
                   </div>
-                  <input
-                    type="range"
-                    min="-12"
-                    max="30"
-                    step="1"
-                    value={stickerConfig.tableOffset}
-                    onChange={(e) => setStickerConfig({ ...stickerConfig, tableOffset: Number(e.target.value) })}
-                  />
-                  <div className="owner-sticker-slider-hints"><span>Mendekat (-12px)</span><span>Menjauh (+30px)</span></div>
-                </div>
 
-                <div className="owner-sticker-control-group">
-                  <div className="owner-sticker-control-header">
-                    <span>Ukuran Nama Usaha</span>
-                    <b>{stickerConfig.businessNameSize} px</b>
+                  <div className="owner-sticker-control-group">
+                    <div className="owner-sticker-control-header">
+                      <span>Ukuran QR Code</span>
+                      <b>{stickerConfig.qrSize} px</b>
+                    </div>
+                    <input
+                      type="range"
+                      min="100"
+                      max="260"
+                      step="5"
+                      value={stickerConfig.qrSize}
+                      onChange={(e) => setStickerConfig({ ...stickerConfig, qrSize: Number(e.target.value) })}
+                    />
+                    <div className="owner-sticker-slider-hints"><span>Kecil (100px)</span><span>Besar (260px)</span></div>
                   </div>
-                  <input
-                    type="range"
-                    min="12"
-                    max="30"
-                    step="1"
-                    value={stickerConfig.businessNameSize}
-                    onChange={(e) => setStickerConfig({ ...stickerConfig, businessNameSize: Number(e.target.value) })}
-                  />
-                  <div className="owner-sticker-slider-hints"><span>Kecil (12px)</span><span>Besar (30px)</span></div>
                 </div>
 
                 <div className="owner-sticker-toggles">
-                  <label className="owner-sticker-checkbox">
-                    <input
-                      type="checkbox"
-                      checked={stickerConfig.showBusinessName}
-                      onChange={(e) => setStickerConfig({ ...stickerConfig, showBusinessName: e.target.checked })}
-                    />
-                    <span>Tampilkan Nama Usaha</span>
-                  </label>
-                  <label className="owner-sticker-checkbox">
-                    <input
-                      type="checkbox"
-                      checked={stickerConfig.showInstruction}
-                      onChange={(e) => setStickerConfig({ ...stickerConfig, showInstruction: e.target.checked })}
-                    />
-                    <span>Tampilkan Petunjuk Scan</span>
-                  </label>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "16px" }}>
+                    <label className="owner-sticker-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={stickerConfig.showBusinessName}
+                        onChange={(e) => setStickerConfig({ ...stickerConfig, showBusinessName: e.target.checked })}
+                      />
+                      <span>Tampilkan Nama Usaha</span>
+                    </label>
+                    {profile.logo_url && (
+                      <label className="owner-sticker-checkbox">
+                        <input
+                          type="checkbox"
+                          checked={stickerConfig.showLogo}
+                          onChange={(e) => setStickerConfig({ ...stickerConfig, showLogo: e.target.checked })}
+                        />
+                        <span>Tampilkan Logo Usaha</span>
+                      </label>
+                    )}
+                    <label className="owner-sticker-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={stickerConfig.showInstruction}
+                        onChange={(e) => setStickerConfig({ ...stickerConfig, showInstruction: e.target.checked })}
+                      />
+                      <span>Tampilkan Petunjuk Scan</span>
+                    </label>
+                  </div>
                 </div>
               </div>
 
