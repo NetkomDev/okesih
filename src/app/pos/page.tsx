@@ -292,33 +292,6 @@ export default function PosModulePage() {
     setDateModalOpen(false);
   };
 
-  if (app.authorized === false) return <DevicePairing type="POS" pairing={app.pairing} error={app.error} onBegin={app.beginPairing}/>;
-  if (!app.data) return <div className="device-loading"><Image src="/okesih-logo-animated.svg" width={90} height={90} alt="OKESIH"/><b>{app.error || "Menyiapkan Kasir..."}</b></div>;
-
-  const update = async (order: DeviceOrder, status: "COOKING" | "DONE" | "REJECTED") => { setBusy(true); app.setError(""); try { await app.transitionOrder(order.id, status); setSelected(null); } catch (reason) { app.setError(reason instanceof Error ? reason.message : "Pesanan gagal diperbarui."); } finally { setBusy(false); } };
-  const changeQty = (menuId: string, delta: number) => setCart((current) => { const nextQty = (current[menuId]?.qty || 0) + delta; if (nextQty <= 0) { const next = { ...current }; delete next[menuId]; return next; } return { ...current, [menuId]: { qty: Math.min(nextQty, 99), notes: current[menuId]?.notes || "" } }; });
-  const submitCashierOrder = async () => {
-    if (!cartItems.length) return;
-    setBusy(true); setSaleMessage(""); app.setError("");
-    try {
-      const order = await app.createCashierOrder({ tableNumber, paymentMethod, items: cartItems.map((item) => ({ menuId: item.menu.id, qty: item.qty, notes: item.notes })) });
-      setCart({}); setSaleMessage(`Pesanan #${String(order.nomor_antrean).padStart(3, "0")} sudah masuk ke KDS dapur.`); window.setTimeout(() => setSaleMessage(""), 5000);
-    } catch (reason) { app.setError(reason instanceof Error ? reason.message : "Pesanan kasir gagal disimpan."); } finally { setBusy(false); }
-  };
-  const toggleOrTestAudio = () => { const ctx = getAudioContext(); setAudioEnabled(true); setAudioUnlocked(Boolean(ctx)); if (ctx) void ctx.resume().then(() => playCashierSound(ctx)); else playCashierSound(null); };
-  const cooking = app.data.orders.filter((order) => order.status_pesanan === "COOKING");
-  const ready = app.data.orders.filter((order) => order.status_pesanan === "READY");
-
-  const handleOpenHistory = () => {
-    if (app.data?.hasAuditPin && !historyUnlocked) {
-      setPinInput("");
-      setPinError("");
-      setPinModalOpen(true);
-      return;
-    }
-    setView("history");
-  };
-
   const verifyAuditPin = async (e?: React.FormEvent, customPin?: string) => {
     if (e) e.preventDefault();
     const pinToVerify = customPin !== undefined ? customPin : pinInput;
@@ -349,7 +322,7 @@ export default function PosModulePage() {
     }
   };
 
-  // Dukungan input keyboard fisik untuk PC/Laptop kasir
+  // Dukungan input keyboard fisik untuk PC/Laptop kasir (Hook dipanggil sebelum conditional early return)
   useEffect(() => {
     if (!pinModalOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -382,6 +355,33 @@ export default function PosModulePage() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [pinModalOpen, pinInput]);
+
+  if (app.authorized === false) return <DevicePairing type="POS" pairing={app.pairing} error={app.error} onBegin={app.beginPairing}/>;
+  if (!app.data) return <div className="device-loading"><Image src="/okesih-logo-animated.svg" width={90} height={90} alt="OKESIH"/><b>{app.error || "Menyiapkan Kasir..."}</b></div>;
+
+  const update = async (order: DeviceOrder, status: "COOKING" | "DONE" | "REJECTED") => { setBusy(true); app.setError(""); try { await app.transitionOrder(order.id, status); setSelected(null); } catch (reason) { app.setError(reason instanceof Error ? reason.message : "Pesanan gagal diperbarui."); } finally { setBusy(false); } };
+  const changeQty = (menuId: string, delta: number) => setCart((current) => { const nextQty = (current[menuId]?.qty || 0) + delta; if (nextQty <= 0) { const next = { ...current }; delete next[menuId]; return next; } return { ...current, [menuId]: { qty: Math.min(nextQty, 99), notes: current[menuId]?.notes || "" } }; });
+  const submitCashierOrder = async () => {
+    if (!cartItems.length) return;
+    setBusy(true); setSaleMessage(""); app.setError("");
+    try {
+      const order = await app.createCashierOrder({ tableNumber, paymentMethod, items: cartItems.map((item) => ({ menuId: item.menu.id, qty: item.qty, notes: item.notes })) });
+      setCart({}); setSaleMessage(`Pesanan #${String(order.nomor_antrean).padStart(3, "0")} sudah masuk ke KDS dapur.`); window.setTimeout(() => setSaleMessage(""), 5000);
+    } catch (reason) { app.setError(reason instanceof Error ? reason.message : "Pesanan kasir gagal disimpan."); } finally { setBusy(false); }
+  };
+  const toggleOrTestAudio = () => { const ctx = getAudioContext(); setAudioEnabled(true); setAudioUnlocked(Boolean(ctx)); if (ctx) void ctx.resume().then(() => playCashierSound(ctx)); else playCashierSound(null); };
+  const cooking = app.data.orders.filter((order) => order.status_pesanan === "COOKING");
+  const ready = app.data.orders.filter((order) => order.status_pesanan === "READY");
+
+  const handleOpenHistory = () => {
+    if (app.data?.hasAuditPin && !historyUnlocked) {
+      setPinInput("");
+      setPinError("");
+      setPinModalOpen(true);
+      return;
+    }
+    setView("history");
+  };
 
   const lockHistory = () => {
     setHistoryUnlocked(false);
