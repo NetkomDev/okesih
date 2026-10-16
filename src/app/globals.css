@@ -3729,7 +3729,7 @@ button {
 .pos-menu-grid>article:hover{border-color:#fcd3c1;box-shadow:0 8px 24px rgba(15,23,42,.06);transform:translateY(-2px)}
 .pos-menu-grid>article.selected{border-color:#f4512c;box-shadow:0 8px 24px rgba(244,81,44,.14)}
 .pos-menu-art{height:74px;display:grid;place-items:center;position:relative;border-radius:14px;background:linear-gradient(135deg,#fff7f2 0%,#fff1ea 100%);border:1px solid rgba(244,81,44,.08);font-size:32px}
-.pos-menu-art>b{position:absolute;right:8px;top:8px;min-width:24px;height:24px;display:grid;place-items:center;padding:0 6px;border-radius:99px;background:#f4512c;color:#fff;font-size:11px;font-weight:900;box-shadow:0 2px 6px rgba(244,81,44,.4)}
+.pos-menu-art>b{position:absolute;right:8px;top:8px;min-width:48px;height:48px;display:grid;place-items:center;padding:0 8px;border-radius:99px;background:#f4512c;color:#fff;font-size:22px;font-weight:950;box-shadow:0 4px 12px rgba(244,81,44,.45);border:2.5px solid #fff}
 .pos-menu-copy{flex:1;padding:12px 2px 8px}
 .pos-menu-copy small{display:block;color:#f4512c;font-size:9px;font-weight:950;letter-spacing:.08em;text-transform:uppercase}
 .pos-menu-copy h2{margin:3px 0 4px;color:#0f172a;font-size:16px;font-weight:850;line-height:1.25}
@@ -3748,7 +3748,7 @@ button {
 .pos-cart-panel>header{display:flex;justify-content:space-between;align-items:center;padding:18px 22px 14px;border-bottom:1px solid #edf0f5;background:#fff;flex-shrink:0}
 .pos-cart-panel>header small{display:block;color:var(--pos-accent);font-size:11px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;margin-bottom:3px}
 .pos-cart-panel h2{margin:0;color:#0f172a;font-size:25px;font-weight:900;letter-spacing:-.03em;line-height:1.15}
-.pos-cart-panel>header>span{padding:6px 12px;border-radius:99px;background:#fff1ed;color:#d84628;font-size:11px;font-weight:900;border:1px solid rgba(244,81,44,.2)}
+.pos-cart-panel>header>span{padding:8px 16px;border-radius:99px;background:#fff1ed;color:#d84628;font-size:15px;font-weight:950;border:1.5px solid rgba(244,81,44,.3)}
 .pos-field{display:grid;gap:6px;margin:14px 20px 12px;color:#64748b;font-size:11px;font-weight:850;letter-spacing:.05em;text-transform:uppercase;flex-shrink:0}
 .pos-field select{height:42px;padding:0 12px;border:1.5px solid #dce2ea;border-radius:10px;background:#f8fafc;color:#1e293b;font-size:13px;font-weight:750;cursor:pointer;transition:all .15s ease}
 .pos-field select:focus{border-color:#f4512c;background:#fff;outline:none}
