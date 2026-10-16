@@ -66,12 +66,18 @@ export default function CashierShiftGate({ tenant, pendingCount, onShiftChanged,
   const [notes, setNotes] = useState("");
   const [closing, setClosing] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [refreshingSession, setRefreshingSession] = useState(false);
   const [error, setError] = useState("");
 
   const loadSession = useCallback(async () => {
-    const body = await cashierRequest("/api/device/cashier-session");
-    setSession(body);
-    return body as SessionState;
+    try {
+      const body = await cashierRequest("/api/device/cashier-session");
+      setSession(body);
+      return body as SessionState;
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Sesi kasir gagal dimuat.");
+      return null;
+    }
   }, []);
 
   useEffect(() => {
@@ -86,6 +92,32 @@ export default function CashierShiftGate({ tenant, pendingCount, onShiftChanged,
     });
     return () => { cancelled = true; };
   }, []);
+
+  // Real-time synchronization for cashier shift & cash calculations
+  useEffect(() => {
+    const supabase = createCashierClient();
+    const channel = supabase
+      .channel("cashier-shift-realtime-channel")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "transactions" },
+        () => {
+          void loadSession();
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "shifts" },
+        () => {
+          void loadSession();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [loadSession]);
 
   const login = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -194,6 +226,7 @@ export default function CashierShiftGate({ tenant, pendingCount, onShiftChanged,
         openEndShiftModal: () => {
           setError("");
           setClosing(true);
+          void loadSession();
         },
       }}
     >
@@ -202,7 +235,28 @@ export default function CashierShiftGate({ tenant, pendingCount, onShiftChanged,
         <button className="ops-modal-close" onClick={() => setClosing(false)}>×</button>
         <small>PERGANTIAN KASIR</small><h2>Akhiri Shift</h2>
         <p>Hitung uang tunai fisik di laci sebelum keluar.</p>
-        <div className="cashier-expected"><span>Kas tunai menurut sistem</span><b>Rp {Number(session.shift?.expectedCash || 0).toLocaleString("id-ID")}</b></div>
+        <div className="cashier-expected">
+          <div>
+            <span>Kas tunai menurut sistem</span>
+            <b>Rp {Number(session.shift?.expectedCash || 0).toLocaleString("id-ID")}</b>
+          </div>
+          <button
+            type="button"
+            className="cashier-refresh-cash-btn"
+            disabled={refreshingSession}
+            onClick={async () => {
+              setRefreshingSession(true);
+              try {
+                await loadSession();
+              } finally {
+                setRefreshingSession(false);
+              }
+            }}
+            title="Sinkronkan kas tunai terbaru"
+          >
+            {refreshingSession ? "..." : "🔄 Sinkronkan"}
+          </button>
+        </div>
         <form onSubmit={endShift}>
           <label>
             Kas fisik diserahkan (Rp)
