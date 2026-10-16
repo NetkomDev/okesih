@@ -4479,6 +4479,203 @@ button.pos-audit-card:hover .pos-audit-card-action-hint {
   color: #0f172a;
 }
 
+/* POS PIN Security Modal & Numpad */
+.pos-pin-modal {
+  position: relative;
+  width: min(380px, 92vw);
+  padding: 32px 28px 24px;
+  border-radius: 28px;
+  background: #ffffff;
+  color: #0f172a;
+  text-align: center;
+  box-shadow: 0 25px 60px -12px rgba(15, 23, 42, 0.35), 0 0 0 1px rgba(15, 23, 42, 0.06);
+  animation: posModalIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pos-pin-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+  color: #ea580c;
+  box-shadow: 0 10px 24px -4px rgba(234, 88, 12, 0.25), inset 0 0 0 1.5px rgba(234, 88, 12, 0.2);
+  margin-bottom: 18px;
+}
+
+.pos-pin-badge svg {
+  width: 32px;
+  height: 32px;
+  stroke-width: 2.2;
+}
+
+.pos-pin-title {
+  font-size: 22px;
+  font-weight: 950;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+  margin: 0 0 6px;
+}
+
+.pos-pin-desc {
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.5;
+  margin: 0 0 24px;
+  font-weight: 500;
+}
+
+/* PIN Indicator Dots */
+.pos-pin-dots {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 22px;
+  padding: 12px 16px;
+  border-radius: 16px;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+}
+
+.pos-pin-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid #cbd5e1;
+  background: #ffffff;
+  transition: all 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.pos-pin-dot.filled {
+  border-color: #ea580c;
+  background: #ea580c;
+  transform: scale(1.15);
+  box-shadow: 0 0 12px rgba(234, 88, 12, 0.4);
+}
+
+.pos-pin-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 16px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: #fef2f2;
+  color: #dc2626;
+  font-size: 12px;
+  font-weight: 750;
+  border: 1px solid #fecaca;
+  animation: posPinShake 0.35s ease;
+}
+
+@keyframes posPinShake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+
+/* On-screen Keypad */
+.pos-pin-numpad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.pos-pin-num-btn {
+  height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 850;
+  color: #0f172a;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+  transition: all 0.12s ease;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pos-pin-num-btn:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+}
+
+.pos-pin-num-btn:active:not(:disabled) {
+  background: #f1f5f9;
+  transform: scale(0.96);
+}
+
+.pos-pin-num-btn.special {
+  font-size: 13.5px;
+  font-weight: 750;
+  color: #64748b;
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+.pos-pin-num-btn.special:hover:not(:disabled) {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.pos-pin-actions {
+  display: grid;
+  grid-template-columns: 1fr 1.3fr;
+  gap: 10px;
+}
+
+.pos-pin-actions button {
+  height: 46px;
+  border-radius: 12px;
+  font-size: 13.5px;
+  font-weight: 850;
+  cursor: pointer;
+  border: 0;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.pos-pin-btn-cancel {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.pos-pin-btn-cancel:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.pos-pin-btn-submit {
+  background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(234, 88, 12, 0.35);
+}
+
+.pos-pin-btn-submit:hover:not(:disabled) {
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(234, 88, 12, 0.45);
+}
+
+.pos-pin-btn-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
 @media(max-width:1100px){.pos-header{grid-template-columns:auto 1fr}.pos-nav{grid-row:2;grid-column:1/-1;justify-self:center}.pos-header-actions{min-width:0}.pos-icon-button span,.pos-device-chip b{display:none}.pos-sale-page{height:calc(100vh - 131px);grid-template-columns:minmax(0,1fr) 340px}.pos-audit-stats{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:760px){.pos-header{position:static;grid-template-columns:1fr auto;padding:10px 13px}.pos-brand strong{max-width:170px}.pos-connection,.pos-install-button{display:none}.pos-nav{width:100%}.pos-nav button{flex:1;justify-content:center;padding:0 8px}.pos-orders-page{padding:20px 13px 80px}.pos-hero-row h1{font-size:23px}.pos-stats{grid-template-columns:1fr}.pos-stats article{min-height:92px}.pos-sale-page{height:auto;display:block;overflow:visible}.pos-menu-panel{padding:20px 13px 30px;overflow:visible}.pos-menu-panel>header{display:grid;align-items:start}.pos-search{width:100%}.pos-menu-grid{grid-template-columns:1fr 1fr}.pos-cart-panel{position:relative;border:0;border-top:1px solid #dfe4eb;box-shadow:0 -10px 30px rgba(15,23,42,.04)}.pos-cart-lines{max-height:420px;min-height:240px}.pos-cart-empty{min-height:240px}.cashier-shift-button{z-index:80}}
 @media(max-width:480px){.pos-menu-grid{grid-template-columns:1fr}.pos-device-chip{display:none}.pos-header-actions{gap:4px}.pos-nav button{font-size:10px}.pos-hero-row>button{font-size:0}.pos-hero-row>button svg{width:18px}.pos-section-heading>small{display:none}}

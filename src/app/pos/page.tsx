@@ -319,9 +319,10 @@ export default function PosModulePage() {
     setView("history");
   };
 
-  const verifyAuditPin = async (e?: React.FormEvent) => {
+  const verifyAuditPin = async (e?: React.FormEvent, customPin?: string) => {
     if (e) e.preventDefault();
-    if (!pinInput.trim()) {
+    const pinToVerify = customPin !== undefined ? customPin : pinInput;
+    if (!pinToVerify.trim()) {
       setPinError("Masukkan PIN keamanan");
       return;
     }
@@ -331,7 +332,7 @@ export default function PosModulePage() {
       const res = await fetch("/api/device/audit-pin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pin: pinInput }),
+        body: JSON.stringify({ pin: pinToVerify }),
       });
       const data = await res.json();
       if (!res.ok || !data.verified) {
@@ -347,6 +348,40 @@ export default function PosModulePage() {
       setPinChecking(false);
     }
   };
+
+  // Dukungan input keyboard fisik untuk PC/Laptop kasir
+  useEffect(() => {
+    if (!pinModalOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key >= "0" && e.key <= "9") {
+        e.preventDefault();
+        setPinInput((prev) => {
+          if (prev.length < 6) {
+            const next = prev + e.key;
+            setPinError("");
+            return next;
+          }
+          return prev;
+        });
+      } else if (e.key === "Backspace") {
+        e.preventDefault();
+        setPinInput((prev) => prev.slice(0, -1));
+        setPinError("");
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        setPinModalOpen(false);
+        setPinInput("");
+        setPinError("");
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        if (pinInput.length >= 4) {
+          void verifyAuditPin();
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [pinModalOpen, pinInput]);
 
   const lockHistory = () => {
     setHistoryUnlocked(false);
@@ -804,7 +839,7 @@ export default function PosModulePage() {
     {/* Modal Input PIN Akses Audit */}
     {pinModalOpen && (
       <div className="ops-modal-backdrop">
-        <section className="ops-modal" style={{ maxWidth: "400px", textAlign: "center", padding: "28px 24px" }}>
+        <section className="pos-pin-modal">
           <button
             className="ops-modal-close"
             onClick={() => {
@@ -815,84 +850,110 @@ export default function PosModulePage() {
           >
             ×
           </button>
-          
-          <div style={{
-            width: "56px",
-            height: "56px",
-            borderRadius: "50%",
-            background: "rgba(234, 88, 12, 0.12)",
-            color: "#ea580c",
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: "26px",
-            marginBottom: "14px"
-          }}>
-            🔒
+
+          <div className="pos-pin-badge">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
           </div>
 
-          <h2 style={{ fontSize: "20px", fontWeight: 800, margin: "0 0 6px", color: "var(--color-heading, #111827)" }}>
-            Akses Terproteksi
-          </h2>
-          <p style={{ fontSize: "13px", color: "var(--color-muted, #6b7280)", margin: "0 0 20px", lineHeight: "1.5" }}>
-            Halaman Histori Pesanan &amp; Audit dikunci oleh Owner. Masukkan PIN keamanan untuk membuka akses.
+          <h2 className="pos-pin-title">Akses Terproteksi</h2>
+          <p className="pos-pin-desc">
+            Halaman Histori &amp; Rekap Audit dikunci. Masukkan PIN keamanan Owner untuk membuka akses.
           </p>
 
           <form onSubmit={verifyAuditPin}>
-            <div style={{ marginBottom: "16px" }}>
-              <input
-                type="password"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                maxLength={6}
-                value={pinInput}
-                onChange={(e) => {
-                  setPinInput(e.target.value.replace(/\D/g, ""));
-                  setPinError("");
-                }}
-                placeholder="• • • • • •"
-                autoFocus
-                style={{
-                  width: "100%",
-                  fontSize: "28px",
-                  fontWeight: 800,
-                  letterSpacing: "12px",
-                  textAlign: "center",
-                  padding: "12px 16px",
-                  borderRadius: "14px",
-                  border: pinError ? "2px solid #ef4444" : "2px solid #e5e7eb",
-                  background: "var(--color-card, #f9fafb)",
-                  color: "var(--color-heading, #111827)",
-                  outline: "none"
-                }}
-              />
-              {pinError && (
-                <div style={{ color: "#ef4444", fontSize: "12px", fontWeight: 600, marginTop: "8px" }}>
-                  {pinError}
-                </div>
-              )}
+            {/* Indikator Titik PIN */}
+            <div className="pos-pin-dots">
+              {[0, 1, 2, 3, 4, 5].map((index) => (
+                <div
+                  key={index}
+                  className={`pos-pin-dot ${index < pinInput.length ? "filled" : ""}`}
+                />
+              ))}
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+            {pinError && (
+              <div className="pos-pin-error">
+                <span>⚠️</span>
+                <span>{pinError}</span>
+              </div>
+            )}
+
+            {/* Tombol Numpad Layar Sentuh / Tablet / POS */}
+            <div className="pos-pin-numpad">
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+                <button
+                  key={num}
+                  type="button"
+                  className="pos-pin-num-btn"
+                  onClick={() => {
+                    if (pinInput.length < 6) {
+                      setPinInput((prev) => prev + String(num));
+                      setPinError("");
+                    }
+                  }}
+                  disabled={pinChecking}
+                >
+                  {num}
+                </button>
+              ))}
               <button
                 type="button"
-                className="pos-filter-btn-cancel"
+                className="pos-pin-num-btn special"
+                onClick={() => {
+                  setPinInput("");
+                  setPinError("");
+                }}
+                disabled={pinChecking || !pinInput}
+              >
+                Reset
+              </button>
+              <button
+                type="button"
+                className="pos-pin-num-btn"
+                onClick={() => {
+                  if (pinInput.length < 6) {
+                    setPinInput((prev) => prev + "0");
+                    setPinError("");
+                  }
+                }}
+                disabled={pinChecking}
+              >
+                0
+              </button>
+              <button
+                type="button"
+                className="pos-pin-num-btn special"
+                onClick={() => {
+                  setPinInput((prev) => prev.slice(0, -1));
+                  setPinError("");
+                }}
+                disabled={pinChecking || !pinInput}
+              >
+                ⌫ Hapus
+              </button>
+            </div>
+
+            <div className="pos-pin-actions">
+              <button
+                type="button"
+                className="pos-pin-btn-cancel"
                 onClick={() => {
                   setPinModalOpen(false);
                   setPinError("");
                   setPinInput("");
                 }}
-                style={{ width: "100%", justifyContent: "center" }}
               >
                 Batal
               </button>
               <button
                 type="submit"
                 disabled={pinChecking || pinInput.length < 4}
-                className="pos-filter-btn-apply"
-                style={{ width: "100%", justifyContent: "center" }}
+                className="pos-pin-btn-submit"
               >
-                {pinChecking ? "Memeriksa..." : "Buka Akses"}
+                {pinChecking ? "Memeriksa..." : "Buka Akses →"}
               </button>
             </div>
           </form>
