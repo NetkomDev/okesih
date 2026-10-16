@@ -28,7 +28,9 @@ type StickerConfig = {
   qrSize: number;
   businessNameSize: number;
   businessNameOffsetX: number;
+  businessNameAlign: "left" | "center" | "right";
   showLogo: boolean;
+  logoSize: number;
   tableLabelSize: number;
   tableOffset: number;
   tableOffsetX: number;
@@ -43,7 +45,9 @@ const DEFAULT_STICKER_CONFIG: StickerConfig = {
   qrSize: 180,
   businessNameSize: 18,
   businessNameOffsetX: 0,
+  businessNameAlign: "center",
   showLogo: true,
+  logoSize: 28,
   tableLabelSize: 36,
   tableOffset: 4,
   tableOffsetX: 0,
@@ -525,8 +529,8 @@ export default function TenantOwnerDashboardPage() {
       transform: translateX(${stickerConfig.businessNameOffsetX || 0}px);
     }
     .biz-logo {
-      width: ${Math.round(stickerConfig.businessNameSize * 1.35)}px;
-      height: ${Math.round(stickerConfig.businessNameSize * 1.35)}px;
+      width: ${stickerConfig.logoSize || 28}px;
+      height: ${stickerConfig.logoSize || 28}px;
       object-fit: contain;
       border-radius: 4px;
       flex-shrink: 0;
@@ -536,6 +540,7 @@ export default function TenantOwnerDashboardPage() {
       font-weight: 800;
       color: #0f172a;
       line-height: 1.2;
+      text-align: ${stickerConfig.businessNameAlign || "center"};
     }
     .table-label {
       font-size: ${stickerConfig.tableLabelSize}px;
@@ -1079,14 +1084,17 @@ export default function TenantOwnerDashboardPage() {
                             alt="Logo Usaha"
                             className="owner-sticker-biz-logo"
                             style={{
-                              width: `${Math.round(stickerConfig.businessNameSize * 1.35)}px`,
-                              height: `${Math.round(stickerConfig.businessNameSize * 1.35)}px`,
+                              width: `${stickerConfig.logoSize || 28}px`,
+                              height: `${stickerConfig.logoSize || 28}px`,
                             }}
                           />
                         )}
                         <div
                           className="owner-sticker-biz-name"
-                          style={{ fontSize: `${stickerConfig.businessNameSize}px` }}
+                          style={{
+                            fontSize: `${stickerConfig.businessNameSize}px`,
+                            textAlign: stickerConfig.businessNameAlign || "center",
+                          }}
                         >
                           {renderMultilineBizName(businessName || profile.nama).map((line, idx) => (
                             <div key={idx} style={{ lineHeight: 1.15 }}>{line}</div>
@@ -1179,6 +1187,82 @@ export default function TenantOwnerDashboardPage() {
                       <span>◄ Kiri (-50)</span>
                       <span style={{ fontWeight: 800, color: (stickerConfig.businessNameOffsetX || 0) === 0 ? "var(--accent)" : "var(--text-muted)" }}>0 (Center)</span>
                       <span>Kanan (+50) ►</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 1b. Pengaturan Logo Usaha & Rata Teks Nama Usaha */}
+                <div className="owner-sticker-control-row">
+                  <div className="owner-sticker-control-group">
+                    <div className="owner-sticker-control-header">
+                      <span>Ukuran Logo Usaha</span>
+                      <b>{stickerConfig.logoSize || 28} px</b>
+                    </div>
+                    <input
+                      type="range"
+                      min="16"
+                      max="60"
+                      step="2"
+                      value={stickerConfig.logoSize || 28}
+                      onChange={(e) => setStickerConfig({ ...stickerConfig, logoSize: Number(e.target.value) })}
+                    />
+                    <div className="owner-sticker-slider-hints"><span>Kecil (16px)</span><span>Besar (60px)</span></div>
+                  </div>
+
+                  <div className="owner-sticker-control-group">
+                    <div className="owner-sticker-control-header">
+                      <span>Rata Teks Nama Usaha</span>
+                      <b>{stickerConfig.businessNameAlign === "left" ? "Rata Kiri" : stickerConfig.businessNameAlign === "right" ? "Rata Kanan" : "Rata Tengah"}</b>
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "6px", marginTop: "2px" }}>
+                      <button
+                        type="button"
+                        onClick={() => setStickerConfig({ ...stickerConfig, businessNameAlign: "left" })}
+                        style={{
+                          padding: "6px 4px",
+                          borderRadius: "6px",
+                          fontSize: "11px",
+                          fontWeight: 700,
+                          background: (stickerConfig.businessNameAlign || "center") === "left" ? "#ea580c" : "var(--bg-surface-2)",
+                          color: (stickerConfig.businessNameAlign || "center") === "left" ? "#ffffff" : "var(--text-muted)",
+                          border: "1px solid var(--border-subtle)",
+                          cursor: "pointer",
+                        }}
+                      >
+                        ⇤ Kiri
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setStickerConfig({ ...stickerConfig, businessNameAlign: "center" })}
+                        style={{
+                          padding: "6px 4px",
+                          borderRadius: "6px",
+                          fontSize: "11px",
+                          fontWeight: 700,
+                          background: (stickerConfig.businessNameAlign || "center") === "center" ? "#ea580c" : "var(--bg-surface-2)",
+                          color: (stickerConfig.businessNameAlign || "center") === "center" ? "#ffffff" : "var(--text-muted)",
+                          border: "1px solid var(--border-subtle)",
+                          cursor: "pointer",
+                        }}
+                      >
+                        ≡ Tengah
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setStickerConfig({ ...stickerConfig, businessNameAlign: "right" })}
+                        style={{
+                          padding: "6px 4px",
+                          borderRadius: "6px",
+                          fontSize: "11px",
+                          fontWeight: 700,
+                          background: (stickerConfig.businessNameAlign || "center") === "right" ? "#ea580c" : "var(--bg-surface-2)",
+                          color: (stickerConfig.businessNameAlign || "center") === "right" ? "#ffffff" : "var(--text-muted)",
+                          border: "1px solid var(--border-subtle)",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Kanan ⇥
+                      </button>
                     </div>
                   </div>
                 </div>
