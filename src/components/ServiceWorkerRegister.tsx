@@ -12,7 +12,7 @@ export default function ServiceWorkerRegister() {
   useEffect(() => {
     if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
 
-    // Jangan daftarkan service worker di mode development localhost untuk menghindari cache stale dev
+    // Jangan daftarkan service worker di mode development localhost
     if (process.env.NODE_ENV === "development") return;
 
     const registerSW = async () => {
@@ -21,18 +21,44 @@ export default function ServiceWorkerRegister() {
           scope: "/",
         });
 
+        // Jika ada service worker baru yang sedang menunggu, suruh dia segera aktif
+        if (registration.waiting) {
+          registration.waiting.postMessage({ type: "SKIP_WAITING" });
+        }
+
         // Cek update service worker secara berkala jika ada rilis baru
         registration.addEventListener("updatefound", () => {
           const installingWorker = registration.installing;
           if (installingWorker) {
             installingWorker.addEventListener("statechange", () => {
-              if (installingWorker.state === "installed" && navigator.serviceWorker.controller) {
-                // Versi baru siap
-                console.log("[OKESIH PWA] Konten baru tersedia. Siap digunakan.");
+              if (installingWorker.state === "installed") {
+                if (navigator.serviceWorker.controller) {
+                  // Versi baru siap - pemicu skip waiting
+                  installingWorker.postMessage({ type: "SKIP_WAITING" });
+                  console.log("[OKESIH PWA] Pembaruan aplikasi kasir siap diterapkan.");
+                } else {
+                  console.log("[OKESIH PWA] Konten offline kasir berhasil di-cache.");
+                }
               }
             });
           }
         });
+
+        // Trigger update otomatis saat online kembali
+        const handleOnline = () => {
+          void registration.update().catch(() => {});
+        };
+        window.addEventListener("online", handleOnline);
+
+        // Periksa update setiap 15 menit
+        const intervalId = window.setInterval(() => {
+          void registration.update().catch(() => {});
+        }, 15 * 60 * 1000);
+
+        return () => {
+          window.removeEventListener("online", handleOnline);
+          window.clearInterval(intervalId);
+        };
       } catch (err) {
         console.warn("[OKESIH PWA] Gagal mendaftarkan Service Worker:", err);
       }
