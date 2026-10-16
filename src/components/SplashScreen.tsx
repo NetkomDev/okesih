@@ -10,11 +10,12 @@ import { usePathname } from "next/navigation";
  */
 export default function SplashScreen() {
   const pathname = usePathname();
+  const isOperational = pathname.startsWith("/pos") || pathname.startsWith("/kds") || pathname.startsWith("/tv");
   const isTenantMenu = pathname.startsWith("/menu/");
   const mounted = useSyncExternalStore(() => () => {}, () => true, () => false);
   const hasSeenSplash = useSyncExternalStore(
     () => () => {},
-    () => sessionStorage.getItem("okesih_splash_welcomed") === "true",
+    () => isOperational || sessionStorage.getItem("okesih_splash_welcomed") === "true",
     () => true
   );
   const [visible, setVisible] = useState(true);

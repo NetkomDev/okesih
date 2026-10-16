@@ -1,14 +1,14 @@
 {
-  "id": "/",
-  "name": "Okesih.com",
-  "short_name": "Okesih.com",
-  "description": "Platform Ekosistem Digital & Manajemen Bisnis OKESIH",
-  "start_url": "/login",
-  "scope": "/",
+  "id": "/kds",
+  "name": "OKESIH Dapur KDS",
+  "short_name": "Dapur OKESIH",
+  "description": "Layar Antrean Dapur & Barista OKESIH KDS",
+  "start_url": "/kds?pwa=kds",
+  "scope": "/kds",
   "display": "standalone",
-  "orientation": "any",
+  "orientation": "landscape",
   "background_color": "#0b1018",
-  "theme_color": "#f4512c",
+  "theme_color": "#1e293b",
   "icons": [
     {
       "src": "/icons/pwa-192.png",

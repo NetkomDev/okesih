@@ -47,7 +47,9 @@ export default function DevicePwaModal({ type, isOpen, onClose }: DevicePwaModal
   useEffect(() => {
     if (typeof window === "undefined") return;
     const checkOrientation = () => {
-      const portrait = window.matchMedia("(orientation: portrait)").matches;
+      // Hanya tampilkan jika perangkat adalah layar tablet/ponsel (lebar <= 1024px atau orientasi portrait mobile)
+      const isMobileOrTablet = window.innerWidth <= 1024;
+      const portrait = window.matchMedia("(orientation: portrait)").matches && isMobileOrTablet;
       setIsPortrait(portrait);
     };
 
