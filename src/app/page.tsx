@@ -3,11 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect } from "react";
-import { createClient } from "@/lib/supabase/client";
-import { extractUserRole } from "@/lib/auth-helpers";
 import ThemeToggle from "@/components/ThemeToggle";
-import InternalPortalLinks from "@/components/InternalPortalLinks";
-import { roleHomeUrl } from "@/lib/app-origins";
 
 export default function HomePage() {
   const [username, setUsername] = useState("");
@@ -67,44 +63,19 @@ export default function HomePage() {
     setLoginError("");
 
     try {
-      const supabase = createClient();
-      const email = username.includes("@")
-        ? username.trim().toLowerCase()
-        : `${username.trim().toLowerCase()}@okesih.local`;
-
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      const response = await fetch("/api/auth/handoff/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+        body: JSON.stringify({ username, password }),
       });
-
-      if (error) {
-        setLoginError(
-          error.message === "Invalid login credentials"
-            ? "Username atau password salah!"
-            : error.message
-        );
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setLoginError(payload.error || "Login tidak dapat diproses.");
         setIsLoading(false);
         return;
       }
-
-      // Deteksi peran pengguna secara aman
-      const role = extractUserRole(data.user);
-
-      if (role === "SUPERADMIN") {
-        window.location.replace(roleHomeUrl(role));
-      } else if (role === "OWNER") {
-        window.location.replace(roleHomeUrl(role));
-      } else if (role === "MARKETING") {
-        window.location.replace(roleHomeUrl(role));
-      } else if (role === "KASIR") {
-        window.location.replace(roleHomeUrl(role));
-      } else if (role === "DAPUR") {
-        window.location.replace(roleHomeUrl(role));
-      } else {
-        await supabase.auth.signOut({ scope: "local" });
-        setLoginError("Akun tidak memiliki peran operasional yang valid.");
-        setIsLoading(false);
-      }
+      window.location.assign(payload.redirectTo);
     } catch (err: unknown) {
       setLoginError(err instanceof Error ? err.message : "Terjadi kesalahan sistem");
       setIsLoading(false);
@@ -1292,13 +1263,14 @@ export default function HomePage() {
                   🔐
                 </div>
                 <h3 style={{ fontSize: "1.45rem", fontWeight: 900, letterSpacing: "-0.02em", marginBottom: "0" }}>
-                  Pilih Portal OKESIH
+                  Masuk ke OKESIH
                 </h3>
+                <p style={{ color: "var(--text-dim)", fontSize: "0.85rem", marginTop: "0.45rem" }}>
+                  Sistem akan membuka portal sesuai hak akses akun Anda.
+                </p>
               </div>
 
-              <InternalPortalLinks />
-              {/* Fallback khusus localhost agar pengembangan tetap dapat menguji semua role pada satu origin. */}
-              {process.env.NODE_ENV !== "production" && <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: "1.1rem", marginTop: "1.25rem" }}>
+              <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
                 {loginError && (
                   <div
                     style={{
@@ -1475,7 +1447,7 @@ export default function HomePage() {
                     </>
                   )}
                 </button>
-              </form>}
+              </form>
             </div>
           </div>
         )}

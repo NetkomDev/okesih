@@ -59,6 +59,8 @@ export function surfaceForApiPath(pathname: string): AppSurface | null {
 }
 
 export function isApiAllowedOnSurface(pathname: string, surface: AppSurface) {
+  if (pathname === "/api/auth/handoff/start") return surface === "PUBLIC";
+  if (pathname === "/api/auth/handoff/consume") return surface !== "PUBLIC";
   const requiredSurface = surfaceForApiPath(pathname);
   if (pathname === "/api/device" || pathname.startsWith("/api/device/")) {
     return surface === "POS" || surface === "KDS";
@@ -88,9 +90,4 @@ export function roleSurface(role: string | null | undefined): Exclude<AppSurface
 export function roleHomeUrl(role: string | null | undefined) {
   const surface = roleSurface(role);
   return surface ? appUrl(surface, APP_ENTRY_PATHS[surface]) : appUrl("PUBLIC", "/login");
-}
-
-export function roleLoginUrl(surface: "SUPERADMIN" | "OWNER" | "MARKETING") {
-  const kind = surface === "SUPERADMIN" ? "superadmin" : surface === "OWNER" ? "owner" : "marketing";
-  return appUrl(surface, `/login?from_pwa=${kind}`);
 }

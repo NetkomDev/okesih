@@ -54,6 +54,11 @@ test("API endpoints are limited to the matching production surface", () => {
   assert.equal(isApiAllowedOnSurface("/api/device/bootstrap", "KDS"), true);
   assert.equal(isApiAllowedOnSurface("/api/device/bootstrap", "OWNER"), false);
   assert.equal(isApiAllowedOnSurface("/api/platform-settings", "PUBLIC"), true);
+  assert.equal(isApiAllowedOnSurface("/api/auth/handoff/start", "PUBLIC"), true);
+  assert.equal(isApiAllowedOnSurface("/api/auth/handoff/start", "OWNER"), false);
+  assert.equal(isApiAllowedOnSurface("/api/auth/handoff/consume", "OWNER"), true);
+  assert.equal(isApiAllowedOnSurface("/api/auth/handoff/consume", "POS"), true);
+  assert.equal(isApiAllowedOnSurface("/api/auth/handoff/consume", "PUBLIC"), false);
 });
 
 test("public origin cannot be turned into an internal login portal by query string", () => {

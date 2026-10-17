@@ -2,17 +2,7 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { createClient } from "@/lib/supabase/client";
-import { extractUserRole } from "@/lib/auth-helpers";
-import { roleHomeUrl } from "@/lib/app-origins";
-import {
-  detectActivePwaKind,
-  isRoleAllowedForPwa,
-  type PwaRoleKind,
-} from "@/lib/pwa-routing";
 import ThemeToggle from "@/components/ThemeToggle";
-import PwaRoleMismatchModal from "@/components/PwaRoleMismatchModal";
-import InternalPortalLinks from "@/components/InternalPortalLinks";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -20,51 +10,18 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState("");
-  const [activePwa, setActivePwa] = useState<PwaRoleKind | null>(null);
-  const [surfaceResolved, setSurfaceResolved] = useState(false);
-  const [mismatch, setMismatch] = useState<{
-    isOpen: boolean;
-    pwaKind: PwaRoleKind;
-    userRole: string;
-  } | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
-    queueMicrotask(async () => {
-      if (cancelled || typeof window === "undefined") return;
-      const pwa = detectActivePwaKind();
-      if (pwa) {
-        setActivePwa(pwa);
-      }
-      setSurfaceResolved(true);
-
+    queueMicrotask(() => {
+      if (typeof window === "undefined") return;
       const params = new URLSearchParams(window.location.search);
       const err = params.get("error");
       if (err === "unauthorized") {
         setLoginError("Akses Ditolak: Anda tidak memiliki izin untuk halaman tersebut.");
-      }
-
-      // Sesi setiap subdomain berdiri sendiri. Auto-login hanya berlaku pada
-      // portal internal yang sedang dibuka, bukan pada domain publik.
-      if (!err && pwa) {
-        try {
-          const supabase = createClient();
-          const { data: { user } } = await supabase.auth.getUser();
-          if (user && !cancelled) {
-            const role = extractUserRole(user);
-            if (role && isRoleAllowedForPwa(role, pwa)) {
-              window.location.replace(roleHomeUrl(role));
-              return;
-            }
-            await supabase.auth.signOut({ scope: "local" });
-          }
-        } catch {}
+      } else if (err === "login_required") {
+        setLoginError("Sesi Anda telah berakhir. Silakan masuk kembali.");
       }
     });
-
-    return () => {
-      cancelled = true;
-    };
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -73,44 +30,19 @@ export default function LoginPage() {
     setLoginError("");
 
     try {
-      const supabase = createClient();
-      const email = username.includes("@")
-        ? username.trim().toLowerCase()
-        : `${username.trim().toLowerCase()}@okesih.local`;
-
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      const response = await fetch("/api/auth/handoff/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+        body: JSON.stringify({ username, password }),
       });
-
-      if (error) {
-        setLoginError(
-          error.message === "Invalid login credentials"
-            ? "Username atau password salah!"
-            : error.message
-        );
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setLoginError(payload.error || "Login tidak dapat diproses.");
         setIsLoading(false);
         return;
       }
-
-      // Deteksi peran pengguna secara aman
-      const role = extractUserRole(data.user);
-
-      if (!role) {
-        await supabase.auth.signOut({ scope: "local" });
-        setLoginError("Akun tidak memiliki peran operasional yang valid.");
-        setIsLoading(false);
-        return;
-      }
-
-      if (activePwa && !isRoleAllowedForPwa(role, activePwa)) {
-        await supabase.auth.signOut({ scope: "local" });
-        setMismatch({ isOpen: true, pwaKind: activePwa, userRole: role });
-        setIsLoading(false);
-        return;
-      }
-
-      window.location.replace(roleHomeUrl(role));
+      window.location.assign(payload.redirectTo);
     } catch (err: unknown) {
       setLoginError(err instanceof Error ? err.message : "Terjadi kesalahan sistem");
       setIsLoading(false);
@@ -167,7 +99,7 @@ export default function LoginPage() {
       </div>
 
       {/* Navigasi Kembali & Theme Toggle */}
-      {surfaceResolved && !activePwa && <div style={{ position: "absolute", top: "2rem", left: "2rem", zIndex: 10 }}>
+      <div style={{ position: "absolute", top: "2rem", left: "2rem", zIndex: 10 }}>
         <Link
           href="/"
           style={{
@@ -200,7 +132,7 @@ export default function LoginPage() {
           </svg>
           <span>Kembali ke Beranda</span>
         </Link>
-      </div>}
+      </div>
 
       <div style={{ position: "absolute", top: "2rem", right: "2rem", zIndex: 10 }}>
         <ThemeToggle />
@@ -234,15 +166,13 @@ export default function LoginPage() {
             />
           </Link>
           <h1 style={{ fontSize: "1.5rem", fontWeight: 900, letterSpacing: "-0.02em", marginBottom: "0" }}>
-            Portal Operasional OKESIH
+            Masuk ke OKESIH
           </h1>
+          <p style={{ color: "var(--text-dim)", fontSize: "0.85rem", marginTop: "0.5rem" }}>
+            Sistem akan membuka portal sesuai hak akses akun Anda.
+          </p>
         </div>
 
-
-        {/* Domain publik hanya memilih portal; kredensial dimasukkan pada origin internal tujuan. */}
-        {!surfaceResolved ? (
-          <div style={{ color: "var(--text-dim)", textAlign: "center", padding: "1rem" }}>Memeriksa portal…</div>
-        ) : !activePwa ? <InternalPortalLinks /> : (
         <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
           {loginError && (
             <div
@@ -421,15 +351,7 @@ export default function LoginPage() {
             )}
           </button>
         </form>
-        )}
       </div>
-
-      {mismatch && (
-        <PwaRoleMismatchModal
-          isOpen={mismatch.isOpen}
-          pwaKind={mismatch.pwaKind}
-        />
-      )}
     </main>
   );
 }

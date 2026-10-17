@@ -36,6 +36,14 @@ export async function proxy(request: NextRequest) {
         const destination = new URL(APP_ENTRY_PATHS[currentSurface], APP_ORIGINS[currentSurface]);
         return NextResponse.redirect(destination, 307);
       }
+      if (currentSurface !== "PUBLIC") {
+        const destination = new URL(`/login${request.nextUrl.search}`, APP_ORIGINS.PUBLIC);
+        return NextResponse.redirect(destination, 307);
+      }
+    } else if (pathname === "/auth/handoff") {
+      if (currentSurface === "PUBLIC") {
+        return NextResponse.redirect(new URL("/", APP_ORIGINS.PUBLIC), 307);
+      }
     } else if (pathname !== "/~offline") {
       const requiredSurface = surfaceForPath(pathname);
       if (requiredSurface !== currentSurface) {

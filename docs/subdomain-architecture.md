@@ -15,7 +15,8 @@ Seluruh aplikasi memakai deployment Vercel yang sama, tetapi dipisahkan berdasar
 
 - Request halaman pada origin yang salah diarahkan ke origin kanonisnya.
 - API Owner, Super Admin, Sales, serta API perangkat hanya tersedia pada origin yang sesuai.
-- Login akun internal dilakukan pada subdomain tujuan sehingga cookie autentikasi tetap host-only.
+- Login akun internal dimulai dari form global pada domain publik. Server menentukan role lalu memakai kode handoff terenkripsi, sekali pakai, dan berumur 60 detik untuk membuat cookie host-only pada subdomain tujuan.
+- Kode handoff dikirim sebagai URL fragment sehingga tidak masuk ke access log atau header referer, lalu langsung dihapus dari address bar sebelum ditukarkan.
 - Dashboard berautentikasi tidak disimpan dalam cache navigasi offline service worker.
 - POS dan KDS mempunyai manifest PWA serta storage yang terpisah berdasarkan origin.
 
