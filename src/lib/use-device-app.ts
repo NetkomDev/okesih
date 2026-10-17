@@ -28,6 +28,7 @@ type Pairing = { pairingId: string; pollSecret: string; code: string; expiresAt:
 export type CashierOrderInput = {
   tableNumber: string;
   paymentMethod: "QRIS" | "CASH";
+  cashReceived?: number;
   items: { menuId: string; qty: number; notes: string }[];
 };
 

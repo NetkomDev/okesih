@@ -7,6 +7,7 @@ const orderSchema = z.object({
   idempotencyKey: z.string().uuid(),
   tableNumber: z.string().trim().min(1).max(20),
   paymentMethod: z.enum(["QRIS", "CASH"]),
+  cashReceived: z.number().int().nonnegative().max(1_000_000_000).optional(),
   items: z.array(z.object({
     menuId: z.string().uuid(),
     qty: z.number().int().min(1).max(99),
@@ -50,6 +51,10 @@ export async function POST(request: NextRequest) {
     });
     const total = items.reduce((sum, item) => sum + item.price * item.qty, 0);
     if (!Number.isFinite(total) || total <= 0) throw new DeviceApiError("Total pesanan tidak valid.", 400);
+    if (input.paymentMethod === "CASH" && (input.cashReceived === undefined || input.cashReceived < total)) {
+      throw new DeviceApiError("Uang pembayaran tunai kurang dari total pesanan.", 400);
+    }
+    const cashChange = input.paymentMethod === "CASH" ? input.cashReceived! - total : null;
 
     const { data: created, error: createError } = await admin.rpc("create_customer_order", {
       p_warkop_id: warkopId,
@@ -105,7 +110,14 @@ export async function POST(request: NextRequest) {
         action: "CASHIER_ORDER_CREATED",
         target_type: "transaction",
         target_id: order.id,
-        metadata: { table: input.tableNumber, payment_method: input.paymentMethod, total, shift_id: shift.id, cashier: cashierName },
+        metadata: {
+          table: input.tableNumber,
+          payment_method: input.paymentMethod,
+          total,
+          shift_id: shift.id,
+          cashier: cashierName,
+          ...(input.paymentMethod === "CASH" ? { cash_received: input.cashReceived, cash_change: cashChange } : {}),
+        },
       }),
       admin.from("shifts").update({ last_activity_at: new Date().toISOString() }).eq("id", shift.id),
     ]);
