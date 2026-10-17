@@ -4057,10 +4057,22 @@ button {
 .pos-history-page {
   width: min(1480px, 100%);
   margin: auto;
-  padding: 30px 26px 90px;
+  padding: 28px 26px 90px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 22px;
+}
+
+.pos-history-page .pos-hero-row {
+  align-items: center;
+}
+
+.pos-history-intro {
+  min-width: 0;
+}
+
+.pos-history-intro p {
+  max-width: 760px;
 }
 
 .pos-history-intro > small {
@@ -4074,7 +4086,7 @@ button {
 }
 
 .pos-history-actions button {
-  min-height: 40px;
+  min-height: 42px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -4088,6 +4100,13 @@ button {
   font-size: 12px;
   font-weight: 850;
   cursor: pointer;
+  transition: border-color 0.16s ease, background 0.16s ease, transform 0.16s ease, box-shadow 0.16s ease;
+}
+
+.pos-history-actions button:hover {
+  transform: translateY(-1px);
+  border-color: #bcc6d3;
+  box-shadow: 0 5px 14px rgba(15, 23, 42, 0.07);
 }
 
 .pos-history-actions button svg {
@@ -4109,11 +4128,13 @@ button {
 
 .pos-audit-stats {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: 1.18fr repeat(3, minmax(0, 1fr));
   gap: 16px;
 }
 
 .pos-audit-card {
+  min-width: 0;
+  min-height: 140px;
   display: flex;
   align-items: center;
   gap: 16px;
@@ -4125,6 +4146,10 @@ button {
   transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
   text-align: left;
   font-family: inherit;
+}
+
+.pos-audit-card > div:not(.pos-audit-icon):not(.pos-audit-card-action-hint) {
+  min-width: 0;
 }
 
 button.pos-audit-card {
@@ -4141,6 +4166,7 @@ button.pos-audit-card:hover {
 button.pos-audit-card.pos-card-clickable {
   border-color: #fed7aa;
   background: linear-gradient(180deg, #ffffff 0%, #fffbf8 100%);
+  padding-right: 54px;
 }
 
 button.pos-audit-card.pos-card-clickable:hover {
@@ -4149,7 +4175,9 @@ button.pos-audit-card.pos-card-clickable:hover {
 }
 
 .pos-audit-card-action-hint {
-  margin-left: auto;
+  position: absolute;
+  right: 16px;
+  margin-left: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -4237,6 +4265,16 @@ button.pos-audit-card:hover .pos-audit-card-action-hint {
   font-weight: 950;
   color: #0f172a;
   letter-spacing: -0.02em;
+}
+
+.pos-audit-card.omzet strong {
+  font-size: clamp(21px, 1.75vw, 25px);
+  white-space: nowrap;
+}
+
+.pos-audit-card:not(.omzet) strong {
+  font-size: clamp(19px, 1.6vw, 24px);
+  white-space: nowrap;
 }
 
 .pos-audit-card p {
@@ -4465,26 +4503,51 @@ button.pos-audit-card:hover .pos-audit-card-action-hint {
 
 /* Audit Toolbar */
 .pos-audit-toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
-  padding: 16px 20px;
-  border-radius: 16px;
+  display: grid;
+  grid-template-columns: minmax(240px, 0.75fr) minmax(420px, 1.25fr);
+  align-items: end;
+  gap: 16px 24px;
+  padding: 20px;
+  border-radius: 18px;
   background: #ffffff;
   border: 1.5px solid #e2e8f0;
-  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.03);
+  box-shadow: 0 6px 22px rgba(15, 23, 42, 0.04);
 }
 
 .pos-audit-toolbar-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  align-self: center;
+}
+
+.pos-audit-toolbar-heading > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.pos-audit-toolbar-heading strong {
+  color: #172033;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.pos-audit-toolbar-heading small {
+  color: #64748b;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.pos-audit-toolbar-heading > span {
   display: none;
 }
 
 .pos-audit-search {
-  flex: 1;
-  min-width: 260px;
-  max-width: 480px;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
   position: relative;
   display: flex;
   align-items: center;
@@ -4501,10 +4564,10 @@ button.pos-audit-card:hover .pos-audit-card-action-hint {
 
 .pos-audit-search input {
   width: 100%;
-  height: 42px;
+  height: 46px;
   padding: 0 16px 0 42px;
   border: 1.5px solid #cbd5e1;
-  border-radius: 10px;
+  border-radius: 12px;
   background: #f8fafc;
   color: #0f172a;
   font-size: 13.5px;
@@ -4520,31 +4583,44 @@ button.pos-audit-card:hover .pos-audit-card-action-hint {
 }
 
 .pos-audit-filters {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(410px, 1.55fr) repeat(2, minmax(210px, 0.75fr));
+  align-items: end;
+  gap: 12px;
 }
 
 .pos-audit-filter-block {
-  display: contents;
+  min-width: 0;
+  display: grid;
+  gap: 6px;
 }
 
 .pos-audit-filter-block > span {
-  display: none;
+  display: block;
+  padding-left: 2px;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .pos-audit-pill-group {
-  display: inline-flex;
-  padding: 3px;
-  border-radius: 10px;
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  padding: 4px;
+  border-radius: 12px;
   background: #f1f5f9;
   border: 1px solid #e2e8f0;
 }
 
 .pos-audit-pill-group button {
-  height: 34px;
-  padding: 0 13px;
+  min-width: 0;
+  height: 36px;
+  flex: 1 1 0;
+  padding: 0 10px;
   border: 0;
   border-radius: 8px;
   background: transparent;
@@ -4553,6 +4629,7 @@ button.pos-audit-card:hover .pos-audit-card-action-hint {
   font-weight: 850;
   cursor: pointer;
   transition: all 0.15s ease;
+  white-space: nowrap;
 }
 
 .pos-audit-pill-group button.active {
@@ -4567,18 +4644,27 @@ button.pos-audit-card:hover .pos-audit-card-action-hint {
   border-radius: 20px;
   border: 1.5px solid #e2e8f0;
   box-shadow: 0 8px 30px rgba(15, 23, 42, 0.04);
-  overflow-x: auto;
+  overflow: hidden;
 }
 
 .pos-history-table {
   width: 100%;
-  min-width: 860px;
+  min-width: 1000px;
+  table-layout: fixed;
   border-collapse: collapse;
   text-align: left;
 }
 
+.pos-history-col-order { width: 20%; }
+.pos-history-col-cashier { width: 16%; }
+.pos-history-col-items { width: 23%; }
+.pos-history-col-payment { width: 10%; }
+.pos-history-col-status { width: 9%; }
+.pos-history-col-total { width: 12%; }
+.pos-history-col-action { width: 10%; }
+
 .pos-history-table th {
-  padding: 16px 20px;
+  padding: 15px 14px;
   background: #f8fafc;
   color: #475569;
   font-size: 11px;
@@ -4590,7 +4676,8 @@ button.pos-audit-card:hover .pos-audit-card-action-hint {
 }
 
 .pos-history-table td {
-  padding: 16px 20px;
+  height: 74px;
+  padding: 14px;
   border-bottom: 1px solid #f1f5f9;
   vertical-align: middle;
   font-size: 13.5px;
@@ -4599,6 +4686,26 @@ button.pos-audit-card:hover .pos-audit-card-action-hint {
 
 .pos-history-table tr:hover td {
   background: #fcfdfe;
+}
+
+.pos-history-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.pos-history-order-cell {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.pos-history-order-cell .pos-audit-queue {
+  min-width: 62px;
+}
+
+.pos-history-order-cell .pos-audit-table-tag {
+  max-width: 104px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .pos-audit-queue {
@@ -4774,6 +4881,13 @@ button.pos-audit-card:hover .pos-audit-card-action-hint {
   background: #e2e8f0;
   border-color: #94a3b8;
   color: #000;
+}
+
+.pos-history-table .pos-audit-action-btn {
+  width: 100%;
+  justify-content: center;
+  padding-inline: 6px;
+  font-size: 11.5px;
 }
 
 .ops-modal-audit-info {
@@ -5006,7 +5120,18 @@ button.pos-audit-card:hover .pos-audit-card-action-hint {
   box-shadow: none;
 }
 
-@media(max-width:1100px){.pos-header{grid-template-columns:auto 1fr}.pos-nav{grid-row:2;grid-column:1/-1;justify-self:center}.pos-header-actions{min-width:0}.pos-icon-button span,.pos-device-chip b{display:none}.pos-sale-page{height:calc(100vh - 131px);grid-template-columns:minmax(0,1fr) 340px}.pos-audit-stats{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:1100px){
+  .pos-header{grid-template-columns:auto 1fr}
+  .pos-nav{grid-row:2;grid-column:1/-1;justify-self:center}
+  .pos-header-actions{min-width:0}
+  .pos-icon-button span,.pos-device-chip b{display:none}
+  .pos-sale-page{height:calc(100vh - 131px);grid-template-columns:minmax(0,1fr) 340px}
+  .pos-audit-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .pos-audit-toolbar{grid-template-columns:minmax(220px,.7fr) minmax(360px,1.3fr)}
+  .pos-audit-filters{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .pos-audit-filter-block:first-child{grid-column:1/-1}
+  .pos-history-table-wrapper{overflow-x:auto}
+}
 @media(max-width:760px){
   .pos-redesign{min-height:100dvh;background:#f5f6f8}
   .pos-header{position:sticky;top:0;z-index:60;grid-template-columns:1fr auto;gap:8px;padding:8px 12px 6px;box-shadow:0 4px 16px rgba(15,23,42,.07)}

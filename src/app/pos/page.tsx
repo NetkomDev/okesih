@@ -685,10 +685,18 @@ export default function PosModulePage() {
       {/* Tabel Histori & Audit Desktop / Tablet */}
       <div className="pos-history-table-wrapper">
         <table className="pos-history-table">
+          <colgroup>
+            <col className="pos-history-col-order" />
+            <col className="pos-history-col-cashier" />
+            <col className="pos-history-col-items" />
+            <col className="pos-history-col-payment" />
+            <col className="pos-history-col-status" />
+            <col className="pos-history-col-total" />
+            <col className="pos-history-col-action" />
+          </colgroup>
           <thead>
             <tr>
-              <th>Antrean &amp; Waktu</th>
-              <th>Meja / Lokasi</th>
+              <th>Pesanan</th>
               <th>Kasir Penanggung Jawab</th>
               <th>Ringkasan Menu</th>
               <th>Pembayaran</th>
@@ -700,7 +708,7 @@ export default function PosModulePage() {
           <tbody>
             {filteredHistoryOrders.length === 0 ? (
               <tr>
-                <td colSpan={8} style={{ textAlign: "center", padding: "48px 20px" }}>
+                <td colSpan={7} style={{ textAlign: "center", padding: "48px 20px" }}>
                   <div style={{ color: "#64748b", fontWeight: 750, fontSize: "14px" }}>
                     Tidak ada transaksi histori yang cocok dengan filter.
                   </div>
@@ -723,15 +731,15 @@ export default function PosModulePage() {
                 return (
                   <tr key={order.id}>
                     <td>
-                      <div className="pos-audit-queue">
-                        <strong>#{String(order.nomor_antrean).padStart(3, "0")}</strong>
-                        <small>{orderDate} · {orderTime}</small>
+                      <div className="pos-history-order-cell">
+                        <div className="pos-audit-queue">
+                          <strong>#{String(order.nomor_antrean).padStart(3, "0")}</strong>
+                          <small>{orderDate} · {orderTime}</small>
+                        </div>
+                        <span className="pos-audit-table-tag">
+                          {order.table_number === "Kasir" ? "Kasir / Take away" : `Meja ${order.table_number}`}
+                        </span>
                       </div>
-                    </td>
-                    <td>
-                      <span className="pos-audit-table-tag">
-                        {order.table_number === "Kasir" ? "Kasir / Take away" : `Meja ${order.table_number}`}
-                      </span>
                     </td>
                     <td>
                       <div className="pos-audit-cashier-badge" title={`Kasir penanggung jawab: ${cashier}`}>
