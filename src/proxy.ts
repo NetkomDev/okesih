@@ -54,8 +54,8 @@ export const config = {
      * Jalankan proxy pada seluruh rute, KECUALI:
      * - _next/static (static assets)
      * - _next/image (image optimization files)
-     * - favicon.ico, icons, manifest files, dll.
+     * - service worker dan aset publik statis (ikon, gambar, audio, manifest)
      */
-    "/((?!_next/static|_next/image|favicon.ico|icons|.*\\.(?:svg|png|jpg|jpeg|gif|webp|webmanifest)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|sw\\.js|icons|.*\\.(?:svg|png|jpg|jpeg|gif|webp|mp3|wav|ogg|webmanifest)$).*)",
   ],
 };
