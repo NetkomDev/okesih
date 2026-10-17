@@ -175,8 +175,8 @@ export default function PosModulePage() {
   const [pinChecking, setPinChecking] = useState(false);
   const [pinShaking, setPinShaking] = useState(false);
 
-  // Filter & Search untuk Pesanan Masuk
-  const [ordersFilter, setOrdersFilter] = useState<"ALL" | "PENDING" | "COOKING" | "READY">("ALL");
+  // Pipeline Pesanan Masuk
+  const [mobileTab, setMobileTab] = useState<"PENDING" | "COOKING" | "READY">("COOKING");
   const [ordersSearch, setOrdersSearch] = useState("");
   const [ordersNow, setOrdersNow] = useState<number>(Date.now());
 
@@ -462,14 +462,7 @@ export default function PosModulePage() {
   const filteredPending = pending.filter((order) => matchesOrderSearch(order, searchQuery));
   const filteredCooking = cooking.filter((order) => matchesOrderSearch(order, searchQuery));
   const filteredReady = ready.filter((order) => matchesOrderSearch(order, searchQuery));
-
-  const allActiveOrders = [...filteredReady, ...filteredCooking, ...filteredPending];
-  const filteredOrders = allActiveOrders.filter((order) => {
-    if (ordersFilter === "PENDING") return order.status_pesanan === "AWAITING_CONFIRMATION";
-    if (ordersFilter === "COOKING") return order.status_pesanan === "COOKING";
-    if (ordersFilter === "READY") return order.status_pesanan === "READY";
-    return true;
-  });
+  const totalActive = filteredPending.length + filteredCooking.length + filteredReady.length;
 
   const handleOpenHistory = () => {
     if (app.data?.hasAuditPin && !historyUnlocked) {
@@ -513,304 +506,197 @@ export default function PosModulePage() {
     {saleMessage && <div className="pos-toast"><span>✓</span>{saleMessage}</div>}
 
     {view === "orders" ? (
-      <main className="pos-orders-page">
-        {/* Top Hero / Operational Header */}
-        <section className="pos-orders-hero">
-          <div className="pos-orders-hero-copy">
-            <div className="pos-orders-live-chip">
+      <main className="pos-pipeline-page">
+        {/* Top Header Ringkas & Elegan */}
+        <header className="pos-pipeline-topbar">
+          <div className="pos-pipeline-title-group">
+            <h1>Alur Pesanan</h1>
+            <span className="pos-pipeline-counter">
               <span className="live-dot" />
-              <span>MONITOR KASIR AKTIF</span>
-              <span className="live-divider">•</span>
-              <b>{pending.length + cooking.length + ready.length} Pesanan Berjalan</b>
-            </div>
-            <h1>Antrean &amp; Transaksi Masuk</h1>
-            <p>Pantau pesanan meja masuk secara real-time, konfirmasi pembayaran, dan pantau proses dapur.</p>
-          </div>
-          <div className="pos-orders-hero-actions">
-            <button
-              type="button"
-              className="pos-hero-btn secondary"
-              onClick={() => void app.refresh()}
-              title="Sinkronkan data pesanan sekarang"
-            >
-              <Icon name="refresh" />
-              <span>Sinkronkan</span>
-            </button>
-            <button
-              type="button"
-              className="pos-hero-btn primary"
-              onClick={() => setView("sale")}
-              title="Buat pesanan langsung di meja kasir"
-            >
-              <Icon name="plus" />
-              <span>Pesanan Langsung</span>
-            </button>
-          </div>
-        </section>
-
-        {/* 3 Interactive KPI Filter Cards */}
-        <section className="pos-kpi-grid">
-          <button
-            type="button"
-            className={`pos-kpi-card waiting ${ordersFilter === "PENDING" ? "active" : ""} ${pending.length > 0 ? "has-urgent" : ""}`}
-            onClick={() => setOrdersFilter((prev) => (prev === "PENDING" ? "ALL" : "PENDING"))}
-          >
-            <div className="pos-kpi-icon">
-              <Icon name="orders" />
-              {pending.length > 0 && <span className="pos-kpi-pulse" />}
-            </div>
-            <div className="pos-kpi-info">
-              <small>PERLU KONFIRMASI</small>
-              <strong>{pending.length}</strong>
-              <p>Pesanan dari meja</p>
-            </div>
-            <span className="pos-kpi-indicator">
-              {ordersFilter === "PENDING" ? "Filter Aktif ✓" : "Klik Filter"}
+              <b>{totalActive}</b> aktif
             </span>
-          </button>
-
-          <button
-            type="button"
-            className={`pos-kpi-card cooking ${ordersFilter === "COOKING" ? "active" : ""}`}
-            onClick={() => setOrdersFilter((prev) => (prev === "COOKING" ? "ALL" : "COOKING"))}
-          >
-            <div className="pos-kpi-icon">♨</div>
-            <div className="pos-kpi-info">
-              <small>SEDANG DISIAPKAN</small>
-              <strong>{cooking.length}</strong>
-              <p>Diproses dapur (KDS)</p>
-            </div>
-            <span className="pos-kpi-indicator">
-              {ordersFilter === "COOKING" ? "Filter Aktif ✓" : "Klik Filter"}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            className={`pos-kpi-card ready ${ordersFilter === "READY" ? "active" : ""}`}
-            onClick={() => setOrdersFilter((prev) => (prev === "READY" ? "ALL" : "READY"))}
-          >
-            <div className="pos-kpi-icon">✓</div>
-            <div className="pos-kpi-info">
-              <small>SIAP DIANTAR</small>
-              <strong>{ready.length}</strong>
-              <p>Menunggu pengantaran</p>
-            </div>
-            <span className="pos-kpi-indicator">
-              {ordersFilter === "READY" ? "Filter Aktif ✓" : "Klik Filter"}
-            </span>
-          </button>
-        </section>
-
-        {/* Operational Filter & Search Toolbar */}
-        <section className="pos-orders-toolbar">
-          <div className="pos-orders-filter-tabs">
-            <button
-              type="button"
-              className={ordersFilter === "ALL" ? "active" : ""}
-              onClick={() => setOrdersFilter("ALL")}
-            >
-              Semua ({pending.length + cooking.length + ready.length})
-            </button>
-            <button
-              type="button"
-              className={ordersFilter === "PENDING" ? "active" : ""}
-              onClick={() => setOrdersFilter("PENDING")}
-            >
-              Perlu Konfirmasi ({pending.length})
-            </button>
-            <button
-              type="button"
-              className={ordersFilter === "COOKING" ? "active" : ""}
-              onClick={() => setOrdersFilter("COOKING")}
-            >
-              Dapur ({cooking.length})
-            </button>
-            <button
-              type="button"
-              className={ordersFilter === "READY" ? "active" : ""}
-              onClick={() => setOrdersFilter("READY")}
-            >
-              Siap Diantar ({ready.length})
-            </button>
           </div>
 
-          <label className="pos-orders-search-box">
-            <Icon name="search" />
-            <input
-              type="text"
-              value={ordersSearch}
-              onChange={(e) => setOrdersSearch(e.target.value)}
-              placeholder="Cari no. antrean, meja, atau nama menu..."
-            />
-            {ordersSearch && (
-              <button
-                type="button"
-                className="pos-orders-search-clear"
-                onClick={() => setOrdersSearch("")}
-                title="Hapus pencarian"
-              >
-                <Icon name="close" />
-              </button>
-            )}
-          </label>
-        </section>
-
-        {/* Orders Content Area */}
-        {ordersFilter === "ALL" ? (
-          <>
-            {/* Section 1: Konfirmasi Pesanan Baru */}
-            <section className="pos-order-section pending-section">
-              <div className="pos-section-heading">
-                <div className="pos-section-title-wrap">
-                  <span className="pos-section-tag pending">⚡ PERLU TINDAKAN CEPAT</span>
-                  <h2>Konfirmasi Pesanan</h2>
-                </div>
-                <span className={`pos-section-badge ${filteredPending.length > 0 ? "urgent" : ""}`}>
-                  {filteredPending.length} pesanan menunggu
-                </span>
-              </div>
-
-              {filteredPending.length === 0 ? (
-                <div className="pos-pending-banner-compact">
-                  <div className="pos-pending-banner-copy">
-                    <span className="pos-pending-banner-check">✓</span>
-                    <div>
-                      <strong>Semua pesanan meja sudah ditangani</strong>
-                      <p>Pesanan baru dari pelanggan akan berdering dan muncul otomatis di sini.</p>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    className="pos-pending-banner-cta"
-                    onClick={() => setView("sale")}
-                  >
-                    + Buat Pesanan Langsung
-                  </button>
-                </div>
-              ) : (
-                <div className="pos-tickets-grid">
-                  {filteredPending.map((order) => (
-                    <OrderCard
-                      key={order.id}
-                      order={order}
-                      onOpen={() => setSelected(order)}
-                      onQuickConfirm={(ord) => void update(ord, "COOKING")}
-                      busy={busy}
-                      now={ordersNow}
-                    />
-                  ))}
-                </div>
-              )}
-            </section>
-
-            {/* Section 2: Dapur & Pengantaran */}
-            {(filteredReady.length > 0 || filteredCooking.length > 0) && (
-              <section className="pos-order-section kitchen-section">
-                <div className="pos-section-heading">
-                  <div className="pos-section-title-wrap">
-                    <span className="pos-section-tag kitchen">PROSES BERJALAN</span>
-                    <h2>Dapur &amp; Pengantaran</h2>
-                  </div>
-                  <span className="pos-section-badge">
-                    {filteredReady.length + filteredCooking.length} pesanan
-                  </span>
-                </div>
-                <div className="pos-tickets-grid">
-                  {filteredReady.map((order) => (
-                    <OrderCard
-                      key={order.id}
-                      order={order}
-                      onOpen={() => setSelected(order)}
-                      onQuickReadyDone={(ord) => void update(ord, "DONE")}
-                      busy={busy}
-                      now={ordersNow}
-                    />
-                  ))}
-                  {filteredCooking.map((order) => (
-                    <OrderCard
-                      key={order.id}
-                      order={order}
-                      onOpen={() => setSelected(order)}
-                      busy={busy}
-                      now={ordersNow}
-                    />
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {filteredPending.length === 0 && filteredReady.length === 0 && filteredCooking.length === 0 && (
-              <div className="pos-empty-state-large">
-                <div className="pos-empty-icon">☕</div>
-                <h3>Belum ada transaksi aktif saat ini</h3>
-                <p>Silakan buat pesanan baru langsung dari kasir atau tunggu pesanan dari meja pelanggan.</p>
+          <div className="pos-pipeline-top-actions">
+            <label className="pos-pipeline-search">
+              <Icon name="search" />
+              <input
+                type="text"
+                value={ordersSearch}
+                onChange={(e) => setOrdersSearch(e.target.value)}
+                placeholder="Cari no. antrean, meja, menu..."
+              />
+              {ordersSearch && (
                 <button
                   type="button"
-                  className="pos-empty-btn"
-                  onClick={() => setView("sale")}
+                  className="search-clear"
+                  onClick={() => setOrdersSearch("")}
+                  title="Hapus filter"
                 >
-                  + Buat Pesanan Kasir
+                  <Icon name="close" />
                 </button>
-              </div>
-            )}
-          </>
-        ) : (
-          <section className="pos-order-section">
-            <div className="pos-section-heading">
-              <div className="pos-section-title-wrap">
-                <span className="pos-section-tag">
-                  {ordersFilter === "PENDING"
-                    ? "PERLU KONFIRMASI"
-                    : ordersFilter === "COOKING"
-                    ? "DAPUR (KDS)"
-                    : "SIAP DIANTAR"}
-                </span>
-                <h2>
-                  {ordersFilter === "PENDING"
-                    ? "Pesanan Menunggu Konfirmasi"
-                    : ordersFilter === "COOKING"
-                    ? "Sedang Disiapkan Dapur"
-                    : "Pesanan Siap Diantar"}
-                </h2>
-              </div>
-              <span className="pos-section-badge">
-                {filteredOrders.length} pesanan
-              </span>
-            </div>
+              )}
+            </label>
 
-            {filteredOrders.length === 0 ? (
-              <div className="pos-empty-filtered">
-                <span>🔍</span>
-                <h3>Tidak ada pesanan ditemukan</h3>
-                <p>
-                  {ordersSearch
-                    ? `Tidak ada pesanan yang cocok dengan pencarian "${ordersSearch}"`
-                    : "Tidak ada pesanan dalam kategori ini saat ini."}
-                </p>
-                {ordersSearch && (
-                  <button type="button" onClick={() => setOrdersSearch("")}>
-                    Reset Pencarian
-                  </button>
-                )}
+            <button
+              type="button"
+              className="pos-pipeline-btn-sync"
+              onClick={() => void app.refresh()}
+              title="Sinkronkan data pesanan"
+            >
+              <Icon name="refresh" />
+              <span>Sinkron</span>
+            </button>
+
+            <button
+              type="button"
+              className="pos-pipeline-btn-new"
+              onClick={() => setView("sale")}
+              title="Buat pesanan langsung di kasir"
+            >
+              <Icon name="plus" />
+              <span>+ Pesanan Kasir</span>
+            </button>
+          </div>
+        </header>
+
+        {/* Mobile Stage Selector Tabs (Hanya di layar kecil) */}
+        <nav className="pos-pipeline-mobile-tabs" aria-label="Tahap Pesanan">
+          <button
+            type="button"
+            className={`tab-btn ${mobileTab === "PENDING" ? "active pending" : ""}`}
+            onClick={() => setMobileTab("PENDING")}
+          >
+            <span className="tab-step">1</span>
+            <span className="tab-name">Pesanan Masuk</span>
+            <span className="tab-count">{filteredPending.length}</span>
+          </button>
+          <button
+            type="button"
+            className={`tab-btn ${mobileTab === "COOKING" ? "active cooking" : ""}`}
+            onClick={() => setMobileTab("COOKING")}
+          >
+            <span className="tab-step">2</span>
+            <span className="tab-name">Proses Dapur</span>
+            <span className="tab-count">{filteredCooking.length}</span>
+          </button>
+          <button
+            type="button"
+            className={`tab-btn ${mobileTab === "READY" ? "active ready" : ""}`}
+            onClick={() => setMobileTab("READY")}
+          >
+            <span className="tab-step">3</span>
+            <span className="tab-name">Siap Diambil</span>
+            <span className="tab-count">{filteredReady.length}</span>
+          </button>
+        </nav>
+
+        {/* 3-Column Visual Pipeline Board */}
+        <div className="pos-pipeline-board">
+          {/* KOLOM 1: PESANAN MASUK */}
+          <section className={`pos-pipeline-col col-pending ${mobileTab === "PENDING" ? "mobile-show" : "mobile-hide"}`}>
+            <header className="pos-pipeline-col-header">
+              <div className="col-header-info">
+                <span className="col-step-badge">1</span>
+                <h2>Pesanan Masuk</h2>
               </div>
-            ) : (
-              <div className="pos-tickets-grid">
-                {filteredOrders.map((order) => (
+              <span className={`col-count-badge ${filteredPending.length > 0 ? "has-items" : ""}`}>
+                {filteredPending.length}
+              </span>
+            </header>
+
+            <div className="pos-pipeline-cards">
+              {filteredPending.length === 0 ? (
+                <div className="pos-pipeline-empty">
+                  <span className="empty-emoji">📥</span>
+                  <p>Tidak ada pesanan menunggu</p>
+                </div>
+              ) : (
+                filteredPending.map((order) => (
                   <OrderCard
                     key={order.id}
                     order={order}
                     onOpen={() => setSelected(order)}
                     onQuickConfirm={(ord) => void update(ord, "COOKING")}
+                    busy={busy}
+                    now={ordersNow}
+                  />
+                ))
+              )}
+            </div>
+          </section>
+
+          {/* Flow Indicator Desktop */}
+          <div className="pos-pipeline-arrow-desktop" aria-hidden="true">→</div>
+
+          {/* KOLOM 2: PROSES DAPUR (KDS) */}
+          <section className={`pos-pipeline-col col-cooking ${mobileTab === "COOKING" ? "mobile-show" : "mobile-hide"}`}>
+            <header className="pos-pipeline-col-header">
+              <div className="col-header-info">
+                <span className="col-step-badge">2</span>
+                <h2>Proses Dapur</h2>
+              </div>
+              <span className={`col-count-badge ${filteredCooking.length > 0 ? "has-items" : ""}`}>
+                {filteredCooking.length}
+              </span>
+            </header>
+
+            <div className="pos-pipeline-cards">
+              {filteredCooking.length === 0 ? (
+                <div className="pos-pipeline-empty">
+                  <span className="empty-emoji">🍳</span>
+                  <p>Dapur sedang santai</p>
+                </div>
+              ) : (
+                filteredCooking.map((order) => (
+                  <OrderCard
+                    key={order.id}
+                    order={order}
+                    onOpen={() => setSelected(order)}
+                    busy={busy}
+                    now={ordersNow}
+                  />
+                ))
+              )}
+            </div>
+          </section>
+
+          {/* Flow Indicator Desktop */}
+          <div className="pos-pipeline-arrow-desktop" aria-hidden="true">→</div>
+
+          {/* KOLOM 3: SIAP DIAMBIL WAITER */}
+          <section className={`pos-pipeline-col col-ready ${mobileTab === "READY" ? "mobile-show" : "mobile-hide"}`}>
+            <header className="pos-pipeline-col-header">
+              <div className="col-header-info">
+                <span className="col-step-badge">3</span>
+                <h2>Siap Diambil Waiter</h2>
+              </div>
+              <span className={`col-count-badge ${filteredReady.length > 0 ? "has-items" : ""}`}>
+                {filteredReady.length}
+              </span>
+            </header>
+
+            <div className="pos-pipeline-cards">
+              {filteredReady.length === 0 ? (
+                <div className="pos-pipeline-empty">
+                  <span className="empty-emoji">🛎️</span>
+                  <p>Belum ada yang siap diantar</p>
+                </div>
+              ) : (
+                filteredReady.map((order) => (
+                  <OrderCard
+                    key={order.id}
+                    order={order}
+                    onOpen={() => setSelected(order)}
                     onQuickReadyDone={(ord) => void update(ord, "DONE")}
                     busy={busy}
                     now={ordersNow}
                   />
-                ))}
-              </div>
-            )}
+                ))
+              )}
+            </div>
           </section>
-        )}
+        </div>
       </main>
     ) : view === "sale" ? <main className="pos-sale-page">
       <section className="pos-menu-panel">
