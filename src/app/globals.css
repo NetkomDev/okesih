@@ -4748,6 +4748,11 @@ button.pos-audit-card:hover .pos-audit-card-action-hint {
   color: #0f172a;
 }
 
+/* POS History Mobile Card List (Hidden on desktop/tablet, enabled on mobile) */
+.pos-history-mobile-list {
+  display: none;
+}
+
 /* POS PIN Security Modal & Numpad */
 .pos-pin-modal {
   position: relative;
@@ -4962,6 +4967,377 @@ button.pos-audit-card:hover .pos-audit-card-action-hint {
   .pos-mobile-payment{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:6px}.pos-mobile-payment button{height:38px;display:flex;align-items:center;justify-content:center;gap:5px;border:1px solid #e2e8f0;border-radius:10px;background:#f8fafc;color:#64748b;font-size:12px;font-weight:850}.pos-mobile-payment button.active{border-color:#f4512c;background:#fff1ed;color:#d94426;box-shadow:inset 0 0 0 1px rgba(244,81,44,.08)}.pos-mobile-payment span{font-weight:950}
   .pos-mobile-pay{grid-row:1;grid-column:2;width:100px;height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 13px;border:0;border-radius:12px;background:linear-gradient(135deg,#f45b36,#e94322);color:#fff;font-size:14px;font-weight:900;box-shadow:0 7px 18px rgba(244,81,44,.26)}.pos-mobile-pay:disabled{background:#cbd1da;box-shadow:none}.pos-mobile-pay b{font-size:18px}
   .pos-cash-modal-backdrop{align-items:end;padding:0}.pos-cash-modal{width:100%;max-height:92dvh;border-width:1px 0 0;border-radius:24px 24px 0 0}.pos-cash-modal form{gap:14px;padding:20px 16px calc(17px + env(safe-area-inset-bottom))}.pos-cash-modal form>header h2{font-size:23px}.pos-cash-total{padding:14px 16px}.pos-cash-total>strong{font-size:25px}.pos-cash-input>div{height:56px}.pos-cash-input input{font-size:24px}.pos-cash-quick button{height:44px;font-size:12px}.pos-cash-modal form>footer{position:sticky;bottom:0;margin:0 -16px calc(-17px - env(safe-area-inset-bottom));padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid #eef1f5}.pos-cash-success{padding:38px 22px calc(32px + env(safe-area-inset-bottom))}
+  /* POS History & Audit Mobile View */
+  .pos-history-page {
+    width: 100%;
+    padding: 12px 10px calc(80px + env(safe-area-inset-bottom));
+    gap: 12px;
+  }
+
+  .pos-history-page .pos-hero-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    margin-bottom: 2px;
+  }
+
+  .pos-history-page .pos-hero-row h1 {
+    font-size: 19px;
+    letter-spacing: -0.02em;
+    margin: 0;
+  }
+
+  .pos-history-page .pos-hero-row p {
+    font-size: 11.5px;
+    color: #64748b;
+    margin: 3px 0 0;
+    line-height: 1.35;
+  }
+
+  .pos-history-page .pos-hero-row > div:last-child {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .pos-history-page .pos-hero-row > div:last-child button {
+    flex: 1;
+    height: 38px;
+    padding: 0 10px;
+    font-size: 11.5px;
+    font-weight: 800;
+    justify-content: center;
+    border-radius: 10px;
+    white-space: nowrap;
+  }
+
+  /* KPI Audit Cards di Mobile */
+  .pos-audit-stats {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 8px;
+  }
+
+  /* Kartu Omzet sebagai Hero Clickable */
+  button.pos-audit-card.omzet {
+    grid-column: 1 / -1;
+    padding: 14px 16px;
+    background: linear-gradient(135deg, #ffffff 0%, #fff7ed 100%) !important;
+    border: 1.5px solid #fed7aa !important;
+    border-radius: 16px;
+    box-shadow: 0 4px 16px rgba(234, 88, 12, 0.08);
+  }
+
+  button.pos-audit-card.omzet .pos-audit-icon {
+    width: 44px;
+    height: 44px;
+    font-size: 20px;
+    flex: 0 0 44px;
+  }
+
+  button.pos-audit-card.omzet strong {
+    font-size: 22px;
+    letter-spacing: -0.02em;
+  }
+
+  button.pos-audit-card.omzet p {
+    font-size: 11px;
+    margin-top: 2px;
+  }
+
+  /* 3 Kartu Mini (Struk, Tunai, QRIS) */
+  .pos-audit-card.orders,
+  .pos-audit-card.cash,
+  .pos-audit-card.qris {
+    padding: 10px 8px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    border-radius: 14px;
+  }
+
+  .pos-audit-card.orders .pos-audit-icon,
+  .pos-audit-card.cash .pos-audit-icon,
+  .pos-audit-card.qris .pos-audit-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 15px;
+    border-radius: 8px;
+    flex: 0 0 32px;
+  }
+
+  .pos-audit-card.orders small,
+  .pos-audit-card.cash small,
+  .pos-audit-card.qris small {
+    font-size: 9px;
+    font-weight: 850;
+    letter-spacing: 0.02em;
+  }
+
+  .pos-audit-card.orders strong,
+  .pos-audit-card.cash strong,
+  .pos-audit-card.qris strong {
+    font-size: 12.5px;
+    letter-spacing: -0.01em;
+  }
+
+  .pos-audit-card.orders p,
+  .pos-audit-card.cash p,
+  .pos-audit-card.qris p {
+    display: none;
+  }
+
+  /* Toolbar Filter & Pencarian di Mobile */
+  .pos-audit-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .pos-audit-search {
+    width: 100%;
+    height: 42px;
+    padding: 0 12px;
+    border-radius: 12px;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+  }
+
+  .pos-audit-search input {
+    font-size: 13px;
+  }
+
+  .pos-audit-filters {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+  }
+
+  /* Smooth Horizontal Scroll Pills di Mobile */
+  .pos-audit-pill-group {
+    display: flex;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding: 3px;
+    border-radius: 11px;
+    background: #f1f5f9;
+    gap: 4px;
+    width: 100%;
+  }
+
+  .pos-audit-pill-group::-webkit-scrollbar {
+    display: none;
+  }
+
+  .pos-audit-pill-group button {
+    flex: 0 0 auto;
+    height: 32px;
+    padding: 0 11px;
+    font-size: 11px;
+    font-weight: 850;
+    border-radius: 8px;
+    white-space: nowrap;
+  }
+
+  /* Sembunyikan Tabel di Mobile, Tampilkan Mobile Cards */
+  .pos-history-table-wrapper {
+    display: none !important;
+  }
+
+  .pos-history-mobile-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .pos-history-mobile-card {
+    background: #ffffff;
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+    padding: 13px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    cursor: pointer;
+    text-align: left;
+    transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .pos-history-mobile-card:active {
+    transform: scale(0.985);
+    background: #fcfdfe;
+    border-color: #cbd5e1;
+  }
+
+  .pos-hm-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .pos-hm-queue-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .pos-hm-queue-num {
+    font-size: 17px;
+    font-weight: 950;
+    color: #0284c7;
+    letter-spacing: -0.02em;
+  }
+
+  .pos-hm-table-tag {
+    font-size: 11px;
+    font-weight: 850;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: #f1f5f9;
+    color: #0f172a;
+    border: 1px solid #e2e8f0;
+  }
+
+  .pos-hm-items-wrap {
+    background: #f8fafc;
+    border-radius: 10px;
+    padding: 8px 10px;
+    border: 1px solid #f1f5f9;
+  }
+
+  .pos-hm-items-text {
+    margin: 0;
+    font-size: 12.5px;
+    font-weight: 800;
+    color: #0f172a;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    line-height: 1.35;
+  }
+
+  .pos-hm-items-count {
+    display: block;
+    margin-top: 3px;
+    font-size: 10.5px;
+    color: #64748b;
+    font-weight: 700;
+  }
+
+  .pos-hm-meta-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    color: #64748b;
+  }
+
+  .pos-hm-cashier-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .pos-hm-cashier-badge .pos-cashier-avatar {
+    width: 20px;
+    height: 20px;
+    font-size: 9.5px;
+  }
+
+  .pos-hm-cashier-name {
+    font-weight: 800;
+    color: #475569;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .pos-hm-time {
+    font-size: 10.5px;
+    font-weight: 700;
+  }
+
+  .pos-hm-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 8px;
+    border-top: 1px dashed #e2e8f0;
+  }
+
+  .pos-hm-amount-action {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .pos-hm-amount {
+    font-size: 15px;
+    font-weight: 950;
+    color: #0f172a;
+  }
+
+  .pos-hm-detail-link {
+    font-size: 11px;
+    font-weight: 850;
+    color: #ea580c;
+    background: #fff7ed;
+    border: 1px solid #ffedd5;
+    padding: 3px 8px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+  }
+
+  .pos-history-mobile-empty {
+    padding: 40px 16px;
+    text-align: center;
+    background: #ffffff;
+    border-radius: 16px;
+    border: 1.5px dashed #cbd5e1;
+    color: #64748b;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .pos-history-mobile-empty .pos-hme-icon {
+    font-size: 32px;
+    margin-bottom: 4px;
+  }
+
+  .pos-history-mobile-empty strong {
+    font-size: 14px;
+    color: #0f172a;
+  }
+
+  .pos-history-mobile-empty p {
+    font-size: 12px;
+    margin: 0;
+    max-width: 260px;
+    line-height: 1.4;
+  }
+
+  .pos-filter-modal {
+    padding: 20px 16px;
+    border-radius: 20px;
+    max-height: 92dvh;
+  }
+
+  .pos-filter-preset-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
   .cashier-shift-button{z-index:80}
 }
 @media(max-width:480px){.pos-header-actions{gap:4px}.pos-nav button{font-size:9.5px}.pos-hero-row>button{font-size:0}.pos-hero-row>button svg{width:18px}.pos-section-heading>small{display:none}}

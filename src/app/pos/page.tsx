@@ -676,7 +676,7 @@ export default function PosModulePage() {
         </div>
       </section>
 
-      {/* Tabel Histori & Audit Modern */}
+      {/* Tabel Histori & Audit Desktop / Tablet */}
       <div className="pos-history-table-wrapper">
         <table className="pos-history-table">
           <thead>
@@ -777,6 +777,98 @@ export default function PosModulePage() {
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Tampilan Mobile: Kartu Transaksi Adaptif Tanpa Scroll Horizontal */}
+      <div className="pos-history-mobile-list" aria-label="Daftar transaksi histori mobile">
+        {filteredHistoryOrders.length === 0 ? (
+          <div className="pos-history-mobile-empty">
+            <span className="pos-hme-icon">🔍</span>
+            <strong>Tidak ada transaksi</strong>
+            <p>Tidak ada riwayat transaksi yang cocok dengan filter atau kata kunci pencarian.</p>
+          </div>
+        ) : (
+          filteredHistoryOrders.map((order) => {
+            const cashier = getOrderCashier(order, shift?.cashierName);
+            const orderTime = new Date(order.created_at).toLocaleTimeString("id-ID", {
+              hour: "2-digit",
+              minute: "2-digit",
+            });
+            const orderDate = new Date(order.created_at).toLocaleDateString("id-ID", {
+              day: "numeric",
+              month: "short",
+            });
+            const itemCount = order.items.reduce((s, i) => s + i.qty, 0);
+            const itemsSummary = order.items.map((i) => `${i.qty}× ${i.nama_menu}`).join(", ");
+            const statusLabel =
+              order.status_pesanan === "DONE"
+                ? "Selesai"
+                : order.status_pesanan === "READY"
+                ? "Siap Diantar"
+                : order.status_pesanan === "COOKING"
+                ? "Disiapkan"
+                : order.status_pesanan === "AWAITING_CONFIRMATION"
+                ? "Menunggu"
+                : order.status_pesanan === "REJECTED"
+                ? "Ditolak"
+                : order.status_pesanan;
+
+            return (
+              <article
+                key={`mobile-${order.id}`}
+                className="pos-history-mobile-card"
+                onClick={() => setSelected(order)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setSelected(order);
+                  }
+                }}
+              >
+                <header className="pos-hm-header">
+                  <div className="pos-hm-queue-wrap">
+                    <strong className="pos-hm-queue-num">#{String(order.nomor_antrean).padStart(3, "0")}</strong>
+                    <span className="pos-hm-table-tag">
+                      {order.table_number === "Kasir" ? "Take away / Kasir" : `Meja ${order.table_number}`}
+                    </span>
+                  </div>
+                  <span className={`pos-audit-status-pill ${order.status_pesanan.toLowerCase()}`}>
+                    {statusLabel}
+                  </span>
+                </header>
+
+                <div className="pos-hm-items-wrap">
+                  <p className="pos-hm-items-text">{itemsSummary || "Pesanan"}</p>
+                  <small className="pos-hm-items-count">{itemCount} total item dipesan</small>
+                </div>
+
+                <div className="pos-hm-meta-row">
+                  <div className="pos-hm-cashier-badge">
+                    <span className="pos-cashier-avatar">{getCashierInitials(cashier)}</span>
+                    <span className="pos-hm-cashier-name">{cashier}</span>
+                  </div>
+                  <span className="pos-hm-time">{orderDate} · {orderTime}</span>
+                </div>
+
+                <footer className="pos-hm-footer">
+                  <span className={`pos-audit-pay-pill ${order.payment_method.toLowerCase()}`}>
+                    {order.payment_method === "CASH" ? "💵 TUNAI" : "📱 QRIS"}
+                  </span>
+                  <div className="pos-hm-amount-action">
+                    <strong className="pos-hm-amount">
+                      Rp {Number(order.total_harga).toLocaleString("id-ID")}
+                    </strong>
+                    <span className="pos-hm-detail-link">
+                      Detail <span>→</span>
+                    </span>
+                  </div>
+                </footer>
+              </article>
+            );
+          })
+        )}
       </div>
     </main>}
 
