@@ -5,16 +5,18 @@ type RevenueRow = { created_at: string; total_harga: number | string };
 
 const MAKASSAR_OFFSET_MS = 8 * 60 * 60 * 1000;
 
+const makassarFormatter = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Makassar",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  hourCycle: "h23",
+  weekday: "short",
+});
+
 function makassarParts(date: Date) {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Makassar",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    hourCycle: "h23",
-    weekday: "short",
-  }).formatToParts(date);
+  const parts = makassarFormatter.formatToParts(date);
   return Object.fromEntries(parts.map((part) => [part.type, part.value]));
 }
 
@@ -83,6 +85,7 @@ export async function GET(request: Request) {
 
     if (error) throw error;
 
+    const bucketsByKey = new Map(buckets.map((bucket) => [bucket.key, bucket]));
     for (const row of (data || []) as RevenueRow[]) {
       const parts = makassarParts(new Date(row.created_at));
       const key = period === "day"
@@ -90,7 +93,7 @@ export async function GET(request: Request) {
         : period === "year"
           ? parts.month
           : `${parts.year}-${parts.month}-${parts.day}`;
-      const bucket = buckets.find((item) => item.key === key);
+      const bucket = bucketsByKey.get(key);
       if (bucket) bucket.value += Number(row.total_harga || 0);
     }
 

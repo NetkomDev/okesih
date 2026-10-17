@@ -15,7 +15,7 @@ export default function SplashScreen() {
   const mounted = useSyncExternalStore(() => () => {}, () => true, () => false);
   const hasSeenSplash = useSyncExternalStore(
     () => () => {},
-    () => isOperational || sessionStorage.getItem("okesih_splash_welcomed") === "true",
+    () => isOperational || isTenantMenu || sessionStorage.getItem("okesih_splash_welcomed") === "true",
     () => true
   );
   const [visible, setVisible] = useState(true);

@@ -4,6 +4,7 @@ import { deviceErrorResponse, requireDevice } from "@/lib/device-auth";
 export async function GET(request: NextRequest) {
   try {
     const { admin, device, warkopId, deviceType } = await requireDevice(request, ["POS", "KDS"]);
+    const includeHistory = deviceType === "POS" && request.nextUrl.searchParams.get("history") !== "0";
     const statuses = deviceType === "POS"
       ? ["AWAITING_CONFIRMATION", "COOKING", "READY"]
       : ["COOKING", "READY"];
@@ -11,12 +12,12 @@ export async function GET(request: NextRequest) {
 
     const [profileResult, menuResult, tableResult, waiterResult, shiftResult, orderResult, historyResult, ownerMemberResult] = await Promise.all([
       admin.from("warkops").select("id,nama,slug,is_active,logo_url,offline_limit_hours,queue_dismiss_seconds,qris_image_url,qris_merchant_name").eq("id", warkopId).single(),
-      admin.from("menus").select("id,nama,harga,kategori,desc_menu,is_available").eq("warkop_id", warkopId).order("kategori").order("nama"),
-      admin.from("warkop_tables").select("id,label,sort_order,is_active").eq("warkop_id", warkopId).eq("is_active", true).order("sort_order"),
-      admin.from("waiters").select("id,name,phone,is_active").eq("warkop_id", warkopId).eq("is_active", true).order("name"),
-      admin.from("shifts").select("id,opened_at,status,opened_by").eq("warkop_id", warkopId).eq("status", "OPEN").order("opened_at", { ascending: false }).limit(1).maybeSingle(),
+      deviceType === "POS" ? admin.from("menus").select("id,nama,harga,kategori,desc_menu,is_available").eq("warkop_id", warkopId).order("kategori").order("nama") : Promise.resolve({ data: [], error: null }),
+      deviceType === "POS" ? admin.from("warkop_tables").select("id,label,sort_order,is_active").eq("warkop_id", warkopId).eq("is_active", true).order("sort_order") : Promise.resolve({ data: [], error: null }),
+      deviceType === "POS" ? admin.from("waiters").select("id,name,phone,is_active").eq("warkop_id", warkopId).eq("is_active", true).order("name") : Promise.resolve({ data: [], error: null }),
+      deviceType === "POS" ? admin.from("shifts").select("id,opened_at,status,opened_by").eq("warkop_id", warkopId).eq("status", "OPEN").order("opened_at", { ascending: false }).limit(1).maybeSingle() : Promise.resolve({ data: null, error: null }),
       admin.from("transactions").select("id,table_number,nomor_antrean,total_harga,payment_method,payment_proof_url,status_pesanan,waiter_name,created_at,updated_at").eq("warkop_id", warkopId).in("status_pesanan", statuses).gte("created_at", since).order("created_at"),
-      deviceType === "POS"
+      includeHistory
         ? admin.from("transactions").select("id,table_number,nomor_antrean,total_harga,payment_method,payment_proof_url,status_pesanan,waiter_name,created_at,updated_at").eq("warkop_id", warkopId).order("created_at", { ascending: false }).limit(200)
         : Promise.resolve({ data: [], error: null }),
       deviceType === "POS"
@@ -50,11 +51,15 @@ export async function GET(request: NextRequest) {
     const signedProofs = new Map<string, string>();
     const ordersWithProof = allOrdersList.filter((order) => Boolean(order.payment_proof_url));
     const uniqueProofOrders = [...new Map(ordersWithProof.map((order) => [order.id, order])).values()];
-    await Promise.all(uniqueProofOrders.map(async (order) => {
-      if (!order.payment_proof_url) return;
-      const { data } = await admin.storage.from("bukti-transfer").createSignedUrl(order.payment_proof_url, 10 * 60);
-      if (data?.signedUrl) signedProofs.set(order.id, data.signedUrl);
-    }));
+    if (uniqueProofOrders.length) {
+      const paths = [...new Set(uniqueProofOrders.map((order) => order.payment_proof_url as string))];
+      const { data: proofs } = await admin.storage.from("bukti-transfer").createSignedUrls(paths, 10 * 60);
+      const urlsByPath = new Map((proofs || []).map((proof) => [proof.path, proof.signedUrl]));
+      for (const order of uniqueProofOrders) {
+        const url = urlsByPath.get(order.payment_proof_url!);
+        if (url) signedProofs.set(order.id, url);
+      }
+    }
 
     return Response.json({
       serverTime: new Date().toISOString(),
@@ -69,11 +74,11 @@ export async function GET(request: NextRequest) {
         payment_proof_url: signedProofs.get(order.id) || null,
         items: itemsByOrder.get(order.id) || [],
       })),
-      historyOrders: (historyResult.data || []).map((order) => ({
+      ...(includeHistory ? { historyOrders: (historyResult.data || []).map((order) => ({
         ...order,
         payment_proof_url: signedProofs.get(order.id) || null,
         items: itemsByOrder.get(order.id) || [],
-      })),
+      })) } : {}),
       hasAuditPin,
     }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {

@@ -140,9 +140,9 @@ function formatElapsedTime(createdAt: string, now: number): string {
 }
 
 export default function PosModulePage() {
-  const app = useDeviceApp("POS");
-  const pwaInstalled = usePwaInstallStatus("/pos/manifest.webmanifest");
   const [view, setView] = useState<View>("orders");
+  const app = useDeviceApp("POS", view === "history");
+  const pwaInstalled = usePwaInstallStatus("/pos/manifest.webmanifest");
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const [selected, setSelected] = useState<DeviceOrder | null>(null);

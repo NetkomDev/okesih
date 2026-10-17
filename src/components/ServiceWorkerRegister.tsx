@@ -15,11 +15,15 @@ export default function ServiceWorkerRegister() {
     // Jangan daftarkan service worker di mode development localhost
     if (process.env.NODE_ENV === "development") return;
 
+    let disposed = false;
+    let cleanupRegistration: (() => void) | undefined;
     const registerSW = async () => {
       try {
         const registration = await navigator.serviceWorker.register("/sw.js", {
           scope: "/",
         });
+
+        if (disposed) return;
 
         // Jika ada service worker baru yang sedang menunggu, suruh dia segera aktif
         if (registration.waiting) {
@@ -55,7 +59,7 @@ export default function ServiceWorkerRegister() {
           void registration.update().catch(() => {});
         }, 15 * 60 * 1000);
 
-        return () => {
+        cleanupRegistration = () => {
           window.removeEventListener("online", handleOnline);
           window.clearInterval(intervalId);
         };
@@ -69,6 +73,11 @@ export default function ServiceWorkerRegister() {
     } else {
       window.addEventListener("load", registerSW, { once: true });
     }
+    return () => {
+      disposed = true;
+      window.removeEventListener("load", registerSW);
+      cleanupRegistration?.();
+    };
   }, []);
 
   return null;

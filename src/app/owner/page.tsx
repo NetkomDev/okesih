@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import QRCode from "qrcode";
 import { useAuthGuard, logoutUser } from "@/lib/auth-helpers";
 import { createClient } from "@/lib/supabase/client";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -364,6 +363,7 @@ export default function TenantOwnerDashboardPage() {
   };
 
   useEffect(() => {
+    if (pathname !== "/owner/qris-tables") return;
     let isMounted = true;
     const generatePreview = async () => {
       const slug = data?.profile?.slug || "sample";
@@ -373,6 +373,7 @@ export default function TenantOwnerDashboardPage() {
       // URL ringkas ?t= menghasilkan QR code Version 2 (25x25) dengan kotak-kotak yang jauh lebih besar & simpel
       const url = `${origin}/menu/${slug}?t=${encodeURIComponent(tableLabel)}`;
       try {
+        const { default: QRCode } = await import("qrcode");
         const qr = await QRCode.toDataURL(url, {
           width: Math.max(260, stickerConfig.qrSize * 2),
           margin: 1,
@@ -385,7 +386,7 @@ export default function TenantOwnerDashboardPage() {
     };
     void generatePreview();
     return () => { isMounted = false; };
-  }, [data?.profile?.slug, data?.tables, stickerConfig.selectedTableId, stickerConfig.qrSize]);
+  }, [pathname, data?.profile?.slug, data?.tables, stickerConfig.selectedTableId, stickerConfig.qrSize]);
 
   const loadDashboard = async () => {
     try {
@@ -673,6 +674,7 @@ export default function TenantOwnerDashboardPage() {
       : data.tables;
     if (!tablesToPrint.length) return setError("Meja yang dipilih tidak ditemukan.");
 
+    const { default: QRCode } = await import("qrcode");
     const cards = await Promise.all(
       tablesToPrint.map(async (table) => {
         // Gunakan URL ringkas ?t= agar modul QR Code berukuran paling besar dan simpel tanpa kotak rapat

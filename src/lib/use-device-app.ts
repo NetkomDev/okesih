@@ -40,7 +40,7 @@ async function deviceHeaders(type: "POS" | "KDS") {
   return { "Content-Type": "application/json", "X-Device-Type": type, ...(token ? { Authorization: `Bearer ${token}` } : {}) };
 }
 
-export function useDeviceApp(type: "POS" | "KDS") {
+export function useDeviceApp(type: "POS" | "KDS", includeHistory = true) {
   const [data, setData] = useState<DeviceBootstrap | null>(null);
   const [authorized, setAuthorized] = useState<boolean | null>(null);
   const [pairing, setPairing] = useState<Pairing | null>(null);
@@ -48,7 +48,9 @@ export function useDeviceApp(type: "POS" | "KDS") {
   const [cachedAt, setCachedAt] = useState<string | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
   const [error, setError] = useState("");
+  const snapshot = useRef<DeviceBootstrap | null>(null);
   const syncing = useRef(false);
+  const refreshInFlight = useRef<Promise<void> | null>(null);
 
   const flushQueue = useCallback(async () => {
     if (syncing.current || !navigator.onLine) return;
@@ -74,29 +76,43 @@ export function useDeviceApp(type: "POS" | "KDS") {
     } finally { syncing.current = false; }
   }, [type]);
 
-  const refresh = useCallback(async (quiet = false) => {
-    try {
-      const response = await fetch("/api/device/bootstrap", { cache: "no-store", headers: { "X-Device-Type": type } });
-      if (response.status === 401) { setAuthorized(false); setData(null); await clearDeviceData(type); return; }
-      const body = await response.json();
-      if (!response.ok) throw new Error(body.error || "Data perangkat gagal dimuat.");
-      setAuthorized(true); setData(body); setCachedAt(null); setError("");
-      await cacheDeviceSnapshot(type, body);
-      await flushQueue();
-    } catch (reason) {
-      const cached = await readDeviceSnapshot<DeviceBootstrap>(type);
-      if (cached) { setAuthorized(true); setData(cached.value); setCachedAt(cached.cachedAt); }
-      else if (!quiet) setError(reason instanceof Error ? reason.message : "Data perangkat gagal dimuat.");
-    }
-  }, [flushQueue, type]);
+  const refresh = useCallback((quiet = false): Promise<void> => {
+    if (refreshInFlight.current) return refreshInFlight.current;
+    const pending = (async () => {
+      try {
+        const withHistory = includeHistory || !snapshot.current;
+        const response = await fetch(`/api/device/bootstrap${withHistory ? "" : "?history=0"}`, { cache: "no-store", headers: { "X-Device-Type": type } });
+        if (response.status === 401) { setAuthorized(false); setData(null); snapshot.current = null; await clearDeviceData(type); return; }
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.error || "Data perangkat gagal dimuat.");
+        const next = { ...snapshot.current, ...body } as DeviceBootstrap;
+        snapshot.current = next;
+        setAuthorized(true); setData(next); setCachedAt(null); setError("");
+        await cacheDeviceSnapshot(type, next);
+        await flushQueue();
+      } catch (reason) {
+        const cached = await readDeviceSnapshot<DeviceBootstrap>(type);
+        if (cached) { snapshot.current = cached.value; setAuthorized(true); setData(cached.value); setCachedAt(cached.cachedAt); }
+        else if (!quiet) setError(reason instanceof Error ? reason.message : "Data perangkat gagal dimuat.");
+      }
+    })();
+    refreshInFlight.current = pending;
+    void pending.finally(() => { refreshInFlight.current = null; }).catch(() => {});
+    return pending;
+  }, [flushQueue, includeHistory, type]);
 
   useEffect(() => {
     const initialTimer = window.setTimeout(() => { setOnline(navigator.onLine); void refresh(); }, 0);
-    const timer = window.setInterval(() => void refresh(true), 3000);
-    const handleOnline = () => { setOnline(true); void flushQueue(); void refresh(true); };
+    // Keep the 3-second fallback: device realtime delivery depends on RLS.
+    const refreshVisible = () => {
+      if (navigator.onLine && document.visibilityState === "visible") void refresh(true);
+    };
+    const timer = window.setInterval(refreshVisible, 3000);
+    const handleOnline = () => { setOnline(true); refreshVisible(); };
+    document.addEventListener("visibilitychange", refreshVisible);
     const handleOffline = () => setOnline(false);
     window.addEventListener("online", handleOnline); window.addEventListener("offline", handleOffline);
-    return () => { window.clearTimeout(initialTimer); window.clearInterval(timer); window.removeEventListener("online", handleOnline); window.removeEventListener("offline", handleOffline); };
+    return () => { window.clearTimeout(initialTimer); window.clearInterval(timer); document.removeEventListener("visibilitychange", refreshVisible); window.removeEventListener("online", handleOnline); window.removeEventListener("offline", handleOffline); };
   }, [flushQueue, refresh]);
 
   useEffect(() => {
@@ -114,7 +130,7 @@ export function useDeviceApp(type: "POS" | "KDS") {
           filter: `warkop_id=eq.${profileId}`,
         },
         () => {
-          void refresh(true);
+          if (navigator.onLine && document.visibilityState === "visible") void refresh(true);
         }
       )
       .subscribe();
@@ -140,7 +156,7 @@ export function useDeviceApp(type: "POS" | "KDS") {
       else if (["EXPIRED", "REJECTED"].includes(body.status)) { window.clearInterval(timer); setPairing(null); setError("Kode pairing berakhir. Buat kode baru."); }
     }, 2500);
     return () => window.clearInterval(timer);
-  }, [pairing, refresh]);
+  }, [pairing, refresh, type]);
 
   const beginPairing = async (deviceName: string) => {
     setError("");
@@ -167,6 +183,8 @@ export function useDeviceApp(type: "POS" | "KDS") {
     const response = await fetch("/api/device/orders", { method: "POST", headers: await deviceHeaders(type), body: JSON.stringify(body) });
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || "Status pesanan gagal diperbarui.");
+    // A read started before this write may contain stale data.
+    await refreshInFlight.current;
     await refresh(true);
   };
 
@@ -179,6 +197,8 @@ export function useDeviceApp(type: "POS" | "KDS") {
     });
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || "Pesanan kasir gagal disimpan.");
+    // A read started before this write may contain stale data.
+    await refreshInFlight.current;
     await refresh(true);
     return result.order as { id: string; nomor_antrean: number; total_harga: number; status_pesanan: string };
   };
