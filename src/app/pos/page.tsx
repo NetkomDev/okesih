@@ -164,6 +164,7 @@ export default function PosModulePage() {
   const [pinInput, setPinInput] = useState("");
   const [pinError, setPinError] = useState("");
   const [pinChecking, setPinChecking] = useState(false);
+  const [pinShaking, setPinShaking] = useState(false);
 
   const audio = useRef<AudioContext | null>(null);
   const cashierOrderSubmitting = useRef(false);
@@ -308,11 +309,17 @@ export default function PosModulePage() {
     setDateModalOpen(false);
   };
 
+  const triggerPinShake = () => {
+    setPinShaking(true);
+    window.setTimeout(() => setPinShaking(false), 500);
+  };
+
   const verifyAuditPin = async (e?: React.FormEvent, customPin?: string) => {
     if (e) e.preventDefault();
     const pinToVerify = customPin !== undefined ? customPin : pinInput;
     if (!pinToVerify.trim()) {
       setPinError("Masukkan PIN keamanan");
+      triggerPinShake();
       return;
     }
     setPinChecking(true);
@@ -326,13 +333,20 @@ export default function PosModulePage() {
       const data = await res.json();
       if (!res.ok || !data.verified) {
         setPinError(data.error || "PIN tidak sesuai. Hubungi Owner.");
+        setPinInput(""); // Langsung kosongkan isian PIN agar siap diisi kembali
+        triggerPinShake(); // Efek visual bergetar pada modal
         return;
       }
+      // PIN benar: segera buka akses dan beralih ke History Pesanan
       setHistoryUnlocked(true);
       setPinModalOpen(false);
+      setPinInput("");
+      setPinError("");
       setView("history");
     } catch {
       setPinError("Gagal memeriksa PIN. Pastikan koneksi terhubung.");
+      setPinInput("");
+      triggerPinShake();
     } finally {
       setPinChecking(false);
     }
@@ -348,6 +362,9 @@ export default function PosModulePage() {
           if (prev.length < 6) {
             const next = prev + e.key;
             setPinError("");
+            if (next.length === 6) {
+              void verifyAuditPin(undefined, next);
+            }
             return next;
           }
           return prev;
@@ -1007,7 +1024,7 @@ export default function PosModulePage() {
     {/* Modal Input PIN Akses Audit */}
     {pinModalOpen && (
       <div className="ops-modal-backdrop">
-        <section className="pos-pin-modal">
+        <section className={`pos-pin-modal ${pinShaking ? "shake" : ""}`}>
           <button
             className="ops-modal-close"
             onClick={() => {
@@ -1058,8 +1075,12 @@ export default function PosModulePage() {
                   className="pos-pin-num-btn"
                   onClick={() => {
                     if (pinInput.length < 6) {
-                      setPinInput((prev) => prev + String(num));
+                      const next = pinInput + String(num);
+                      setPinInput(next);
                       setPinError("");
+                      if (next.length === 6) {
+                        void verifyAuditPin(undefined, next);
+                      }
                     }
                   }}
                   disabled={pinChecking}
@@ -1083,8 +1104,12 @@ export default function PosModulePage() {
                 className="pos-pin-num-btn"
                 onClick={() => {
                   if (pinInput.length < 6) {
-                    setPinInput((prev) => prev + "0");
+                    const next = pinInput + "0";
+                    setPinInput(next);
                     setPinError("");
+                    if (next.length === 6) {
+                      void verifyAuditPin(undefined, next);
+                    }
                   }
                 }}
                 disabled={pinChecking}

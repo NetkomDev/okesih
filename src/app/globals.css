@@ -4936,6 +4936,22 @@ button.pos-audit-card:hover .pos-audit-card-action-hint {
   animation: posModalIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.pos-pin-modal.shake {
+  animation: posPinModalShake 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+@keyframes posPinModalShake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  15%, 45%, 75% {
+    transform: translateX(-10px);
+  }
+  30%, 60%, 90% {
+    transform: translateX(10px);
+  }
+}
+
 .pos-pin-badge {
   display: inline-flex;
   align-items: center;
@@ -5102,16 +5118,32 @@ button.pos-audit-card:hover .pos-audit-card-action-hint {
   color: #0f172a;
 }
 
+.pos-pin-btn-cancel:active {
+  transform: scale(0.96);
+  background: #cbd5e1;
+}
+
 .pos-pin-btn-submit {
+  position: relative;
+  overflow: hidden;
   background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%);
   color: #ffffff;
   box-shadow: 0 4px 14px rgba(234, 88, 12, 0.35);
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  -webkit-tap-highlight-color: transparent;
 }
 
 .pos-pin-btn-submit:hover:not(:disabled) {
   background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
   transform: translateY(-1px);
   box-shadow: 0 6px 18px rgba(234, 88, 12, 0.45);
+}
+
+.pos-pin-btn-submit:active:not(:disabled) {
+  transform: scale(0.95);
+  background: linear-gradient(135deg, #c2410c 0%, #9a3412 100%);
+  box-shadow: 0 2px 6px rgba(234, 88, 12, 0.3), inset 0 2px 4px rgba(0, 0, 0, 0.2);
+  filter: brightness(0.95);
 }
 
 .pos-pin-btn-submit:disabled {
