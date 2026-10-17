@@ -13,6 +13,7 @@ export type Tenant = {
   slug: string;
   ownerName: string;
   phone?: string;
+  address?: string;
   province: string;
   cityRegency: string;
   status: "ACTIVE" | "SUSPENDED";
@@ -29,6 +30,7 @@ export type Application = {
   business_name: string;
   owner_name: string;
   owner_phone?: string;
+  address?: string;
   province: string;
   city_regency: string;
   status: "PENDING" | "PROCESSING" | "APPROVED" | "REJECTED";

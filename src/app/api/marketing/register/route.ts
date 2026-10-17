@@ -1,8 +1,17 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { assertSameOrigin } from "@/lib/device-auth";
+import {
+  cleanWhatsAppMessageField,
+  createWhatsAppUrl,
+  getSuperAdminWhatsAppNumber,
+  isValidIndonesianWhatsAppNumber,
+  normalizeIndonesianWhatsAppNumber,
+} from "@/lib/whatsapp";
 
 export async function POST(request: Request) {
   try {
+    assertSameOrigin(request);
     const body = await request.json();
     const {
       fullName,
@@ -19,6 +28,14 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: "Mohon lengkapi semua kolom yang wajib diisi (Nama, No HP/WA, Kota/Wilayah, dan Rekening Bank)." },
         { status: 400 }
+      );
+    }
+
+    const marketingPhone = normalizeIndonesianWhatsAppNumber(phone);
+    if (!isValidIndonesianWhatsAppNumber(marketingPhone)) {
+      return NextResponse.json(
+        { error: "Nomor WhatsApp tidak valid. Gunakan nomor Indonesia aktif, misalnya 081234567890." },
+        { status: 400 },
       );
     }
 
@@ -52,7 +69,7 @@ export async function POST(request: Request) {
       .insert([
         {
           full_name: fullName.trim(),
-          phone: phone.trim(),
+          phone: marketingPhone,
           email: email ? email.trim().toLowerCase() : null,
           city_area: cityArea.trim(),
           referral_code: referralCode,
@@ -75,6 +92,19 @@ export async function POST(request: Request) {
       );
     }
 
+    const adminPhone = getSuperAdminWhatsAppNumber(process.env.SUPERADMIN_WHATSAPP_NUMBER);
+    const message = [
+      "*PENDAFTARAN MITRA MARKETING OKESIH*",
+      "",
+      `Nama: *${cleanWhatsAppMessageField(data.full_name)}*`,
+      `WhatsApp: +${marketingPhone}`,
+      `Email: ${cleanWhatsAppMessageField(data.email) || "-"}`,
+      `Wilayah: ${cleanWhatsAppMessageField(data.city_area)}`,
+      `Kode Referral: *${cleanWhatsAppMessageField(data.referral_code)}*`,
+      "",
+      "Pendaftaran telah tersimpan di Dashboard Super Admin dan menunggu verifikasi.",
+    ].join("\n");
+
     return NextResponse.json({
       success: true,
       message: "Pendaftaran berhasil diterima! Tim Admin akan segera meninjau dan mengaktifkan akun kemitraan Anda.",
@@ -84,13 +114,14 @@ export async function POST(request: Request) {
         referralCode: data.referral_code,
         cityArea: data.city_area,
         status: data.status,
+        whatsappUrl: createWhatsAppUrl(adminPhone, message),
       },
     });
   } catch (err: unknown) {
     console.error("Error in /api/marketing/register:", err);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Terjadi kesalahan internal server." },
-      { status: 500 }
+      { status: err instanceof Error && "status" in err && typeof err.status === "number" ? err.status : 500 }
     );
   }
 }

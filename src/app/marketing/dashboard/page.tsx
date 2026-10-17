@@ -15,11 +15,13 @@ export default function MarketingDashboardPage() {
   const { data, loading, error: contextError, isAuthorized } = useMarketingData();
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [whatsappUrl, setWhatsappUrl] = useState("");
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     name: "",
     ownerName: "",
     phone: "",
+    address: "",
     province: "",
     cityRegency: "",
   });
@@ -29,6 +31,7 @@ export default function MarketingDashboardPage() {
     setSaving(true);
     setError("");
     setNotice("");
+    setWhatsappUrl("");
     try {
       const response = await fetch("/api/marketing/dashboard", {
         method: "POST",
@@ -37,7 +40,9 @@ export default function MarketingDashboardPage() {
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Pengajuan tenant gagal dikirim.");
-      setForm({ name: "", ownerName: "", phone: "", province: "", cityRegency: "" });
+      if (!payload.data?.whatsappUrl) throw new Error("Tautan WhatsApp Admin gagal disiapkan.");
+      setForm({ name: "", ownerName: "", phone: "", address: "", province: "", cityRegency: "" });
+      setWhatsappUrl(payload.data.whatsappUrl);
       setNotice(
         "Pengajuan tersimpan. Kirim pesan yang sudah disiapkan melalui WhatsApp Anda."
       );
@@ -89,7 +94,12 @@ export default function MarketingDashboardPage() {
         </header>
 
         {(error || contextError) && <div className="mkt-alert error">{error || contextError}</div>}
-        {notice && <div className="mkt-alert success">✓ {notice}</div>}
+        {notice && (
+          <div className="mkt-alert success">
+            ✓ {notice}
+            {whatsappUrl && <a href={whatsappUrl}>Buka WhatsApp</a>}
+          </div>
+        )}
 
         {/* 4 Cards Statistik Interaktif: Klik untuk menuju halaman detail tanpa reload */}
         <section className="mkt-stats">
@@ -201,6 +211,16 @@ export default function MarketingDashboardPage() {
                 placeholder="08xxxxxxxxxx"
                 value={form.phone}
                 onChange={(e) => setForm({ ...form, phone: e.target.value })}
+              />
+            </label>
+            <label>
+              Alamat lengkap usaha
+              <textarea
+                required
+                rows={3}
+                placeholder="Nama jalan, nomor, kelurahan/kecamatan"
+                value={form.address}
+                onChange={(e) => setForm({ ...form, address: e.target.value })}
               />
             </label>
             <div className="mkt-form-row">

@@ -7,6 +7,12 @@ import { createDevicePin, hashDevicePin, readDevicePin, devicePinKey } from "../
 import dashboardManifestModule from "../src/lib/pwa-manifest.ts";
 import { getTrustedUserRole } from "../src/lib/auth-role.ts";
 import { requestPwaInstallation } from "../src/lib/pwa-install.ts";
+import {
+  createWhatsAppUrl,
+  formatWhatsAppDate,
+  getSuperAdminWhatsAppNumber,
+  normalizeIndonesianWhatsAppNumber,
+} from "../src/lib/whatsapp.ts";
 
 // tsx exposes a TypeScript default export through a CJS compatibility layer
 // when the package does not declare `type: module`.
@@ -186,4 +192,31 @@ test("PIN storage is isolated by paired device and fails closed on corruption", 
   values.set(devicePinKey("one"), "{}");
   assert.throws(() => readDevicePin("one"));
   delete globalThis.localStorage;
+});
+
+test("WhatsApp links normalize Indonesian numbers and preserve generated messages", () => {
+  assert.equal(normalizeIndonesianWhatsAppNumber("+62 856-9448-8510"), "6285694488510");
+  assert.equal(normalizeIndonesianWhatsAppNumber("0856 9448 8510"), "6285694488510");
+  assert.equal(getSuperAdminWhatsAppNumber("0856-9448-8510"), "6285694488510");
+  const message = "Tenant: Risolinan\nJumlah: Rp 25.123";
+  const url = new URL(createWhatsAppUrl("085694488510", message));
+  assert.equal(url.hostname, "wa.me");
+  assert.equal(url.pathname, "/6285694488510");
+  assert.equal(url.searchParams.get("text"), message);
+  assert.equal(formatWhatsAppDate("2026-10-18"), "18 Oktober 2026");
+  assert.throws(() => createWhatsAppUrl("123", message));
+});
+
+test("credential and billing flows use manual WhatsApp links, not the legacy outbox", async () => {
+  const routeFiles = [
+    "../src/app/api/superadmin/marketing/route.ts",
+    "../src/app/api/superadmin/tenants/route.ts",
+    "../src/app/api/superadmin/tenant-applications/route.ts",
+    "../src/app/api/owner/billing/route.ts",
+  ];
+  for (const relativePath of routeFiles) {
+    const source = await readFile(new URL(relativePath, import.meta.url), "utf8");
+    assert.equal(source.includes('.from("whatsapp_outbox")'), false, relativePath);
+    assert.equal(source.includes("createWhatsAppUrl"), true, relativePath);
+  }
 });

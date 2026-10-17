@@ -14,7 +14,12 @@ export default function MarketingRegisterPage() {
   const [mktBankAccountName, setMktBankAccountName] = useState("");
   const [mktNotes, setMktNotes] = useState("");
   const [mktSubmitting, setMktSubmitting] = useState(false);
-  const [mktSuccess, setMktSuccess] = useState<{ referralCode: string; fullName: string; cityArea: string } | null>(null);
+  const [mktSuccess, setMktSuccess] = useState<{
+    referralCode: string;
+    fullName: string;
+    cityArea: string;
+    whatsappUrl: string;
+  } | null>(null);
   const [mktError, setMktError] = useState("");
   const [commissionPerReceipt, setCommissionPerReceipt] = useState<number>(15);
 
@@ -51,6 +56,7 @@ export default function MarketingRegisterPage() {
       if (!res.ok) {
         throw new Error(result.error || "Gagal memproses pendaftaran.");
       }
+      if (!result.data?.whatsappUrl) throw new Error("Tautan WhatsApp Admin gagal disiapkan.");
 
       setMktSuccess(result.data);
       setMktFullName("");
@@ -60,6 +66,7 @@ export default function MarketingRegisterPage() {
       setMktBankAccountNo("");
       setMktBankAccountName("");
       setMktNotes("");
+      window.location.assign(result.data.whatsappUrl);
     } catch (err: unknown) {
       setMktError(err instanceof Error ? err.message : "Terjadi kesalahan sistem saat mengirim pendaftaran.");
     } finally {
@@ -272,9 +279,7 @@ export default function MarketingRegisterPage() {
 
             <div>
               <a
-                href={`https://wa.me/6281234567890?text=${encodeURIComponent(`Halo Admin OKESIH, saya baru saja mendaftar sebagai Mitra Marketing atas nama ${mktSuccess.fullName} (Kode: ${mktSuccess.referralCode}) untuk area ${mktSuccess.cityArea}. Mohon bantuan aktivasi kemitraan saya.`)}`}
-                target="_blank"
-                rel="noreferrer"
+                href={mktSuccess.whatsappUrl}
                 className="btn-primary"
                 style={{
                   background: "#25D366",
@@ -289,7 +294,7 @@ export default function MarketingRegisterPage() {
                   textDecoration: "none",
                 }}
               >
-                <span>💬 Konfirmasi via WhatsApp Okesih.com Sekarang</span>
+                <span>💬 Buka Kembali Pesan WhatsApp Admin</span>
                 <span>→</span>
               </a>
             </div>
@@ -531,6 +536,20 @@ export default function MarketingRegisterPage() {
                 resize: "vertical",
               }}
             />
+          </div>
+
+          <div
+            style={{
+              padding: "0.9rem 1rem",
+              borderRadius: "12px",
+              background: "rgba(37, 211, 102, 0.1)",
+              border: "1px solid rgba(37, 211, 102, 0.35)",
+              color: "#A7F3D0",
+              fontSize: "0.82rem",
+              lineHeight: 1.5,
+            }}
+          >
+            💬 Setelah data tersimpan, aplikasi WhatsApp pada perangkat ini akan dibuka dengan pesan untuk Admin yang sudah terisi. Pastikan WhatsApp aktif memakai nomor yang Anda daftarkan, lalu tekan <strong>Kirim</strong>.
           </div>
 
           <button

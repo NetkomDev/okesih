@@ -3,6 +3,13 @@ import { OwnerApiError, ownerErrorResponse, requireOwner } from "@/lib/owner-api
 import { randomUUID } from "node:crypto";
 import { billingProofStoragePath, BILLING_PROOF_RETENTION_DAYS, deleteExpiredBillingProofs } from "@/lib/billing-proof-retention";
 import { verifyBillingProof } from "@/lib/billing-proof-ocr";
+import {
+  cleanWhatsAppMessageField,
+  createWhatsAppUrl,
+  formatWhatsAppDate,
+  formatWhatsAppRupiah,
+  getSuperAdminWhatsAppNumber,
+} from "@/lib/whatsapp";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -87,6 +94,7 @@ export async function POST(request: Request) {
   try {
     assertSameOrigin(request);
     const { admin, user, warkopId } = await requireOwner(request);
+    const adminPhone = getSuperAdminWhatsAppNumber(process.env.SUPERADMIN_WHATSAPP_NUMBER);
 
     const formData = await request.formData();
     const file = formData.get("file");
@@ -125,6 +133,13 @@ export async function POST(request: Request) {
     if (billingError || !billing) {
       throw new OwnerApiError("Tagihan sewa tidak ditemukan.", 404);
     }
+
+    const { data: warkop, error: warkopError } = await admin
+      .from("warkops")
+      .select("nama,address,city_regency,province")
+      .eq("id", warkopId)
+      .single();
+    if (warkopError || !warkop) throw new OwnerApiError("Profil tenant tidak ditemukan.", 404);
 
     // OCR berjalan sebelum berkas atau hasilnya disimpan ke Supabase.
     const image = Buffer.from(await file.arrayBuffer());
@@ -197,10 +212,29 @@ export async function POST(request: Request) {
       },
     });
 
+    const fullAddress = [warkop.address, warkop.city_regency, warkop.province]
+      .map(cleanWhatsAppMessageField)
+      .filter(Boolean)
+      .join(", ");
+    const message = [
+      "*KONFIRMASI PEMBAYARAN SEWA SAAS OKESIH*",
+      "",
+      `Tenant: *${cleanWhatsAppMessageField(warkop.nama)}*`,
+      `Alamat: ${fullAddress || "Belum dilengkapi"}`,
+      `Tanggal tagihan: ${formatWhatsAppDate(billing.tanggal)}`,
+      `Jumlah pembayaran: *${formatWhatsAppRupiah(billing.total_tagihan)}*`,
+      `ID Tagihan: ${billing.id}`,
+      "",
+      "Bukti pembayaran telah diunggah dan lolos pemeriksaan sistem. Mohon cek Dashboard Super Admin.",
+    ].join("\n");
+
     return Response.json({
       success: true,
-      message: "Bukti transfer terverifikasi OCR dan pembayaran ditandai lunas.",
-      data: updated,
+      message: "Bukti transfer terverifikasi. Pesan WhatsApp konfirmasi siap dikirim ke Super Admin.",
+      data: {
+        ...updated,
+        whatsappUrl: createWhatsAppUrl(adminPhone, message),
+      },
     });
   } catch (error) {
     return ownerErrorResponse(error);

@@ -56,14 +56,19 @@ export async function PATCH(request: Request) {
   try {
     assertSameOrigin(request);
     const { admin, warkopId, user } = await requireOwner(request);
-    const businessName = String((await request.json()).businessName || "").trim();
+    const body = await request.json();
+    const businessName = String(body.businessName || "").trim();
+    const address = String(body.address || "").trim();
     if (businessName.length < 2 || businessName.length > 150) {
       throw new OwnerApiError("Nama usaha harus terdiri dari 2–150 karakter.", 400);
     }
-    const { data, error } = await admin.from("warkops").update({ nama: businessName, updated_at: new Date().toISOString() }).eq("id", warkopId).select("nama").single();
+    if (address.length < 5 || address.length > 500) {
+      throw new OwnerApiError("Alamat lengkap usaha harus terdiri dari 5–500 karakter.", 400);
+    }
+    const { data, error } = await admin.from("warkops").update({ nama: businessName, address, updated_at: new Date().toISOString() }).eq("id", warkopId).select("nama,address").single();
     if (error) throw error;
-    await admin.from("audit_logs").insert({ warkop_id: warkopId, actor_user_id: user.id, action: "BUSINESS_NAME_UPDATED", target_type: "warkop", target_id: warkopId });
-    return Response.json({ data: { businessName: data.nama } });
+    await admin.from("audit_logs").insert({ warkop_id: warkopId, actor_user_id: user.id, action: "BUSINESS_IDENTITY_UPDATED", target_type: "warkop", target_id: warkopId });
+    return Response.json({ data: { businessName: data.nama, address: data.address } });
   } catch (error) {
     return ownerErrorResponse(error);
   }

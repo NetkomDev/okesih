@@ -7,7 +7,6 @@
     "build": "next build --webpack && node scripts/check-secrets.mjs",
     "start": "next start",
     "test:pwa": "node scripts/test-pwa-launch.mjs",
-    "whatsapp:worker": "node scripts/whatsapp-worker.mjs",
     "seed:demo": "node --env-file=.env.local scripts/seed-tenant-demo.mjs",
     "lint": "eslint",
     "check-secrets": "node scripts/check-secrets.mjs"

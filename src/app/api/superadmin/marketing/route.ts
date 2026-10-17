@@ -1,31 +1,33 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { assertSameOrigin } from "@/lib/device-auth";
+import { APP_ORIGINS } from "@/lib/app-origins";
+import {
+  cleanWhatsAppMessageField,
+  createWhatsAppUrl,
+  isValidIndonesianWhatsAppNumber,
+  normalizeIndonesianWhatsAppNumber,
+} from "@/lib/whatsapp";
 
-function normalizePhone(value: unknown) {
-  const digits = String(value || "").replace(/\D/g, "");
-  if (digits.startsWith("62")) return digits;
-  if (digits.startsWith("0")) return `62${digits.slice(1)}`;
-  if (digits.startsWith("8")) return `62${digits}`;
-  return digits;
+async function superAdminClient() {
+  const sessionClient = await createServerSupabaseClient();
+  const { data: { user } } = await sessionClient.auth.getUser();
+  if (!user || String(user.app_metadata?.role).toUpperCase() !== "SUPERADMIN") return null;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) throw new Error("Konfigurasi database belum lengkap.");
+  return createClient(url, key, { auth: { persistSession: false } });
 }
 
 export async function GET(request: Request) {
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (!supabaseUrl || !supabaseServiceKey) {
-      return NextResponse.json(
-        { error: "Konfigurasi server database belum lengkap." },
-        { status: 500 }
-      );
-    }
+    const supabase = await superAdminClient();
+    if (!supabase) return NextResponse.json({ error: "Akses Super Admin diperlukan." }, { status: 401 });
 
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
     const city = searchParams.get("city");
-
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     let query = supabase
       .from("marketing_partners")
@@ -58,18 +60,17 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!url || !key) return NextResponse.json({ error: "Konfigurasi database belum lengkap." }, { status: 500 });
+    assertSameOrigin(request);
+    const supabase = await superAdminClient();
+    if (!supabase) return NextResponse.json({ error: "Akses Super Admin diperlukan." }, { status: 401 });
 
     const body = await request.json();
     if (!body.name || !body.phone || !body.area || !body.referralCode || !body.accountNumber || !body.username || !body.password) {
       return NextResponse.json({ error: "Nama, kontak, wilayah, kode referral, dan rekening wajib diisi." }, { status: 400 });
     }
 
-    const supabase = createClient(url, key);
-    const phone = normalizePhone(body.phone);
-    if (!/^628\d{8,11}$/.test(phone)) return NextResponse.json({ error: "Nomor WhatsApp marketing tidak valid." }, { status: 400 });
+    const phone = normalizeIndonesianWhatsAppNumber(body.phone);
+    if (!isValidIndonesianWhatsAppNumber(phone)) return NextResponse.json({ error: "Nomor WhatsApp marketing tidak valid." }, { status: 400 });
     const username = String(body.username).trim().toLowerCase().replace(/[^a-z0-9_-]/g, "");
     if (username.length < 4) return NextResponse.json({ error: "Username marketing minimal 4 karakter." }, { status: 400 });
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
@@ -103,23 +104,21 @@ export async function POST(request: Request) {
       app_metadata: { role: "MARKETING", marketing_partner_id: data.id },
       user_metadata: { role: "MARKETING", marketing_partner_id: data.id, referral_code: data.referral_code },
     });
-    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://okesih.com").replace(/\/$/, "");
     const message = [
-      `Halo ${data.full_name}, akun Marketing OKESIH Anda sudah aktif. 🎉`, "",
+      `Halo ${cleanWhatsAppMessageField(data.full_name)}, akun Marketing OKESIH Anda sudah aktif. 🎉`, "",
       `Kode referral: *${data.referral_code}*`,
       `Username: *${username}*`,
       `Password: *${String(body.password)}*`,
-      `Login: ${appUrl}/login`, "",
+      `Login: ${APP_ORIGINS.PUBLIC}/login`, "",
       "Setelah login, buka Dashboard Marketing lalu tekan Install Aplikasi agar OKESIH tersimpan di layar utama HP.",
       "Mohon segera ganti dan simpan kredensial dengan aman.", "", "Salam,", "Tim OKESIH",
     ].join("\n");
-    const { error: outboxError } = await supabase.from("whatsapp_outbox").insert({ recipient_phone: phone, message });
-    if (outboxError) {
-      await supabase.from("marketing_partners").delete().eq("id", data.id);
-      await supabase.auth.admin.deleteUser(authData.user.id);
-      return NextResponse.json({ error: `Marketing dibatalkan karena WhatsApp gagal diantrekan: ${outboxError.message}` }, { status: 500 });
-    }
-    return NextResponse.json({ success: true, data, credentials: { username, password: String(body.password) }, whatsappQueued: true });
+    return NextResponse.json({
+      success: true,
+      data,
+      credentials: { username, password: String(body.password) },
+      whatsappUrl: createWhatsAppUrl(phone, message),
+    });
   } catch (err: unknown) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Terjadi kesalahan internal." }, { status: 500 });
   }
@@ -127,15 +126,9 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (!supabaseUrl || !supabaseServiceKey) {
-      return NextResponse.json(
-        { error: "Konfigurasi server database belum lengkap." },
-        { status: 500 }
-      );
-    }
+    assertSameOrigin(request);
+    const supabase = await superAdminClient();
+    if (!supabase) return NextResponse.json({ error: "Akses Super Admin diperlukan." }, { status: 401 });
 
     const body = await request.json();
     const { id, status, commissionRate, notesAdmin } = body;
@@ -144,12 +137,41 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "ID marketing partner diperlukan." }, { status: 400 });
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
     const updatePayload: Record<string, unknown> = {};
     if (status) updatePayload.status = status;
     if (commissionRate !== undefined) updatePayload.commission_rate = commissionRate;
     if (notesAdmin !== undefined) updatePayload.notes_admin = notesAdmin;
+
+    const { data: current, error: currentError } = await supabase
+      .from("marketing_partners")
+      .select("*")
+      .eq("id", id)
+      .single();
+    if (currentError || !current) {
+      return NextResponse.json({ error: currentError?.message || "Mitra marketing tidak ditemukan." }, { status: 404 });
+    }
+
+    let createdAuthUserId: string | null = null;
+    let username: string | null = null;
+    let password: string | null = null;
+    if (status === "ACTIVE" && !current.user_id) {
+      const suffix = `${Date.now()}`.slice(-6);
+      username = `marketing_${suffix}`;
+      password = `okesih${suffix}!`;
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: `${username}@okesih.local`,
+        password,
+        email_confirm: true,
+        app_metadata: { role: "MARKETING", marketing_partner_id: id },
+        user_metadata: { role: "MARKETING", marketing_partner_id: id, referral_code: current.referral_code },
+      });
+      if (authError || !authData.user) {
+        return NextResponse.json({ error: authError?.message || "Akun marketing gagal dibuat." }, { status: 500 });
+      }
+      createdAuthUserId = authData.user.id;
+      updatePayload.user_id = authData.user.id;
+      updatePayload.username = username;
+    }
 
     const { data, error } = await supabase
       .from("marketing_partners")
@@ -159,11 +181,27 @@ export async function PATCH(request: Request) {
       .single();
 
     if (error) {
+      if (createdAuthUserId) await supabase.auth.admin.deleteUser(createdAuthUserId);
       console.error("Supabase update error:", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, data });
+    let whatsappUrl: string | null = null;
+    if (username && password) {
+      const message = [
+        `Halo ${cleanWhatsAppMessageField(data.full_name)}, pendaftaran Marketing OKESIH Anda telah disetujui. 🎉`,
+        "",
+        `Kode referral: *${cleanWhatsAppMessageField(data.referral_code)}*`,
+        `Username: *${username}*`,
+        `Password sementara: *${password}*`,
+        `Login: ${APP_ORIGINS.PUBLIC}/login`,
+        "",
+        "Silakan login, simpan kredensial dengan aman, lalu pasang aplikasi Marketing OKESIH.",
+      ].join("\n");
+      whatsappUrl = createWhatsAppUrl(data.phone, message);
+    }
+
+    return NextResponse.json({ success: true, data, whatsappUrl });
   } catch (err: unknown) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Terjadi kesalahan internal." },

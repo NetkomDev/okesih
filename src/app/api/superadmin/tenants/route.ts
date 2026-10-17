@@ -1,27 +1,29 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { assertSameOrigin } from "@/lib/device-auth";
+import { APP_ORIGINS } from "@/lib/app-origins";
+import {
+  cleanWhatsAppMessageField,
+  createWhatsAppUrl,
+  isValidIndonesianWhatsAppNumber,
+  normalizeIndonesianWhatsAppNumber,
+} from "@/lib/whatsapp";
 
-function normalizeIndonesianWhatsAppNumber(value: unknown) {
-  const digits = String(value || "").replace(/\D/g, "");
-  if (digits.startsWith("62")) return digits;
-  if (digits.startsWith("0")) return `62${digits.slice(1)}`;
-  if (digits.startsWith("8")) return `62${digits}`;
-  return digits;
+async function superAdminClient() {
+  const sessionClient = await createServerSupabaseClient();
+  const { data: { user } } = await sessionClient.auth.getUser();
+  if (!user || String(user.app_metadata?.role).toUpperCase() !== "SUPERADMIN") return null;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) throw new Error("Konfigurasi database belum lengkap.");
+  return createClient(url, key, { auth: { persistSession: false } });
 }
 
 export async function GET() {
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (!supabaseUrl || !supabaseServiceKey) {
-      return NextResponse.json(
-        { error: "Konfigurasi server database belum lengkap." },
-        { status: 500 }
-      );
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = await superAdminClient();
+    if (!supabase) return NextResponse.json({ error: "Akses Super Admin diperlukan." }, { status: 401 });
 
     // 1. Ambil seluruh data warkop
     const { data: warkops, error: warkopErr } = await supabase
@@ -87,6 +89,7 @@ export async function GET() {
         slug: w.slug,
         ownerName: w.owner_name || ownerMap.get(w.id) || "Owner Warkop",
         phone: w.owner_phone ? `+${w.owner_phone}` : "Belum diatur",
+        address: w.address || "",
         province: w.province || "Belum diatur",
         cityRegency: w.city_regency || "Belum diatur",
         uniqueCodeRange: `${start} - ${end}`,
@@ -116,15 +119,9 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (!supabaseUrl || !supabaseServiceKey) {
-      return NextResponse.json(
-        { error: "Konfigurasi server database belum lengkap." },
-        { status: 500 }
-      );
-    }
+    assertSameOrigin(request);
+    const supabase = await superAdminClient();
+    if (!supabase) return NextResponse.json({ error: "Akses Super Admin diperlukan." }, { status: 401 });
 
     const body = await request.json();
     const {
@@ -132,6 +129,7 @@ export async function POST(request: Request) {
       slug,
       ownerName,
       phone,
+      address,
       province,
       cityRegency,
       uniqueCodeRange,
@@ -141,22 +139,20 @@ export async function POST(request: Request) {
       password,
     } = body;
 
-    if (!name || !slug || !ownerName || !phone || !province || !cityRegency || !username || !password) {
+    if (!name || !slug || !ownerName || !phone || !address || !province || !cityRegency || !username || !password) {
       return NextResponse.json(
-        { error: "Data tenant, wilayah, nomor WhatsApp, dan kredensial owner wajib diisi." },
+        { error: "Data tenant, alamat, wilayah, nomor WhatsApp, dan kredensial owner wajib diisi." },
         { status: 400 }
       );
     }
 
     const ownerWhatsApp = normalizeIndonesianWhatsAppNumber(phone);
-    if (!/^628\d{8,11}$/.test(ownerWhatsApp)) {
+    if (!isValidIndonesianWhatsAppNumber(ownerWhatsApp)) {
       return NextResponse.json(
         { error: "Nomor WhatsApp owner tidak valid. Gunakan nomor Indonesia aktif, misalnya 081234567890." },
         { status: 400 }
       );
     }
-
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Parsing rentang kode unik (misal "500 - 599")
     let rangeStart = 100;
@@ -177,6 +173,7 @@ export async function POST(request: Request) {
         slug: slug.trim().toLowerCase(),
         owner_name: ownerName.trim(),
         owner_phone: ownerWhatsApp,
+        address: address.trim(),
         province: province.trim(),
         city_regency: cityRegency.trim(),
         unique_code_range_start: rangeStart,
@@ -236,18 +233,18 @@ export async function POST(request: Request) {
       );
     }
 
-    // 3. Antrekan pesan. Worker WhatsApp Web pada perangkat super admin akan
-    // mengirimkannya dari nomor +62 856-9448-8510.
-    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://okesih.com").replace(/\/$/, "");
+    // 3. Siapkan pesan untuk dibuka dan dikirim oleh Super Admin melalui
+    // aplikasi WhatsApp pada perangkatnya, tanpa pengiriman otomatis/API.
     const welcomeMessage = [
-      `Halo ${ownerName.trim()}, selamat datang di OKESIH! 🎉`,
+      `Halo ${cleanWhatsAppMessageField(ownerName)}, selamat datang di OKESIH! 🎉`,
       "",
-      `Tenant *${newWarkop.nama}* Anda telah aktif dan siap digunakan.`,
+      `Tenant *${cleanWhatsAppMessageField(newWarkop.nama)}* Anda telah aktif dan siap digunakan.`,
       "",
       "Berikut kredensial login Owner:",
       `Username: *${finalOwnerUsername}*`,
       `Password: *${String(password)}*`,
-      `Login: ${appUrl}/login`,
+      `Login: ${APP_ORIGINS.PUBLIC}/login`,
+      `Menu usaha: ${APP_ORIGINS.PUBLIC}/menu/${newWarkop.slug}`,
       "",
       "Mohon simpan data ini dengan aman dan segera ganti password setelah login pertama.",
       "",
@@ -255,19 +252,7 @@ export async function POST(request: Request) {
       "Tim OKESIH",
     ].join("\n");
 
-    const { error: outboxError } = await supabase.from("whatsapp_outbox").insert({
-      warkop_id: newWarkop.id,
-      recipient_phone: ownerWhatsApp,
-      message: welcomeMessage,
-    });
-    if (outboxError) {
-      await supabase.auth.admin.deleteUser(authData.user.id);
-      await supabase.from("warkops").delete().eq("id", newWarkop.id);
-      return NextResponse.json(
-        { error: `Tenant dibatalkan karena pesan WhatsApp gagal diantrekan: ${outboxError.message}` },
-        { status: 500 }
-      );
-    }
+    const whatsappUrl = createWhatsAppUrl(ownerWhatsApp, welcomeMessage);
 
     // 4. Update counter akuisisi marketing jika diasosiasikan
     if (marketingAgentId && marketingAgentId !== "direct") {
@@ -296,6 +281,7 @@ export async function POST(request: Request) {
         slug: newWarkop.slug,
         ownerName: ownerName.trim(),
         phone: `+${ownerWhatsApp}`,
+        address: newWarkop.address,
         province: newWarkop.province,
         cityRegency: newWarkop.city_regency,
         uniqueCodeRange: `${rangeStart} - ${rangeEnd}`,
@@ -303,7 +289,7 @@ export async function POST(request: Request) {
         commissionPerReceipt: Number(newWarkop.marketing_commission_per_receipt) || 0,
         status: "ACTIVE",
         joinedDate: "Hari Ini",
-        whatsappQueued: true,
+        whatsappUrl,
       },
     });
   } catch (err: unknown) {
@@ -316,15 +302,9 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (!supabaseUrl || !supabaseServiceKey) {
-      return NextResponse.json(
-        { error: "Konfigurasi server database belum lengkap." },
-        { status: 500 }
-      );
-    }
+    assertSameOrigin(request);
+    const supabase = await superAdminClient();
+    if (!supabase) return NextResponse.json({ error: "Akses Super Admin diperlukan." }, { status: 401 });
 
     const body = await request.json();
     const { id, is_active } = body;
@@ -332,8 +312,6 @@ export async function PATCH(request: Request) {
     if (!id || typeof is_active !== "boolean") {
       return NextResponse.json({ error: "ID dan status is_active diperlukan." }, { status: 400 });
     }
-
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const { data, error } = await supabase
       .from("warkops")

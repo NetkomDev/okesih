@@ -2,14 +2,13 @@ import { NextResponse } from "next/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { assertSameOrigin } from "@/lib/device-auth";
-
-function normalizePhone(value: unknown) {
-  const digits = String(value || "").replace(/\D/g, "");
-  if (digits.startsWith("62")) return digits;
-  if (digits.startsWith("0")) return `62${digits.slice(1)}`;
-  if (digits.startsWith("8")) return `62${digits}`;
-  return digits;
-}
+import {
+  cleanWhatsAppMessageField,
+  createWhatsAppUrl,
+  getSuperAdminWhatsAppNumber,
+  isValidIndonesianWhatsAppNumber,
+  normalizeIndonesianWhatsAppNumber,
+} from "@/lib/whatsapp";
 
 async function context() {
   const sessionClient = await createServerSupabaseClient();
@@ -29,11 +28,11 @@ export async function GET() {
     if (!ctx) return NextResponse.json({ error: "Akun marketing tidak aktif atau tidak terhubung." }, { status: 401 });
     const { admin, partner } = ctx;
     const { data: tenants, error } = await admin.from("warkops")
-      .select("id,nama,slug,owner_name,owner_phone,province,city_regency,is_active,marketing_commission_per_receipt,created_at")
+      .select("id,nama,slug,owner_name,owner_phone,address,province,city_regency,is_active,marketing_commission_per_receipt,created_at")
       .eq("marketing_agent_id", partner.id).order("created_at", { ascending: false });
     if (error) throw error;
     const { data: applications, error: applicationError } = await admin.from("tenant_applications")
-      .select("id,business_name,owner_name,owner_phone,province,city_regency,status,review_notes,created_at,warkop_id")
+      .select("id,business_name,owner_name,owner_phone,address,province,city_regency,status,review_notes,created_at,warkop_id")
       .eq("marketing_partner_id", partner.id).order("created_at", { ascending: false });
     if (applicationError) throw applicationError;
     const { data: withdrawals, error: withdrawalError } = await admin.from("marketing_commission_withdrawals")
@@ -78,6 +77,7 @@ export async function GET() {
         slug: tenant.slug,
         ownerName: tenant.owner_name,
         phone: tenant.owner_phone,
+        address: tenant.address,
         province: tenant.province,
         cityRegency: tenant.city_regency,
         status: tenant.is_active ? "ACTIVE" : "SUSPENDED",
@@ -132,18 +132,18 @@ export async function POST(request: Request) {
     if (!ctx) return NextResponse.json({ error: "Akun marketing tidak aktif atau tidak terhubung." }, { status: 401 });
     const { admin, partner } = ctx;
     const body = await request.json();
-    if (!body.name || !body.ownerName || !body.phone || !body.province || !body.cityRegency) return NextResponse.json({ error: "Semua data usaha, owner, WhatsApp, dan wilayah wajib diisi." }, { status: 400 });
-    const phone = normalizePhone(body.phone);
-    if (!/^628\d{8,11}$/.test(phone)) return NextResponse.json({ error: "Nomor WhatsApp owner tidak valid." }, { status: 400 });
+    if (!body.name || !body.ownerName || !body.phone || !body.address || !body.province || !body.cityRegency) return NextResponse.json({ error: "Semua data usaha, owner, WhatsApp, alamat, dan wilayah wajib diisi." }, { status: 400 });
+    const phone = normalizeIndonesianWhatsAppNumber(body.phone);
+    if (!isValidIndonesianWhatsAppNumber(phone)) return NextResponse.json({ error: "Nomor WhatsApp owner tidak valid." }, { status: 400 });
     const { data: application, error: applicationError } = await admin.from("tenant_applications").insert({
       marketing_partner_id: partner.id, business_name: String(body.name).trim(), owner_name: String(body.ownerName).trim(),
-      owner_phone: phone, province: String(body.province).trim(), city_regency: String(body.cityRegency).trim(), status: "PENDING",
+      owner_phone: phone, address: String(body.address).trim(), province: String(body.province).trim(), city_regency: String(body.cityRegency).trim(), status: "PENDING",
     }).select().single();
     if (applicationError) throw applicationError;
-    const adminPhone = normalizePhone(process.env.SUPERADMIN_WHATSAPP_NUMBER || "6285694488510");
-    const marketingPhone = normalizePhone(partner.phone);
-    const message = ["*PENGAJUAN TENANT BARU OKESIH*", "", `Marketing: *${partner.full_name}*`, `Kode Referral: ${partner.referral_code}`, `WhatsApp Marketing: +${marketingPhone}`, "", `Usaha: *${application.business_name}*`, `Owner: ${application.owner_name}`, `WhatsApp Owner: +${phone}`, `Wilayah: ${application.city_regency}, ${application.province}`, "", "Pengajuan sudah tersimpan. Silakan review melalui Dashboard Super Admin → Daftar Tenant."].join("\n");
-    const whatsappUrl = `https://wa.me/${adminPhone}?text=${encodeURIComponent(message)}`;
+    const adminPhone = getSuperAdminWhatsAppNumber(process.env.SUPERADMIN_WHATSAPP_NUMBER);
+    const marketingPhone = normalizeIndonesianWhatsAppNumber(partner.phone);
+    const message = ["*PENGAJUAN TENANT BARU OKESIH*", "", `Marketing: *${cleanWhatsAppMessageField(partner.full_name)}*`, `Kode Referral: ${cleanWhatsAppMessageField(partner.referral_code)}`, `WhatsApp Marketing: +${marketingPhone}`, "", `Usaha: *${cleanWhatsAppMessageField(application.business_name)}*`, `Owner: ${cleanWhatsAppMessageField(application.owner_name)}`, `WhatsApp Owner: +${phone}`, `Alamat: ${cleanWhatsAppMessageField(application.address)}`, `Wilayah: ${cleanWhatsAppMessageField(application.city_regency)}, ${cleanWhatsAppMessageField(application.province)}`, "", "Pengajuan sudah tersimpan. Silakan review melalui Dashboard Super Admin → Daftar Tenant."].join("\n");
+    const whatsappUrl = createWhatsAppUrl(adminPhone, message);
     return NextResponse.json({ success: true, data: { id: application.id, name: application.business_name, status: "PENDING", whatsappUrl, marketingPhone } });
   } catch (error) {
     const status = error instanceof Error && "status" in error && typeof error.status === "number" ? error.status : 500;

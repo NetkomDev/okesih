@@ -79,6 +79,7 @@ interface TenantWarkop {
   slug: string;
   ownerName: string;
   phone: string;
+  address: string;
   province: string;
   cityRegency: string;
   uniqueCodeRange: string;
@@ -97,6 +98,7 @@ interface TenantApplication {
   business_name: string;
   owner_name: string;
   owner_phone: string;
+  address: string;
   province: string;
   city_regency: string;
   status: "PENDING" | "PROCESSING" | "APPROVED" | "REJECTED";
@@ -128,6 +130,7 @@ interface NewTenantCredentials {
   commissionPerReceipt: number;
   username: string;
   password: string;
+  whatsappUrl: string;
 }
 
 type AnalyticsPeriod = "today" | "week" | "month" | "year";
@@ -312,20 +315,23 @@ export default function SuperAdminDashboardPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, status: newStatus }),
       });
-      if (res.ok) {
-        setMarketingList((prev) =>
-          prev.map((m) => (m.id === id ? { ...m, status: newStatus } : m))
-        );
-        showToast(
-          "Status Marketing Diperbarui",
-          `Status mitra marketing berhasil diubah menjadi ${newStatus}.`,
-          "success"
-        );
-      } else {
-        showToast("Gagal Memperbarui", "Server tidak dapat mengubah status mitra.", "error");
+      const payload = await res.json();
+      if (!res.ok) throw new Error(payload.error || "Server tidak dapat mengubah status mitra.");
+      setMarketingList((prev) =>
+        prev.map((m) => (m.id === id ? { ...m, status: newStatus } : m))
+      );
+      showToast(
+        "Status Marketing Diperbarui",
+        payload.whatsappUrl
+          ? "Akun marketing aktif. Kredensial siap dikirim melalui WhatsApp Anda."
+          : `Status mitra marketing berhasil diubah menjadi ${newStatus}.`,
+        "success"
+      );
+      if (payload.whatsappUrl) {
+        window.location.assign(payload.whatsappUrl);
       }
-    } catch {
-      showToast("Koneksi Bermasalah", "Terjadi kesalahan jaringan ke server.", "error");
+    } catch (error) {
+      showToast("Gagal Memperbarui", error instanceof Error ? error.message : "Terjadi kesalahan jaringan ke server.", "error");
     }
   };
 
@@ -388,8 +394,12 @@ export default function SuperAdminDashboardPage() {
       const response = await fetch("/api/superadmin/tenant-applications", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, decision }) });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Pengajuan gagal diproses.");
+      if (decision === "APPROVE" && !payload.data?.whatsappUrl) throw new Error("Tautan WhatsApp owner gagal disiapkan.");
       await Promise.all([loadTenantApplications(), loadTenants(), loadMarketingPartners()]);
-      showToast(decision === "APPROVE" ? "Tenant Disetujui" : "Pengajuan Ditolak", decision === "APPROVE" ? "Tenant dan akun owner dibuat. Kredensial telah diantrekan ke WhatsApp owner." : "Status pengajuan telah diperbarui.", "success");
+      showToast(decision === "APPROVE" ? "Tenant Disetujui" : "Pengajuan Ditolak", decision === "APPROVE" ? "Tenant dan akun owner dibuat. Pesan kredensial siap dikirim melalui WhatsApp Anda." : "Status pengajuan telah diperbarui.", "success");
+      if (decision === "APPROVE" && payload.data?.whatsappUrl) {
+        window.location.assign(payload.data.whatsappUrl);
+      }
     } catch (error) {
       showToast("Review Gagal", error instanceof Error ? error.message : "Terjadi kesalahan jaringan.", "error");
     } finally {
@@ -673,6 +683,7 @@ export default function SuperAdminDashboardPage() {
   const [newSlug, setNewSlug] = useState<string>("");
   const [newOwnerName, setNewOwnerName] = useState<string>("");
   const [newPhone, setNewPhone] = useState<string>("");
+  const [newAddress, setNewAddress] = useState<string>("");
   const [newProvince, setNewProvince] = useState<string>("");
   const [newCityRegency, setNewCityRegency] = useState<string>("");
   const [newCodeRange, setNewCodeRange] = useState<string>("500 - 599");
@@ -714,6 +725,7 @@ export default function SuperAdminDashboardPage() {
     setNewSlug("");
     setNewOwnerName("");
     setNewPhone("");
+    setNewAddress("");
     setNewProvince("");
     setNewCityRegency("");
     setNewCodeRange(`${(tenants.length + 1) * 100} - ${(tenants.length + 1) * 100 + 99}`);
@@ -727,8 +739,8 @@ export default function SuperAdminDashboardPage() {
   // Simpan Tenant Baru (Persistens ke Supabase)
   const handleCreateTenant = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newWarkopName.trim() || !newOwnerName.trim() || !newPhone.trim() || !newProvince || !newCityRegency.trim()) {
-      showToast("Form Belum Lengkap", "Nama usaha, owner, nomor WhatsApp, provinsi, dan kota/kabupaten wajib diisi.", "error");
+    if (!newWarkopName.trim() || !newOwnerName.trim() || !newPhone.trim() || !newAddress.trim() || !newProvince || !newCityRegency.trim()) {
+      showToast("Form Belum Lengkap", "Nama usaha, owner, nomor WhatsApp, alamat, provinsi, dan kota/kabupaten wajib diisi.", "error");
       return;
     }
 
@@ -774,6 +786,7 @@ export default function SuperAdminDashboardPage() {
       slug: createdSlug,
       ownerName: newOwnerName.trim(),
       phone: `+${normalizedPhone}`,
+      address: newAddress.trim(),
       province: newProvince,
       cityRegency: newCityRegency.trim(),
       uniqueCodeRange: newCodeRange,
@@ -808,6 +821,7 @@ export default function SuperAdminDashboardPage() {
           slug: newTenant.slug,
           ownerName: newTenant.ownerName,
           phone: newTenant.phone,
+          address: newTenant.address,
           province: newTenant.province,
           cityRegency: newTenant.cityRegency,
           uniqueCodeRange: newTenant.uniqueCodeRange,
@@ -819,6 +833,7 @@ export default function SuperAdminDashboardPage() {
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Tenant gagal disimpan.");
+      if (!payload.data?.whatsappUrl) throw new Error("Tautan WhatsApp owner gagal disiapkan.");
       await loadTenants();
       setIsRegisterModalOpen(false);
       setNewTenantCredentials({
@@ -829,12 +844,14 @@ export default function SuperAdminDashboardPage() {
         commissionPerReceipt: newTenant.commissionPerReceipt,
         username: generatedUsername,
         password: generatedPassword,
+        whatsappUrl: payload.data.whatsappUrl,
       });
       showToast(
         "Tenant Berhasil Didaftarkan",
-        `Pesan selamat datang dan kredensial ${newTenant.name} telah diantrekan ke WhatsApp owner.`,
+        `Pesan selamat datang dan kredensial ${newTenant.name} siap dikirim melalui WhatsApp Anda.`,
         "success"
       );
+      window.location.assign(payload.data.whatsappUrl);
     } catch (err) {
       console.error("Gagal sinkron tenant ke Supabase:", err);
       setTenants((prev) => prev.filter((tenant) => tenant.id !== newTenant.id));
@@ -888,9 +905,11 @@ export default function SuperAdminDashboardPage() {
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Gagal menyimpan marketing.");
+      if (!payload.whatsappUrl) throw new Error("Tautan WhatsApp marketing gagal disiapkan.");
       await loadMarketingPartners();
       setIsMarketingModalOpen(false);
-      showToast("Marketing Berhasil Didaftarkan", `Kredensial ${newMkt.name} telah diantrekan ke WhatsApp ${newMkt.phone}.`, "success");
+      showToast("Marketing Berhasil Didaftarkan", `Kredensial ${newMkt.name} siap dikirim melalui WhatsApp Anda.`, "success");
+      window.location.assign(payload.whatsappUrl);
     } catch (error) {
       showToast("Gagal Menyimpan", error instanceof Error ? error.message : "Terjadi kesalahan jaringan.", "error");
     } finally {
@@ -1863,7 +1882,7 @@ export default function SuperAdminDashboardPage() {
                     const marketing = Array.isArray(item.marketing_partners) ? item.marketing_partners[0] : item.marketing_partners;
                     const busy = reviewingApplicationId === item.id || item.status === "PROCESSING";
                     return <div key={item.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap", padding: "0.85rem", borderRadius: "10px", background: isDark ? "rgba(15,23,42,.75)" : "#fff", border: isDark ? "1px solid rgba(255,255,255,.08)" : "1px solid #FDE68A" }}>
-                      <div><div style={{ fontWeight: 850, color: isDark ? "#fff" : "#17211B" }}>{item.business_name}</div><div style={{ fontSize: "0.75rem", color: isDark ? "#94A3B8" : "#64748B", marginTop: "3px" }}>{item.owner_name} · +{item.owner_phone} · {item.city_regency}, {item.province}</div><div style={{ fontSize: "0.72rem", color: "#059669", marginTop: "3px", fontWeight: 750 }}>Marketing: {marketing?.full_name || "-"} · {marketing?.referral_code || "-"} · {marketing?.phone || "-"}</div></div>
+                      <div><div style={{ fontWeight: 850, color: isDark ? "#fff" : "#17211B" }}>{item.business_name}</div><div style={{ fontSize: "0.75rem", color: isDark ? "#94A3B8" : "#64748B", marginTop: "3px" }}>{item.owner_name} · +{item.owner_phone} · {item.address ? `${item.address}, ` : ""}{item.city_regency}, {item.province}</div><div style={{ fontSize: "0.72rem", color: "#059669", marginTop: "3px", fontWeight: 750 }}>Marketing: {marketing?.full_name || "-"} · {marketing?.referral_code || "-"} · {marketing?.phone || "-"}</div></div>
                       <div style={{ display: "flex", gap: "0.5rem" }}><button disabled={busy} onClick={() => void reviewTenantApplication(item.id, "REJECT")} style={{ border: "1px solid #EF4444", color: "#DC2626", background: "transparent", borderRadius: "7px", padding: "0.45rem 0.75rem", fontWeight: 800, cursor: busy ? "wait" : "pointer" }}>Tolak</button><button disabled={busy} onClick={() => void reviewTenantApplication(item.id, "APPROVE")} style={{ border: 0, color: "#fff", background: "#059669", borderRadius: "7px", padding: "0.45rem 0.8rem", fontWeight: 800, cursor: busy ? "wait" : "pointer" }}>{busy ? "Memproses..." : "Verifikasi & Aktifkan"}</button></div>
                     </div>;
                   })}
@@ -3609,6 +3628,25 @@ export default function SuperAdminDashboardPage() {
                 </div>
               </div>
 
+              <div>
+                <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: isDark ? "#94A3B8" : "#475569", marginBottom: "0.35rem" }}>
+                  Alamat Lengkap Usaha
+                </label>
+                <textarea
+                  required
+                  rows={3}
+                  value={newAddress}
+                  onChange={(e) => setNewAddress(e.target.value)}
+                  placeholder="Nama jalan, nomor, kelurahan/kecamatan"
+                  style={{
+                    width: "100%", padding: "0.75rem 1rem", borderRadius: "8px", resize: "vertical",
+                    background: isDark ? "rgba(15, 23, 42, 0.8)" : "#F8FAFC",
+                    border: isDark ? "1px solid rgba(56, 189, 248, 0.3)" : "1px solid rgba(0, 0, 0, 0.15)",
+                    color: isDark ? "#FFF" : "#0F172A", fontSize: "0.9rem", outline: "none",
+                  }}
+                />
+              </div>
+
               {/* Rentang Kode Unik POS */}
               <div>
                 <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: isDark ? "#94A3B8" : "#475569", marginBottom: "0.35rem" }}>
@@ -3798,7 +3836,7 @@ export default function SuperAdminDashboardPage() {
                   cursor: isTenantSaving ? "wait" : "pointer",
                 }}
               >
-                {isTenantSaving ? "MENYIMPAN & MENGANTREKAN WHATSAPP..." : "✓ DAFTARKAN TENANT & SIMPAN"}
+                {isTenantSaving ? "MENYIMPAN & MENYIAPKAN WHATSAPP..." : "✓ DAFTARKAN TENANT & KIRIM WHATSAPP"}
               </button>
             </form>
           </div>
@@ -4051,7 +4089,7 @@ export default function SuperAdminDashboardPage() {
                   marginTop: "0.5rem",
                 }}
               >
-                {isMarketingSaving ? "MENYIMPAN & MENGANTREKAN WHATSAPP..." : "✓ SIMPAN & KIRIM KE WHATSAPP"}
+                {isMarketingSaving ? "MENYIMPAN & MENYIAPKAN WHATSAPP..." : "✓ SIMPAN & KIRIM KE WHATSAPP"}
               </button>
             </form>
           </div>
@@ -4150,7 +4188,22 @@ export default function SuperAdminDashboardPage() {
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: "0.75rem" }}>
+            <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+              <a
+                href={newTenantCredentials.whatsappUrl}
+                className="btn-primary"
+                style={{
+                  flex: 1,
+                  minWidth: "180px",
+                  background: "linear-gradient(135deg, #25D366, #128C7E)",
+                  fontSize: "0.85rem",
+                  fontWeight: 800,
+                  textAlign: "center",
+                  textDecoration: "none",
+                }}
+              >
+                💬 Buka WhatsApp Owner
+              </a>
               <button
                 type="button"
                 onClick={() => {
@@ -4161,6 +4214,7 @@ export default function SuperAdminDashboardPage() {
                 className="btn-primary"
                 style={{
                   flex: 1,
+                  minWidth: "180px",
                   background: "linear-gradient(135deg, #10B981, #059669)",
                   fontSize: "0.85rem",
                   fontWeight: 800,

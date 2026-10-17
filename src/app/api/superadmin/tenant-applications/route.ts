@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { assertSameOrigin } from "@/lib/device-auth";
+import { APP_ORIGINS } from "@/lib/app-origins";
+import { cleanWhatsAppMessageField, createWhatsAppUrl } from "@/lib/whatsapp";
 
 async function superAdminContext() {
   const sessionClient = await createServerSupabaseClient();
@@ -17,7 +20,7 @@ export async function GET() {
     const ctx = await superAdminContext();
     if (!ctx) return NextResponse.json({ error: "Akses Super Admin diperlukan." }, { status: 401 });
     const { data, error } = await ctx.admin.from("tenant_applications")
-      .select("id,business_name,owner_name,owner_phone,province,city_regency,status,review_notes,created_at,marketing_partners(full_name,phone,city_area,referral_code,commission_rate)")
+      .select("id,business_name,owner_name,owner_phone,address,province,city_regency,status,review_notes,created_at,marketing_partners(full_name,phone,city_area,referral_code,commission_rate)")
       .order("created_at", { ascending: false });
     if (error) throw error;
     return NextResponse.json({ data });
@@ -29,6 +32,7 @@ export async function GET() {
 export async function PATCH(request: Request) {
   let applicationId = "";
   try {
+    assertSameOrigin(request);
     const ctx = await superAdminContext();
     if (!ctx) return NextResponse.json({ error: "Akses Super Admin diperlukan." }, { status: 401 });
     const body = await request.json();
@@ -60,7 +64,7 @@ export async function PATCH(request: Request) {
     const rangeStart = Math.max(100, Math.ceil((Number(lastRange?.unique_code_range_end || 99) + 1) / 100) * 100);
     const { data: tenant, error: tenantError } = await admin.from("warkops").insert({
       nama: application.business_name, slug, owner_name: application.owner_name, owner_phone: application.owner_phone,
-      province: application.province, city_regency: application.city_regency, unique_code_range_start: rangeStart,
+      address: application.address, province: application.province, city_regency: application.city_regency, unique_code_range_start: rangeStart,
       unique_code_range_end: rangeStart + 99, marketing_agent_id: application.marketing_partner_id,
       marketing_commission_per_receipt: Number(marketing?.commission_rate || 0), is_active: true,
     }).select().single();
@@ -76,16 +80,24 @@ export async function PATCH(request: Request) {
     const { error: onboardingError } = memberError ? { error: null } : await admin.from("owner_onboarding").insert({ warkop_id: tenant.id, owner_user_id: authData.user.id });
     if (memberError || onboardingError) { await admin.auth.admin.deleteUser(authData.user.id); await admin.from("warkops").delete().eq("id", tenant.id); throw memberError || onboardingError; }
 
-    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://okesih.com").replace(/\/$/, "");
-    const message = [`Halo ${application.owner_name}, pengajuan *${tenant.nama}* telah diverifikasi dan diaktifkan oleh OKESIH. 🎉`, "", `Username: *${username}*`, `Password: *${password}*`, `Login: ${appUrl}/login`, `Menu usaha: ${appUrl}/menu/${slug}`, "", "Silakan login, ganti password, lalu ikuti petunjuk instalasi aplikasi OKESIH."].join("\n");
-    const { error: outboxError } = await admin.from("whatsapp_outbox").insert({ warkop_id: tenant.id, recipient_phone: application.owner_phone, message });
-    if (outboxError) { await admin.auth.admin.deleteUser(authData.user.id); await admin.from("warkops").delete().eq("id", tenant.id); throw new Error(`WhatsApp owner gagal diantrekan: ${outboxError.message}`); }
+    const message = [
+      `Halo ${cleanWhatsAppMessageField(application.owner_name)}, pengajuan *${cleanWhatsAppMessageField(tenant.nama)}* telah diverifikasi dan diaktifkan oleh OKESIH. 🎉`,
+      "",
+      "*KREDENSIAL OWNER*",
+      `Username: *${username}*`,
+      `Password sementara: *${password}*`,
+      `Login: ${APP_ORIGINS.PUBLIC}/login`,
+      `Menu usaha: ${APP_ORIGINS.PUBLIC}/menu/${slug}`,
+      "",
+      "Silakan login, ganti password sementara, lalu ikuti petunjuk instalasi aplikasi OKESIH Owner.",
+    ].join("\n");
+    const whatsappUrl = createWhatsAppUrl(application.owner_phone, message);
 
     await Promise.all([
       admin.from("tenant_applications").update({ status: "APPROVED", warkop_id: tenant.id, review_notes: String(body.notes || "Terverifikasi"), reviewed_at: new Date().toISOString() }).eq("id", applicationId),
       admin.from("marketing_partners").update({ total_tenants_acquired: Number(marketing?.total_tenants_acquired || 0) + 1 }).eq("id", application.marketing_partner_id),
     ]);
-    return NextResponse.json({ success: true, data: { tenantId: tenant.id, name: tenant.nama, username, whatsappQueued: true } });
+    return NextResponse.json({ success: true, data: { tenantId: tenant.id, name: tenant.nama, username, whatsappUrl } });
   } catch (error) {
     if (applicationId) {
       const url = process.env.NEXT_PUBLIC_SUPABASE_URL; const key = process.env.SUPABASE_SERVICE_ROLE_KEY;

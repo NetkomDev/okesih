@@ -17,7 +17,7 @@ type MenuItem = { id: string; name: string; price: number; category: string; des
 type Staff = { id: string; username: string; name: string; role: "KASIR" | "DAPUR"; status: "ACTIVE" | "INACTIVE"; onShift: boolean };
 type Waiter = { id: string; name: string; phone: string | null; is_active: boolean };
 type BusinessTable = { id: string; label: string; sort_order: number; is_active: boolean };
-type Profile = { id: string; nama: string; slug: string; is_active: boolean; logo_url: string | null; qris_image_url: string | null; qris_merchant_name: string | null };
+type Profile = { id: string; nama: string; slug: string; address: string | null; is_active: boolean; logo_url: string | null; qris_image_url: string | null; qris_merchant_name: string | null };
 type Metrics = { receiptCount: number; cash: number; qris: number; total: number; billing: { tagihan_pokok: number; kode_unik: number; total_tagihan: number; status_bayar: string } | null };
 type RevenuePeriod = "day" | "week" | "month" | "year";
 type RevenueData = { period: RevenuePeriod; series: { label: string; value: number }[]; total: number; average: number; transactionCount: number };
@@ -155,6 +155,7 @@ export default function TenantOwnerDashboardPage() {
   const [tableInput, setTableInput] = useState("");
   const [merchantName, setMerchantName] = useState("");
   const [businessName, setBusinessName] = useState("");
+  const [businessAddress, setBusinessAddress] = useState("");
   const [editingTable, setEditingTable] = useState<BusinessTable | null>(null);
   const [tableEditError, setTableEditError] = useState("");
   const [devices, setDevices] = useState<DeviceInstallation[]>([]);
@@ -191,6 +192,7 @@ export default function TenantOwnerDashboardPage() {
   const [billingProofFile, setBillingProofFile] = useState<File | null>(null);
   const [billingProofPreview, setBillingProofPreview] = useState<string | null>(null);
   const [billingError, setBillingError] = useState("");
+  const [billingWhatsAppUrl, setBillingWhatsAppUrl] = useState("");
   const [copiedTotal, setCopiedTotal] = useState(false);
   const billingFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -232,21 +234,25 @@ export default function TenantOwnerDashboardPage() {
     }
     setIsBillingUploading(true);
     setBillingError("");
+    setBillingWhatsAppUrl("");
     try {
       const form = new FormData();
       form.append("file", billingProofFile);
       if (billingData?.activeBilling?.id) {
         form.append("billingId", billingData.activeBilling.id);
       }
-      await ownerFetch("/api/owner/billing", {
+      const payload = await ownerFetch("/api/owner/billing", {
         method: "POST",
         body: form,
       });
-      setNotice("Bukti transfer lolos verifikasi OCR dan pembayaran sudah ditandai lunas.");
+      if (!payload.data?.whatsappUrl) throw new Error("Tautan WhatsApp Super Admin gagal disiapkan.");
+      setBillingWhatsAppUrl(payload.data.whatsappUrl);
+      setNotice("Bukti transfer lolos verifikasi. Kirim konfirmasi yang sudah disiapkan melalui WhatsApp Anda.");
       setBillingProofFile(null);
       setBillingProofPreview(null);
       await loadOwnerBilling();
       await mutate(() => ownerFetch("/api/owner/dashboard", { cache: "no-store" }));
+      window.location.assign(payload.data.whatsappUrl);
     } catch (err) {
       setBillingError(err instanceof Error ? err.message : "Gagal mengunggah bukti transfer.");
     } finally {
@@ -394,6 +400,7 @@ export default function TenantOwnerDashboardPage() {
         setData(cached);
         setMerchantName(cached.profile.qris_merchant_name || cached.profile.nama);
         setBusinessName(cached.profile.nama);
+        setBusinessAddress(cached.profile.address || "");
       }
 
       const payload = await ownerFetch("/api/owner/dashboard", { cache: "no-store" });
@@ -401,6 +408,7 @@ export default function TenantOwnerDashboardPage() {
       setData(payload.data);
       setMerchantName(payload.data.profile.qris_merchant_name || payload.data.profile.nama);
       setBusinessName(payload.data.profile.nama);
+      setBusinessAddress(payload.data.profile.address || "");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Dashboard gagal dimuat.");
     }
@@ -609,9 +617,9 @@ export default function TenantOwnerDashboardPage() {
     }, "Logo usaha berhasil diperbarui.");
   };
 
-  const saveBusinessName = () => void mutate(
-    () => ownerFetch("/api/owner/branding", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ businessName }) }),
-    "Nama usaha berhasil disimpan."
+  const saveBusinessIdentity = () => void mutate(
+    () => ownerFetch("/api/owner/branding", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ businessName, address: businessAddress }) }),
+    "Identitas dan alamat usaha berhasil disimpan."
   );
 
   const saveMerchantName = () => void mutate(
@@ -1209,7 +1217,8 @@ export default function TenantOwnerDashboardPage() {
               <h2>Identitas &amp; Logo Usaha</h2><p>Logo aktif otomatis tampil pada menu pelanggan, layar Kasir, dan layar Dapur. Jika belum diunggah, sistem menggunakan logo OKESIH.</p>
               <div className="owner-logo-preview"><img src={profile.logo_url || "/logo.svg?v=2"} alt={profile.logo_url ? `Logo ${profile.nama}` : "Logo OKESIH"}/></div>
               <label>Nama Usaha<input maxLength={150} value={businessName} onChange={(event) => setBusinessName(event.target.value)} /></label>
-              <button disabled={busy || businessName.trim().length < 2 || businessName.trim() === profile.nama} className="btn-secondary owner-save-field" onClick={saveBusinessName}>Simpan Nama Usaha</button>
+              <label>Alamat Lengkap Usaha<textarea rows={3} maxLength={500} value={businessAddress} onChange={(event) => setBusinessAddress(event.target.value)} placeholder="Nama jalan, nomor, kelurahan/kecamatan" /></label>
+              <button disabled={busy || businessName.trim().length < 2 || businessAddress.trim().length < 5 || (businessName.trim() === profile.nama && businessAddress.trim() === (profile.address || ""))} className="btn-secondary owner-save-field" onClick={saveBusinessIdentity}>Simpan Identitas Usaha</button>
               <input ref={logoInput} hidden type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => uploadLogo(event.target.files?.[0])}/>
               <div className="owner-branding-actions"><button disabled={busy} className="btn-primary" onClick={() => logoInput.current?.click()}>{busy ? "Menyimpan..." : profile.logo_url ? "Ganti Logo Usaha" : "Upload Logo Usaha"}</button>{profile.logo_url && <button disabled={busy} className="btn-secondary" onClick={() => confirm("Hapus logo usaha dan gunakan logo OKESIH?") && void mutate(() => ownerFetch("/api/owner/branding", { method: "DELETE" }), "Logo usaha berhasil dihapus.")}>Gunakan Logo OKESIH</button>}</div>
               <small>PNG, JPG, atau WebP · Maksimal 2 MB · Disarankan rasio 1:1.</small>
@@ -2015,6 +2024,25 @@ export default function TenantOwnerDashboardPage() {
                           "Analisis & Verifikasi Bukti"
                         )}
                       </button>
+                    )}
+
+                    {billingWhatsAppUrl && (
+                      <a
+                        href={billingWhatsAppUrl}
+                        className="btn-primary"
+                        style={{
+                          padding: "10px",
+                          borderRadius: "10px",
+                          fontWeight: 800,
+                          fontSize: "12px",
+                          background: "#25D366",
+                          color: "#fff",
+                          textAlign: "center",
+                          textDecoration: "none",
+                        }}
+                      >
+                        💬 Buka Kembali WhatsApp Super Admin
+                      </a>
                     )}
 
                     <small style={{ color: "var(--ow-muted)", fontSize: "9.5px", lineHeight: 1.35, textAlign: "center" }}>

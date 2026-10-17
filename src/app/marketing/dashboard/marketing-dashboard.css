@@ -148,6 +148,14 @@ html, body {
   border: 1px solid #a7f3d0;
 }
 
+.mkt-alert.success a {
+  display: inline-flex;
+  margin-left: 10px;
+  color: #047857;
+  font-weight: 800;
+  text-decoration: underline;
+}
+
 /* 4 Card Statistik: Icon Besar & Interaktif */
 .mkt-stats {
   display: grid;
@@ -357,7 +365,8 @@ html, body {
 }
 
 .mkt-form input,
-.mkt-form select {
+.mkt-form select,
+.mkt-form textarea {
   width: 100%;
   box-sizing: border-box;
   border: 1px solid #cbd5e1;
@@ -372,10 +381,16 @@ html, body {
 }
 
 .mkt-form input:focus,
-.mkt-form select:focus {
+.mkt-form select:focus,
+.mkt-form textarea:focus {
   border-color: #0d9488;
   background: #ffffff;
   box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
+}
+
+.mkt-form textarea {
+  resize: vertical;
+  min-height: 78px;
 }
 
 .mkt-form-row {
@@ -1734,4 +1749,3 @@ html, body {
   color: #ffffff;
   font-weight: 850;
 }
-

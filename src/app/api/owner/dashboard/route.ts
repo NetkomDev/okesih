@@ -10,7 +10,7 @@ export async function GET(request: Request) {
     const end = new Date(`${today}T23:59:59.999+08:00`).toISOString();
 
     const [profile, menus, members, waiters, tables, transactions, billing, activeShift] = await Promise.all([
-      admin.from("warkops").select("id,nama,slug,is_active,logo_url,qris_image_url,qris_merchant_name").eq("id", warkopId).single(),
+      admin.from("warkops").select("id,nama,slug,address,is_active,logo_url,qris_image_url,qris_merchant_name").eq("id", warkopId).single(),
       admin.from("menus").select("id,nama,harga,kategori,desc_menu,is_available").eq("warkop_id", warkopId).order("created_at", { ascending: false }),
       admin.from("warkop_members").select("id,username,display_name,role,is_active,user_id").eq("warkop_id", warkopId).neq("role", "OWNER").order("created_at"),
       admin.from("waiters").select("id,name,phone,is_active").eq("warkop_id", warkopId).order("created_at"),

@@ -2,14 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { assertSameOrigin } from "@/lib/device-auth";
-
-function normalizePhone(value: unknown) {
-  const digits = String(value || "").replace(/\D/g, "");
-  if (digits.startsWith("62")) return digits;
-  if (digits.startsWith("0")) return `62${digits.slice(1)}`;
-  if (digits.startsWith("8")) return `62${digits}`;
-  return digits;
-}
+import { createWhatsAppUrl, getSuperAdminWhatsAppNumber, normalizeIndonesianWhatsAppNumber } from "@/lib/whatsapp";
 
 async function marketingContext() {
   const sessionClient = await createServerSupabaseClient();
@@ -36,8 +29,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Nominal pencairan harus berupa Rupiah bulat dan lebih dari nol." }, { status: 400 });
     }
 
-    const adminPhone = normalizePhone(process.env.SUPERADMIN_WHATSAPP_NUMBER || "6285694488510");
-    if (!/^628\d{8,11}$/.test(adminPhone)) throw new Error("Nomor WhatsApp Super Admin belum dikonfigurasi dengan benar.");
+    const adminPhone = getSuperAdminWhatsAppNumber(process.env.SUPERADMIN_WHATSAPP_NUMBER);
 
     const { data, error } = await ctx.admin.rpc("request_marketing_commission_withdrawal", {
       p_marketing_partner_id: ctx.partner.id,
@@ -50,7 +42,7 @@ export async function POST(request: Request) {
 
     const requestId = String(data.id);
     const remainingBalance = Number(data.available_balance || 0);
-    const marketingPhone = normalizePhone(ctx.partner.phone);
+    const marketingPhone = normalizeIndonesianWhatsAppNumber(ctx.partner.phone);
     const message = [
       "*PENGAJUAN PENCAIRAN KOMISI OKESIH*", "",
       `Marketing: *${ctx.partner.full_name}*`,
@@ -63,7 +55,7 @@ export async function POST(request: Request) {
       `ID Pengajuan: ${requestId}`, "",
       "Pengajuan sudah tersimpan. Mohon verifikasi dan transfer melalui Dashboard Super Admin.",
     ].join("\n");
-    const whatsappUrl = `https://wa.me/${adminPhone}?text=${encodeURIComponent(message)}`;
+    const whatsappUrl = createWhatsAppUrl(adminPhone, message);
     return NextResponse.json({ success: true, data: { ...data, whatsappUrl } });
   } catch (error) {
     const status = error instanceof Error && "status" in error && typeof error.status === "number" ? error.status : 500;
