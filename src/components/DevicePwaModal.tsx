@@ -25,6 +25,7 @@ export default function DevicePwaModal({ type, isOpen, onClose }: DevicePwaModal
 
   // Auto-lock screen orientation to landscape when supported
   useEffect(() => {
+    if (type === "POS") return;
     const lockLandscape = async () => {
       try {
         if (typeof window !== "undefined" && "orientation" in screen && "lock" in screen.orientation) {
@@ -41,10 +42,11 @@ export default function DevicePwaModal({ type, isOpen, onClose }: DevicePwaModal
     };
     window.addEventListener("pointerdown", handleTouch, { once: true });
     return () => window.removeEventListener("pointerdown", handleTouch);
-  }, []);
+  }, [type]);
 
   // Monitor orientation portrait / landscape
   useEffect(() => {
+    if (type === "POS") return;
     if (typeof window === "undefined") return;
     const checkOrientation = () => {
       // Hanya tampilkan jika perangkat adalah layar tablet/ponsel (lebar <= 1024px atau orientasi portrait mobile)
@@ -61,7 +63,7 @@ export default function DevicePwaModal({ type, isOpen, onClose }: DevicePwaModal
       window.removeEventListener("resize", checkOrientation);
       window.removeEventListener("orientationchange", checkOrientation);
     };
-  }, []);
+  }, [type]);
 
   // Check standalone, iOS, and prompt availability
   useEffect(() => {
@@ -129,7 +131,7 @@ export default function DevicePwaModal({ type, isOpen, onClose }: DevicePwaModal
   return (
     <>
       {/* Indicator when device is in portrait mode */}
-      {isPortrait && (
+      {type === "KDS" && isPortrait && (
         <aside
           role="region"
           aria-label="Pemberitahuan orientasi layar"

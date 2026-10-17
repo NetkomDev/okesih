@@ -144,6 +144,7 @@ export default function PosModulePage() {
   const [category, setCategory] = useState("Semua");
   const [tableNumber, setTableNumber] = useState("Kasir");
   const [paymentMethod, setPaymentMethod] = useState<"CASH" | "QRIS">("CASH");
+  const [mobileCartOpen, setMobileCartOpen] = useState(false);
   const [saleMessage, setSaleMessage] = useState("");
   const [historySearch, setHistorySearch] = useState("");
   const [historyStatusFilter, setHistoryStatusFilter] = useState("ALL");
@@ -366,7 +367,7 @@ export default function PosModulePage() {
     setBusy(true); setSaleMessage(""); app.setError("");
     try {
       const order = await app.createCashierOrder({ tableNumber, paymentMethod, items: cartItems.map((item) => ({ menuId: item.menu.id, qty: item.qty, notes: item.notes })) });
-      setCart({}); setSaleMessage(`Pesanan #${String(order.nomor_antrean).padStart(3, "0")} sudah masuk ke KDS dapur.`); window.setTimeout(() => setSaleMessage(""), 5000);
+      setCart({}); setMobileCartOpen(false); setSaleMessage(`Pesanan #${String(order.nomor_antrean).padStart(3, "0")} sudah masuk ke KDS dapur.`); window.setTimeout(() => setSaleMessage(""), 5000);
     } catch (reason) { app.setError(reason instanceof Error ? reason.message : "Pesanan kasir gagal disimpan."); } finally { setBusy(false); }
   };
   const toggleOrTestAudio = () => { const ctx = getAudioContext(); setAudioEnabled(true); setAudioUnlocked(Boolean(ctx)); if (ctx) void ctx.resume().then(() => playCashierSound(ctx)); else playCashierSound(null); };
@@ -445,11 +446,26 @@ export default function PosModulePage() {
         <div className="pos-categories">{categories.map((item) => <button key={item} className={category === item ? "active" : ""} onClick={() => setCategory(item)}>{item}</button>)}</div>
         <div className="pos-menu-grid">{visibleMenus.map((menu) => { const qty = cart[menu.id]?.qty || 0; return <article key={menu.id} className={qty ? "selected" : ""}><div className="pos-menu-art"><span>{menu.kategori?.toLowerCase().includes("minum") ? "☕" : "🍽"}</span>{qty > 0 && <b>{qty}</b>}</div><div className="pos-menu-copy"><small>{menu.kategori || "Menu"}</small><h2>{menu.nama}</h2><p>{menu.desc_menu || "Siap dipesan langsung dari kasir."}</p><strong>Rp {Number(menu.harga).toLocaleString("id-ID")}</strong></div>{qty === 0 ? <button className="pos-add-menu" onClick={() => changeQty(menu.id, 1)}><Icon name="plus"/> Tambah</button> : <div className="pos-menu-qty"><button onClick={() => changeQty(menu.id, -1)}><Icon name="minus"/></button><b>{qty}</b><button onClick={() => changeQty(menu.id, 1)}><Icon name="plus"/></button></div>}</article>; })}{visibleMenus.length === 0 && <div className="pos-menu-empty">Menu tidak ditemukan.</div>}</div>
       </section>
-      <aside className="pos-cart-panel"><header><div><small>PESANAN LANGSUNG</small><h2>Keranjang</h2></div><span>{cartCount} item</span></header><label className="pos-field">Lokasi pesanan<select value={tableNumber} onChange={(event) => setTableNumber(event.target.value)}><option value="Kasir">Kasir / Bawa pulang</option>{app.data.tables.map((table) => <option key={table.id} value={table.label}>Meja {table.label}</option>)}</select></label>
+      <button className={`pos-cart-backdrop ${mobileCartOpen ? "open" : ""}`} type="button" aria-label="Tutup keranjang" onClick={() => setMobileCartOpen(false)}/>
+      <aside className={`pos-cart-panel ${mobileCartOpen ? "mobile-open" : ""}`} aria-label="Keranjang pesanan"><header><div><small>PESANAN LANGSUNG</small><h2>Keranjang</h2></div><div className="pos-cart-heading-actions"><span>{cartCount} item</span><button className="pos-cart-mobile-close" type="button" aria-label="Tutup keranjang" onClick={() => setMobileCartOpen(false)}><Icon name="close"/></button></div></header><label className="pos-field">Lokasi pesanan<select value={tableNumber} onChange={(event) => setTableNumber(event.target.value)}><option value="Kasir">Kasir / Bawa pulang</option>{app.data.tables.map((table) => <option key={table.id} value={table.label}>Meja {table.label}</option>)}</select></label>
         <div className="pos-cart-lines">{cartItems.length === 0 ? <div className="pos-cart-empty"><span><Icon name="cart"/></span><h3>Keranjang masih kosong</h3><p>Pilih menu di sebelah kiri untuk mulai membuat pesanan.</p></div> : cartItems.map((item) => <article key={item.menu.id}><div><h3>{item.menu.nama}</h3><strong>Rp {(Number(item.menu.harga) * item.qty).toLocaleString("id-ID")}</strong></div><div className="pos-cart-line-actions"><div className="pos-menu-qty"><button onClick={() => changeQty(item.menu.id, -1)}><Icon name="minus"/></button><b>{item.qty}</b><button onClick={() => changeQty(item.menu.id, 1)}><Icon name="plus"/></button></div><button className="pos-remove" onClick={() => setCart((current) => { const next = { ...current }; delete next[item.menu.id]; return next; })}><Icon name="close"/></button></div><input value={item.notes} maxLength={300} onChange={(event) => setCart((current) => ({ ...current, [item.menu.id]: { ...current[item.menu.id], notes: event.target.value } }))} placeholder="Catatan, mis. tanpa gula"/></article>)}</div>
         <div className="pos-payment"><small>METODE PEMBAYARAN</small><div><button className={paymentMethod === "CASH" ? "active" : ""} onClick={() => setPaymentMethod("CASH")}><span>Rp</span><b>Tunai</b></button><button className={paymentMethod === "QRIS" ? "active" : ""} onClick={() => setPaymentMethod("QRIS")}><span>▦</span><b>QRIS</b></button></div></div>
         <footer><div><span>Total pembayaran</span><strong>Rp {cartTotal.toLocaleString("id-ID")}</strong></div><button disabled={!cartItems.length || busy || !app.online} onClick={() => void submitCashierOrder()}>{busy ? "Mengirim..." : <><span>Bayar & Kirim ke Dapur</span><b>→</b></>}</button>{!app.online && <small>Hubungkan internet untuk mengirim pesanan ke KDS.</small>}</footer>
       </aside>
+      <section className="pos-mobile-checkout" aria-label="Pembayaran pesanan">
+        <button className="pos-mobile-cart-summary" type="button" onClick={() => setMobileCartOpen(true)}>
+          <span><Icon name="cart"/><b>{cartCount}</b></span>
+          <span><small>Total</small><strong>Rp {cartTotal.toLocaleString("id-ID")}</strong></span>
+          <em>Lihat</em>
+        </button>
+        <div className="pos-mobile-payment" aria-label="Pilih metode pembayaran">
+          <button type="button" className={paymentMethod === "CASH" ? "active" : ""} aria-pressed={paymentMethod === "CASH"} onClick={() => setPaymentMethod("CASH")}><span>Rp</span>Tunai</button>
+          <button type="button" className={paymentMethod === "QRIS" ? "active" : ""} aria-pressed={paymentMethod === "QRIS"} onClick={() => setPaymentMethod("QRIS")}><span>▦</span>QRIS</button>
+        </div>
+        <button className="pos-mobile-pay" type="button" disabled={!cartItems.length || busy || !app.online} onClick={() => void submitCashierOrder()}>
+          <span>{busy ? "Mengirim..." : "Bayar"}</span><b>→</b>
+        </button>
+      </section>
     </main> : <main className="pos-history-page">
       <section className="pos-hero-row">
         <div>
