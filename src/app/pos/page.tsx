@@ -510,7 +510,7 @@ export default function PosModulePage() {
         {/* Top Header Ringkas & Elegan */}
         <header className="pos-pipeline-topbar">
           <div className="pos-pipeline-title-group">
-            <h1>Alur Pesanan</h1>
+            <h1>Pesanan Masuk</h1>
             <span className="pos-pipeline-counter">
               <span className="live-dot" />
               <b>{totalActive}</b> aktif
