@@ -60,7 +60,7 @@ export default function LoginPage() {
         justifyContent: "center",
         position: "relative",
         backgroundColor: "var(--bg-deep-black)",
-        color: "#FFF",
+        color: "var(--text-pure-white)",
         padding: "2rem 1.5rem",
       }}
     >

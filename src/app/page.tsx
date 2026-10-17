@@ -118,7 +118,7 @@ export default function HomePage() {
           flexDirection: "column",
           position: "relative",
           backgroundColor: "var(--bg-deep-black)",
-          color: "#FFF",
+          color: "var(--text-pure-white)",
         }}
       >
         {/* Background Ambient Glows (Isolated, never affects main scroll container) */}
@@ -278,7 +278,7 @@ export default function HomePage() {
                 background: isMobileMenuOpen ? "rgba(255, 69, 0, 0.2)" : "rgba(255, 255, 255, 0.06)",
                 border: isMobileMenuOpen ? "1px solid rgba(255, 69, 0, 0.4)" : "1px solid var(--border-subtle)",
                 borderRadius: "10px",
-                color: isMobileMenuOpen ? "var(--brand-orange-light)" : "#FFF",
+                color: isMobileMenuOpen ? "var(--brand-orange-light)" : "var(--text-pure-white)",
                 padding: "0.45rem 0.75rem",
                 fontSize: "1.2rem",
                 cursor: "pointer",
@@ -882,7 +882,7 @@ export default function HomePage() {
                 fontWeight: 900,
                 letterSpacing: "-0.025em",
                 lineHeight: 1.25,
-                color: "#FFF",
+                color: "var(--text-pure-white)",
                 maxWidth: "780px",
               }}
             >

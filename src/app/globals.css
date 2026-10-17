@@ -1699,7 +1699,11 @@ button {
 [data-theme="light"] h4,
 [data-theme="light"] h5,
 [data-theme="light"] h6 {
-  color: #0F172A;
+  color: #0F172A !important;
+}
+
+[data-theme="light"] #rekrutmen-marketing h2 {
+  color: #0F172A !important;
 }
 
 [data-theme="light"] p {

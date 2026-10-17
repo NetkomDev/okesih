@@ -59,9 +59,8 @@ export default function MarketingProgramPage() {
         minHeight: "100vh",
         display: "flex",
         flexDirection: "column",
-        backgroundColor: "#0D0D0E",
-        background: "#0D0D0E",
-        color: "#FFF",
+        backgroundColor: "var(--bg-deep-black)",
+        color: "var(--text-pure-white)",
         position: "relative",
         overflowX: "clip",
       }}
@@ -139,7 +138,7 @@ export default function MarketingProgramPage() {
               style={{
                 display: "inline-flex",
                 alignItems: "center",
-                gap: "0.5rem",
+                gap: "0.45rem",
                 color: "var(--text-muted)",
                 fontSize: "0.85rem",
                 fontWeight: 700,
@@ -151,7 +150,19 @@ export default function MarketingProgramPage() {
                 transition: "all 0.2s ease",
               }}
             >
-              <span>←</span>
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{ display: "inline-block", flexShrink: 0 }}
+              >
+                <polyline points="15 18 9 12 15 6" />
+              </svg>
               <span>Beranda</span>
             </Link>
 

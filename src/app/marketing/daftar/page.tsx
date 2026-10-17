@@ -75,7 +75,7 @@ export default function MarketingRegisterPage() {
         flexDirection: "column",
         position: "relative",
         backgroundColor: "var(--bg-deep-black)",
-        color: "#FFF",
+        color: "var(--text-pure-white)",
         padding: "2rem 1.5rem 5rem",
       }}
     >
