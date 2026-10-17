@@ -6,6 +6,7 @@
     "dev": "next dev --webpack",
     "build": "next build --webpack && node scripts/check-secrets.mjs",
     "start": "next start",
+    "test:pwa": "node scripts/test-pwa-launch.mjs",
     "whatsapp:worker": "node scripts/whatsapp-worker.mjs",
     "seed:demo": "node --env-file=.env.local scripts/seed-tenant-demo.mjs",
     "lint": "eslint",
@@ -33,6 +34,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.4.0",
+    "tsx": "^4.23.15",
     "typescript": "^5"
   }
 }
