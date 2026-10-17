@@ -5,13 +5,13 @@ import MarketingSyncIndicator from "./MarketingSyncIndicator";
 
 export const metadata: Metadata = {
   title: "Dashboard Marketing",
-  applicationName: "Okesih.com",
-  manifest: "/manifest.webmanifest",
+  applicationName: "OKESIH Sales",
+  manifest: "/manifest-marketing.webmanifest",
   icons: {
     icon: "/logo.svg",
     apple: "/icons/apple-touch-icon.png",
   },
-  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "Okesih.com" },
+  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "OKESIH Sales" },
 };
 
 export default function MarketingDashboardLayout({ children }: { children: React.ReactNode }) {

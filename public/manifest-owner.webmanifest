@@ -1,9 +1,9 @@
 {
   "id": "/",
-  "name": "Okesih.com",
-  "short_name": "Okesih.com",
-  "description": "Platform Ekosistem Digital & Manajemen Bisnis OKESIH",
-  "start_url": "/login",
+  "name": "OKESIH Owner",
+  "short_name": "Owner OKESIH",
+  "description": "Dashboard pemilik usaha OKESIH",
+  "start_url": "/owner?pwa=owner",
   "scope": "/",
   "display": "standalone",
   "orientation": "any",

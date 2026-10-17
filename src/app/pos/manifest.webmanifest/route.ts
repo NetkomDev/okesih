@@ -2,18 +2,18 @@ export const dynamic = "force-static";
 
 export function GET() {
   return Response.json({
-    id: "/pos",
+    id: "/",
     name: "OKESIH Kasir",
     short_name: "Kasir OKESIH",
     description: "Aplikasi kasir POS OKESIH untuk perangkat yang dipairing Owner.",
     start_url: "/pos?pwa=pos",
-    scope: "/pos",
+    scope: "/",
     display: "standalone",
     orientation: "landscape",
     background_color: "#f5f7fb",
     theme_color: "#f4512c",
     related_applications: [
-      { platform: "webapp", url: "/pos/manifest.webmanifest", id: "/pos" },
+      { platform: "webapp", url: "/pos/manifest.webmanifest", id: "/" },
     ],
     prefer_related_applications: false,
     icons: [

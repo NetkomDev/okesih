@@ -1,9 +1,9 @@
 {
   "id": "/",
-  "name": "Okesih.com",
-  "short_name": "Okesih.com",
-  "description": "Platform Ekosistem Digital & Manajemen Bisnis OKESIH",
-  "start_url": "/login",
+  "name": "OKESIH Sales",
+  "short_name": "Sales OKESIH",
+  "description": "Dashboard mitra marketing OKESIH",
+  "start_url": "/marketing/dashboard?pwa=marketing",
   "scope": "/",
   "display": "standalone",
   "orientation": "any",

@@ -1,10 +1,10 @@
 {
-  "id": "/kds",
+  "id": "/",
   "name": "OKESIH Dapur KDS",
   "short_name": "Dapur OKESIH",
   "description": "Layar Antrean Dapur & Barista OKESIH KDS",
   "start_url": "/kds?pwa=kds",
-  "scope": "/kds",
+  "scope": "/",
   "display": "standalone",
   "orientation": "landscape",
   "background_color": "#0b1018",

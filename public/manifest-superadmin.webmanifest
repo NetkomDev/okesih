@@ -1,9 +1,9 @@
 {
   "id": "/",
-  "name": "Okesih.com",
-  "short_name": "Okesih.com",
-  "description": "Platform Ekosistem Digital & Manajemen Bisnis OKESIH",
-  "start_url": "/login",
+  "name": "OKESIH Super Admin",
+  "short_name": "Admin OKESIH",
+  "description": "Dashboard administrasi platform OKESIH",
+  "start_url": "/superadmin?pwa=superadmin",
   "scope": "/",
   "display": "standalone",
   "orientation": "any",

@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { test } from "node:test";
-import { installationKind, isDashboardLaunch, isRoleAllowedForPwa, PWA_ROLE_CONFIGS } from "../src/lib/pwa-routing.ts";
+import { detectActivePwaKind, installationKind, isDashboardLaunch, isRoleAllowedForPwa, pwaKindForHostname, PWA_ROLE_CONFIGS } from "../src/lib/pwa-routing.ts";
+import { APP_HOSTS, isApiAllowedOnSurface, roleHomeUrl, surfaceForHostname, surfaceForPath } from "../src/lib/app-origins.ts";
 import { createDevicePin, hashDevicePin, readDevicePin, devicePinKey } from "../src/lib/device-pin.ts";
 import dashboardManifestModule from "../src/lib/pwa-manifest.ts";
 import { getTrustedUserRole } from "../src/lib/auth-role.ts";
@@ -11,13 +12,56 @@ import { requestPwaInstallation } from "../src/lib/pwa-install.ts";
 // when the package does not declare `type: module`.
 const dashboardManifest = dashboardManifestModule.default ?? dashboardManifestModule;
 
-test("shared dashboard manifest preserves identity and opens login", () => {
+test("public manifest preserves the public origin identity", () => {
   const manifest = dashboardManifest();
   assert.equal(manifest.id, "/");
   assert.equal(manifest.name, "Okesih.com");
   assert.equal(manifest.short_name, "Okesih.com");
-  assert.equal(manifest.start_url, "/login");
+  assert.equal(manifest.start_url, "/");
   assert.equal(manifest.scope, "/");
+});
+
+test("production hostnames isolate every internal application", () => {
+  const expected = {
+    PUBLIC: [APP_HOSTS.PUBLIC, null],
+    SUPERADMIN: [APP_HOSTS.SUPERADMIN, "superadmin"],
+    OWNER: [APP_HOSTS.OWNER, "owner"],
+    MARKETING: [APP_HOSTS.MARKETING, "marketing"],
+    POS: [APP_HOSTS.POS, "pos"],
+    KDS: [APP_HOSTS.KDS, "kds"],
+  };
+  for (const [surface, [hostname, pwaKind]] of Object.entries(expected)) {
+    assert.equal(surfaceForHostname(hostname), surface);
+    assert.equal(pwaKindForHostname(hostname), pwaKind);
+  }
+  assert.equal(surfaceForHostname("localhost"), null);
+  assert.equal(surfaceForPath("/superadmin"), "SUPERADMIN");
+  assert.equal(surfaceForPath("/owner/devices"), "OWNER");
+  assert.equal(surfaceForPath("/marketing/dashboard/komisi"), "MARKETING");
+  assert.equal(surfaceForPath("/pos"), "POS");
+  assert.equal(surfaceForPath("/kds"), "KDS");
+  assert.equal(surfaceForPath("/menu/demo"), "PUBLIC");
+  assert.equal(roleHomeUrl("OWNER"), "https://owner.okesih.com/owner");
+  assert.equal(roleHomeUrl("KASIR"), "https://pos.okesih.com/pos");
+});
+
+test("API endpoints are limited to the matching production surface", () => {
+  assert.equal(isApiAllowedOnSurface("/api/owner/dashboard", "OWNER"), true);
+  assert.equal(isApiAllowedOnSurface("/api/owner/dashboard", "POS"), false);
+  assert.equal(isApiAllowedOnSurface("/api/superadmin/tenants", "SUPERADMIN"), true);
+  assert.equal(isApiAllowedOnSurface("/api/marketing/dashboard", "MARKETING"), true);
+  assert.equal(isApiAllowedOnSurface("/api/device/bootstrap", "POS"), true);
+  assert.equal(isApiAllowedOnSurface("/api/device/bootstrap", "KDS"), true);
+  assert.equal(isApiAllowedOnSurface("/api/device/bootstrap", "OWNER"), false);
+  assert.equal(isApiAllowedOnSurface("/api/platform-settings", "PUBLIC"), true);
+});
+
+test("public origin cannot be turned into an internal login portal by query string", () => {
+  globalThis.window = {
+    location: { hostname: "www.okesih.com", search: "?from_pwa=owner", pathname: "/login" },
+  };
+  assert.equal(detectActivePwaKind(), null);
+  delete globalThis.window;
 });
 
 test("dedicated dashboards keep independent install identities", () => {
@@ -77,11 +121,11 @@ test("install prompt is consumed once and reads browser userChoice", async () =>
 
 test("operational and dashboard manifests keep native launch targets", async () => {
   const expectedManifests = [
-    ["pos", "OKESIH Kasir", "Kasir OKESIH", "/pos?pwa=pos", "/pos", "/pos"],
-    ["kds", "OKESIH Dapur KDS", "Dapur OKESIH", "/kds?pwa=kds", "/kds", "/kds"],
-    ["owner", "Okesih.com", "Okesih.com", "/login", "/", "/"],
-    ["marketing", "Okesih.com", "Okesih.com", "/login", "/", "/"],
-    ["superadmin", "Okesih.com", "Okesih.com", "/login", "/", "/"],
+    ["pos", "OKESIH Kasir", "Kasir OKESIH", "/pos?pwa=pos", "/", "/"],
+    ["kds", "OKESIH Dapur KDS", "Dapur OKESIH", "/kds?pwa=kds", "/", "/"],
+    ["owner", "OKESIH Owner", "Owner OKESIH", "/owner?pwa=owner", "/", "/"],
+    ["marketing", "OKESIH Sales", "Sales OKESIH", "/marketing/dashboard?pwa=marketing", "/", "/"],
+    ["superadmin", "OKESIH Super Admin", "Admin OKESIH", "/superadmin?pwa=superadmin", "/", "/"],
   ];
 
   for (const [kind, name, shortName, path, id, scope] of expectedManifests) {

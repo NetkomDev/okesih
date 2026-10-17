@@ -9,6 +9,7 @@ type ProtectedSurface = {
 };
 
 function getProtectedSurface(path: string): ProtectedSurface | null {
+  if (path === "/admin" || path.startsWith("/admin/")) return { role: "SUPERADMIN", pwa: "superadmin" };
   if (path === "/superadmin") return { role: "SUPERADMIN", pwa: "superadmin" };
   if (path === "/owner" || path.startsWith("/owner/")) return { role: "OWNER", pwa: "owner" };
   if (path === "/marketing/dashboard" || path.startsWith("/marketing/dashboard/")) {

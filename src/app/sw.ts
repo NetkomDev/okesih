@@ -11,6 +11,8 @@ declare global {
 
 declare const self: ServiceWorkerGlobalScope;
 
+const PRIVILEGED_HOSTS = new Set(["admin.okesih.com", "owner.okesih.com", "sales.okesih.com"]);
+
 const OFFLINE_HTML = `<!DOCTYPE html>
 <html lang="id">
 <head>
@@ -134,10 +136,16 @@ const serwist = new Serwist({
   clientsClaim: true,
   navigationPreload: true,
   runtimeCaching: [
-    // 1. Dokumen Navigasi Utama (POS, KDS, & Root App)
+    // Dashboard berautentikasi tidak disimpan sebagai dokumen offline agar
+    // halaman sensitif tidak dapat dibuka dari cache setelah sesi berakhir.
+    {
+      matcher: ({ request, url }) => request.mode === "navigate" && PRIVILEGED_HOSTS.has(url.hostname),
+      handler: new NetworkOnly({ networkTimeoutSeconds: 15 }),
+    },
+    // 1. Dokumen navigasi publik dan aplikasi perangkat (POS/KDS).
     // Menggunakan NetworkFirst dengan timeout cepat (4 detik) agar PWA instan fallback ke cache offline jika offline/lambat
     {
-      matcher: ({ request }) => request.mode === "navigate",
+      matcher: ({ request, url }) => request.mode === "navigate" && !PRIVILEGED_HOSTS.has(url.hostname),
       handler: new NetworkFirst({
         cacheName: "pages-navigation",
         networkTimeoutSeconds: 4,
@@ -172,6 +180,16 @@ const serwist = new Serwist({
 // Tangkap semua unhandled error di Serwist agar browser TIDAK PERNAH menampilkan error "This page couldn't load"
 serwist.setCatchHandler(async ({ request }) => {
   if (request.mode === "navigate" || request.destination === "document") {
+    const isPrivilegedOrigin = PRIVILEGED_HOSTS.has(new URL(request.url).hostname);
+    if (isPrivilegedOrigin) {
+      const offlineMatched = await caches.match("/~offline");
+      if (offlineMatched) return offlineMatched;
+      return new Response(OFFLINE_HTML, {
+        status: 503,
+        headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" },
+      });
+    }
+
     // 1. Coba cari di cache 'pages-navigation' untuk URL yang diminta
     const navCache = await caches.open("pages-navigation");
     const matched = await navCache.match(request);

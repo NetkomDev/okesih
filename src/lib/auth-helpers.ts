@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "./supabase/client";
 import type { User } from "@supabase/supabase-js";
 import { getTrustedUserRole, type UserRole } from "./auth-role";
+import { roleHomeUrl } from "./app-origins";
 
 /**
  * Helper utilitas untuk sistem autentikasi OKESIH tanpa OTP/Email ribet.
@@ -75,11 +75,19 @@ export async function logoutUser(): Promise<void> {
   await logoutUserTo("/login");
 }
 
-import { detectActivePwaKind, isStandaloneApp, type PwaRoleKind } from "./pwa-routing";
+import type { PwaRoleKind } from "./pwa-routing";
 
 export interface RoleMismatchInfo {
   pwaKind: PwaRoleKind;
   userRole: string;
+}
+
+interface AuthGuardResult {
+  isAuthorized: boolean;
+  currentUser: User | null;
+  currentRole: UserRole | null;
+  loading: boolean;
+  roleMismatch: RoleMismatchInfo | null;
 }
 
 /**
@@ -87,8 +95,7 @@ export interface RoleMismatchInfo {
  * Menutup celah keamanan sehingga pengguna tidak dapat sembarangan membuka
  * halaman yang bukan hak aksesnya atau berpindah peran tanpa otentikasi.
  */
-export function useAuthGuard(allowedRoles: UserRole[]) {
-  const router = useRouter();
+export function useAuthGuard(allowedRoles: UserRole[]): AuthGuardResult {
   // Callers commonly pass an inline array (for example `["OWNER"]`). Using
   // that array directly as an effect dependency restarts the guard on every
   // render and can leave client-side navigation permanently loading.
@@ -97,7 +104,7 @@ export function useAuthGuard(allowedRoles: UserRole[]) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [currentRole, setCurrentRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [roleMismatch, setRoleMismatch] = useState<RoleMismatchInfo | null>(null);
+  const roleMismatch: RoleMismatchInfo | null = null;
 
   useEffect(() => {
     let isMounted = true;
@@ -110,7 +117,7 @@ export function useAuthGuard(allowedRoles: UserRole[]) {
 
         if (userError || !user) {
           if (isMounted) {
-            router.replace("/login?error=login_required");
+            window.location.replace("/login?error=login_required");
           }
           return;
         }
@@ -120,20 +127,8 @@ export function useAuthGuard(allowedRoles: UserRole[]) {
         // Jika akun tidak memiliki hak akses (role tidak sesuai dengan halaman ini)
         if (!role || !permittedRoles.includes(role)) {
           if (isMounted) {
-            // Arahkan ke dashboard haknya secara otomatis
-            if (role === "SUPERADMIN") {
-              router.replace("/superadmin");
-            } else if (role === "OWNER") {
-              router.replace("/owner");
-            } else if (role === "MARKETING") {
-              router.replace("/marketing/dashboard");
-            } else if (role === "KASIR") {
-              router.replace("/pos");
-            } else if (role === "DAPUR") {
-              router.replace("/kds");
-            } else {
-              router.replace("/login?error=unauthorized");
-            }
+            await supabase.auth.signOut({ scope: "local" });
+            window.location.replace(role ? roleHomeUrl(role) : "/login?error=unauthorized");
           }
           return;
         }
@@ -146,7 +141,7 @@ export function useAuthGuard(allowedRoles: UserRole[]) {
         }
       } catch {
         if (isMounted) {
-          router.replace("/login?error=auth_failed");
+          window.location.replace("/login?error=auth_failed");
         }
       }
     };
@@ -156,8 +151,7 @@ export function useAuthGuard(allowedRoles: UserRole[]) {
     return () => {
       isMounted = false;
     };
-  }, [router, allowedRolesKey]);
+  }, [allowedRolesKey]);
 
   return { isAuthorized, currentUser, currentRole, loading, roleMismatch };
 }
-

@@ -10,6 +10,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import PwaInstallButton from "@/components/PwaInstallButton";
 import PwaRoleInstallModal from "@/components/PwaRoleInstallModal";
 import PwaRoleMismatchModal from "@/components/PwaRoleMismatchModal";
+import { APP_HOSTS, appUrl } from "@/lib/app-origins";
 
 
 type MenuItem = { id: string; name: string; price: number; category: string; description: string; isAvailable: boolean };
@@ -945,7 +946,7 @@ export default function TenantOwnerDashboardPage() {
               </p>
             </div>
           )}
-          <div className="owner-actions"><ThemeToggle/><PwaInstallButton label="Install Owner" compact onInstalled={() => void onboardingAction({ action: "pwa_installed" })}/><Link href="/pos" target="_blank" rel="noopener noreferrer" className="btn-secondary">Layar Kasir</Link><Link href="/kds" target="_blank" rel="noopener noreferrer" className="btn-secondary">Layar Dapur</Link></div>
+          <div className="owner-actions"><ThemeToggle/><PwaInstallButton label="Install Owner" compact onInstalled={() => void onboardingAction({ action: "pwa_installed" })}/><a href={appUrl("POS", "/pos")} target="_blank" rel="noopener noreferrer" className="btn-secondary">Layar Kasir</a><a href={appUrl("KDS", "/kds")} target="_blank" rel="noopener noreferrer" className="btn-secondary">Layar Dapur</a></div>
         </header>
 
         <main className="owner-main">
@@ -1625,7 +1626,7 @@ export default function TenantOwnerDashboardPage() {
 
           {view === "devices" && <section className="owner-device-page owner-page-panel">
             <div className="owner-device-setup">
-              <article className="owner-panel"><span className="device-step">01</span><h2>Buka aplikasi di perangkat tujuan</h2><p>Pada tablet Kasir buka <b>okesih.com/pos</b>. Pada layar dapur buka <b>okesih.com/kds</b>, kemudian pilih Buat Kode Pairing.</p><div className="owner-device-links"><Link href="/pos" target="_blank" rel="noopener noreferrer">Buka Kasir ↗</Link><Link href="/kds" target="_blank" rel="noopener noreferrer">Buka KDS ↗</Link></div></article>
+              <article className="owner-panel"><span className="device-step">01</span><h2>Buka aplikasi di perangkat tujuan</h2><p>Pada tablet Kasir buka <b>{APP_HOSTS.POS}</b>. Pada layar dapur buka <b>{APP_HOSTS.KDS}</b>, kemudian pilih Buat Kode Pairing.</p><div className="owner-device-links"><a href={appUrl("POS", "/pos")} target="_blank" rel="noopener noreferrer">Buka Kasir ↗</a><a href={appUrl("KDS", "/kds")} target="_blank" rel="noopener noreferrer">Buka KDS ↗</a></div></article>
               <article className="owner-panel"><span className="device-step">02</span><h2>Setujui kode pairing</h2><p>Masukkan enam digit yang tampil pada perangkat. Kode hanya berlaku lima menit dan sekali pakai.</p><div className="owner-pair-form"><input inputMode="numeric" maxLength={6} placeholder="000000" value={pairingCode} onChange={(event) => setPairingCode(event.target.value.replace(/\D/g, ""))}/><button className="btn-primary" disabled={busy || pairingCode.length !== 6} onClick={() => void deviceAction({ action: "approve", code: pairingCode })}>{busy ? "Memproses..." : "Setujui Perangkat"}</button></div></article>
             </div>
             <article className="owner-panel owner-device-list"><div className="owner-section-heading"><div><h2>Perangkat Terdaftar</h2><p>Cabut akses segera jika perangkat hilang atau tidak lagi digunakan.</p></div>{devices.some((device) => device.status === "ACTIVE") && <button className="link-button danger" onClick={() => confirm("Cabut seluruh perangkat Kasir dan KDS?") && void deviceAction({ action: "revoke_all" })}>Cabut Semua</button>}</div>

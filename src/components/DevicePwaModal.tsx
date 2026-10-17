@@ -16,7 +16,6 @@ export default function DevicePwaModal({ type, isOpen, onClose }: DevicePwaModal
   const [show, setShow] = useState(false);
   const [isIos, setIsIos] = useState(false);
   const [canPrompt, setCanPrompt] = useState(false);
-  const [isPortrait, setIsPortrait] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
   const detectedInstalled = usePwaInstallStatus(type === "POS" ? "/pos/manifest.webmanifest" : "/kds/manifest.webmanifest");
 
@@ -42,27 +41,6 @@ export default function DevicePwaModal({ type, isOpen, onClose }: DevicePwaModal
     };
     window.addEventListener("pointerdown", handleTouch, { once: true });
     return () => window.removeEventListener("pointerdown", handleTouch);
-  }, [type]);
-
-  // Monitor orientation portrait / landscape
-  useEffect(() => {
-    if (type === "POS") return;
-    if (typeof window === "undefined") return;
-    const checkOrientation = () => {
-      // Hanya tampilkan jika perangkat adalah layar tablet/ponsel (lebar <= 1024px atau orientasi portrait mobile)
-      const isMobileOrTablet = window.innerWidth <= 1024;
-      const portrait = window.matchMedia("(orientation: portrait)").matches && isMobileOrTablet;
-      setIsPortrait(portrait);
-    };
-
-    const initialTimer = window.setTimeout(checkOrientation, 0);
-    window.addEventListener("resize", checkOrientation);
-    window.addEventListener("orientationchange", checkOrientation);
-    return () => {
-      window.clearTimeout(initialTimer);
-      window.removeEventListener("resize", checkOrientation);
-      window.removeEventListener("orientationchange", checkOrientation);
-    };
   }, [type]);
 
   // Check standalone, iOS, and prompt availability
@@ -118,63 +96,8 @@ export default function DevicePwaModal({ type, isOpen, onClose }: DevicePwaModal
     }
   };
 
-  const forceRotate = async () => {
-    try {
-      if ("orientation" in screen && "lock" in screen.orientation) {
-        await (screen.orientation as unknown as { lock: (orientation: string) => Promise<void> }).lock("landscape");
-      }
-    } catch {
-      alert("Silakan putar perangkat Anda ke posisi horizontal (landscape) dan pastikan rotasi otomatis pada pengaturan HP/Tablet Anda aktif.");
-    }
-  };
-
   return (
     <>
-      {/* Indicator when device is in portrait mode */}
-      {type === "KDS" && isPortrait && (
-        <aside
-          role="region"
-          aria-label="Pemberitahuan orientasi layar"
-          className="ops-portrait-helper"
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            zIndex: 90,
-            background: "linear-gradient(90deg, #f97316 0%, #ea580c 100%)",
-            color: "#fff",
-            padding: "8px 16px",
-            fontSize: "12.5px",
-            fontWeight: 800,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            boxShadow: "0 4px 12px rgba(234,88,12,0.35)",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <span style={{ fontSize: "16px" }}>🔄</span>
-            <span>Putar HP / Tablet ke posisi horizontal (Landscape) untuk tampilan optimal.</span>
-          </div>
-          <button
-            onClick={() => void forceRotate()}
-            style={{
-              padding: "4px 10px",
-              background: "#fff",
-              color: "#ea580c",
-              border: 0,
-              borderRadius: "6px",
-              fontWeight: 900,
-              fontSize: "11px",
-              cursor: "pointer",
-            }}
-          >
-            Kunci Landscape
-          </button>
-        </aside>
-      )}
-
       {/* PWA Install Modal */}
       {visible && !isStandalone && detectedInstalled !== true && (
         <div className="ops-modal-backdrop" style={{ zIndex: 120 }}>

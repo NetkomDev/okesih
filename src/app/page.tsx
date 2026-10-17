@@ -3,13 +3,13 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { extractUserRole } from "@/lib/auth-helpers";
 import ThemeToggle from "@/components/ThemeToggle";
+import InternalPortalLinks from "@/components/InternalPortalLinks";
+import { roleHomeUrl } from "@/lib/app-origins";
 
 export default function HomePage() {
-  const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -91,17 +91,19 @@ export default function HomePage() {
       const role = extractUserRole(data.user);
 
       if (role === "SUPERADMIN") {
-        router.push("/superadmin");
+        window.location.replace(roleHomeUrl(role));
       } else if (role === "OWNER") {
-        router.push("/owner");
+        window.location.replace(roleHomeUrl(role));
       } else if (role === "MARKETING") {
-        router.push("/marketing/dashboard");
+        window.location.replace(roleHomeUrl(role));
       } else if (role === "KASIR") {
-        router.push("/pos");
+        window.location.replace(roleHomeUrl(role));
       } else if (role === "DAPUR") {
-        router.push("/kds");
+        window.location.replace(roleHomeUrl(role));
       } else {
-        router.push("/admin");
+        await supabase.auth.signOut({ scope: "local" });
+        setLoginError("Akun tidak memiliki peran operasional yang valid.");
+        setIsLoading(false);
       }
     } catch (err: unknown) {
       setLoginError(err instanceof Error ? err.message : "Terjadi kesalahan sistem");
@@ -1290,12 +1292,13 @@ export default function HomePage() {
                   🔐
                 </div>
                 <h3 style={{ fontSize: "1.45rem", fontWeight: 900, letterSpacing: "-0.02em", marginBottom: "0" }}>
-                  Masuk ke Sistem OKESIH
+                  Pilih Portal OKESIH
                 </h3>
               </div>
 
-              {/* Form Input */}
-              <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
+              <InternalPortalLinks />
+              {/* Fallback khusus localhost agar pengembangan tetap dapat menguji semua role pada satu origin. */}
+              {process.env.NODE_ENV !== "production" && <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: "1.1rem", marginTop: "1.25rem" }}>
                 {loginError && (
                   <div
                     style={{
@@ -1472,7 +1475,7 @@ export default function HomePage() {
                     </>
                   )}
                 </button>
-              </form>
+              </form>}
             </div>
           </div>
         )}

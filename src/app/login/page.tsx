@@ -2,26 +2,26 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { extractUserRole } from "@/lib/auth-helpers";
+import { roleHomeUrl } from "@/lib/app-origins";
 import {
   detectActivePwaKind,
   isRoleAllowedForPwa,
   type PwaRoleKind,
-  PWA_ROLE_CONFIGS,
 } from "@/lib/pwa-routing";
 import ThemeToggle from "@/components/ThemeToggle";
 import PwaRoleMismatchModal from "@/components/PwaRoleMismatchModal";
+import InternalPortalLinks from "@/components/InternalPortalLinks";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState("");
   const [activePwa, setActivePwa] = useState<PwaRoleKind | null>(null);
+  const [surfaceResolved, setSurfaceResolved] = useState(false);
   const [mismatch, setMismatch] = useState<{
     isOpen: boolean;
     pwaKind: PwaRoleKind;
@@ -36,6 +36,7 @@ export default function LoginPage() {
       if (pwa) {
         setActivePwa(pwa);
       }
+      setSurfaceResolved(true);
 
       const params = new URLSearchParams(window.location.search);
       const err = params.get("error");
@@ -43,30 +44,19 @@ export default function LoginPage() {
         setLoginError("Akses Ditolak: Anda tidak memiliki izin untuk halaman tersebut.");
       }
 
-      // Jika user sudah memiliki sesi aktif di browser/PWA dan tidak ada error login khusus,
-      // arahkan langsung ke dashboard sesuai hak aksesnya tanpa harus login ulang
-      if (!err) {
+      // Sesi setiap subdomain berdiri sendiri. Auto-login hanya berlaku pada
+      // portal internal yang sedang dibuka, bukan pada domain publik.
+      if (!err && pwa) {
         try {
           const supabase = createClient();
           const { data: { user } } = await supabase.auth.getUser();
           if (user && !cancelled) {
             const role = extractUserRole(user);
-            if (role === "SUPERADMIN") {
-              window.location.replace("/superadmin?pwa=superadmin");
-              return;
-            } else if (role === "OWNER") {
-              window.location.replace("/owner?pwa=owner");
-              return;
-            } else if (role === "MARKETING") {
-              window.location.replace("/marketing/dashboard?pwa=marketing");
-              return;
-            } else if (role === "KASIR") {
-              window.location.replace("/pos?pwa=pos");
-              return;
-            } else if (role === "DAPUR") {
-              window.location.replace("/kds?pwa=kds");
+            if (role && isRoleAllowedForPwa(role, pwa)) {
+              window.location.replace(roleHomeUrl(role));
               return;
             }
+            await supabase.auth.signOut({ scope: "local" });
           }
         } catch {}
       }
@@ -106,21 +96,21 @@ export default function LoginPage() {
       // Deteksi peran pengguna secara aman
       const role = extractUserRole(data.user);
 
-      // Semua role dapat login di aplikasi PWA Okesih.com dan diarahkan ke dashboard haknya
-
-      if (role === "SUPERADMIN") {
-        window.location.replace("/superadmin?pwa=superadmin");
-      } else if (role === "OWNER") {
-        window.location.replace("/owner?pwa=owner");
-      } else if (role === "MARKETING") {
-        window.location.replace("/marketing/dashboard?pwa=marketing");
-      } else if (role === "KASIR") {
-        window.location.replace("/pos?pwa=pos");
-      } else if (role === "DAPUR") {
-        window.location.replace("/kds?pwa=kds");
-      } else {
-        router.push("/admin");
+      if (!role) {
+        await supabase.auth.signOut({ scope: "local" });
+        setLoginError("Akun tidak memiliki peran operasional yang valid.");
+        setIsLoading(false);
+        return;
       }
+
+      if (activePwa && !isRoleAllowedForPwa(role, activePwa)) {
+        await supabase.auth.signOut({ scope: "local" });
+        setMismatch({ isOpen: true, pwaKind: activePwa, userRole: role });
+        setIsLoading(false);
+        return;
+      }
+
+      window.location.replace(roleHomeUrl(role));
     } catch (err: unknown) {
       setLoginError(err instanceof Error ? err.message : "Terjadi kesalahan sistem");
       setIsLoading(false);
@@ -177,7 +167,7 @@ export default function LoginPage() {
       </div>
 
       {/* Navigasi Kembali & Theme Toggle */}
-      {!activePwa && <div style={{ position: "absolute", top: "2rem", left: "2rem", zIndex: 10 }}>
+      {surfaceResolved && !activePwa && <div style={{ position: "absolute", top: "2rem", left: "2rem", zIndex: 10 }}>
         <Link
           href="/"
           style={{
@@ -249,7 +239,10 @@ export default function LoginPage() {
         </div>
 
 
-        {/* Form Login */}
+        {/* Domain publik hanya memilih portal; kredensial dimasukkan pada origin internal tujuan. */}
+        {!surfaceResolved ? (
+          <div style={{ color: "var(--text-dim)", textAlign: "center", padding: "1rem" }}>Memeriksa portal…</div>
+        ) : !activePwa ? <InternalPortalLinks /> : (
         <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
           {loginError && (
             <div
@@ -428,6 +421,7 @@ export default function LoginPage() {
             )}
           </button>
         </form>
+        )}
       </div>
 
       {mismatch && (

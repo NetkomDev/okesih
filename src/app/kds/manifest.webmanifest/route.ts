@@ -2,12 +2,12 @@ export const dynamic = "force-static";
 
 export function GET() {
   return Response.json({
-    id: "/kds",
+    id: "/",
     name: "OKESIH Dapur KDS",
     short_name: "Dapur OKESIH",
     description: "Layar antrean pesanan dapur (KDS) OKESIH untuk koki dan barista.",
     start_url: "/kds?pwa=kds",
-    scope: "/kds",
+    scope: "/",
     display: "standalone",
     orientation: "landscape",
     background_color: "#0f172a",

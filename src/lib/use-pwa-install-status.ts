@@ -24,6 +24,7 @@ export function usePwaInstallStatus(manifestPath: string) {
           const apps = await nav.getInstalledRelatedApps();
           nextInstalled = apps.some((app) =>
             app.platform === "webapp" && (
+              app.id === "/" ||
               app.id === "/pos" ||
               app.url === manifestPath ||
               app.url?.endsWith(manifestPath)

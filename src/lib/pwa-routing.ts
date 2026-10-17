@@ -1,3 +1,5 @@
+import { surfaceForHostname } from "@/lib/app-origins";
+
 export type InstallationKind = "POS" | "KDS" | "OWNER" | "MARKETING" | "SUPERADMIN" | "DASHBOARD";
 export type PwaRoleKind = "superadmin" | "owner" | "marketing" | "pos" | "kds";
 
@@ -16,35 +18,35 @@ export interface PwaRoleMeta {
 export const PWA_ROLE_CONFIGS: Record<PwaRoleKind, PwaRoleMeta> = {
   superadmin: {
     kind: "superadmin",
-    name: "Okesih.com",
-    shortName: "Okesih.com",
-    description: "Platform Ekosistem Digital & Manajemen Bisnis OKESIH",
+    name: "OKESIH Super Admin",
+    shortName: "Admin OKESIH",
+    description: "Portal administrasi platform OKESIH.",
     allowedRoles: ["SUPERADMIN"],
-    startUrl: "/login",
+    startUrl: "/superadmin?pwa=superadmin",
     scope: "/",
-    manifest: "/manifest.webmanifest",
+    manifest: "/manifest-superadmin.webmanifest",
     themeColor: "#f4512c",
   },
   owner: {
     kind: "owner",
-    name: "Okesih.com",
-    shortName: "Okesih.com",
-    description: "Platform Ekosistem Digital & Manajemen Bisnis OKESIH",
+    name: "OKESIH Owner",
+    shortName: "Owner OKESIH",
+    description: "Portal pemilik usaha OKESIH.",
     allowedRoles: ["OWNER"],
-    startUrl: "/login",
+    startUrl: "/owner?pwa=owner",
     scope: "/",
-    manifest: "/manifest.webmanifest",
+    manifest: "/manifest-owner.webmanifest",
     themeColor: "#f4512c",
   },
   marketing: {
     kind: "marketing",
-    name: "Okesih.com",
-    shortName: "Okesih.com",
-    description: "Platform Ekosistem Digital & Manajemen Bisnis OKESIH",
+    name: "OKESIH Sales",
+    shortName: "Sales OKESIH",
+    description: "Portal marketing dan sales OKESIH.",
     allowedRoles: ["MARKETING"],
-    startUrl: "/login",
+    startUrl: "/marketing/dashboard?pwa=marketing",
     scope: "/",
-    manifest: "/manifest.webmanifest",
+    manifest: "/manifest-marketing.webmanifest",
     themeColor: "#f4512c",
   },
   pos: {
@@ -54,7 +56,7 @@ export const PWA_ROLE_CONFIGS: Record<PwaRoleKind, PwaRoleMeta> = {
     description: "Aplikasi kasir POS OKESIH untuk perangkat yang dipairing Owner.",
     allowedRoles: ["KASIR"],
     startUrl: "/pos?pwa=pos",
-    scope: "/pos",
+    scope: "/",
     manifest: "/pos/manifest.webmanifest",
     themeColor: "#f4512c",
   },
@@ -65,7 +67,7 @@ export const PWA_ROLE_CONFIGS: Record<PwaRoleKind, PwaRoleMeta> = {
     description: "Layar antrean pesanan dapur (KDS) OKESIH untuk koki dan barista.",
     allowedRoles: ["DAPUR"],
     startUrl: "/kds?pwa=kds",
-    scope: "/kds",
+    scope: "/",
     manifest: "/kds/manifest.webmanifest",
     themeColor: "#1e293b",
   },
@@ -95,6 +97,17 @@ export function isStandaloneApp(): boolean {
   );
 }
 
+export function pwaKindForHostname(hostname: string): PwaRoleKind | null {
+  switch (surfaceForHostname(hostname)) {
+    case "SUPERADMIN": return "superadmin";
+    case "OWNER": return "owner";
+    case "MARKETING": return "marketing";
+    case "POS": return "pos";
+    case "KDS": return "kds";
+    default: return null;
+  }
+}
+
 const STORAGE_ACTIVE_PWA_KEY = "okesih_active_pwa";
 const STANDALONE_PWA_KEY = "okesih_installed_pwa_role";
 
@@ -115,7 +128,22 @@ function setCookie(name: string, value: string) {
 export function detectActivePwaKind(): PwaRoleKind | null {
   if (typeof window === "undefined") return null;
 
-  // 1. Cek query param ?pwa=... atau ?from_pwa=...
+  // 1. Origin produksi adalah sumber identitas aplikasi yang paling kuat.
+  // Domain publik tidak boleh diubah menjadi portal login lewat query string.
+  if (surfaceForHostname(window.location.hostname) === "PUBLIC") return null;
+  const hostnameKind = pwaKindForHostname(window.location.hostname);
+  if (hostnameKind) {
+    try {
+      sessionStorage.setItem(STORAGE_ACTIVE_PWA_KEY, hostnameKind);
+      if (isStandaloneApp()) {
+        localStorage.setItem(STANDALONE_PWA_KEY, hostnameKind);
+        setCookie("okesih_pwa", hostnameKind);
+      }
+    } catch {}
+    return hostnameKind;
+  }
+
+  // 2. Cek query param ?pwa=... atau ?from_pwa=... untuk localhost/preview.
   try {
     const params = new URLSearchParams(window.location.search);
     const pwaParam = (params.get("pwa") || params.get("from_pwa") || "").toLowerCase().trim();
@@ -132,7 +160,7 @@ export function detectActivePwaKind(): PwaRoleKind | null {
     }
   } catch {}
 
-  // 2. Cek sessionStorage (tersimpan dari launch sebelumnya pada session yang sama)
+  // 3. Cek sessionStorage (tersimpan dari launch sebelumnya pada session yang sama)
   try {
     const stored = sessionStorage.getItem(STORAGE_ACTIVE_PWA_KEY) as PwaRoleKind | null;
     if (stored && (stored in PWA_ROLE_CONFIGS)) {
@@ -140,7 +168,7 @@ export function detectActivePwaKind(): PwaRoleKind | null {
     }
   } catch {}
 
-  // 3. Jika sedang berjalan di standalone mode (aplikasi PWA yang sudah terpasang)
+  // 4. Jika sedang berjalan di standalone mode (aplikasi PWA yang sudah terpasang)
   if (isStandaloneApp()) {
     // 3a. Cek localStorage identitas PWA
     try {

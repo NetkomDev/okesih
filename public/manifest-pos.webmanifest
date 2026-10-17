@@ -1,10 +1,10 @@
 {
-  "id": "/pos",
+  "id": "/",
   "name": "OKESIH Kasir",
   "short_name": "Kasir OKESIH",
   "description": "Aplikasi Kasir POS OKESIH untuk Warkop, Resto, dan Kafe",
   "start_url": "/pos?pwa=pos",
-  "scope": "/pos",
+  "scope": "/",
   "display": "standalone",
   "orientation": "landscape",
   "background_color": "#0b1018",

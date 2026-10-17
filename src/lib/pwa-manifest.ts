@@ -6,7 +6,7 @@ export default function dashboardManifest(): MetadataRoute.Manifest {
     name: "Okesih.com",
     short_name: "Okesih.com",
     description: "Platform Ekosistem Digital & Manajemen Bisnis OKESIH",
-    start_url: "/login",
+    start_url: "/",
     scope: "/",
     display: "standalone",
     orientation: "any",
@@ -40,9 +40,9 @@ export default function dashboardManifest(): MetadataRoute.Manifest {
     ],
     shortcuts: [
       {
-        name: "Login OKESIH",
-        url: "/login",
-        description: "Masuk ke Akun OKESIH",
+        name: "Beranda OKESIH",
+        url: "/",
+        description: "Buka beranda OKESIH",
       },
     ],
   };
