@@ -507,33 +507,23 @@ export default function PosModulePage() {
       </section>
     </main> : <main className="pos-history-page">
       <section className="pos-hero-row">
-        <div>
+        <div className="pos-history-intro">
+          <small>REKAP TRANSAKSI</small>
           <h1>Histori Pesanan &amp; Audit Kasir</h1>
           <p>Rekap seluruh transaksi, nama kasir pelaksana, dan rincian pembayaran untuk keperluan audit owner.</p>
         </div>
-        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+        <div className="pos-history-actions">
           {app.data?.hasAuditPin && (
             <button
               type="button"
+              className="pos-history-lock-button"
               onClick={lockHistory}
               title="Kunci kembali akses audit"
-              style={{
-                background: "rgba(239, 68, 68, 0.1)",
-                color: "#dc2626",
-                border: "1px solid rgba(239, 68, 68, 0.3)",
-                borderRadius: "10px",
-                padding: "8px 14px",
-                fontWeight: 700,
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px"
-              }}
             >
-              🔒 Kunci Audit
+              <span aria-hidden="true">🔒</span> Kunci Audit
             </button>
           )}
-          <button onClick={() => void app.refresh()}><Icon name="refresh"/> Sinkronkan Data</button>
+          <button className="pos-history-sync-button" type="button" onClick={() => void app.refresh()}><Icon name="refresh"/> Sinkronkan</button>
         </div>
       </section>
 
@@ -588,90 +578,106 @@ export default function PosModulePage() {
 
       {/* Toolbar Filter & Pencarian */}
       <section className="pos-audit-toolbar">
+        <div className="pos-audit-toolbar-heading">
+          <div>
+            <strong>Temukan transaksi</strong>
+            <small>{filteredHistoryOrders.length} transaksi ditampilkan</small>
+          </div>
+          <span>{activeDateRange.label}</span>
+        </div>
         <label className="pos-audit-search">
           <Icon name="search"/>
           <input
             type="text"
             value={historySearch}
             onChange={(e) => setHistorySearch(e.target.value)}
-            placeholder="Cari kasir, meja, no. antrean, atau nama menu..."
+            placeholder="Cari kasir, meja, antrean, atau menu..."
           />
         </label>
 
         <div className="pos-audit-filters">
-          <div className="pos-audit-pill-group">
-            <button
-              className={historyDateFilter.mode === "today" ? "active" : ""}
-              onClick={() => setHistoryDateFilter({ mode: "today" })}
-            >
-              Hari Ini
-            </button>
-            <button
-              className={historyDateFilter.mode === "this_week" ? "active" : ""}
-              onClick={() => setHistoryDateFilter({ mode: "this_week" })}
-            >
-              Minggu Ini
-            </button>
-            <button
-              className={historyDateFilter.mode === "this_month" ? "active" : ""}
-              onClick={() => setHistoryDateFilter({ mode: "this_month" })}
-            >
-              Bulan Ini
-            </button>
-            <button
-              className={historyDateFilter.mode === "this_year" ? "active" : ""}
-              onClick={() => setHistoryDateFilter({ mode: "this_year" })}
-            >
-              Tahun Ini
-            </button>
-            <button
-              className={historyDateFilter.mode === "custom" || historyDateFilter.mode === "all" ? "active" : ""}
-              onClick={openDateFilterModal}
-            >
-              {historyDateFilter.mode === "custom" ? "Custom 📅" : "Lainnya ▾"}
-            </button>
+          <div className="pos-audit-filter-block">
+            <span>Periode</span>
+            <div className="pos-audit-pill-group">
+              <button
+                className={historyDateFilter.mode === "today" ? "active" : ""}
+                onClick={() => setHistoryDateFilter({ mode: "today" })}
+              >
+                Hari Ini
+              </button>
+              <button
+                className={historyDateFilter.mode === "this_week" ? "active" : ""}
+                onClick={() => setHistoryDateFilter({ mode: "this_week" })}
+              >
+                Minggu Ini
+              </button>
+              <button
+                className={historyDateFilter.mode === "this_month" ? "active" : ""}
+                onClick={() => setHistoryDateFilter({ mode: "this_month" })}
+              >
+                Bulan Ini
+              </button>
+              <button
+                className={historyDateFilter.mode === "this_year" ? "active" : ""}
+                onClick={() => setHistoryDateFilter({ mode: "this_year" })}
+              >
+                Tahun Ini
+              </button>
+              <button
+                className={historyDateFilter.mode === "custom" || historyDateFilter.mode === "all" ? "active" : ""}
+                onClick={openDateFilterModal}
+              >
+                {historyDateFilter.mode === "custom" ? "Custom 📅" : "Lainnya ▾"}
+              </button>
+            </div>
           </div>
 
-          <div className="pos-audit-pill-group">
-            <button
-              className={historyPaymentFilter === "ALL" ? "active" : ""}
-              onClick={() => setHistoryPaymentFilter("ALL")}
-            >
-              Semua Bayar
-            </button>
-            <button
-              className={historyPaymentFilter === "CASH" ? "active" : ""}
-              onClick={() => setHistoryPaymentFilter("CASH")}
-            >
-              Tunai
-            </button>
-            <button
-              className={historyPaymentFilter === "QRIS" ? "active" : ""}
-              onClick={() => setHistoryPaymentFilter("QRIS")}
-            >
-              QRIS
-            </button>
+          <div className="pos-audit-filter-block">
+            <span>Pembayaran</span>
+            <div className="pos-audit-pill-group">
+              <button
+                className={historyPaymentFilter === "ALL" ? "active" : ""}
+                onClick={() => setHistoryPaymentFilter("ALL")}
+              >
+                Semua
+              </button>
+              <button
+                className={historyPaymentFilter === "CASH" ? "active" : ""}
+                onClick={() => setHistoryPaymentFilter("CASH")}
+              >
+                Tunai
+              </button>
+              <button
+                className={historyPaymentFilter === "QRIS" ? "active" : ""}
+                onClick={() => setHistoryPaymentFilter("QRIS")}
+              >
+                QRIS
+              </button>
+            </div>
           </div>
 
-          <div className="pos-audit-pill-group">
-            <button
-              className={historyStatusFilter === "ALL" ? "active" : ""}
-              onClick={() => setHistoryStatusFilter("ALL")}
-            >
-              Semua Status
-            </button>
-            <button
-              className={historyStatusFilter === "DONE" ? "active" : ""}
-              onClick={() => setHistoryStatusFilter("DONE")}
-            >
-              Selesai
-            </button>
-            <button
-              className={historyStatusFilter === "COOKING" ? "active" : ""}
-              onClick={() => setHistoryStatusFilter("COOKING")}
-            >
-              Dapur
-            </button>
+          <div className="pos-audit-filter-block">
+            <span>Status</span>
+            <div className="pos-audit-pill-group">
+              <button
+                className={historyStatusFilter === "ALL" ? "active" : ""}
+                onClick={() => setHistoryStatusFilter("ALL")}
+              >
+                Semua
+              </button>
+              <button
+                className={historyStatusFilter === "DONE" ? "active" : ""}
+                onClick={() => setHistoryStatusFilter("DONE")}
+              >
+                Selesai
+              </button>
+              <button
+                className={historyStatusFilter === "COOKING" ? "active" : ""}
+                onClick={() => setHistoryStatusFilter("COOKING")}
+              >
+                Dapur
+              </button>
+            </div>
           </div>
         </div>
       </section>
@@ -781,6 +787,13 @@ export default function PosModulePage() {
 
       {/* Tampilan Mobile: Kartu Transaksi Adaptif Tanpa Scroll Horizontal */}
       <div className="pos-history-mobile-list" aria-label="Daftar transaksi histori mobile">
+        <div className="pos-history-list-heading">
+          <div>
+            <strong>Daftar transaksi</strong>
+            <small>Ketuk kartu untuk melihat detail struk</small>
+          </div>
+          <span>{filteredHistoryOrders.length}</span>
+        </div>
         {filteredHistoryOrders.length === 0 ? (
           <div className="pos-history-mobile-empty">
             <span className="pos-hme-icon">🔍</span>
