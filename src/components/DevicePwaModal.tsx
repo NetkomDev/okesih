@@ -75,7 +75,9 @@ export default function DevicePwaModal({ type, isOpen, onClose }: DevicePwaModal
     };
   }, [detectedInstalled, type]);
 
-  const visible = typeof isOpen === "boolean" ? isOpen : show;
+  // Popup manual dari header dan popup otomatis setelah pairing dapat hidup
+  // bersamaan; nilai false dari parent tidak boleh mematikan trigger pairing.
+  const visible = Boolean(isOpen) || show;
 
   const handleClose = () => {
     setShow(false);
@@ -85,7 +87,7 @@ export default function DevicePwaModal({ type, isOpen, onClose }: DevicePwaModal
   const handleInstallClick = async () => {
     const currentKind = installationKind(window.location.pathname);
     const outcome = await requestPwaInstallation(currentKind);
-    if (outcome === "accepted") {
+    if (outcome === "accepted" || outcome === "dismissed") {
       handleClose();
     } else if (outcome === "unavailable") {
       if (isIos) {

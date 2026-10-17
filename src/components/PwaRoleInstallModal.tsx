@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { PwaRoleKind, PWA_ROLE_CONFIGS, isStandaloneApp, type InstallationKind } from "@/lib/pwa-routing";
 import { requestPwaInstallation } from "@/lib/pwa-install";
+import { usePwaInstallStatus } from "@/lib/use-pwa-install-status";
 
 interface PwaRoleInstallModalProps {
   pwaKind: PwaRoleKind;
@@ -22,6 +23,7 @@ export default function PwaRoleInstallModal({
   const [installing, setInstalling] = useState(false);
 
   const config = PWA_ROLE_CONFIGS[pwaKind];
+  const detectedInstalled = usePwaInstallStatus(config.manifest);
   const appTitle = title || "Pasang Aplikasi Okesih.com";
   const appSubtitle =
     subtitle ||
@@ -29,7 +31,7 @@ export default function PwaRoleInstallModal({
   const storageKey = `okesih_install_dismissed_${pwaKind}`;
 
   useEffect(() => {
-    if (typeof window === "undefined" || !enabled) return;
+    if (typeof window === "undefined" || !enabled || detectedInstalled !== false) return;
 
     // Jangan tampilkan jika sudah diinstal (standalone) atau user sudah klik nanti di sesi ini
     const standalone = isStandaloneApp();
@@ -58,9 +60,9 @@ export default function PwaRoleInstallModal({
         window.clearTimeout(fallbackTimer);
       };
     }
-  }, [enabled, storageKey]);
+  }, [detectedInstalled, enabled, storageKey]);
 
-  if (!showModal) return null;
+  if (!showModal || detectedInstalled) return null;
 
   const handleInstallClick = async () => {
     setInstalling(true);

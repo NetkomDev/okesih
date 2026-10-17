@@ -78,7 +78,7 @@ export function installationKind(path: string): InstallationKind {
   if (/^\/kds(\/|$)/.test(path)) return "KDS";
   if (/^\/owner(\/|$)/.test(path)) return "OWNER";
   if (/^\/marketing(\/|$)/.test(path)) return "MARKETING";
-  if (/^\/superadmin(\/|$)/.test(path)) return "SUPERADMIN";
+  if (/^\/(superadmin|admin)(\/|$)/.test(path)) return "SUPERADMIN";
   return "DASHBOARD";
 }
 

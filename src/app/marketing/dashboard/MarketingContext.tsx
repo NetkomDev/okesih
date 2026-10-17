@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useCallback, useEffect, useState } from "react";
 import { useAuthGuard } from "@/lib/auth-helpers";
 import PwaRoleMismatchModal from "@/components/PwaRoleMismatchModal";
+import PwaRoleInstallModal from "@/components/PwaRoleInstallModal";
 
 
 
@@ -153,6 +154,7 @@ export function MarketingProvider({ children }: { children: React.ReactNode }) {
         isAuthorized,
       }}
     >
+      <PwaRoleInstallModal pwaKind="marketing" enabled={isAuthorized} />
       {children}
     </MarketingContext.Provider>
   );

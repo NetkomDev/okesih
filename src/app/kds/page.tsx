@@ -5,6 +5,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import DevicePairing from "@/components/DevicePairing";
 import DevicePwaModal from "@/components/DevicePwaModal";
 import { type DeviceOrder, useDeviceApp } from "@/lib/use-device-app";
+import { requestPwaInstallation } from "@/lib/pwa-install";
+import { usePwaInstallStatus } from "@/lib/use-pwa-install-status";
 
 function playKitchenBell(ctx: AudioContext) {
   const now = ctx.currentTime;
@@ -85,6 +87,7 @@ function playPesananSelesaiSound(ctx?: AudioContext | null) {
 
 export default function KdsModulePage() {
   const app = useDeviceApp("KDS");
+  const pwaInstalled = usePwaInstallStatus("/kds/manifest.webmanifest");
   const [busyId, setBusyId] = useState("");
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
@@ -280,6 +283,24 @@ export default function KdsModulePage() {
           <span className={app.online ? "kds-chip kds-online" : "kds-chip kds-offline"}>
             <i /> {app.online ? "Online" : "Offline"}
           </span>
+          {pwaInstalled === false && (
+            <button
+              type="button"
+              className="kds-btn"
+              title="Pasang aplikasi Dapur KDS"
+              onClick={async () => {
+                if (!window.__okesihInstallPrompt) {
+                  setPwaModalOpen(true);
+                  return;
+                }
+                const result = await requestPwaInstallation("KDS");
+                if (result === "unavailable") setPwaModalOpen(true);
+              }}
+            >
+              <span>📲</span>
+              <b>Pasang Aplikasi</b>
+            </button>
+          )}
           {app.pendingCount > 0 && (
             <span className="kds-chip kds-sync">
               ⚡ {app.pendingCount} antrean sync

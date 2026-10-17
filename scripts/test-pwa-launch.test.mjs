@@ -77,6 +77,7 @@ test("dedicated dashboards keep independent install identities", () => {
   assert.equal(installationKind("/marketing/dashboard"), "MARKETING");
   assert.equal(installationKind("/marketing/dashboard/komisi"), "MARKETING");
   assert.equal(installationKind("/superadmin"), "SUPERADMIN");
+  assert.equal(installationKind("/admin"), "SUPERADMIN");
   for (const path of ["/login", "/pos", "/kds", "/menu/risolinan", "/tv", "/ownership"]) {
     assert.equal(isDashboardLaunch(path), false, path);
   }
@@ -121,6 +122,20 @@ test("install prompt is consumed once and reads browser userChoice", async () =>
   assert.equal(await requestPwaInstallation("OWNER"), "accepted");
   assert.equal(prompted, 1);
   assert.equal(await requestPwaInstallation("OWNER"), "unavailable");
+  delete globalThis.window;
+});
+
+test("install prompt cannot be consumed by a different application kind", async () => {
+  let prompted = 0;
+  globalThis.window = {
+    __okesihInstallKind: "OWNER",
+    __okesihInstallPrompt: {
+      prompt: async () => { prompted += 1; },
+      userChoice: Promise.resolve({ outcome: "accepted", platform: "web" }),
+    },
+  };
+  assert.equal(await requestPwaInstallation("KDS"), "unavailable");
+  assert.equal(prompted, 0);
   delete globalThis.window;
 });
 

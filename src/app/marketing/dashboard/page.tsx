@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useState } from "react";
 import { INDONESIA_PROVINCES } from "@/lib/indonesia-regions";
 import { logoutUser } from "@/lib/auth-helpers";
-import PwaRoleInstallModal from "@/components/PwaRoleInstallModal";
 import { useMarketingData } from "./MarketingContext";
 import MarketingLoading from "./MarketingLoading";
 import "./marketing-dashboard.css";
@@ -59,7 +58,6 @@ export default function MarketingDashboardPage() {
 
   return (
     <main className="mkt-shell">
-      <PwaRoleInstallModal pwaKind="marketing" />
       <div className="mkt-container">
         {/* Latar Header Orange Full Bleed Melengkung di Belakang Card Header */}
         <div className="mkt-home-header-bg" aria-hidden="true" />

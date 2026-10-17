@@ -1,16 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { installationKind } from "@/lib/pwa-routing";
+import { installationKind, pwaKindForHostname, PWA_ROLE_CONFIGS } from "@/lib/pwa-routing";
 import { requestPwaInstallation } from "@/lib/pwa-install";
 import { usePwaInstallStatus } from "@/lib/use-pwa-install-status";
 
 export default function PwaInstallButton({ label = "Install Aplikasi", compact = false, onInstalled }: { label?: string; compact?: boolean; onInstalled?: () => void }) {
   const [available, setAvailable] = useState(false);
   const pathname = typeof window !== "undefined" ? window.location.pathname : "";
-  const detectedInstalled = usePwaInstallStatus(pathname.startsWith("/pos")
-    ? "/pos/manifest.webmanifest"
-    : pathname.startsWith("/kds") ? "/kds/manifest.webmanifest" : "/manifest.webmanifest");
+  const hostnameKind = typeof window !== "undefined" ? pwaKindForHostname(window.location.hostname) : null;
+  const manifestPath = hostnameKind
+    ? PWA_ROLE_CONFIGS[hostnameKind].manifest
+    : pathname.startsWith("/pos")
+      ? "/pos/manifest.webmanifest"
+      : pathname.startsWith("/kds")
+        ? "/kds/manifest.webmanifest"
+        : "/manifest.webmanifest";
+  const detectedInstalled = usePwaInstallStatus(manifestPath);
   const [installed, setInstalled] = useState(false);
 
   useEffect(() => {
@@ -26,7 +32,7 @@ export default function PwaInstallButton({ label = "Install Aplikasi", compact =
     return () => { window.clearTimeout(initialTimer); window.removeEventListener("okesih-install-ready", installReady); window.removeEventListener("appinstalled", appInstalled); };
   }, [onInstalled]);
 
-  if (installed || detectedInstalled) return null;
+  if (installed || detectedInstalled !== false) return null;
   return <button className={compact ? "pwa-install compact" : "pwa-install"} onClick={async () => {
     const currentKind = installationKind(window.location.pathname);
     if (available && window.__okesihInstallKind !== currentKind) {
@@ -36,7 +42,10 @@ export default function PwaInstallButton({ label = "Install Aplikasi", compact =
     }
     const outcome = await requestPwaInstallation(currentKind);
     setAvailable(false);
-    if (outcome === "accepted") onInstalled?.();
+    if (outcome === "accepted") {
+      setInstalled(true);
+      onInstalled?.();
+    }
     if (outcome === "unavailable") alert("Buka menu browser, lalu pilih ‘Instal aplikasi’ atau ‘Tambahkan ke layar utama’.");
   }}>{label}</button>;
 }

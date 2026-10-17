@@ -178,7 +178,7 @@ export default function PosModulePage() {
   // Pipeline Pesanan Masuk
   const [mobileTab, setMobileTab] = useState<"PENDING" | "COOKING" | "READY">("COOKING");
   const [ordersSearch, setOrdersSearch] = useState("");
-  const [ordersNow, setOrdersNow] = useState<number>(Date.now());
+  const [ordersNow, setOrdersNow] = useState<number>(() => Date.now());
 
   useEffect(() => {
     const timer = setInterval(() => setOrdersNow(Date.now()), 30000);

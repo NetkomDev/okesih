@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import { useState } from "react";
-import PwaInstallButton from "@/components/PwaInstallButton";
 
 export default function DevicePairing({ type, pairing, error, onBegin }: {
   type: "POS" | "KDS";
@@ -24,7 +23,6 @@ export default function DevicePairing({ type, pairing, error, onBegin }: {
         <h1>Masukkan kode ini di Dashboard Owner</h1><div className="device-pairing-code">{pairing.code}</div><p>Dashboard Owner → Perangkat &amp; PWA → Setujui Perangkat. Kode berlaku sampai {new Date(pairing.expiresAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}.</p><span className="device-pairing-wait">● Menunggu persetujuan Owner...</span>
       </>}
       {error && <div className="device-pairing-error">{error}</div>}
-      {type === "POS" && <PwaInstallButton label="Pasang Aplikasi Kasir"/>}
     </section>
   </main>;
 }
