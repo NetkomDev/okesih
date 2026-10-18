@@ -1686,36 +1686,43 @@
   .owner-shell .owner-topbar.is-home {
     align-content: flex-start;
     align-items: center;
-    min-height: 148px !important;
-    padding: 8px 16px 52px !important;
+    min-height: 168px !important;
+    padding: 10px 16px 64px !important;
   }
 
   .owner-topbar.is-home .owner-brand {
-    min-height: 64px;
+    min-height: 54px;
     align-items: center;
     gap: 12px;
   }
 
   .owner-topbar.is-home .owner-brand img {
-    width: 50px !important;
-    height: 50px !important;
+    width: 48px !important;
+    height: 48px !important;
     border-radius: 14px;
   }
 
   .owner-shell .owner-topbar.is-home .owner-brand strong {
-    font-size: 22px !important;
-    line-height: 1.12;
+    font-size: 21px !important;
+    line-height: 1.15;
   }
 
   .owner-topbar.is-home .owner-brand small {
     margin-top: 2px;
-    font-size: 11px;
+    font-size: 10.5px;
     line-height: 1.2;
   }
 
+  /* Garis horizontal pembatas: digeser naik rapat di bawah logo & nama usaha */
   .owner-topbar.is-home .owner-home-divider {
-    margin-top: 4px;
-    transform: translateY(-12px);
+    display: block !important;
+    flex-basis: 100% !important;
+    width: 100% !important;
+    height: 1px !important;
+    margin-top: 6px !important;
+    margin-bottom: 0 !important;
+    transform: translateY(-4px) !important;
+    opacity: 0.85;
   }
 
   .owner-shell .owner-topbar.is-subpage {
@@ -1727,10 +1734,10 @@
     padding-top: 2px;
   }
 
-  /* Geser ke atas judul Ringkasan Penjualan Hari Ini */
+  /* Urutan tampilan mobile: Header -> Garis Horisontal -> Judul Halaman (dengan margin turun sedikit) */
   .owner-shell .owner-topbar.is-home ~ .owner-main,
   .owner-shell:has(.is-home) .owner-main {
-    margin-top: -110px !important;
+    margin-top: -56px !important;
   }
 
   .owner-main {
@@ -1739,15 +1746,15 @@
   }
 
   #ringkasan > .owner-section-heading {
-    margin-top: -18px !important;
-    margin-bottom: 12px !important;
+    margin-top: 14px !important;
+    margin-bottom: 14px !important;
   }
 
   #ringkasan > .owner-section-heading h1 {
     font-size: 22.5px !important;
     letter-spacing: -0.03em !important;
     margin-top: 0 !important;
-    margin-bottom: 2px !important;
+    margin-bottom: 3px !important;
     color: #ffffff !important;
     text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
   }
@@ -1779,7 +1786,10 @@
     width: 100% !important;
     height: calc(64px + env(safe-area-inset-bottom, 12px)) !important;
     padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 12px)) !important;
+    display: flex !important;
     flex-direction: row !important;
+    align-items: center !important;
+    overflow: visible !important;
     z-index: 95 !important;
     background: rgba(11, 16, 24, 0.92) !important;
     backdrop-filter: blur(24px) saturate(190%) !important;
@@ -1805,11 +1815,14 @@
   .owner-sidebar nav {
     margin: 0 !important;
     display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
     align-items: center !important;
-    justify-content: space-around !important;
+    justify-content: space-between !important;
     width: 100% !important;
+    height: 100% !important;
     gap: 2px !important;
-    padding: 0 2px !important;
+    padding: 0 !important;
     overflow-x: auto !important;
     -webkit-overflow-scrolling: touch !important;
     scrollbar-width: none !important;
@@ -1820,9 +1833,9 @@
   }
 
   .owner-sidebar nav a {
-    flex: 1 0 auto !important;
-    min-width: 44px !important;
-    max-width: 60px !important;
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    max-width: 58px !important;
     height: 52px !important;
     padding: 3px 2px 4px !important;
     display: flex !important;
