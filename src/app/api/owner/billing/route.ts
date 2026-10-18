@@ -173,6 +173,7 @@ export async function POST(request: Request) {
         ocr_raw_text: JSON.stringify({
           engine: "tesseract-lstm",
           confidence: ocr.confidence,
+          durationMs: ocr.durationMs,
           extractedAmount: Number(billing.total_tagihan),
           extractedAmounts: ocr.extractedAmounts,
           uniqueCodeMatch: true,

@@ -1,54 +1,77 @@
 import { NextResponse } from "next/server";
 import { clientEnv } from "@/lib/env";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function GET() {
-  const startTime = Date.now();
-  let supabaseConnected = false;
-  let supabaseMessage = "Belum terkoneksi";
+  const startTime = performance.now();
+  let dbConnected = false;
+  let dbMessage = "Belum terverifikasi";
+  let dbLatencyMs = 0;
+  let lastUpdatedAt: string | null = null;
 
   try {
-    const supabase = await createServerSupabaseClient();
-    // Test ping auth status or server version
-    const { error } = await supabase.auth.getSession();
-    if (!error) {
-      supabaseConnected = true;
-      supabaseMessage = "Koneksi BaaS Supabase Aktif & Siap";
+    const admin = createAdminClient();
+    const queryStart = performance.now();
+
+    // Probe query database nyata ke tabel sistem platform_settings
+    // Menguji ketersediaan Postgres, PostgREST pool, dan keabsahan koneksi jaringan.
+    const { data, error } = await admin
+      .from("platform_settings")
+      .select("id, updated_at")
+      .eq("id", "global")
+      .limit(1)
+      .maybeSingle();
+
+    dbLatencyMs = Math.round(performance.now() - queryStart);
+
+    if (error) {
+      dbConnected = false;
+      dbMessage = `Database query error: ${error.message}`;
     } else {
-      supabaseMessage = `Respon Supabase: ${error.message}`;
+      dbConnected = true;
+      dbMessage = "Koneksi PostgreSQL aktif dan query responsif";
+      lastUpdatedAt = data?.updated_at || null;
     }
   } catch (err) {
-    supabaseMessage = err instanceof Error ? err.message : "Gagal inisialisasi client";
+    dbConnected = false;
+    dbMessage = err instanceof Error ? err.message : "Gagal inisialisasi koneksi database";
   }
 
-  const durationMs = Date.now() - startTime;
+  const totalDurationMs = Math.round(performance.now() - startTime);
+  const memUsage = process.memoryUsage();
+  const isHealthy = dbConnected;
 
-  return NextResponse.json(
-    {
-      status: "healthy",
-      service: "OKESIH.COM Core System",
-      version: "3.0-mvp",
-      timestamp: new Date().toISOString(),
-      supabase: {
-        url: clientEnv.NEXT_PUBLIC_SUPABASE_URL,
-        connected: supabaseConnected,
-        message: supabaseMessage,
-        latencyMs: durationMs,
-      },
-      pwa: {
-        manifest: "/manifest.webmanifest",
-        offlineFallback: "/~offline",
-      },
-      security: {
-        serviceRoleIsolated: true,
-        clientAnonGuarded: true,
-      },
+  const payload = {
+    status: isHealthy ? "healthy" : "unhealthy",
+    service: "OKESIH.COM Core System",
+    version: "3.0-p2",
+    timestamp: new Date().toISOString(),
+    database: {
+      url: clientEnv.NEXT_PUBLIC_SUPABASE_URL,
+      connected: dbConnected,
+      message: dbMessage,
+      latencyMs: dbLatencyMs,
+      lastSettingsUpdate: lastUpdatedAt,
+      probeTable: "platform_settings",
     },
-    {
-      status: 200,
-      headers: {
-        "Cache-Control": "no-store, max-age=0",
-      },
-    }
-  );
+    system: {
+      uptimeSeconds: Math.round(process.uptime()),
+      memoryRssMb: Math.round(memUsage.rss / 1024 / 1024),
+      memoryHeapUsedMb: Math.round(memUsage.heapUsed / 1024 / 1024),
+      nodeVersion: process.version,
+    },
+    subsystems: {
+      ocr: "tesseract-lstm/eng-isolated",
+      pwa: "serwist-multi-surface",
+      securityGuard: "active",
+    },
+    totalDurationMs,
+  };
+
+  return NextResponse.json(payload, {
+    status: isHealthy ? 200 : 503,
+    headers: {
+      "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+    },
+  });
 }

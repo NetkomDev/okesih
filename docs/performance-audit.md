@@ -67,6 +67,8 @@ Perhitungan dampak: tab terlihat dengan polling 3 detik menghasilkan sekitar 1.2
 
 ### P2 — OCR dan operasional
 
+**Ditindaklanjuti:** isolasi bundel Tesseract terverifikasi server-only, pengukuran empiris cold start/memori/konkurensi diterapkan dengan antrean serial dan timeout guard, serta endpoint health telah diubah menjadi probe query PostgreSQL nyata sesuai [rincian OCR dan operasional](ocr-and-operations.md). Poin di bawah merekam temuan baseline audit.
+
 - Tesseract dipakai pada server, bukan bukti bahwa seluruh browser mengunduh OCR. Worker/data OCR disertakan khusus route billing melalui tracing config.
 - `recognize()` menginisialisasi OCR untuk unggahan. Ukur cold start, memori, durasi, dan konkurensi sebelum memilih worker reuse atau antrean pekerjaan; pemakaian worker global tanpa pembatasan dapat memperburuk beban.
 - Endpoint health memakai `auth.getSession()` dan bukan probe query database. Hasilnya belum cukup sebagai bukti kesehatan database ataupun latency query.
