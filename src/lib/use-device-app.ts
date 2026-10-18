@@ -13,8 +13,10 @@ export type DeviceOrder = {
 
 export type DeviceBootstrap = {
   serverTime: string;
+  metadataVersion?: string;
+  metadataModified?: boolean;
   device: { id: string; name: string; type: "POS" | "KDS"; expiresAt: string };
-  profile: { id: string; nama: string; slug: string; is_active: boolean; logo_url: string | null; offline_limit_hours: number; queue_dismiss_seconds: number };
+  profile: { id: string; nama: string; slug: string; is_active: boolean; logo_url: string | null; offline_limit_hours: number; queue_dismiss_seconds: number; updated_at?: string };
   menus: { id: string; nama: string; harga: number; kategori: string; desc_menu: string | null; is_available: boolean }[];
   tables: { id: string; label: string }[];
   waiters: { id: string; name: string }[];
@@ -23,6 +25,14 @@ export type DeviceBootstrap = {
   historyOrders?: DeviceOrder[];
   hasAuditPin?: boolean;
 };
+
+function computeSnapshotVersion(item: DeviceBootstrap): string {
+  const ordersSummary = (item.orders || []).map((o) => `${o.id}:${o.status_pesanan}:${o.updated_at}`).join(";");
+  const historySummary = (item.historyOrders || []).map((o) => `${o.id}:${o.status_pesanan}:${o.updated_at}`).join(";");
+  const shiftKey = item.shift ? `${item.shift.id}:${item.shift.status}` : "none";
+  const metaVer = item.metadataVersion || item.profile?.updated_at || "";
+  return `${metaVer}|${shiftKey}|${ordersSummary}|${historySummary}`;
+}
 
 type Pairing = { pairingId: string; pollSecret: string; code: string; expiresAt: string };
 
@@ -82,14 +92,34 @@ export function useDeviceApp(type: "POS" | "KDS", includeHistory = true) {
     const pending = (async () => {
       try {
         const withHistory = includeHistory || !snapshot.current;
-        const response = await fetch(`/api/device/bootstrap${withHistory ? "" : "?history=0"}`, { cache: "no-store", headers: { "X-Device-Type": type } });
+        const currentMetaVer = snapshot.current?.metadataVersion || snapshot.current?.profile?.updated_at || "";
+        const queryParams = new URLSearchParams();
+        if (!withHistory) queryParams.set("history", "0");
+        if (currentMetaVer) queryParams.set("meta_version", currentMetaVer);
+
+        const response = await fetch(`/api/device/bootstrap?${queryParams.toString()}`, {
+          cache: "no-store",
+          headers: { "X-Device-Type": type },
+        });
         if (response.status === 401) { setAuthorized(false); setData(null); snapshot.current = null; await clearDeviceData(type); return; }
         const body = await response.json();
         if (!response.ok) throw new Error(body.error || "Data perangkat gagal dimuat.");
-        const next = { ...snapshot.current, ...body } as DeviceBootstrap;
+
+        // Jika metadata warkop tidak berubah, pertahankan daftar menu, meja, dan pelayan dari snapshot yang sudah ada
+        const next: DeviceBootstrap = {
+          ...snapshot.current,
+          ...body,
+          menus: body.menus ?? snapshot.current?.menus ?? [],
+          tables: body.tables ?? snapshot.current?.tables ?? [],
+          waiters: body.waiters ?? snapshot.current?.waiters ?? [],
+          metadataVersion: body.metadataVersion || snapshot.current?.metadataVersion,
+        };
+
         snapshot.current = next;
         setAuthorized(true); setData(next); setCachedAt(null); setError("");
-        await cacheDeviceSnapshot(type, next);
+
+        const dataVersion = computeSnapshotVersion(next);
+        await cacheDeviceSnapshot(type, next, { dataVersion });
         await flushQueue();
       } catch (reason) {
         const cached = await readDeviceSnapshot<DeviceBootstrap>(type);
@@ -111,10 +141,16 @@ export function useDeviceApp(type: "POS" | "KDS", includeHistory = true) {
     const timer = window.setInterval(refreshVisible, 3000);
     const handleOnline = () => { setOnline(true); refreshVisible(); };
     document.addEventListener("visibilitychange", refreshVisible);
-    const handleOffline = () => setOnline(false);
+    const handleOffline = () => {
+      setOnline(false);
+      if (snapshot.current) {
+        const dataVersion = computeSnapshotVersion(snapshot.current);
+        void cacheDeviceSnapshot(type, snapshot.current, { dataVersion, force: true });
+      }
+    };
     window.addEventListener("online", handleOnline); window.addEventListener("offline", handleOffline);
     return () => { window.clearTimeout(initialTimer); window.clearInterval(timer); document.removeEventListener("visibilitychange", refreshVisible); window.removeEventListener("online", handleOnline); window.removeEventListener("offline", handleOffline); };
-  }, [flushQueue, refresh]);
+  }, [flushQueue, refresh, type]);
 
   useEffect(() => {
     const profileId = data?.profile?.id;

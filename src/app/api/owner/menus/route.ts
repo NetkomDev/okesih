@@ -1,4 +1,4 @@
-import { ownerErrorResponse, requireOwner } from "@/lib/owner-api";
+import { ownerErrorResponse, requireOwner, touchWarkopUpdatedAt } from "@/lib/owner-api";
 
 function normalizeCategory(value: unknown) {
   const category = String(value || "").trim().replace(/\s+/g, " ");
@@ -14,6 +14,7 @@ export async function POST(request: Request) {
     if (!category) return Response.json({ error: "Kategori wajib diisi dan maksimal 50 karakter." }, { status: 400 });
     const { data, error } = await admin.from("menus").insert({ warkop_id: warkopId, nama: String(body.name).trim(), harga: Number(body.price), kategori: category, desc_menu: String(body.description || "-").trim(), is_available: true }).select().single();
     if (error) throw error;
+    await touchWarkopUpdatedAt(admin, warkopId);
     return Response.json({ data });
   } catch (error) { return ownerErrorResponse(error); }
 }
@@ -35,6 +36,7 @@ export async function PATCH(request: Request) {
     if (Object.keys(updates).length === 0) return Response.json({ error: "Tidak ada perubahan menu yang dikirim." }, { status: 400 });
     const { data, error } = await admin.from("menus").update(updates).eq("id", body.id).eq("warkop_id", warkopId).select().single();
     if (error) throw error;
+    await touchWarkopUpdatedAt(admin, warkopId);
     return Response.json({ data });
   } catch (error) { return ownerErrorResponse(error); }
 }
@@ -46,6 +48,7 @@ export async function DELETE(request: Request) {
     if (!id) return Response.json({ error: "ID menu wajib diisi." }, { status: 400 });
     const { error } = await admin.from("menus").delete().eq("id", id).eq("warkop_id", warkopId);
     if (error) throw error;
+    await touchWarkopUpdatedAt(admin, warkopId);
     return Response.json({ success: true });
   } catch (error) { return ownerErrorResponse(error); }
 }

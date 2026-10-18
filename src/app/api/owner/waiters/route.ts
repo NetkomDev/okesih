@@ -1,4 +1,4 @@
-import { ownerErrorResponse, requireOwner } from "@/lib/owner-api";
+import { ownerErrorResponse, requireOwner, touchWarkopUpdatedAt } from "@/lib/owner-api";
 
 export async function POST(request: Request) {
   try {
@@ -8,6 +8,7 @@ export async function POST(request: Request) {
     if (!name) return Response.json({ error: "Nama waiter wajib diisi." }, { status: 400 });
     const { data, error } = await admin.from("waiters").insert({ warkop_id: warkopId, name, phone: String(body.phone || "").trim() || null }).select().single();
     if (error) throw error;
+    await touchWarkopUpdatedAt(admin, warkopId);
     return Response.json({ data });
   } catch (error) { return ownerErrorResponse(error); }
 }
@@ -18,6 +19,7 @@ export async function DELETE(request: Request) {
     const id = new URL(request.url).searchParams.get("id");
     const { error } = await admin.from("waiters").delete().eq("id", id).eq("warkop_id", warkopId);
     if (error) throw error;
+    await touchWarkopUpdatedAt(admin, warkopId);
     return Response.json({ success: true });
   } catch (error) { return ownerErrorResponse(error); }
 }

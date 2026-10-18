@@ -13,12 +13,131 @@ declare const self: ServiceWorkerGlobalScope;
 
 const PRIVILEGED_HOSTS = new Set(["admin.okesih.com", "owner.okesih.com", "sales.okesih.com"]);
 
-const OFFLINE_HTML = `<!DOCTYPE html>
+/**
+ * Filter manifest precache per origin:
+ * - POS/KDS tidak mem-precache chunk superadmin/owner/marketing untuk menghemat storage dan bandwidth.
+ * - Tetap mempertahankan 100% chunk core, CSS, fonts, audio, dan layout yang dibutuhkan untuk offline.
+ */
+function filterPrecacheByOrigin(manifest: (PrecacheEntry | string)[] | undefined): (PrecacheEntry | string)[] | undefined {
+  if (!manifest || !Array.isArray(manifest)) return manifest;
+
+  const hostname = self.location.hostname;
+  const isPos = hostname === "pos.okesih.com";
+  const isKds = hostname === "kds.okesih.com";
+  const isPrivileged = PRIVILEGED_HOSTS.has(hostname);
+  const isPublic = hostname === "okesih.com" || hostname === "www.okesih.com";
+
+  // Pada localhost / preview vercel: pertahankan seluruh manifest agar preview terpadu tetap lengkap
+  if (!isPos && !isKds && !isPrivileged && !isPublic) {
+    return manifest;
+  }
+
+  return manifest.filter((entry) => {
+    const url = typeof entry === "string" ? entry : entry.url;
+
+    // Aset inti framework, CSS, media, audio, icons: selalu di-cache untuk semua surface
+    const isCore =
+      url.includes("/framework-") ||
+      url.includes("/main-") ||
+      url.includes("/main-app-") ||
+      url.includes("/webpack-") ||
+      url.includes("/polyfills-") ||
+      url.startsWith("/_next/static/css/") ||
+      url.startsWith("/_next/static/media/") ||
+      url.startsWith("/sound/") ||
+      url.startsWith("/icons/") ||
+      url === "/favicon.svg" ||
+      url === "/logo.svg" ||
+      url.includes("/app/layout-") ||
+      url.includes("/app/~offline/") ||
+      url.includes("/components/builtin/");
+
+    if (isCore) return true;
+
+    if (isPos) {
+      if (url.includes("/app/pos/")) return true;
+      if (url === "/manifest-pos.webmanifest") return true;
+      // Jangan simpan chunk fitur lain di perangkat kasir
+      if (
+        url.includes("/app/superadmin/") ||
+        url.includes("/app/owner/") ||
+        url.includes("/app/marketing/") ||
+        url.includes("/app/kds/") ||
+        url.includes("/app/tv/") ||
+        url.includes("/app/menu/") ||
+        url.includes("/manifest-")
+      ) {
+        return false;
+      }
+      return true;
+    }
+
+    if (isKds) {
+      if (url.includes("/app/kds/")) return true;
+      if (url === "/manifest-kds.webmanifest") return true;
+      // Jangan simpan chunk fitur lain di layar dapur
+      if (
+        url.includes("/app/superadmin/") ||
+        url.includes("/app/owner/") ||
+        url.includes("/app/marketing/") ||
+        url.includes("/app/pos/") ||
+        url.includes("/app/tv/") ||
+        url.includes("/app/menu/") ||
+        url.includes("/manifest-")
+      ) {
+        return false;
+      }
+      return true;
+    }
+
+    if (isPrivileged) {
+      // Dashboard sensitif tidak disimpan offline secara permanen
+      if (url.includes("/app/superadmin/") || url.includes("/app/owner/") || url.includes("/app/marketing/")) {
+        return false;
+      }
+      return true;
+    }
+
+    if (isPublic) {
+      if (
+        url.includes("/app/superadmin/") ||
+        url.includes("/app/owner/") ||
+        url.includes("/app/pos/") ||
+        url.includes("/app/kds/")
+      ) {
+        return false;
+      }
+      return true;
+    }
+
+    return true;
+  });
+}
+
+function createOfflineCard(config: {
+  title: string;
+  desc: string;
+  primaryActionLabel: string;
+  primaryActionUrl?: string;
+  secondaryActionLabel?: string;
+  secondaryActionUrl?: string;
+  badgeText: string;
+  reloadTarget: string;
+}): string {
+  const primaryOnClick = config.primaryActionUrl
+    ? `window.location.href='${config.primaryActionUrl}'`
+    : `window.location.reload()`;
+
+  const secondaryBtn = config.secondaryActionLabel && config.secondaryActionUrl
+    ? `<a class="btn-secondary" href="${config.secondaryActionUrl}">${config.secondaryActionLabel}</a>`
+    : "";
+
+  return `<!DOCTYPE html>
 <html lang="id">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>Kasir OKESIH · Mode Cadangan Offline</title>
+  <title>${config.title} · OKESIH</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -109,13 +228,13 @@ const OFFLINE_HTML = `<!DOCTYPE html>
 <body>
   <div class="card">
     <div class="icon">📶</div>
-    <h1>Koneksi Kasir Terputus</h1>
-    <p>Aplikasi kasir sedang offline atau koneksi internet tersendat. Silakan muat ulang saat jaringan stabil, atau buka kembali halaman kasir.</p>
+    <h1>${config.title}</h1>
+    <p>${config.desc}</p>
     <div class="actions">
-      <button class="btn-primary" onclick="window.location.reload()">Muat Ulang Kasir</button>
-      <a class="btn-secondary" href="/pos">Buka Layar Kasir</a>
+      <button class="btn-primary" onclick="${primaryOnClick}">${config.primaryActionLabel}</button>
+      ${secondaryBtn}
     </div>
-    <div class="status-badge" id="online-status">Menunggu koneksi internet...</div>
+    <div class="status-badge" id="online-status">${config.badgeText}</div>
   </div>
   <script>
     window.addEventListener("online", function() {
@@ -124,14 +243,65 @@ const OFFLINE_HTML = `<!DOCTYPE html>
         badge.innerText = "✓ Terhubung kembali! Memuat ulang...";
         badge.style.color = "#10b981";
       }
-      setTimeout(function() { window.location.href = "/pos"; }, 600);
+      setTimeout(function() { window.location.href = "${config.reloadTarget}"; }, 600);
     });
   </script>
 </body>
 </html>`;
+}
+
+function getOfflineHtml(surface: "POS" | "KDS" | "PRIVILEGED" | "PUBLIC", pathname: string): string {
+  if (surface === "POS") {
+    return createOfflineCard({
+      title: "Koneksi Kasir Terputus",
+      desc: "Aplikasi kasir sedang offline atau koneksi internet tersendat. Perangkat tetap dapat beroperasi dengan batas offline yang aktif.",
+      primaryActionLabel: "Muat Ulang Kasir",
+      secondaryActionLabel: "Buka Layar Kasir",
+      secondaryActionUrl: "/pos",
+      badgeText: "Mode Offline Kasir Aktif",
+      reloadTarget: "/pos",
+    });
+  }
+
+  if (surface === "KDS") {
+    return createOfflineCard({
+      title: "Koneksi Layar Dapur Terputus",
+      desc: "Layar dapur (KDS) sedang offline atau koneksi internet tersendat. Pesanan yang telah disinkronkan tetap dapat dikerjakan.",
+      primaryActionLabel: "Muat Ulang Dapur",
+      secondaryActionLabel: "Buka Layar Dapur",
+      secondaryActionUrl: "/kds",
+      badgeText: "Mode Offline Dapur Aktif",
+      reloadTarget: "/kds",
+    });
+  }
+
+  if (surface === "PRIVILEGED") {
+    return createOfflineCard({
+      title: "Koneksi Dashboard Terputus",
+      desc: "Akses dashboard pengelolaan memerlukan koneksi internet stabil demi keamanan dan integritas data warkop.",
+      primaryActionLabel: "Coba Sambungkan Kembali",
+      secondaryActionLabel: "Kembali ke Beranda",
+      secondaryActionUrl: "/",
+      badgeText: "Memerlukan Internet",
+      reloadTarget: pathname,
+    });
+  }
+
+  return createOfflineCard({
+    title: "Koneksi Internet Terputus",
+    desc: "Halaman tidak dapat dimuat karena perangkat Anda sedang tidak terhubung ke internet. Periksa koneksi data atau Wi-Fi Anda.",
+    primaryActionLabel: "Coba Muat Ulang",
+    secondaryActionLabel: "Buka Beranda",
+    secondaryActionUrl: "/",
+    badgeText: "Menunggu koneksi internet...",
+    reloadTarget: pathname,
+  });
+}
+
+const filteredManifest = filterPrecacheByOrigin(self.__SW_MANIFEST);
 
 const serwist = new Serwist({
-  precacheEntries: self.__SW_MANIFEST,
+  precacheEntries: filteredManifest,
   skipWaiting: true,
   clientsClaim: true,
   navigationPreload: true,
@@ -177,37 +347,62 @@ const serwist = new Serwist({
   },
 });
 
-// Tangkap semua unhandled error di Serwist agar browser TIDAK PERNAH menampilkan error "This page couldn't load"
+// Tangkap semua unhandled error di Serwist dengan pemisahan fallback sesuai surface
 serwist.setCatchHandler(async ({ request }) => {
   if (request.mode === "navigate" || request.destination === "document") {
-    const isPrivilegedOrigin = PRIVILEGED_HOSTS.has(new URL(request.url).hostname);
-    if (isPrivilegedOrigin) {
+    const url = new URL(request.url);
+    const pathname = url.pathname;
+    const hostname = url.hostname;
+
+    const isPos = hostname === "pos.okesih.com" || pathname.startsWith("/pos");
+    const isKds = hostname === "kds.okesih.com" || pathname.startsWith("/kds");
+    const isPrivileged =
+      PRIVILEGED_HOSTS.has(hostname) ||
+      pathname.startsWith("/admin") ||
+      pathname.startsWith("/owner") ||
+      pathname.startsWith("/marketing/dashboard");
+
+    const surfaceKind: "POS" | "KDS" | "PRIVILEGED" | "PUBLIC" = isPos
+      ? "POS"
+      : isKds
+        ? "KDS"
+        : isPrivileged
+          ? "PRIVILEGED"
+          : "PUBLIC";
+
+    // 1. Dashboard sensitif tidak pernah disajikan dari cache kadaluwarsa
+    if (isPrivileged) {
       const offlineMatched = await caches.match("/~offline");
       if (offlineMatched) return offlineMatched;
-      return new Response(OFFLINE_HTML, {
+      return new Response(getOfflineHtml("PRIVILEGED", pathname), {
         status: 503,
         headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" },
       });
     }
 
-    // 1. Coba cari di cache 'pages-navigation' untuk URL yang diminta
+    // 2. Coba cari di cache 'pages-navigation' untuk URL yang diminta persis
     const navCache = await caches.open("pages-navigation");
     const matched = await navCache.match(request);
     if (matched) return matched;
 
-    // 2. Coba cari di cache untuk '/pos' atau URL tanpa query param
-    const posMatched = await navCache.match("/pos");
-    if (posMatched) return posMatched;
+    // 3. Fallback cache KHUSUS SESUAI SURFACE (POS hanya fallback ke /pos, KDS hanya ke /kds, publik TIDAK PERNAH ke /pos)
+    if (isPos) {
+      const posMatched = await navCache.match("/pos");
+      if (posMatched) return posMatched;
+    } else if (isKds) {
+      const kdsMatched = await navCache.match("/kds");
+      if (kdsMatched) return kdsMatched;
+    }
 
-    // 3. Coba cari di cache bawaan
+    // 4. Coba cari di cache bawaan untuk request tersebut
     const anyMatched = await caches.match(request);
     if (anyMatched) return anyMatched;
 
     const offlineMatched = await caches.match("/~offline");
     if (offlineMatched) return offlineMatched;
 
-    // 4. Fallback mutlak: Sajikan halaman offline emergency dengan HTTP 200
-    return new Response(OFFLINE_HTML, {
+    // 5. Fallback darurat: sajikan dokumen offline sesuai surface (bukan halaman kasir untuk semua rute)
+    return new Response(getOfflineHtml(surfaceKind, pathname), {
       status: 200,
       headers: {
         "Content-Type": "text/html; charset=utf-8",
@@ -219,12 +414,19 @@ serwist.setCatchHandler(async ({ request }) => {
   return Response.error();
 });
 
-// Pre-warming cache untuk /pos dan /~offline saat service worker diinstal
+// Pre-warming cache sesuai surface saat service worker diinstal
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open("pages-navigation").then(async (cache) => {
       try {
-        await cache.addAll(["/~offline"]);
+        const hostname = self.location.hostname;
+        const prewarmUrls = ["/~offline"];
+        if (hostname === "pos.okesih.com") {
+          prewarmUrls.push("/pos");
+        } else if (hostname === "kds.okesih.com") {
+          prewarmUrls.push("/kds");
+        }
+        await cache.addAll(prewarmUrls);
       } catch {
         // Abaikan jika saat install sedang offline
       }
@@ -240,3 +442,4 @@ self.addEventListener("message", (event) => {
 });
 
 serwist.addEventListeners();
+

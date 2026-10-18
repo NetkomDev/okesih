@@ -49,17 +49,89 @@ function requestValue<T>(request: IDBRequest<T>): Promise<T> {
   });
 }
 
-export async function cacheDeviceSnapshot(type: "POS" | "KDS", value: unknown) {
+export type StoredSnapshot<T> = {
+  value: T;
+  cachedAt: string;
+  dataVersion?: string;
+};
+
+// Tracking versi snapshot in-memory per tipe perangkat untuk deduplikasi I/O
+const lastSnapshotMeta = new Map<string, { dataVersion: string; cachedAtTime: number }>();
+
+export async function cacheDeviceSnapshot(
+  type: "POS" | "KDS",
+  value: unknown,
+  options?: { dataVersion?: string; force?: boolean }
+) {
+  const now = new Date();
+  const nowTime = now.getTime();
+  const currentVersion = options?.dataVersion;
+  const lastState = lastSnapshotMeta.get(type);
+
+  // Jika versi data tidak berubah dan waktu tulis terakhir kurang dari 30 detik:
+  // Lewati serialisasi dan penulisan ulang seluruh struktur objek ke IndexedDB untuk menghemat disk I/O,
+  // sambil tetap menjamin batas izin offline diperbarui secara berkala (< 30 detik) atau saat force=true.
+  if (
+    !options?.force &&
+    currentVersion &&
+    lastState &&
+    lastState.dataVersion === currentVersion &&
+    nowTime - lastState.cachedAtTime < 30_000
+  ) {
+    return;
+  }
+
   const db = await openDatabase();
   const transaction = db.transaction(STORE_CACHE, "readwrite");
   const done = transactionDone(transaction);
-  transaction.objectStore(STORE_CACHE).put({ value, cachedAt: new Date().toISOString() }, type);
+  transaction.objectStore(STORE_CACHE).put(
+    {
+      value,
+      cachedAt: now.toISOString(),
+      dataVersion: currentVersion,
+    },
+    type
+  );
   await done;
+
+  if (currentVersion) {
+    lastSnapshotMeta.set(type, { dataVersion: currentVersion, cachedAtTime: nowTime });
+  }
+}
+
+export async function touchDeviceSnapshotTime(type: "POS" | "KDS") {
+  const cached = await readDeviceSnapshot<unknown>(type);
+  if (!cached || !cached.value) return;
+  const now = new Date();
+  const db = await openDatabase();
+  const transaction = db.transaction(STORE_CACHE, "readwrite");
+  const done = transactionDone(transaction);
+  transaction.objectStore(STORE_CACHE).put(
+    {
+      value: cached.value,
+      cachedAt: now.toISOString(),
+      dataVersion: cached.dataVersion,
+    },
+    type
+  );
+  await done;
+  if (cached.dataVersion) {
+    lastSnapshotMeta.set(type, { dataVersion: cached.dataVersion, cachedAtTime: now.getTime() });
+  }
 }
 
 export async function readDeviceSnapshot<T>(type: "POS" | "KDS") {
   const db = await openDatabase();
-  return requestValue<{ value: T; cachedAt: string } | undefined>(db.transaction(STORE_CACHE).objectStore(STORE_CACHE).get(type));
+  const record = await requestValue<StoredSnapshot<T> | undefined>(
+    db.transaction(STORE_CACHE).objectStore(STORE_CACHE).get(type)
+  );
+  if (record?.dataVersion) {
+    lastSnapshotMeta.set(type, {
+      dataVersion: record.dataVersion,
+      cachedAtTime: new Date(record.cachedAt).getTime(),
+    });
+  }
+  return record;
 }
 
 export async function enqueueDeviceOperation(operation: QueuedOperation) {

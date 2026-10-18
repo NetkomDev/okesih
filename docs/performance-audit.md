@@ -56,6 +56,8 @@ Perhitungan dampak: tab terlihat dengan polling 3 detik menghasilkan sekitar 1.2
 
 ### P2 — Data, autentikasi, dan offline
 
+**Ditindaklanjuti:** optimasi proxy auth, pemisahan metadata berversi POS, deduplikasi snapshot IndexedDB, deduplikasi MarketingProvider, audit manifest precache per origin, serta pemisahan fallback navigasi service worker telah diterapkan sesuai [rincian data, autentikasi, dan offline](data-auth-offline.md). Poin di bawah merekam temuan baseline audit.
+
 - Proxy memanggil `auth.getUser()` untuk setiap request yang cocok, termasuk sebagian API yang melakukan autentikasi lagi. Ukur jumlah validasi jaringan untuk request bersesi; pengguna anonim tidak selalu menyebabkan panggilan auth jaringan. Optimasi harus mempertahankan guard superadmin dan penyegaran cookie.
 - Metadata menu/meja/pelayan POS masih dikirim setiap polling. Pisahkan metadata berversi dari pesanan setelah ada invalidasi perubahan owner yang jelas.
 - Snapshot masih ditulis pada setiap refresh sukses. Deduplikasi berdasarkan versi data dapat mengurangi I/O, tetapi waktu validasi izin offline harus tetap diperbarui terpisah; melewati write sembarangan bisa mengubah batas offline.

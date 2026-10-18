@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useCallback, useEffect, useState } from "react";
+import React, { createContext, useContext, useCallback, useEffect, useRef, useState } from "react";
 import { useAuthGuard } from "@/lib/auth-helpers";
 import PwaRoleMismatchModal from "@/components/PwaRoleMismatchModal";
 import PwaRoleInstallModal from "@/components/PwaRoleInstallModal";
@@ -95,44 +95,77 @@ export function MarketingProvider({ children }: { children: React.ReactNode }) {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
 
-  const refresh = useCallback(async () => {
+  const refreshInFlight = useRef<Promise<void> | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const lastSyncTime = useRef<number>(0);
+
+  const refresh = useCallback(async (): Promise<void> => {
+    if (refreshInFlight.current) return refreshInFlight.current;
+
     setRefreshing(true);
-    try {
-      const response = await fetch("/api/marketing/dashboard", { cache: "no-store" });
-      const payload = await response.json();
-      if (!response.ok) {
-        throw new Error(payload.error || "Gagal memuat data marketing.");
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    const promise = (async () => {
+      try {
+        const response = await fetch("/api/marketing/dashboard", {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        const payload = await response.json();
+        if (!response.ok) {
+          throw new Error(payload.error || "Gagal memuat data marketing.");
+        }
+        setData(payload.data);
+        setError("");
+      } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") {
+          return;
+        }
+        setError(err instanceof Error ? err.message : "Terjadi kesalahan sinkronisasi data.");
+      } finally {
+        setDataLoading(false);
+        setRefreshing(false);
+        refreshInFlight.current = null;
       }
-      setData(payload.data);
-      setError("");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Terjadi kesalahan sinkronisasi data.");
-    } finally {
-      setDataLoading(false);
-      setRefreshing(false);
-    }
+    })();
+
+    refreshInFlight.current = promise;
+    return promise;
   }, []);
+
+  // Batalkan request in-flight saat otorisasi dicabut (misal logout atau ganti akun)
+  useEffect(() => {
+    if (!isAuthorized) {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      refreshInFlight.current = null;
+    }
+  }, [isAuthorized]);
 
   useEffect(() => {
     if (!isAuthorized) return;
     queueMicrotask(() => void refresh());
 
-    // Auto-sync data saat PWA dibuka kembali atau kembali aktif
-    const onVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        void refresh();
-      }
-    };
-    const onFocus = () => {
+    // Auto-sync data saat PWA dibuka kembali atau kembali aktif dengan deduplikasi & throttle
+    const handleForegroundEvent = () => {
+      if (document.visibilityState !== "visible") return;
+      const now = Date.now();
+      if (now - lastSyncTime.current < 2000) return;
+      lastSyncTime.current = now;
       void refresh();
     };
 
-    window.addEventListener("visibilitychange", onVisibilityChange);
-    window.addEventListener("focus", onFocus);
+    window.addEventListener("visibilitychange", handleForegroundEvent);
+    window.addEventListener("focus", handleForegroundEvent);
 
     return () => {
-      window.removeEventListener("visibilitychange", onVisibilityChange);
-      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("visibilitychange", handleForegroundEvent);
+      window.removeEventListener("focus", handleForegroundEvent);
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
     };
   }, [isAuthorized, refresh]);
 
@@ -145,13 +178,15 @@ export function MarketingProvider({ children }: { children: React.ReactNode }) {
     );
   }
 
+  const activeData = isAuthorized ? data : null;
+
   return (
     <MarketingContext.Provider
       value={{
-        data,
-        loading: authLoading || (dataLoading && !data),
+        data: activeData,
+        loading: authLoading || (dataLoading && !activeData),
         refreshing,
-        error,
+        error: isAuthorized ? error : "",
         refresh,
         isAuthorized,
       }}

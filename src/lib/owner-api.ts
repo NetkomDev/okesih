@@ -29,6 +29,17 @@ export class OwnerApiError extends Error {
   }
 }
 
+export async function touchWarkopUpdatedAt(admin: ReturnType<typeof createAdminClient>, warkopId: string) {
+  try {
+    await admin
+      .from("warkops")
+      .update({ updated_at: new Date().toISOString() })
+      .eq("id", warkopId);
+  } catch {
+    // Non-blocking: kegagalan menyentuh timestamp tidak boleh menggagalkan mutasi data utama
+  }
+}
+
 export function ownerErrorResponse(error: unknown) {
   const status = error instanceof OwnerApiError
     ? error.status
@@ -38,3 +49,4 @@ export function ownerErrorResponse(error: unknown) {
   const message = error instanceof Error ? error.message : "Terjadi kesalahan internal.";
   return Response.json({ error: message }, { status });
 }
+

@@ -1,5 +1,5 @@
 import { assertSameOrigin } from "@/lib/device-auth";
-import { ownerErrorResponse, OwnerApiError, requireOwner } from "@/lib/owner-api";
+import { ownerErrorResponse, OwnerApiError, requireOwner, touchWarkopUpdatedAt } from "@/lib/owner-api";
 
 export async function POST(request: Request) {
   try {
@@ -30,6 +30,7 @@ export async function POST(request: Request) {
     }));
     const { data, error } = await admin.from("warkop_tables").upsert(rows, { onConflict: "warkop_id,label", ignoreDuplicates: true }).select();
     if (error) throw error;
+    await touchWarkopUpdatedAt(admin, warkopId);
     return Response.json({ data });
   } catch (error) { return ownerErrorResponse(error); }
 }
@@ -87,6 +88,7 @@ export async function PATCH(request: Request) {
       .single();
 
     if (error) throw error;
+    await touchWarkopUpdatedAt(admin, warkopId);
     return Response.json({ data });
   } catch (error) { return ownerErrorResponse(error); }
 }
@@ -100,6 +102,7 @@ export async function DELETE(request: Request) {
     const { data, error } = await admin.from("warkop_tables").delete().eq("id", id).eq("warkop_id", warkopId).select("id").maybeSingle();
     if (error) throw error;
     if (!data) throw new OwnerApiError("Meja tidak ditemukan.", 404);
+    await touchWarkopUpdatedAt(admin, warkopId);
     return Response.json({ success: true });
   } catch (error) { return ownerErrorResponse(error); }
 }

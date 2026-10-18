@@ -26,10 +26,59 @@ function copyResponseCookies(source: NextResponse, target: NextResponse) {
 }
 
 /**
- * Menyegarkan (refresh) token sesi Supabase pada setiap request yang lewat middleware.
- * Memastikan cookies auth selalu valid dan tidak kedaluwarsa.
+ * Memeriksa apakah request membawa cookie sesi auth Supabase.
+ * Cookie Supabase SSR biasanya dinamai 'sb-<project-ref>-auth-token' atau berakhiran '-auth-token'.
+ */
+export function hasSupabaseAuthSession(request: NextRequest): boolean {
+  return request.cookies.getAll().some(
+    (cookie) => cookie.name.includes("-auth-token") || cookie.name.startsWith("sb-")
+  );
+}
+
+/**
+ * Menyegarkan (refresh) token sesi Supabase pada request yang relevan.
+ * Memastikan cookies auth selalu valid dan tidak kedaluwarsa untuk request bersesi,
+ * serta menjaga guard Super Admin dan Protected Dashboards.
  */
 export async function updateSession(request: NextRequest) {
+  const path = request.nextUrl.pathname;
+
+  // 1. Route perangkat POS & KDS tidak menggunakan sesi akun Supabase (menggunakan pairing cookie perangkat).
+  // Melewati pemanggilan auth.getUser() di proxy menghindari validasi jaringan berulang setiap polling 3 detik.
+  if (path.startsWith("/api/device/") || path === "/pos" || path === "/kds") {
+    return NextResponse.next({ request });
+  }
+
+  const isSuperAdminApi = path === "/api/superadmin" || path.startsWith("/api/superadmin/");
+  const protectedSurface = getProtectedSurface(path);
+  const hasSessionCookie = hasSupabaseAuthSession(request);
+
+  // 2. Jika request sama sekali tidak membawa cookie auth Supabase:
+  // - Untuk Super Admin API: tolak seketika tanpa network overhead.
+  // - Untuk Protected Dashboard: redirect seketika ke /login tanpa network overhead.
+  // - Untuk route publik: teruskan request langsung tanpa inisialisasi client Supabase.
+  if (!hasSessionCookie) {
+    if (isSuperAdminApi) {
+      return NextResponse.json(
+        { error: "Akses khusus Super Admin." },
+        { status: 401 }
+      );
+    }
+
+    if (protectedSurface) {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = "/login";
+      redirectUrl.search = "";
+      redirectUrl.searchParams.set("error", "login_required");
+      redirectUrl.searchParams.set("from_pwa", protectedSurface.pwa);
+      return NextResponse.redirect(redirectUrl);
+    }
+
+    return NextResponse.next({ request });
+  }
+
+  // 3. Request bersesi: inisialisasi client Supabase SSR untuk menyegarkan token
+  // dan memvalidasi izin akses sesuai peran.
   let supabaseResponse = NextResponse.next({
     request,
   });
@@ -57,12 +106,7 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  // Menyegarkan sesi auth sekaligus mengunci dashboard berdasarkan perannya.
-  // Client guard tetap dipertahankan sebagai lapisan UX.
   const { data: { user } } = await supabase.auth.getUser();
-  const path = request.nextUrl.pathname;
-  const isSuperAdminApi = path === "/api/superadmin" || path.startsWith("/api/superadmin/");
-  const protectedSurface = getProtectedSurface(path);
 
   if (isSuperAdminApi) {
     if (!user || getTrustedUserRole(user) !== "SUPERADMIN") {
