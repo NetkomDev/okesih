@@ -5,6 +5,7 @@ import { cacheDeviceSnapshot, clearDeviceData, enqueueDeviceOperation, listDevic
 import { createCashierClient, createClient } from "@/lib/supabase/client";
 
 export type DeviceOrder = {
+  cashier_name?: string;
   id: string; table_number: string; nomor_antrean: number; total_harga: number; payment_method: "QRIS" | "CASH";
   payment_proof_url: string | null; status_pesanan: string; waiter_name: string | null; created_at: string; updated_at: string;
   items: { id: string; nama_menu: string; harga_satuan: number; qty: number; notes: string | null }[];

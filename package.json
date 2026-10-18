@@ -9,7 +9,8 @@
     "test:pwa": "node scripts/test-pwa-launch.mjs",
     "seed:demo": "node --env-file=.env.local scripts/seed-tenant-demo.mjs",
     "lint": "eslint",
-    "check-secrets": "node scripts/check-secrets.mjs"
+    "check-secrets": "node scripts/check-secrets.mjs",
+    "test:reporting": "node --import tsx --test scripts/reporting.test.mjs"
   },
   "dependencies": {
     "@serwist/next": "^9.5.13",

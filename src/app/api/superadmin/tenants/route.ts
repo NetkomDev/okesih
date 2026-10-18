@@ -1,3 +1,5 @@
+import { z } from "zod";
+import { paginationSchema } from "@/lib/reporting";
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -20,100 +22,21 @@ async function superAdminClient() {
   return createClient(url, key, { auth: { persistSession: false } });
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const supabase = await superAdminClient();
     if (!supabase) return NextResponse.json({ error: "Akses Super Admin diperlukan." }, { status: 401 });
-
-    // 1. Ambil seluruh data warkop
-    const { data: warkops, error: warkopErr } = await supabase
-      .from("warkops")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (warkopErr) {
-      console.error("Supabase warkops error:", warkopErr);
-      return NextResponse.json({ error: warkopErr.message }, { status: 500 });
-    }
-
-    // 2. Ambil data owners dari warkop_members
-    const { data: members } = await supabase
-      .from("warkop_members")
-      .select("warkop_id, username, role")
-      .eq("role", "OWNER");
-
-    // 3. Ambil data marketing partners untuk mapping nama agen
-    const { data: marketings } = await supabase
-      .from("marketing_partners")
-      .select("id, full_name, referral_code");
-
-    const marketingMap = new Map<string, { name: string; code: string }>();
-    marketings?.forEach((m) => {
-      marketingMap.set(m.id, { name: m.full_name, code: m.referral_code });
+    const query = paginationSchema.extend({ search: z.string().trim().max(120).default(""), province: z.string().max(100).default("") })
+      .parse(Object.fromEntries(new URL(request.url).searchParams));
+    const { data, error } = await supabase.rpc("report_superadmin_tenants", {
+      p_page: query.page, p_page_size: query.pageSize, p_search: query.search, p_province: query.province,
     });
-
-    const ownerMap = new Map<string, string>();
-    members?.forEach((mem) => {
-      if (!ownerMap.has(mem.warkop_id)) {
-        ownerMap.set(mem.warkop_id, mem.username);
-      }
-    });
-
-    const todayWita = new Intl.DateTimeFormat("en-CA", {
-      timeZone: "Asia/Makassar", year: "numeric", month: "2-digit", day: "2-digit",
-    }).format(new Date());
-    const startTodayUtc = new Date(`${todayWita}T00:00:00+08:00`).toISOString();
-    const endTodayUtc = new Date(`${todayWita}T23:59:59.999+08:00`).toISOString();
-
-    // Format data sekaligus mengambil angka operasional riil per tenant.
-    const formattedTenants = await Promise.all((warkops || []).map(async (w) => {
-      const start = w.unique_code_range_start || 100;
-      const end = w.unique_code_range_end || 199;
-      const mktInfo = w.marketing_agent_id ? marketingMap.get(w.marketing_agent_id) : null;
-      const [{ count: todayTransactions }, { data: billing }] = await Promise.all([
-        supabase.from("transactions").select("id", { count: "exact", head: true })
-          .eq("warkop_id", w.id)
-          .gte("created_at", startTodayUtc)
-          .lte("created_at", endTodayUtc)
-          .not("status_pesanan", "in", "(VOID,REJECTED)"),
-        supabase.from("saas_billings")
-          .select("tagihan_pokok, status_bayar")
-          .eq("warkop_id", w.id)
-          .eq("tanggal", todayWita)
-          .maybeSingle(),
-      ]);
-
-      return {
-        id: w.id,
-        name: w.nama,
-        slug: w.slug,
-        ownerName: w.owner_name || ownerMap.get(w.id) || "Owner Warkop",
-        phone: w.owner_phone ? `+${w.owner_phone}` : "Belum diatur",
-        address: w.address || "",
-        province: w.province || "Belum diatur",
-        cityRegency: w.city_regency || "Belum diatur",
-        uniqueCodeRange: `${start} - ${end}`,
-        marketingAgentId: w.marketing_agent_id || "direct",
-        marketingAgentName: mktInfo ? `${mktInfo.name} (${mktInfo.code})` : "Direct HQ (Tanpa Marketing)",
-        commissionPerReceipt: Number(w.marketing_commission_per_receipt) || 0,
-        todayTransactions: todayTransactions || 0,
-        totalSaasBilling: Number(billing?.tagihan_pokok) || 0,
-        paymentStatus: billing?.status_bayar === "PAID" ? "PAID" : billing ? "UNPAID" : "UNPAID",
-        status: w.is_active ? "ACTIVE" : "SUSPENDED",
-        joinedDate: new Date(w.created_at).toLocaleDateString("id-ID", {
-          day: "numeric",
-          month: "short",
-          year: "numeric",
-        }),
-      };
-    }));
-
-    return NextResponse.json({ data: formattedTenants });
-  } catch (err: unknown) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Terjadi kesalahan internal server." },
-      { status: 500 }
-    );
+    if (error) throw error;
+    return NextResponse.json({ ...data, data: data.data.map((tenant: { joinedAt: string }) => ({
+      ...tenant, joinedDate: new Date(tenant.joinedAt).toLocaleDateString("id-ID", { timeZone: "Asia/Makassar", day: "numeric", month: "short", year: "numeric" }),
+    })) }, { headers: { "Cache-Control": "no-store" } });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof z.ZodError ? "Parameter pencarian atau halaman tidak valid." : err instanceof Error ? err.message : "Gagal memuat tenant." }, { status: err instanceof z.ZodError ? 400 : 500 });
   }
 }
 

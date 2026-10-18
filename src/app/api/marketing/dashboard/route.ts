@@ -27,71 +27,8 @@ export async function GET() {
     const ctx = await context();
     if (!ctx) return NextResponse.json({ error: "Akun marketing tidak aktif atau tidak terhubung." }, { status: 401 });
     const { admin, partner } = ctx;
-    const { data: tenants, error } = await admin.from("warkops")
-      .select("id,nama,slug,owner_name,owner_phone,address,province,city_regency,is_active,marketing_commission_per_receipt,created_at")
-      .eq("marketing_agent_id", partner.id).order("created_at", { ascending: false });
+    const { data: report, error } = await admin.rpc("report_marketing_dashboard", { p_partner_id: partner.id });
     if (error) throw error;
-    const { data: applications, error: applicationError } = await admin.from("tenant_applications")
-      .select("id,business_name,owner_name,owner_phone,address,province,city_regency,status,review_notes,created_at,warkop_id")
-      .eq("marketing_partner_id", partner.id).order("created_at", { ascending: false });
-    if (applicationError) throw applicationError;
-    const { data: withdrawals, error: withdrawalError } = await admin.from("marketing_commission_withdrawals")
-      .select("id,amount,status,bank_name,bank_account_number,bank_account_name,notes,reviewed_at,created_at")
-      .eq("marketing_partner_id", partner.id).order("created_at", { ascending: false }).limit(25);
-    if (withdrawalError) throw withdrawalError;
-    const ids = (tenants || []).map((item) => item.id);
-    let transactions: Array<{ warkop_id: string }> = [];
-    let billings: Array<{ warkop_id: string; status_bayar: string; tagihan_pokok: number }> = [];
-    if (ids.length) {
-      const [trxResult, billingResult] = await Promise.all([
-        admin.from("transactions").select("warkop_id").in("warkop_id", ids).neq("status_pesanan", "VOID").neq("status_pesanan", "REJECTED"),
-        admin.from("saas_billings").select("warkop_id, status_bayar, tagihan_pokok").in("warkop_id", ids).order("created_at", { ascending: false }),
-      ]);
-      if (trxResult.error) throw trxResult.error;
-      transactions = trxResult.data || [];
-      billings = billingResult.data || [];
-    }
-    const receiptCount = new Map<string, number>();
-    transactions.forEach((row) => receiptCount.set(row.warkop_id, (receiptCount.get(row.warkop_id) || 0) + 1));
-    const billingMap = new Map<string, { status: "PAID" | "UNPAID"; amount: number }>();
-    billings.forEach((b) => {
-      if (!billingMap.has(b.warkop_id)) {
-        billingMap.set(b.warkop_id, {
-          status: b.status_bayar === "PAID" ? "PAID" : "UNPAID",
-          amount: Number(b.tagihan_pokok) || 0,
-        });
-      } else if (b.status_bayar === "UNPAID") {
-        // Jika ada salah satu tagihan yang belum bayar, tandai UNPAID
-        billingMap.set(b.warkop_id, {
-          status: "UNPAID",
-          amount: (billingMap.get(b.warkop_id)?.amount || 0) + (Number(b.tagihan_pokok) || 0),
-        });
-      }
-    });
-
-    const mapped = (tenants || []).map((tenant) => {
-      const bInfo = billingMap.get(tenant.id);
-      return {
-        id: tenant.id,
-        name: tenant.nama,
-        slug: tenant.slug,
-        ownerName: tenant.owner_name,
-        phone: tenant.owner_phone,
-        address: tenant.address,
-        province: tenant.province,
-        cityRegency: tenant.city_regency,
-        status: tenant.is_active ? "ACTIVE" : "SUSPENDED",
-        paymentStatus: bInfo?.status || "PAID",
-        unpaidAmount: bInfo?.amount || 0,
-        commissionPerReceipt: Number(tenant.marketing_commission_per_receipt || 0),
-        joinedAt: tenant.created_at,
-        receipts: receiptCount.get(tenant.id) || 0,
-        commission: (receiptCount.get(tenant.id) || 0) * Number(tenant.marketing_commission_per_receipt || 0),
-      };
-    });
-    const commission = mapped.reduce((sum, item) => sum + item.commission, 0);
-    const pendingWithdrawal = (withdrawals || []).filter((item) => item.status === "PENDING").reduce((sum, item) => sum + Number(item.amount || 0), 0);
-    const availableCommission = Math.max(0, commission - Number(partner.commission_paid || 0) - pendingWithdrawal);
     return NextResponse.json({
       data: {
         profile: {
@@ -105,19 +42,7 @@ export async function GET() {
           bankAccountNumber: partner.bank_account_number,
           bankAccountName: partner.bank_account_name,
         },
-        applications: applications || [],
-        withdrawals: withdrawals || [],
-        tenants: mapped,
-        totals: {
-          tenants: mapped.length,
-          pending: (applications || []).filter((item) => item.status === "PENDING" || item.status === "PROCESSING").length,
-          unpaidTenants: mapped.filter((item) => item.paymentStatus === "UNPAID").length,
-          paidTenants: mapped.filter((item) => item.paymentStatus === "PAID").length,
-          receipts: mapped.reduce((sum, item) => sum + item.receipts, 0),
-          commission,
-          pendingWithdrawal,
-          availableCommission,
-        },
+        ...report,
       },
     });
   } catch (error) {

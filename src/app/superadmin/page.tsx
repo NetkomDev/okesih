@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import Pagination from "@/components/Pagination";
+import type { Pagination as PageInfo } from "@/lib/reporting";
 import Image from "next/image";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuthGuard, logoutUser } from "@/lib/auth-helpers";
@@ -363,19 +365,41 @@ export default function SuperAdminDashboardPage() {
 
   // State Tenant Warkop
   const [tenants, setTenants] = useState<TenantWarkop[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [tenantRegionFilter, setTenantRegionFilter] = useState("ALL");
+  const [tenantPage, setTenantPage] = useState(1);
+  const [tenantPagination, setTenantPagination] = useState<PageInfo>({ page: 1, pageSize: 25, total: 0, totalPages: 1 });
+  const [totalTenants, setTotalTenants] = useState(0);
+  const [tenantProvinces, setTenantProvinces] = useState<string[]>([]);
+  const [tenantLoading, setTenantLoading] = useState(false);
+  const [tenantError, setTenantError] = useState("");
+  const tenantRequest = useRef(0);
   const [tenantApplications, setTenantApplications] = useState<TenantApplication[]>([]);
   const [reviewingApplicationId, setReviewingApplicationId] = useState<string | null>(null);
 
   // Load Tenants dari Supabase API
-  const loadTenants = async () => {
+  const loadTenants = useCallback(async () => {
+    const requestId = ++tenantRequest.current;
+    setTenantLoading(true); setTenantError("");
     try {
-      const res = await fetch("/api/superadmin/tenants");
+      const params = new URLSearchParams({ page: String(tenantPage), pageSize: "25", search: searchQuery, province: tenantRegionFilter });
+      const res = await fetch(`/api/superadmin/tenants?${params}`, { cache: "no-store" });
       const json = await res.json();
-      if (json.data && Array.isArray(json.data)) setTenants(json.data);
-    } catch (e) {
-      console.error("Gagal memuat tenants dari database:", e);
-    }
-  };
+      if (!res.ok) throw new Error(json.error || "Tenant gagal dimuat.");
+      if (requestId !== tenantRequest.current) return;
+      setTenants(json.data); setTenantPagination(json.pagination); setTotalTenants(json.totalTenants); setTenantProvinces(json.provinces);
+      if (tenantPage > json.pagination.totalPages) setTenantPage(json.pagination.totalPages);
+    } catch (error) {
+      if (requestId === tenantRequest.current) setTenantError(error instanceof Error ? error.message : "Tenant gagal dimuat.");
+    } finally { if (requestId === tenantRequest.current) setTenantLoading(false); }
+  }, [tenantPage, searchQuery, tenantRegionFilter]);
+
+  useEffect(() => {
+    if (!isAuthorized) return;
+    const invalidate = () => { tenantRequest.current++; };
+    const timer = setTimeout(() => void loadTenants(), 250);
+    return () => { clearTimeout(timer); invalidate(); };
+  }, [isAuthorized, loadTenants]);
 
   const loadTenantApplications = async () => {
     try {
@@ -409,7 +433,6 @@ export default function SuperAdminDashboardPage() {
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      void loadTenants();
       void loadMarketingPartners();
       void loadMarketingWithdrawals();
       void loadTenantApplications();
@@ -423,7 +446,6 @@ export default function SuperAdminDashboardPage() {
         void loadMarketingPartners();
         void loadMarketingWithdrawals();
       } else if (activeTab === "tenants") {
-        void loadTenants();
         void loadTenantApplications();
       }
     }, 0);
@@ -714,10 +736,6 @@ export default function SuperAdminDashboardPage() {
     setIsMarketingModalOpen(true);
   };
 
-  // Search Query
-  const [searchQuery, setSearchQuery] = useState<string>("");
-  const [tenantRegionFilter, setTenantRegionFilter] = useState<string>("ALL");
-
   // Buka Modal Registrasi Tenant
   const handleOpenRegisterModal = () => {
     const randomSuffix = Math.floor(Math.random() * 899) + 100;
@@ -728,7 +746,7 @@ export default function SuperAdminDashboardPage() {
     setNewAddress("");
     setNewProvince("");
     setNewCityRegency("");
-    setNewCodeRange(`${(tenants.length + 1) * 100} - ${(tenants.length + 1) * 100 + 99}`);
+    setNewCodeRange(`${(totalTenants + 1) * 100} - ${(totalTenants + 1) * 100 + 99}`);
     setSelectedMarketingId("direct");
     setTenantCommissionRate(""); // default kosong (mengikuti standar global komisi)
     setGeneratedUsername(`owner_${randomSuffix}`);
@@ -955,27 +973,13 @@ export default function SuperAdminDashboardPage() {
     });
   };
 
-  // Filter Tenant
-  const filteredTenants = tenants.filter(
-    (t) =>
-      (tenantRegionFilter === "ALL" || t.province === tenantRegionFilter) &&
-      (t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        t.slug.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        t.ownerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        t.province.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        t.cityRegency.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const filteredTenants = tenants;
 
-  // Global Financial Metrics
-  const totalActiveTenants = analytics?.activeTenants ?? tenants.filter((t) => t.status === "ACTIVE").length;
-  const totalAllTransactions = analytics?.receipts ?? tenants.reduce((sum, t) => sum + t.todayTransactions, 0);
-  const totalGrossSaasBilling = analytics?.grossBilling ?? tenants.reduce((sum, t) => sum + t.totalSaasBilling, 0);
-
-  // Total Komisi Marketing yang dialokasikan dari transaksi hari ini
-  const totalMarketingCommission = analytics?.marketingCommission ?? tenants.reduce(
-    (sum, t) => sum + t.todayTransactions * t.commissionPerReceipt,
-    0
-  );
+  // Overview metrics must never be calculated from one tenant page.
+  const totalActiveTenants = analytics?.activeTenants ?? 0;
+  const totalAllTransactions = analytics?.receipts ?? 0;
+  const totalGrossSaasBilling = analytics?.grossBilling ?? 0;
+  const totalMarketingCommission = analytics?.marketingCommission ?? 0;
 
   // Net Revenue Platform SaaS Pusat (Gross - Komisi Marketing)
   const netPlatformRevenue = analytics?.netRevenue ?? totalGrossSaasBilling - totalMarketingCommission;
@@ -1173,7 +1177,7 @@ export default function SuperAdminDashboardPage() {
                 <strong>Daftar Tenant Warkop</strong>
                 <span>Rentang Kode Unik &amp; Akun</span>
               </div>
-              <span className="superadmin-sidebar-item-badge">{tenants.length}</span>
+              <span className="superadmin-sidebar-item-badge">{totalTenants}</span>
             </button>
 
             {/* 3. Marketing */}
@@ -1536,7 +1540,7 @@ export default function SuperAdminDashboardPage() {
                 TENANT AKTIF
               </div>
               <div style={{ fontSize: "2.1rem", fontWeight: 900, color: isDark ? "#38BDF8" : "#0284C7" }}>
-                {totalActiveTenants} <span style={{ fontSize: "0.95rem", color: isDark ? "#64748B" : "#94A3B8" }}>/ {tenants.length} Warkop</span>
+                {totalActiveTenants} <span style={{ fontSize: "0.95rem", color: isDark ? "#64748B" : "#94A3B8" }}>/ {totalTenants} Warkop</span>
               </div>
               <div style={{ fontSize: "0.75rem", color: isDark ? "#34D399" : "#059669", marginTop: "0.4rem", fontWeight: 600 }}>
                 + {analytics?.newTenants ?? 0} tenant baru • {periodLabel}
@@ -1729,7 +1733,7 @@ export default function SuperAdminDashboardPage() {
                       🏢 Kelola Tenant Warkop
                     </div>
                     <div style={{ fontSize: "0.78rem", color: isDark ? "#94A3B8" : "#64748B", marginTop: "0.2rem" }}>
-                      {tenants.length} warkop terdaftar • Alokasi kode unik POS
+                      {totalTenants} warkop terdaftar • Alokasi kode unik POS
                     </div>
                   </div>
                   <span style={{ fontSize: "1.2rem", color: "#0284C7" }}>→</span>
@@ -1827,7 +1831,7 @@ export default function SuperAdminDashboardPage() {
               <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
                 <select
                   value={tenantRegionFilter}
-                  onChange={(e) => setTenantRegionFilter(e.target.value)}
+                  onChange={(e) => { setTenantRegionFilter(e.target.value); setTenantPage(1); }}
                   aria-label="Filter tenant berdasarkan provinsi"
                   style={{
                     background: isDark ? "rgba(15, 23, 42, 0.8)" : "#F8FAFC",
@@ -1836,14 +1840,14 @@ export default function SuperAdminDashboardPage() {
                   }}
                 >
                   <option value="ALL">Semua wilayah</option>
-                  {Array.from(new Set(tenants.map((tenant) => tenant.province))).sort().map((province) => (
+                  {tenantProvinces.map((province) => (
                     <option key={province} value={province}>{province}</option>
                   ))}
                 </select>
                 <input
                   type="text"
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => { setSearchQuery(e.target.value); setTenantPage(1); }}
                   placeholder="Cari warkop, slug, owner..."
                   style={{
                     background: isDark ? "rgba(15, 23, 42, 0.8)" : "#F8FAFC",
@@ -2021,6 +2025,9 @@ export default function SuperAdminDashboardPage() {
                 </tbody>
               </table>
             </div>
+            {tenantError && <p role="alert">{tenantError}</p>}
+            {tenantLoading && <p role="status">Memuat tenant...</p>}
+            <Pagination pagination={tenantPagination} onPage={setTenantPage} loading={tenantLoading} />
           </section>
         )}
 

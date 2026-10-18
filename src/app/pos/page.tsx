@@ -1,5 +1,9 @@
 "use client";
 
+import Pagination from "@/components/Pagination";
+import { useOrderHistory } from "@/lib/use-order-history";
+import { witaRange } from "@/lib/reporting-dates";
+
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import DevicePairing from "@/components/DevicePairing";
@@ -114,6 +118,7 @@ function Icon({ name }: { name: "orders" | "cart" | "history" | "search" | "refr
 }
 
 function getOrderCashier(order: DeviceOrder, currentShiftCashier?: string): string {
+  if (order.cashier_name) return order.cashier_name;
   if (order.waiter_name) {
     return order.waiter_name.replace(/^Kasir:\s*/i, "").trim();
   }
@@ -141,7 +146,7 @@ function formatElapsedTime(createdAt: string, now: number): string {
 
 export default function PosModulePage() {
   const [view, setView] = useState<View>("orders");
-  const app = useDeviceApp("POS", view === "history");
+  const app = useDeviceApp("POS", false);
   const pwaInstalled = usePwaInstallStatus("/pos/manifest.webmanifest");
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
@@ -169,6 +174,8 @@ export default function PosModulePage() {
 
   // PIN Gate Keamanan Audit Histori
   const [historyUnlocked, setHistoryUnlocked] = useState(false);
+  const [historyPin, setHistoryPin] = useState("");
+  const [historyPage, setHistoryPage] = useState(1);
   const [pinModalOpen, setPinModalOpen] = useState(false);
   const [pinInput, setPinInput] = useState("");
   const [pinError, setPinError] = useState("");
@@ -231,82 +238,28 @@ export default function PosModulePage() {
     Math.ceil(cartTotal / 100_000) * 100_000,
   ])).filter((amount) => amount > 0).slice(0, 4), [cartTotal]);
 
-  // Kombinasi pesanan aktif dan histori pesanan agar audit selalu up to date
-  const allOrders = useMemo(() => {
-    if (!app.data) return [];
-    const map = new Map<string, DeviceOrder>();
-    for (const ord of app.data.historyOrders || []) {
-      map.set(ord.id, ord);
-    }
-    for (const ord of app.data.orders || []) {
-      map.set(ord.id, ord);
-    }
-    return Array.from(map.values()).sort(
-      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    );
-  }, [app.data]);
-
-  // Rentang tanggal aktif
-  const activeDateRange = useMemo(() => {
-    return getDateRangeForMode(
-      historyDateFilter.mode,
-      historyDateFilter.startDate,
-      historyDateFilter.endDate
-    );
-  }, [historyDateFilter]);
-
-  // Filtered orders untuk audit owner
-  const filteredHistoryOrders = useMemo(() => {
-    const { start, end } = activeDateRange;
-    const startTime = start ? start.getTime() : null;
-    const endTime = end ? end.getTime() : null;
-
-    return allOrders.filter((order) => {
-      if (startTime !== null && endTime !== null) {
-        const orderTime = new Date(order.created_at).getTime();
-        if (orderTime < startTime || orderTime > endTime) return false;
-      }
-      if (historyStatusFilter !== "ALL" && order.status_pesanan !== historyStatusFilter) {
-        return false;
-      }
-      if (historyPaymentFilter !== "ALL" && order.payment_method !== historyPaymentFilter) {
-        return false;
-      }
-      if (historySearch.trim()) {
-        const q = historySearch.toLowerCase();
-        const cashierName = getOrderCashier(order, shift?.cashierName).toLowerCase();
-        const table = (order.table_number || "").toLowerCase();
-        const queue = String(order.nomor_antrean);
-        const itemNames = order.items.map((i) => i.nama_menu).join(" ").toLowerCase();
-        if (!cashierName.includes(q) && !table.includes(q) && !queue.includes(q) && !itemNames.includes(q)) {
-          return false;
-        }
-      }
-      return true;
-    });
-  }, [allOrders, activeDateRange, historyStatusFilter, historyPaymentFilter, historySearch, shift?.cashierName]);
-
-  // KPI Metrics Audit
-  const auditStats = useMemo(() => {
-    const { start, end } = activeDateRange;
-    const startTime = start ? start.getTime() : null;
-    const endTime = end ? end.getTime() : null;
-
-    const targetSet = startTime !== null && endTime !== null
-      ? allOrders.filter((o) => {
-          const t = new Date(o.created_at).getTime();
-          return t >= startTime && t <= endTime;
-        })
-      : allOrders;
-
-    const validCompleted = targetSet.filter((o) => o.status_pesanan !== "REJECTED");
-    const totalOmzet = validCompleted.reduce((sum, o) => sum + Number(o.total_harga || 0), 0);
-    const totalCount = targetSet.length;
-    const cashTotal = validCompleted.filter((o) => o.payment_method === "CASH").reduce((sum, o) => sum + Number(o.total_harga || 0), 0);
-    const qrisTotal = validCompleted.filter((o) => o.payment_method === "QRIS").reduce((sum, o) => sum + Number(o.total_harga || 0), 0);
-
-    return { totalOmzet, totalCount, cashTotal, qrisTotal };
-  }, [allOrders, activeDateRange]);
+  const activeDateRange = useMemo(() => getDateRangeForMode(historyDateFilter.mode, historyDateFilter.startDate, historyDateFilter.endDate), [historyDateFilter]);
+  const periodParams = new URLSearchParams({ period: historyDateFilter.mode });
+  if (historyDateFilter.startDate) periodParams.set("start", historyDateFilter.startDate);
+  if (historyDateFilter.endDate) periodParams.set("end", historyDateFilter.endDate);
+  const historyParams = new URLSearchParams(periodParams);
+  historyParams.set("page", String(historyPage)); historyParams.set("pageSize", "25");
+  historyParams.set("status", historyStatusFilter); historyParams.set("payment", historyPaymentFilter); historyParams.set("search", historySearch);
+  const history = useOrderHistory(view === "history" && !!app.data && (historyUnlocked || !app.data.hasAuditPin), historyParams.toString(), periodParams.toString(), historyPin);
+  const cachedHistory = useMemo(() => {
+    if (app.online) return [];
+    const range = witaRange({ period: historyDateFilter.mode, start: historyDateFilter.startDate, end: historyDateFilter.endDate });
+    const orders = new Map((app.data?.historyOrders || []).map((order) => [order.id, order]));
+    for (const order of app.data?.orders || []) orders.set(order.id, order);
+    return [...orders.values()].filter((order) => (!range.start || Date.parse(order.created_at) >= Date.parse(range.start)) && (!range.end || Date.parse(order.created_at) < Date.parse(range.end))
+      && (historyStatusFilter === "ALL" || order.status_pesanan === historyStatusFilter) && (historyPaymentFilter === "ALL" || order.payment_method === historyPaymentFilter)
+      && `${getOrderCashier(order)} ${order.table_number} ${order.nomor_antrean} ${order.items.map((item) => item.nama_menu).join(" ")}`.toLowerCase().includes(historySearch.trim().toLowerCase()))
+      .sort((a,b) => b.created_at.localeCompare(a.created_at) || b.id.localeCompare(a.id));
+  }, [app.online, app.data, historyDateFilter, historyStatusFilter, historyPaymentFilter, historySearch]);
+  const filteredHistoryOrders = app.online ? history.data?.orders || [] : cachedHistory.slice((historyPage-1)*25, historyPage*25);
+  const historyPagination = app.online ? history.data?.pagination || { page: historyPage, pageSize: 25, total: 0, totalPages: 1 }
+    : { page: historyPage, pageSize: 25, total: cachedHistory.length, totalPages: Math.max(1, Math.ceil(cachedHistory.length/25)) };
+  const auditStats = app.online && history.summary ? { totalOmzet: history.summary.total, totalCount: history.summary.transactionCount, cashTotal: history.summary.cash, qrisTotal: history.summary.qris } : null;
 
   const openDateFilterModal = () => {
     const todayStr = formatIsoDate(new Date());
@@ -317,9 +270,9 @@ export default function PosModulePage() {
 
   const applyCustomDateRange = () => {
     if (!tempCustomStart && !tempCustomEnd) {
-      setHistoryDateFilter({ mode: "today" });
+      setHistoryPage(1); setHistoryDateFilter({ mode: "today" });
     } else {
-      setHistoryDateFilter({
+      setHistoryPage(1); setHistoryDateFilter({
         mode: "custom",
         startDate: tempCustomStart || tempCustomEnd,
         endDate: tempCustomEnd || tempCustomStart,
@@ -357,6 +310,7 @@ export default function PosModulePage() {
         return;
       }
       // PIN benar: segera buka akses dan beralih ke History Pesanan
+      setHistoryPin(pinToVerify.trim());
       setHistoryUnlocked(true);
       setPinModalOpen(false);
       setPinInput("");
@@ -411,7 +365,7 @@ export default function PosModulePage() {
   if (app.authorized === false) return <DevicePairing type="POS" pairing={app.pairing} error={app.error} onBegin={app.beginPairing}/>;
   if (!app.data) return <div className="device-loading"><Image src="/okesih-logo-animated.svg" width={90} height={90} alt="OKESIH"/><b>{app.error || "Menyiapkan Kasir..."}</b></div>;
 
-  const update = async (order: DeviceOrder, status: "COOKING" | "DONE" | "REJECTED") => { setBusy(true); app.setError(""); try { await app.transitionOrder(order.id, status); setSelected(null); } catch (reason) { app.setError(reason instanceof Error ? reason.message : "Pesanan gagal diperbarui."); } finally { setBusy(false); } };
+  const update = async (order: DeviceOrder, status: "COOKING" | "DONE" | "REJECTED") => { setBusy(true); app.setError(""); try { await app.transitionOrder(order.id, status); history.refresh(); setSelected(null); } catch (reason) { app.setError(reason instanceof Error ? reason.message : "Pesanan gagal diperbarui."); } finally { setBusy(false); } };
   const changeQty = (menuId: string, delta: number) => setCart((current) => { const nextQty = (current[menuId]?.qty || 0) + delta; if (nextQty <= 0) { const next = { ...current }; delete next[menuId]; return next; } return { ...current, [menuId]: { qty: Math.min(nextQty, 99), notes: current[menuId]?.notes || "" } }; });
   const submitCashierOrder = async (cashPayment?: number) => {
     if (!cartItems.length || cashierOrderSubmitting.current) return;
@@ -476,6 +430,7 @@ export default function PosModulePage() {
 
   const lockHistory = () => {
     setHistoryUnlocked(false);
+    setHistoryPin("");
     setView("orders");
   };
 
@@ -762,7 +717,7 @@ export default function PosModulePage() {
               <span aria-hidden="true">🔒</span> Kunci Audit
             </button>
           )}
-          <button className="pos-history-sync-button" type="button" onClick={() => void app.refresh()}><Icon name="refresh"/> Sinkronkan</button>
+          <button className="pos-history-sync-button" type="button" onClick={history.refresh} disabled={history.loading || !app.online}><Icon name="refresh"/> Sinkronkan</button>
         </div>
       </section>
 
@@ -780,8 +735,8 @@ export default function PosModulePage() {
               <span>OMZET</span>
               <span className="pos-audit-period-tag">{activeDateRange.label}</span>
             </small>
-            <strong>Rp {auditStats.totalOmzet.toLocaleString("id-ID")}</strong>
-            <p>{auditStats.totalCount} transaksi · Klik untuk ubah filter</p>
+            <strong>Rp {auditStats ? auditStats.totalOmzet.toLocaleString("id-ID") : "—"}</strong>
+            <p>{auditStats ? auditStats.totalCount : "—"} transaksi · Klik untuk ubah filter</p>
           </div>
           <div className="pos-audit-card-action-hint" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -793,15 +748,15 @@ export default function PosModulePage() {
           <div className="pos-audit-icon">🧾</div>
           <div>
             <small>TOTAL STRUK</small>
-            <strong>{auditStats.totalCount} Struk</strong>
-            <p>Berhasil &amp; diproses</p>
+            <strong>{auditStats ? auditStats.totalCount : "—"} Struk</strong>
+            <p>Seluruh status pesanan</p>
           </div>
         </article>
         <article className="pos-audit-card cash">
           <div className="pos-audit-icon">💵</div>
           <div>
             <small>TOTAL KAS TUNAI</small>
-            <strong>Rp {auditStats.cashTotal.toLocaleString("id-ID")}</strong>
+            <strong>Rp {auditStats ? auditStats.cashTotal.toLocaleString("id-ID") : "—"}</strong>
             <p>Uang fisik di laci kasir</p>
           </div>
         </article>
@@ -809,12 +764,16 @@ export default function PosModulePage() {
           <div className="pos-audit-icon">📱</div>
           <div>
             <small>TOTAL NON-TUNAI (QRIS)</small>
-            <strong>Rp {auditStats.qrisTotal.toLocaleString("id-ID")}</strong>
+            <strong>Rp {auditStats ? auditStats.qrisTotal.toLocaleString("id-ID") : "—"}</strong>
             <p>Masuk rekening usaha</p>
           </div>
         </article>
       </section>
 
+      {!app.online && <p role="status">Mode offline: hanya snapshot pesanan terakhir yang tersedia, bukan seluruh histori. Ringkasan periode memerlukan internet.</p>}
+      {history.error && <p role="alert">{history.error}</p>}
+      {history.loading && <p role="status">Memuat histori...</p>}
+      <Pagination pagination={historyPagination} onPage={setHistoryPage} loading={history.loading} />
       {/* Toolbar Filter & Pencarian */}
       <section className="pos-audit-toolbar">
         <div className="pos-audit-toolbar-heading">
@@ -829,7 +788,7 @@ export default function PosModulePage() {
           <input
             type="text"
             value={historySearch}
-            onChange={(e) => setHistorySearch(e.target.value)}
+            onChange={(e) => { setHistorySearch(e.target.value); setHistoryPage(1); }}
             placeholder="Cari kasir, meja, antrean, atau menu..."
           />
         </label>
@@ -840,25 +799,25 @@ export default function PosModulePage() {
             <div className="pos-audit-pill-group">
               <button
                 className={historyDateFilter.mode === "today" ? "active" : ""}
-                onClick={() => setHistoryDateFilter({ mode: "today" })}
+                onClick={() => { setHistoryPage(1); setHistoryDateFilter({ mode: "today" }); }}
               >
                 Hari Ini
               </button>
               <button
                 className={historyDateFilter.mode === "this_week" ? "active" : ""}
-                onClick={() => setHistoryDateFilter({ mode: "this_week" })}
+                onClick={() => { setHistoryPage(1); setHistoryDateFilter({ mode: "this_week" }); }}
               >
                 Minggu Ini
               </button>
               <button
                 className={historyDateFilter.mode === "this_month" ? "active" : ""}
-                onClick={() => setHistoryDateFilter({ mode: "this_month" })}
+                onClick={() => { setHistoryPage(1); setHistoryDateFilter({ mode: "this_month" }); }}
               >
                 Bulan Ini
               </button>
               <button
                 className={historyDateFilter.mode === "this_year" ? "active" : ""}
-                onClick={() => setHistoryDateFilter({ mode: "this_year" })}
+                onClick={() => { setHistoryPage(1); setHistoryDateFilter({ mode: "this_year" }); }}
               >
                 Tahun Ini
               </button>
@@ -876,19 +835,19 @@ export default function PosModulePage() {
             <div className="pos-audit-pill-group">
               <button
                 className={historyPaymentFilter === "ALL" ? "active" : ""}
-                onClick={() => setHistoryPaymentFilter("ALL")}
+                onClick={() => { setHistoryPaymentFilter("ALL"); setHistoryPage(1); }}
               >
                 Semua
               </button>
               <button
                 className={historyPaymentFilter === "CASH" ? "active" : ""}
-                onClick={() => setHistoryPaymentFilter("CASH")}
+                onClick={() => { setHistoryPaymentFilter("CASH"); setHistoryPage(1); }}
               >
                 Tunai
               </button>
               <button
                 className={historyPaymentFilter === "QRIS" ? "active" : ""}
-                onClick={() => setHistoryPaymentFilter("QRIS")}
+                onClick={() => { setHistoryPaymentFilter("QRIS"); setHistoryPage(1); }}
               >
                 QRIS
               </button>
@@ -900,19 +859,19 @@ export default function PosModulePage() {
             <div className="pos-audit-pill-group">
               <button
                 className={historyStatusFilter === "ALL" ? "active" : ""}
-                onClick={() => setHistoryStatusFilter("ALL")}
+                onClick={() => { setHistoryStatusFilter("ALL"); setHistoryPage(1); }}
               >
                 Semua
               </button>
               <button
                 className={historyStatusFilter === "DONE" ? "active" : ""}
-                onClick={() => setHistoryStatusFilter("DONE")}
+                onClick={() => { setHistoryStatusFilter("DONE"); setHistoryPage(1); }}
               >
                 Selesai
               </button>
               <button
                 className={historyStatusFilter === "COOKING" ? "active" : ""}
-                onClick={() => setHistoryStatusFilter("COOKING")}
+                onClick={() => { setHistoryStatusFilter("COOKING"); setHistoryPage(1); }}
               >
                 Dapur
               </button>
@@ -1150,7 +1109,7 @@ export default function PosModulePage() {
               type="button"
               className={`pos-preset-option ${historyDateFilter.mode === "today" ? "active" : ""}`}
               onClick={() => {
-                setHistoryDateFilter({ mode: "today" });
+                setHistoryPage(1); setHistoryDateFilter({ mode: "today" });
                 setDateModalOpen(false);
               }}
             >
@@ -1162,7 +1121,7 @@ export default function PosModulePage() {
               type="button"
               className={`pos-preset-option ${historyDateFilter.mode === "this_week" ? "active" : ""}`}
               onClick={() => {
-                setHistoryDateFilter({ mode: "this_week" });
+                setHistoryPage(1); setHistoryDateFilter({ mode: "this_week" });
                 setDateModalOpen(false);
               }}
             >
@@ -1174,7 +1133,7 @@ export default function PosModulePage() {
               type="button"
               className={`pos-preset-option ${historyDateFilter.mode === "this_month" ? "active" : ""}`}
               onClick={() => {
-                setHistoryDateFilter({ mode: "this_month" });
+                setHistoryPage(1); setHistoryDateFilter({ mode: "this_month" });
                 setDateModalOpen(false);
               }}
             >
@@ -1186,7 +1145,7 @@ export default function PosModulePage() {
               type="button"
               className={`pos-preset-option ${historyDateFilter.mode === "this_year" ? "active" : ""}`}
               onClick={() => {
-                setHistoryDateFilter({ mode: "this_year" });
+                setHistoryPage(1); setHistoryDateFilter({ mode: "this_year" });
                 setDateModalOpen(false);
               }}
             >
@@ -1225,7 +1184,7 @@ export default function PosModulePage() {
               type="button"
               className="pos-filter-btn-cancel"
               onClick={() => {
-                setHistoryDateFilter({ mode: "all" });
+                setHistoryPage(1); setHistoryDateFilter({ mode: "all" });
                 setDateModalOpen(false);
               }}
             >

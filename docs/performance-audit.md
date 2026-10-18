@@ -29,6 +29,8 @@ Perhitungan dampak: tab terlihat dengan polling 3 detik menghasilkan sekitar 1.2
 
 ### P1 — Agregasi dan pagination database
 
+**Ditindaklanjuti:** agregasi, pagination superadmin/POS, serta verifikasi dan penambahan indeks diterapkan dalam [rincian reporting](reporting.md). Poin di bawah merekam temuan baseline audit.
+
 - `src/app/api/superadmin/tenants/route.ts`: tiga pengambilan awal diikuti dua query per tenant. Biaya bertambah menjadi 3 + 2N query sebelum memperhitungkan autentikasi. Gunakan agregasi SQL/RPC dan pagination tenant; jangan mengganti count dengan pengambilan seluruh transaksi ke Node.
 - `src/app/api/marketing/dashboard/route.ts`: mengambil transaksi lintas tenant untuk menghitung jumlah/komisi dalam JavaScript. Dashboard owner dan revenue juga menghitung dari daftar baris. Pengambilan tanpa pagination berisiko terpotong oleh batas respons PostgREST yang dikonfigurasi. Agregasi SQL diperlukan untuk performa sekaligus ketepatan angka pada volume besar.
 - Histori POS masih dibatasi 200 transaksi; filter tanggal tidak berarti seluruh riwayat database tersedia. Perlu endpoint histori berpagination dan agregat periode tersendiri.
