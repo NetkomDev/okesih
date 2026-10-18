@@ -46,6 +46,8 @@ Perhitungan dampak: tab terlihat dengan polling 3 detik menghasilkan sekitar 1.2
 
 ### P2 — CSS dan render halaman publik
 
+**Ditindaklanjuti:** modularisasi stylesheet fitur dan pemindahan rendering landing/marketing ke Server Components telah diterapkan sesuai [rincian CSS dan render publik](css-and-public-rendering.md). Poin di bawah merekam temuan baseline audit.
+
 - `src/app/globals.css`: 7.179 baris / 235.025 byte sumber; artefak build yang tersedia sebelum audit berukuran 201.547 byte, sekitar 35.958 byte gzip. Semua route mengimpor stylesheet global lewat root layout.
 - Pisahkan stylesheet fitur ke layout/komponen terkait setelah memetakan selector bersama dan urutan override. Perlu uji visual mode terang/gelap serta lebar 360, 768, dan 1280 piksel; pemisahan otomatis berisiko mengubah cascade.
 - Landing dan marketing masih banyak merender melalui Client Components. Pindahkan konten statis ke server dan pertahankan island interaktif untuk navigasi/form/modal.

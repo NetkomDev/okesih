@@ -1,86 +1,37 @@
-"use client";
-
 import Link from "next/link";
 import Image from "next/image";
-import { useState, useEffect } from "react";
-import ThemeToggle from "@/components/ThemeToggle";
+import LandingHeader from "@/components/landing/LandingHeader";
+import LoginModal from "@/components/landing/LoginModal";
+import FaqAccordion from "@/components/landing/FaqAccordion";
+import MobileBottomBar from "@/components/landing/MobileBottomBar";
+import LoginTriggerButton from "@/components/landing/LoginTriggerButton";
 
 export default function HomePage() {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [loginError, setLoginError] = useState("");
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-  const [saasFeePerReceipt, setSaasFeePerReceipt] = useState<number>(50);
-  const [marketingCommission, setMarketingCommission] = useState<number>(15);
+  const saasFeePerReceipt = 50;
+  const marketingCommission = 15;
 
-  // FAQ Accordion State
-  const [openFaq, setOpenFaq] = useState<number | null>(0);
-  // Mobile Menu State
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const err = params.get("error");
-      const shouldOpenLogin = err === "login_required" || err === "unauthorized" || window.location.hash === "#login";
-      if (!shouldOpenLogin) return;
-
-      queueMicrotask(() => {
-        if (err === "unauthorized") {
-          setLoginError("Akses Ditolak: Anda tidak memiliki izin untuk halaman tersebut.");
-        }
-        setIsLoginModalOpen(true);
-      });
-    }
-  }, []);
-
-  useEffect(() => {
-    fetch("/api/platform-settings", { cache: "no-store" })
-      .then((response) => response.ok ? response.json() : Promise.reject())
-      .then((payload) => {
-        setSaasFeePerReceipt(payload.data.saasFeePerReceipt);
-        setMarketingCommission(payload.data.defaultMarketingCommission);
-      })
-      .catch(() => undefined);
-  }, []);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isLoginModalOpen) {
-        setIsLoginModalOpen(false);
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isLoginModalOpen]);
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setLoginError("");
-
-    try {
-      const response = await fetch("/api/auth/handoff/start", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        cache: "no-store",
-        body: JSON.stringify({ username, password }),
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        setLoginError(payload.error || "Login tidak dapat diproses.");
-        setIsLoading(false);
-        return;
-      }
-      window.location.assign(payload.redirectTo);
-    } catch (err: unknown) {
-      setLoginError(err instanceof Error ? err.message : "Terjadi kesalahan sistem");
-      setIsLoading(false);
-    }
-  };
+  const faqs = [
+    {
+      q: "Bagaimana sistem OKESIH membebankan biaya sewa flat?",
+      a: "OKESIH tidak mengenakan biaya langganan bulanan jutaan rupiah ataupun komisi persentase omzet. Biaya sewa hanya dihitung flat Rp 50 untuk setiap struk transaksi sah yang tercetak oleh kasir/pelanggan. Jika toko tutup atau sepi, Anda tidak membayar biaya sewa membengkak.",
+    },
+    {
+      q: "Apakah uang pembayaran pelanggan (Cash & QRIS) ditahan oleh OKESIH?",
+      a: "Sama sekali tidak. Gambar QRIS yang tampil di layar HP pelanggan adalah QRIS rekening milik usaha Anda sendiri (BCA, BRI, Mandiri, Dana, GoPay, dll). Uang pelanggan 100% masuk langsung ke rekening Anda tanpa perantara.",
+    },
+    {
+      q: "Bagaimana jika koneksi internet di tempat usaha saya tiba-tiba terputus?",
+      a: "Aplikasi Kasir POS OKESIH dilengkapi teknologi Offline-First (PWA & IndexedDB). Kasir tetap dapat menerima pesanan dan mencetak struk seperti biasa. Begitu internet terhubung kembali, sistem secara otomatis mensinkronkan seluruh data ke cloud.",
+    },
+    {
+      q: "Bagaimana cara mendaftarkan warkop, kafe, atau warung saya ke OKESIH?",
+      a: "Pendaftaran tenant warkop/usaha baru dikelola oleh tim Super Admin atau Mitra Marketing Lapangan kami. Setelah didaftarkan, Owner langsung menerima kredensial akun login instan dan dapat langsung mengatur menu serta mencetak stiker QR meja.",
+    },
+    {
+      q: "Bagaimana cara kerja pembayaran sewa Rp 50 per transaksi?",
+      a: "Setiap kali Anda menutup shift/toko di penghujung hari, sistem menghitung total struk tercetak hari itu berdasarkan tarif aktif Rp 50 per struk, lalu menambahkan nominal kode unik tenant.",
+    },
+  ];
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -111,7 +62,7 @@ export default function HomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      <main
+<main
         style={{
           minHeight: "100vh",
           display: "flex",
@@ -155,254 +106,7 @@ export default function HomePage() {
           />
         </div>
 
-        {/* Top Navbar */}
-        <header
-          className="site-header"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "1.1rem 2rem",
-            borderBottom: "1px solid var(--border-subtle)",
-            position: "sticky",
-            top: 0,
-            zIndex: 40,
-            backdropFilter: "blur(14px)",
-            WebkitBackdropFilter: "blur(14px)",
-            background: "rgba(13, 13, 14, 0.88)",
-          }}
-        >
-          {/* Logo & Brand */}
-          <Link href="/" style={{ display: "flex", alignItems: "center", gap: "0.85rem", textDecoration: "none", color: "inherit" }}>
-            <img
-              src="/logo.svg?v=2"
-              alt="Logo OKESIH.COM"
-              width={46}
-              height={46}
-              style={{
-                width: "46px",
-                height: "46px",
-                objectFit: "contain",
-                display: "block",
-                flexShrink: 0,
-              }}
-            />
-            <div>
-              <div style={{ fontSize: "1.25rem", fontWeight: 900, letterSpacing: "-0.03em", whiteSpace: "nowrap" }}>
-                OKESIH<span style={{ color: "var(--brand-orange-light)" }}>.COM</span>
-              </div>
-              <div className="brand-tagline-text" style={{ fontSize: "0.75rem", color: "var(--text-dim)", fontWeight: 500 }}>
-                Platform Kasir &amp; Operasional Kafe &amp; Resto
-              </div>
-            </div>
-          </Link>
-
-          {/* Navigation Links (Desktop Only) */}
-          <nav style={{ display: "flex", alignItems: "center", gap: "1.5rem" }} className="desktop-nav">
-            <a href="#solusi" style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: 600, textDecoration: "none" }}>
-              Solusi Usaha
-            </a>
-            <a href="#fitur" style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: 600, textDecoration: "none" }}>
-              Fitur Lengkap
-            </a>
-            <a href="#keunggulan" style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: 600, textDecoration: "none" }}>
-              Keunggulan
-            </a>
-            <a href="#tarif" style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: 600, textDecoration: "none" }}>
-              Biaya Sewa
-            </a>
-            <Link href="/marketing" style={{ color: "#34D399", fontSize: "0.85rem", fontWeight: 700, textDecoration: "none" }}>
-              💼 Mitra Marketing
-            </Link>
-            <a href="#faq" style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: 600, textDecoration: "none" }}>
-              FAQ
-            </a>
-          </nav>
-
-          {/* Action Buttons, Theme Toggle & Hamburger Toggle */}
-          <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
-            <Link
-              href="/marketing"
-              className="marketing-pill-btn desktop-only-btn"
-            >
-              <span>💼</span>
-              <span>Jadi Mitra Marketing</span>
-            </Link>
-
-            <ThemeToggle />
-
-            <button
-              type="button"
-              onClick={() => setIsLoginModalOpen(true)}
-              className="btn-primary desktop-only-btn"
-              title="Masuk ke Akun"
-              aria-label="Masuk ke Akun"
-              style={{
-                width: "38px",
-                height: "38px",
-                padding: "0",
-                borderRadius: "10px",
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-                border: "none",
-                background: "linear-gradient(135deg, #FF5722, #FF4500)",
-                boxShadow: "0 4px 14px var(--brand-orange-glow)",
-                flexShrink: 0,
-              }}
-            >
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#FFFFFF"
-                strokeWidth="2.1"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                style={{ display: "block" }}
-              >
-                <path d="M 9 8 V 7 A 4 4 0 0 1 13 3 H 17 A 4 4 0 0 1 21 7 V 17 A 4 4 0 0 1 17 21 H 13 A 4 4 0 0 1 9 17 V 16" />
-                <path d="M 3 12 H 15" />
-                <path d="M 11 8 L 15 12 L 11 16" />
-              </svg>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="mobile-nav-toggle"
-              aria-label={isMobileMenuOpen ? "Tutup Menu" : "Buka Menu"}
-              style={{
-                background: isMobileMenuOpen ? "rgba(255, 69, 0, 0.2)" : "rgba(255, 255, 255, 0.06)",
-                border: isMobileMenuOpen ? "1px solid rgba(255, 69, 0, 0.4)" : "1px solid var(--border-subtle)",
-                borderRadius: "10px",
-                color: isMobileMenuOpen ? "var(--brand-orange-light)" : "var(--text-pure-white)",
-                padding: "0.45rem 0.75rem",
-                fontSize: "1.2rem",
-                cursor: "pointer",
-                display: "none",
-                alignItems: "center",
-                justifyContent: "center",
-                lineHeight: 1,
-              }}
-            >
-              {isMobileMenuOpen ? "✕" : "☰"}
-            </button>
-          </div>
-        </header>
-
-        {/* Mobile Menu Dropdown / Drawer */}
-        {isMobileMenuOpen && (
-          <div className="mobile-menu-drawer">
-            <a
-              href="#solusi"
-              className="mobile-nav-link"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              <span>☕ Solusi Usaha</span>
-              <span>→</span>
-            </a>
-            <a
-              href="#fitur"
-              className="mobile-nav-link"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              <span>⚡ Fitur Lengkap</span>
-              <span>→</span>
-            </a>
-            <a
-              href="#keunggulan"
-              className="mobile-nav-link"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              <span>💎 Keunggulan</span>
-              <span>→</span>
-            </a>
-            <a
-              href="#tarif"
-              className="mobile-nav-link"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              <span>🏷️ Biaya Sewa Rp {saasFeePerReceipt.toLocaleString("id-ID")}</span>
-              <span>→</span>
-            </a>
-            <Link
-              href="/marketing"
-              className="mobile-nav-link"
-              onClick={() => setIsMobileMenuOpen(false)}
-              style={{
-                background: "rgba(16, 185, 129, 0.12)",
-                border: "1px solid rgba(16, 185, 129, 0.4)",
-                color: "#34D399",
-                fontWeight: 800,
-              }}
-            >
-              <span>💼 Program Mitra Marketing (Rp {marketingCommission.toLocaleString("id-ID")}/Struk)</span>
-              <span>→</span>
-            </Link>
-            <a
-              href="#faq"
-              className="mobile-nav-link"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              <span>❓ Tanya Jawab (FAQ)</span>
-              <span>→</span>
-            </a>
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem", marginTop: "0.5rem" }}>
-              <div style={{ display: "flex", justifyContent: "center", marginBottom: "0.25rem" }}>
-                <ThemeToggle showText={true} />
-              </div>
-              <Link
-                href="/menu/giras-nusantara?table=01"
-                target="_blank"
-                className="btn-primary"
-                onClick={() => setIsMobileMenuOpen(false)}
-                style={{ textAlign: "center", padding: "0.85rem", fontWeight: 800, fontSize: "0.9rem" }}
-              >
-                📱 Coba Demo QR Menu Meja
-              </Link>
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => {
-                  setIsMobileMenuOpen(false);
-                  setIsLoginModalOpen(true);
-                }}
-                style={{
-                  textAlign: "center",
-                  padding: "0.85rem",
-                  fontWeight: 800,
-                  fontSize: "0.9rem",
-                  cursor: "pointer",
-                  border: "1px solid var(--border-subtle)",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "0.6rem",
-                }}
-              >
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="#FF5722"
-                  strokeWidth="2.1"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  style={{ display: "inline-block", verticalAlign: "middle" }}
-                >
-                  <path d="M 9 8 V 7 A 4 4 0 0 1 13 3 H 17 A 4 4 0 0 1 21 7 V 17 A 4 4 0 0 1 17 21 H 13 A 4 4 0 0 1 9 17 V 16" />
-                  <path d="M 3 12 H 15" />
-                  <path d="M 11 8 L 15 12 L 11 16" />
-                </svg>
-                <span>Masuk ke Akun</span>
-              </button>
-            </div>
-          </div>
-        )}
+        <LandingHeader />
 
         {/* HERO SECTION */}
         <section className="hero-container hero-split">
@@ -423,9 +127,9 @@ export default function HomePage() {
               <Link href="/menu/giras-nusantara?table=01" target="_blank" className="btn-primary">
                 📱 Coba Demo QR Menu
               </Link>
-              <button type="button" onClick={() => setIsLoginModalOpen(true)} className="btn-secondary">
-                🔑 Masuk Portal Operasional
-              </button>
+              <LoginTriggerButton className="btn-secondary">
+                <span>🔑 Masuk Portal Operasional</span>
+              </LoginTriggerButton>
             </div>
 
             <div className="hero-social-proof" aria-label="Pengguna OKESIH di Indonesia">
@@ -999,62 +703,7 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-            {[
-              {
-                q: "Apakah saya harus membeli printer kasir atau tablet khusus?",
-                a: "Tidak perlu. Anda bisa menggunakan smartphone Android atau iPhone apa saja yang sudah Anda miliki. Jika ingin mencetak struk fisik kertas, aplikasi kasir mendukung printer bluetooth thermal 58mm/80mm standar yang banyak dijual murah di pasaran.",
-              },
-              {
-                q: "Apakah uang pembayaran dari pelanggan masuk ke rekening OKESIH?",
-                a: "Sama sekali tidak. Gambar QRIS yang tampil di layar HP pelanggan adalah QRIS rekening milik usaha Anda sendiri (BCA, BRI, Mandiri, Dana, GoPay, dll). Uang pelanggan 100% masuk langsung ke rekening Anda tanpa perantara.",
-              },
-              {
-                q: "Bagaimana jika koneksi internet di tempat usaha saya tiba-tiba terputus?",
-                a: "Aplikasi Kasir POS OKESIH dilengkapi teknologi Offline-First (PWA & IndexedDB). Kasir tetap dapat menerima pesanan dan mencetak struk seperti biasa. Begitu internet terhubung kembali, sistem secara otomatis mensinkronkan seluruh data ke cloud.",
-              },
-              {
-                q: "Bagaimana cara mendaftarkan warkop, kafe, atau warung saya ke OKESIH?",
-                a: "Pendaftaran tenant warkop/usaha baru dikelola oleh tim Super Admin atau Mitra Marketing Lapangan kami. Setelah didaftarkan, Owner langsung menerima kredensial akun login instan dan dapat langsung mengatur menu serta mencetak stiker QR meja.",
-              },
-              {
-                q: `Bagaimana cara kerja pembayaran sewa Rp ${saasFeePerReceipt.toLocaleString("id-ID")} per transaksi?`,
-                a: `Setiap kali Anda menutup shift/toko di penghujung hari, sistem menghitung total struk tercetak hari itu berdasarkan tarif aktif Rp ${saasFeePerReceipt.toLocaleString("id-ID")} per struk, lalu menambahkan nominal kode unik tenant.`,
-              },
-            ].map((faq, idx) => (
-              <div
-                key={idx}
-                className="glass-panel mobile-compact-panel"
-                style={{
-                  padding: "1.25rem 1.5rem",
-                  cursor: "pointer",
-                  border: openFaq === idx ? "1px solid rgba(255, 69, 0, 0.4)" : "1px solid var(--border-subtle)",
-                }}
-                onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <h3
-                    style={{
-                      fontSize: "1rem",
-                      fontWeight: 800,
-                      color: openFaq === idx ? "var(--brand-orange-light)" : "var(--text-pure-white)",
-                      transition: "color 0.2s ease",
-                    }}
-                  >
-                    {faq.q}
-                  </h3>
-                  <span style={{ fontSize: "1.2rem", fontWeight: 700, color: "var(--brand-orange-light)" }}>
-                    {openFaq === idx ? "−" : "+"}
-                  </span>
-                </div>
-                {openFaq === idx && (
-                  <p style={{ marginTop: "0.85rem", fontSize: "0.875rem", color: "var(--text-muted)", lineHeight: 1.6 }}>
-                    {faq.a}
-                  </p>
-                )}
-              </div>
-            ))}
-          </div>
+          <FaqAccordion items={faqs} />
         </section>
 
         {/* SECTION: CLOSING CTA / PORTAL AKSES KELOLA RESMI */}
@@ -1159,9 +808,7 @@ export default function HomePage() {
                 marginBottom: "2.5rem",
               }}
             >
-              <button
-                type="button"
-                onClick={() => setIsLoginModalOpen(true)}
+              <LoginTriggerButton
                 className="btn-primary"
                 style={{
                   padding: "0.95rem 2rem",
@@ -1178,7 +825,7 @@ export default function HomePage() {
               >
                 <span>🔐 Masuk ke Portal Operasional</span>
                 <span>→</span>
-              </button>
+              </LoginTriggerButton>
 
               <a
                 href="#rekrutmen-marketing"
@@ -1225,232 +872,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* MODAL DIALOG: PORTAL AKSES LOGIN RESMI (ELEGAN & TIDAK VULGAR) */}
-        {isLoginModalOpen && (
-          <div
-            className="login-modal-backdrop"
-            onClick={(e) => {
-              if (e.target === e.currentTarget) setIsLoginModalOpen(false);
-            }}
-          >
-            <div className="login-modal-card" role="dialog" aria-modal="true">
-              {/* Tombol Tutup ✕ */}
-              <button
-                type="button"
-                className="login-close-btn"
-                onClick={() => setIsLoginModalOpen(false)}
-                aria-label="Tutup Portal Login"
-              >
-                ✕
-              </button>
-
-              {/* Header Modal */}
-              <div style={{ textAlign: "center", marginBottom: "1.75rem" }}>
-                <div
-                  style={{
-                    width: "52px",
-                    height: "52px",
-                    borderRadius: "16px",
-                    background: "linear-gradient(135deg, #FF5722, #FF4500)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    margin: "0 auto 1rem",
-                    fontSize: "26px",
-                    boxShadow: "0 6px 20px rgba(255, 69, 0, 0.4)",
-                  }}
-                >
-                  🔐
-                </div>
-                <h3 style={{ fontSize: "1.45rem", fontWeight: 900, letterSpacing: "-0.02em", marginBottom: "0" }}>
-                  Masuk ke OKESIH
-                </h3>
-                <p style={{ color: "var(--text-dim)", fontSize: "0.85rem", marginTop: "0.45rem" }}>
-                  Sistem akan membuka portal sesuai hak akses akun Anda.
-                </p>
-              </div>
-
-              <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
-                {loginError && (
-                  <div
-                    style={{
-                      background: "rgba(239, 68, 68, 0.15)",
-                      border: "1px solid #EF4444",
-                      color: "#FCA5A5",
-                      padding: "0.75rem 1rem",
-                      borderRadius: "var(--radius-sm)",
-                      fontSize: "0.825rem",
-                      fontWeight: 600,
-                    }}
-                  >
-                    ⚠️ {loginError}
-                  </div>
-                )}
-
-                <div>
-                  <label
-                    style={{
-                      fontSize: "0.85rem",
-                      fontWeight: 700,
-                      color: "var(--text-pure-white)",
-                      display: "block",
-                      marginBottom: "0.4rem",
-                    }}
-                  >
-                    Username
-                  </label>
-                  <div style={{ position: "relative" }}>
-                    <span
-                      style={{
-                        position: "absolute",
-                        left: "1rem",
-                        top: "50%",
-                        transform: "translateY(-50%)",
-                        fontSize: "0.95rem",
-                        color: "var(--text-dim)",
-                      }}
-                    >
-                      👤
-                    </span>
-                    <input
-                      type="text"
-                      required
-                      autoFocus
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      placeholder="Username akun Anda..."
-                      style={{
-                        width: "100%",
-                        padding: "0.85rem 1rem 0.85rem 2.6rem",
-                        borderRadius: "12px",
-                        background: "var(--bg-surface-1)",
-                        border: "1px solid var(--border-subtle)",
-                        color: "var(--text-pure-white)",
-                        fontSize: "0.95rem",
-                        outline: "none",
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label
-                    style={{
-                      fontSize: "0.85rem",
-                      fontWeight: 700,
-                      color: "var(--text-pure-white)",
-                      display: "block",
-                      marginBottom: "0.4rem",
-                    }}
-                  >
-                    Password
-                  </label>
-                  <div style={{ position: "relative" }}>
-                    <span
-                      style={{
-                        position: "absolute",
-                        left: "1rem",
-                        top: "50%",
-                        transform: "translateY(-50%)",
-                        fontSize: "0.95rem",
-                        color: "var(--text-dim)",
-                      }}
-                    >
-                      🔒
-                    </span>
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••"
-                      style={{
-                        width: "100%",
-                        padding: "0.85rem 2.8rem 0.85rem 2.6rem",
-                        borderRadius: "12px",
-                        background: "var(--bg-surface-1)",
-                        border: "1px solid var(--border-subtle)",
-                        color: "var(--text-pure-white)",
-                        fontSize: "0.95rem",
-                        outline: "none",
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
-                      title={showPassword ? "Sembunyikan password" : "Tampilkan password"}
-                      style={{
-                        position: "absolute",
-                        right: "0.75rem",
-                        top: "50%",
-                        transform: "translateY(-50%)",
-                        background: "none",
-                        border: "none",
-                        color: "#94A3B8",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "0.35rem",
-                        cursor: "pointer",
-                        padding: "0.25rem 0.4rem",
-                        fontSize: "0.75rem",
-                        fontWeight: 700,
-                        borderRadius: "6px",
-                      }}
-                    >
-                      {showPassword ? (
-                        <>
-                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-                            <line x1="1" y1="1" x2="23" y2="23" />
-                          </svg>
-                          <span>Tutup</span>
-                        </>
-                      ) : (
-                        <>
-                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                            <circle cx="12" cy="12" r="3" />
-                          </svg>
-                          <span>Lihat</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="btn-primary"
-                  style={{
-                    width: "100%",
-                    marginTop: "0.35rem",
-                    padding: "0.95rem",
-                    fontWeight: 800,
-                    fontSize: "0.95rem",
-                    borderRadius: "12px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "0.5rem",
-                    cursor: "pointer",
-                    border: "none",
-                  }}
-                >
-                  {isLoading ? (
-                    <span>⏳ Memverifikasi Otoritas...</span>
-                  ) : (
-                    <>
-                      <span>Masuk ke Sistem</span>
-                      <span>→</span>
-                    </>
-                  )}
-                </button>
-              </form>
-            </div>
-          </div>
-        )}
+        <LoginModal />
 
         {/* FOOTER PUBLIK */}
         <footer
@@ -1475,7 +897,7 @@ export default function HomePage() {
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
-              <img
+              <Image
                 src="/logo.svg?v=2"
                 alt="Logo OKESIH.COM"
                 width={42}
@@ -1504,52 +926,7 @@ export default function HomePage() {
           </div>
         </footer>
 
-        {/* FLOATING QUICK BOTTOM BAR FOR MOBILE */}
-        <div className="mobile-bottom-bar">
-          <Link
-            href="/menu/giras-nusantara?table=01"
-            target="_blank"
-            className="btn-primary"
-            style={{
-              flex: 1,
-              fontSize: "0.85rem",
-              padding: "0.75rem 0.5rem",
-              textAlign: "center",
-              fontWeight: 800,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "0.35rem",
-              borderRadius: "10px",
-              textDecoration: "none",
-            }}
-          >
-            <span>📱</span>
-            <span>Demo QR</span>
-          </Link>
-          <button
-            type="button"
-            onClick={() => setIsLoginModalOpen(true)}
-            className="btn-secondary"
-            style={{
-              flex: 1,
-              fontSize: "0.85rem",
-              padding: "0.75rem 0.5rem",
-              textAlign: "center",
-              fontWeight: 800,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "0.35rem",
-              borderRadius: "10px",
-              cursor: "pointer",
-              border: "1px solid var(--border-subtle)",
-            }}
-          >
-            <span>🔑</span>
-            <span>Masuk Akun</span>
-          </button>
-        </div>
+        <MobileBottomBar />
       </main>
     </>
   );

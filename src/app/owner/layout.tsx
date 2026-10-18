@@ -1,6 +1,7 @@
 import { OwnerProvider } from "@/components/owner/provider";
 import OwnerShell from "@/components/owner/Shell";
 import type { Metadata, Viewport } from "next";
+import "@/styles/owner.css";
 
 export const metadata: Metadata = { title: "OKESIH Owner", manifest: "/manifest-owner.webmanifest", applicationName: "OKESIH Owner", icons: { icon: "/logo.svg", apple: "/icons/apple-touch-icon.png" }, appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "OKESIH Owner" } };
 export const viewport: Viewport = { themeColor: "#f4512c", width: "device-width", initialScale: 1 };

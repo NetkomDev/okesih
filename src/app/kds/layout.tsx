@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import "@/styles/kds.css";
 
 export const metadata: Metadata = { title: "OKESIH Dapur KDS", manifest: "/kds/manifest.webmanifest", applicationName: "OKESIH Dapur KDS", icons: { icon: "/logo.svg", apple: "/icons/apple-touch-icon.png" }, appleWebApp: { capable: true, title: "OKESIH Dapur KDS" } };
 export const viewport: Viewport = { themeColor: "#f59e0b", width: "device-width", initialScale: 1, maximumScale: 1 };
