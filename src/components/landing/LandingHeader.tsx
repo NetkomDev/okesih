@@ -5,7 +5,15 @@ import Image from "next/image";
 import { useState } from "react";
 import ThemeToggle from "@/components/ThemeToggle";
 
-export default function LandingHeader() {
+interface LandingHeaderProps {
+  saasFeePerReceipt?: number;
+  marketingCommission?: number;
+}
+
+export default function LandingHeader({
+  saasFeePerReceipt = 50,
+  marketingCommission = 15,
+}: LandingHeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleOpenLogin = () => {
@@ -186,7 +194,7 @@ export default function LandingHeader() {
             className="mobile-nav-link"
             onClick={() => setIsMobileMenuOpen(false)}
           >
-            <span>🏷️ Biaya Sewa Rp 50</span>
+            <span>🏷️ Biaya Sewa (Rp {saasFeePerReceipt.toLocaleString("id-ID")})</span>
             <span>→</span>
           </a>
           <Link
@@ -200,7 +208,7 @@ export default function LandingHeader() {
               fontWeight: 800,
             }}
           >
-            <span>💼 Program Mitra Marketing (Rp 15/Struk)</span>
+            <span>💼 Program Mitra Marketing (Rp {marketingCommission.toLocaleString("id-ID")}/Struk)</span>
             <span>→</span>
           </Link>
           <a

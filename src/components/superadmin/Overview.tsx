@@ -320,7 +320,7 @@ return (<>{activeTab === "overview" && (
                       💳 QRIS &amp; Billing SaaS Platform
                     </div>
                     <div style={{ fontSize: "0.78rem", color: isDark ? "#94A3B8" : "#64748B", marginTop: "0.2rem" }}>
-                      Biaya SaaS Rp 100/struk • Verifikasi mutasi
+                      Biaya SaaS flat per struk • Verifikasi mutasi
                     </div>
                   </div>
                   <span style={{ fontSize: "1.2rem", color: "#D97706" }}>→</span>

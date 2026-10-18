@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { useMarketingData } from "../MarketingContext";
 import MarketingLoading from "../MarketingLoading";

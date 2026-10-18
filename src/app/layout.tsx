@@ -33,7 +33,7 @@ export const metadata: Metadata = {
     "antrean smart tv",
     "pos kasir hemat",
     "aplikasi f&b indonesia",
-    "sistem kasir rp 50 per struk",
+    "sistem kasir hemat per struk",
   ],
   authors: [{ name: "OKESIH Team" }],
   creator: "PT OKESIH KARYA DIGITAL",

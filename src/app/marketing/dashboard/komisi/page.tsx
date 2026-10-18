@@ -144,7 +144,7 @@ export default function MarketingKomisiPage() {
                         <b>{tenant.receipts.toLocaleString("id-ID")}</b> struk
                       </td>
                       <td>
-                        {tenant.commissionPerReceipt ? money(tenant.commissionPerReceipt) : "Rp 15"} / struk
+                        {money(tenant.commissionPerReceipt || data?.profile?.commissionRate || 0)} / struk
                       </td>
                       <td>
                         <strong style={{ color: "#047857", fontSize: "14px" }}>

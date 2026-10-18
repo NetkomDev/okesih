@@ -25,8 +25,12 @@ export default function MarketingRegisterPage() {
 
   useEffect(() => {
     fetch("/api/platform-settings", { cache: "no-store" })
-      .then((response) => response.ok ? response.json() : Promise.reject())
-      .then((payload) => setCommissionPerReceipt(payload.data.defaultMarketingCommission))
+      .then((response) => (response.ok ? response.json() : Promise.reject()))
+      .then((payload) => {
+        if (typeof payload?.data?.defaultMarketingCommission === "number") {
+          setCommissionPerReceipt(payload.data.defaultMarketingCommission);
+        }
+      })
       .catch(() => undefined);
   }, []);
 

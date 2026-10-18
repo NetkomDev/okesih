@@ -2,10 +2,12 @@ import Link from "next/link";
 import MarketingHeader from "@/components/marketing/MarketingHeader";
 import CommissionCalculator from "@/components/marketing/CommissionCalculator";
 import MarketingFaq from "@/components/marketing/MarketingFaq";
+import { getPlatformSettings } from "@/lib/platform-settings";
 
-export default function MarketingProgramPage() {
-  const commissionPerReceipt = 15;
-  const saasFeePerReceipt = 50;
+export default async function MarketingProgramPage() {
+  const settings = await getPlatformSettings();
+  const commissionPerReceipt = settings.defaultMarketingCommission;
+  const saasFeePerReceipt = settings.saasFeePerReceipt;
 
   const faqs = [
     {

@@ -12,19 +12,20 @@ export default function CommissionCalculator({
 }: CommissionCalculatorProps) {
   const [tenantCount, setTenantCount] = useState<number>(20);
   const [avgReceipts, setAvgReceipts] = useState<number>(120);
-  const [commissionPerReceipt, setCommissionPerReceipt] = useState<number>(initialCommissionPerReceipt);
+  const [liveCommission, setLiveCommission] = useState<number | null>(null);
 
   useEffect(() => {
     fetch("/api/platform-settings", { cache: "no-store" })
       .then((response) => (response.ok ? response.json() : Promise.reject()))
       .then((payload) => {
-        if (payload?.data?.defaultMarketingCommission) {
-          setCommissionPerReceipt(payload.data.defaultMarketingCommission);
+        if (typeof payload?.data?.defaultMarketingCommission === "number") {
+          setLiveCommission(payload.data.defaultMarketingCommission);
         }
       })
       .catch(() => undefined);
   }, []);
 
+  const commissionPerReceipt = liveCommission ?? initialCommissionPerReceipt;
   const dailyReceiptsTotal = tenantCount * avgReceipts;
   const dailyCommission = dailyReceiptsTotal * commissionPerReceipt;
   const monthlyCommission = dailyCommission * 30;
@@ -56,7 +57,7 @@ export default function CommissionCalculator({
             style={{
               display: "inline-flex",
               alignItems: "center",
-              gap: "0.4rem",
+              gap: "0.5rem",
               padding: "0.35rem 0.95rem",
               borderRadius: "var(--radius-pill)",
               backgroundColor: "rgba(251, 191, 36, 0.15)",
@@ -66,9 +67,13 @@ export default function CommissionCalculator({
               fontWeight: 800,
               marginBottom: "0.75rem",
               textTransform: "uppercase",
+              flexWrap: "wrap",
+              justifyContent: "center",
             }}
           >
-            📊 KALKULATOR POTENSI PENDAPATAN
+            <span>📊 KALKULATOR POTENSI PENDAPATAN</span>
+            <span style={{ opacity: 0.6 }}>•</span>
+            <span style={{ color: "#34D399" }}>Tarif Komisi: Rp {commissionPerReceipt.toLocaleString("id-ID")}/struk</span>
           </div>
           <h2 style={{ fontSize: "clamp(1.5rem, 3vw, 2.1rem)", fontWeight: 900, letterSpacing: "-0.02em" }}>
             Berapa Penghasilan Pasif yang Bisa Anda Dapatkan?
