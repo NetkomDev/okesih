@@ -1,2 +1,4 @@
-import Waiters from "@/components/owner/Waiters";
-export default function Page() { return <Waiters />; }
+import Team from "@/components/owner/Team";
+export default function Page() {
+  return <Team initialTab="waiters" />;
+}

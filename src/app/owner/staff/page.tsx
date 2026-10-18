@@ -1,2 +1,4 @@
-import Staff from "@/components/owner/Staff";
-export default function Page() { return <Staff />; }
+import Team from "@/components/owner/Team";
+export default function Page() {
+  return <Team initialTab="staff" />;
+}
