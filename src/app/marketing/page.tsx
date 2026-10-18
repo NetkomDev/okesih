@@ -100,7 +100,7 @@ export default async function MarketingProgramPage() {
         style={{
           position: "relative",
           zIndex: 1,
-          padding: "5rem 1.5rem 4rem",
+          padding: "3.5rem 1.25rem 2.5rem",
           maxWidth: "1000px",
           margin: "0 auto",
           textAlign: "center",
@@ -112,14 +112,14 @@ export default async function MarketingProgramPage() {
             display: "inline-flex",
             alignItems: "center",
             gap: "0.5rem",
-            padding: "0.45rem 1.25rem",
+            padding: "0.35rem 1.15rem",
             borderRadius: "var(--radius-pill)",
-            backgroundColor: "rgba(16, 185, 129, 0.15)",
-            border: "1px solid rgba(16, 185, 129, 0.4)",
-            color: "#34D399",
-            fontSize: "0.825rem",
+            backgroundColor: "var(--accent-emerald-bg)",
+            border: "1px solid var(--accent-emerald-border)",
+            color: "var(--accent-emerald)",
+            fontSize: "0.78rem",
             fontWeight: 800,
-            marginBottom: "1.5rem",
+            marginBottom: "1.25rem",
             textTransform: "uppercase",
             letterSpacing: "0.06em",
           }}
@@ -129,36 +129,27 @@ export default async function MarketingProgramPage() {
 
         <h1
           style={{
-            fontSize: "clamp(2.2rem, 5vw, 3.4rem)",
+            fontSize: "clamp(2rem, 4.5vw, 3.2rem)",
             fontWeight: 900,
             letterSpacing: "-0.03em",
-            lineHeight: 1.15,
-            marginBottom: "1.25rem",
+            lineHeight: 1.18,
+            marginBottom: "1rem",
           }}
         >
-          Raih Komisi Pasif Harian Bersama{" "}
-          <span
-            style={{
-              background: "linear-gradient(135deg, #34D399 0%, #10B981 50%, #FBBF24 100%)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-            }}
-          >
-            Ekosistem OKESIH
-          </span>
+          Raih Komisi Pasif Harian Bersama OKESIH
         </h1>
 
         <p
           style={{
-            fontSize: "clamp(1rem, 2vw, 1.15rem)",
+            fontSize: "clamp(0.95rem, 2vw, 1.1rem)",
             color: "var(--text-muted)",
-            maxWidth: "760px",
-            margin: "0 auto 2.5rem",
-            lineHeight: 1.65,
+            maxWidth: "720px",
+            margin: "0 auto 2rem",
+            lineHeight: 1.6,
           }}
         >
-          Daftarkan warkop, kafe, resto, dan usaha kuliner di wilayah Anda. Nikmati bagi hasil pasif otomatis{" "}
-          <strong style={{ color: "#34D399" }}>Rp {commissionPerReceipt.toLocaleString("id-ID")} per struk transaksi</strong> seumur hidup yang dicairkan langsung ke rekening bank atau e-wallet Anda!
+          Ajak warkop, kafe, dan resto di wilayah Anda pakai OKESIH. Dapatkan bagi hasil otomatis{" "}
+          <strong style={{ color: "var(--accent-emerald)" }}>Rp {commissionPerReceipt.toLocaleString("id-ID")} per struk transaksi</strong> seumur hidup yang dicairkan langsung ke rekening bank atau e-wallet Anda!
         </p>
 
         {/* CTA Button Group */}
@@ -167,9 +158,9 @@ export default async function MarketingProgramPage() {
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
-            gap: "1rem",
+            gap: "0.85rem",
             flexWrap: "wrap",
-            marginBottom: "3.5rem",
+            marginBottom: "2.5rem",
           }}
         >
           <Link
@@ -177,14 +168,14 @@ export default async function MarketingProgramPage() {
             className="btn-primary"
             style={{
               background: "linear-gradient(135deg, #10B981, #059669)",
-              padding: "1rem 2.25rem",
-              fontSize: "1rem",
+              padding: "0.95rem 2rem",
+              fontSize: "0.95rem",
               fontWeight: 900,
               borderRadius: "14px",
               display: "inline-flex",
               alignItems: "center",
-              gap: "0.6rem",
-              boxShadow: "0 8px 30px rgba(16, 185, 129, 0.45)",
+              gap: "0.5rem",
+              boxShadow: "0 6px 24px rgba(16, 185, 129, 0.4)",
               textDecoration: "none",
               color: "#FFF",
             }}
@@ -198,15 +189,14 @@ export default async function MarketingProgramPage() {
             href="#simulasi"
             className="btn-secondary"
             style={{
-              padding: "1rem 1.75rem",
-              fontSize: "0.95rem",
+              padding: "0.95rem 1.6rem",
+              fontSize: "0.9rem",
               fontWeight: 700,
               borderRadius: "14px",
               display: "inline-flex",
               alignItems: "center",
-              gap: "0.5rem",
+              gap: "0.4rem",
               textDecoration: "none",
-              transition: "all 0.2s ease",
             }}
           >
             <span>📊 Hitung Potensi Komisi</span>
@@ -218,37 +208,46 @@ export default async function MarketingProgramPage() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-            gap: "1rem",
-            padding: "1.5rem",
-            borderRadius: "20px",
+            gridTemplateColumns: "repeat(2, 1fr)",
+            gap: "0.75rem",
+            padding: "1.25rem",
+            borderRadius: "18px",
             background: "rgba(255, 255, 255, 0.03)",
-            border: "1px solid rgba(255, 255, 255, 0.08)",
+            border: "1px solid var(--border-subtle)",
             textAlign: "center",
           }}
+          className="mkt-stats-grid"
         >
-          <div>
-            <div style={{ fontSize: "1.75rem", fontWeight: 900, color: "#34D399" }}>Rp {commissionPerReceipt.toLocaleString("id-ID")} / Struk</div>
-            <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "0.25rem" }}>
-              Bagi Hasil Otomatis Real-Time
+          <div style={{ padding: "0.5rem" }}>
+            <div style={{ fontSize: "clamp(1.25rem, 3.5vw, 1.6rem)", fontWeight: 900, color: "var(--accent-emerald)" }}>
+              Rp {commissionPerReceipt.toLocaleString("id-ID")} / Struk
+            </div>
+            <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginTop: "0.2rem" }}>
+              Bagi Hasil Real-Time
             </div>
           </div>
-          <div>
-            <div style={{ fontSize: "1.75rem", fontWeight: 900, color: "#FBBF24" }}>Rp 0 (Gratis)</div>
-            <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "0.25rem" }}>
-              Tanpa Biaya &amp; Tanpa Modal Awal
+          <div style={{ padding: "0.5rem" }}>
+            <div style={{ fontSize: "clamp(1.25rem, 3.5vw, 1.6rem)", fontWeight: 900, color: "var(--accent-amber)" }}>
+              Rp 0 (Gratis)
+            </div>
+            <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginTop: "0.2rem" }}>
+              Tanpa Modal Awal
             </div>
           </div>
-          <div>
-            <div style={{ fontSize: "1.75rem", fontWeight: 900, color: "#60A5FA" }}>100% Fleksibel</div>
-            <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "0.25rem" }}>
-              Bebas Jam Kerja &amp; Target Kantor
+          <div style={{ padding: "0.5rem" }}>
+            <div style={{ fontSize: "clamp(1.25rem, 3.5vw, 1.6rem)", fontWeight: 900, color: "var(--accent-blue)" }}>
+              100% Fleksibel
+            </div>
+            <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginTop: "0.2rem" }}>
+              Tanpa Target Bulanan
             </div>
           </div>
-          <div>
-            <div style={{ fontSize: "1.75rem", fontWeight: 900, color: "#A78BFA" }}>Seumur Hidup</div>
-            <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "0.25rem" }}>
-              Selama Tenant Tetap Beroperasi
+          <div style={{ padding: "0.5rem" }}>
+            <div style={{ fontSize: "clamp(1.25rem, 3.5vw, 1.6rem)", fontWeight: 900, color: "var(--accent-purple)" }}>
+              Seumur Hidup
+            </div>
+            <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginTop: "0.2rem" }}>
+              Selama Toko Beroperasi
             </div>
           </div>
         </div>
@@ -259,97 +258,93 @@ export default async function MarketingProgramPage() {
         style={{
           position: "relative",
           zIndex: 1,
-          padding: "3.5rem 1.5rem",
+          padding: "3rem 1.25rem",
           maxWidth: "1100px",
           margin: "0 auto",
           width: "100%",
         }}
       >
-        <div style={{ textAlign: "center", marginBottom: "2.75rem" }}>
-          <h2 style={{ fontSize: "2rem", fontWeight: 900, letterSpacing: "-0.02em", marginBottom: "0.75rem" }}>
-            Keuntungan Eksklusif Mitra Marketing
+        <div style={{ textAlign: "center", marginBottom: "2.25rem" }}>
+          <h2 style={{ fontSize: "clamp(1.5rem, 3.5vw, 2rem)", fontWeight: 900, letterSpacing: "-0.02em", marginBottom: "0.5rem" }}>
+            Keuntungan Menjadi Mitra OKESIH
           </h2>
-          <p style={{ fontSize: "0.95rem", color: "var(--text-muted)", maxWidth: "600px", margin: "0 auto" }}>
-            Solusi bisnis kemitraan modern dengan transparansi data penuh dan pembayaran komisi tepat waktu.
+          <p style={{ fontSize: "0.9rem", color: "var(--text-muted)", maxWidth: "600px", margin: "0 auto" }}>
+            Peluang penghasilan pasif transparan dengan pencairan komisi langsung ke rekening.
           </p>
         </div>
 
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-            gap: "1.5rem",
+            gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+            gap: "1.25rem",
           }}
         >
           <div
-            className="glass-panel"
+            className="glass-panel mobile-compact-panel"
             style={{
-              padding: "1.85rem",
-              borderRadius: "18px",
-              border: "1px solid rgba(16, 185, 129, 0.25)",
-              background: "rgba(21, 21, 24, 0.75)",
+              padding: "1.5rem",
+              borderRadius: "16px",
+              border: "1px solid var(--accent-emerald-border)",
             }}
           >
-            <div style={{ fontSize: "2.25rem", marginBottom: "0.75rem" }}>📈</div>
-            <h3 style={{ fontSize: "1.2rem", fontWeight: 800, marginBottom: "0.5rem", color: "#34D399" }}>
+            <div style={{ fontSize: "1.85rem", marginBottom: "0.5rem" }}>📈</div>
+            <h3 style={{ fontSize: "1.05rem", fontWeight: 800, marginBottom: "0.35rem", color: "var(--accent-emerald)" }}>
               Komisi Pasif Berulang
             </h3>
-            <p style={{ fontSize: "0.875rem", color: "var(--text-muted)", lineHeight: 1.6 }}>
-              Setiap kali tenant binaan Anda melayani pelanggan dan mencetak struk pesanan, pundi komisi Anda bertambah otomatis tanpa Anda harus hadir menjaga toko.
+            <p style={{ fontSize: "0.825rem", color: "var(--text-muted)", lineHeight: 1.5, margin: 0 }}>
+              Setiap kali tenant binaan mencetak struk pesanan, pundi komisi bertambah otomatis tanpa Anda harus menjaga toko.
             </p>
           </div>
 
           <div
-            className="glass-panel"
+            className="glass-panel mobile-compact-panel"
             style={{
-              padding: "1.85rem",
-              borderRadius: "18px",
-              border: "1px solid rgba(16, 185, 129, 0.25)",
-              background: "rgba(21, 21, 24, 0.75)",
+              padding: "1.5rem",
+              borderRadius: "16px",
+              border: "1px solid var(--accent-emerald-border)",
             }}
           >
-            <div style={{ fontSize: "2.25rem", marginBottom: "0.75rem" }}>🗺️</div>
-            <h3 style={{ fontSize: "1.2rem", fontWeight: 800, marginBottom: "0.5rem", color: "#34D399" }}>
-              Pemetaan Wilayah &amp; Referral
+            <div style={{ fontSize: "1.85rem", marginBottom: "0.5rem" }}>🗺️</div>
+            <h3 style={{ fontSize: "1.05rem", fontWeight: 800, marginBottom: "0.35rem", color: "var(--accent-emerald)" }}>
+              Wilayah &amp; Referral Resmi
             </h3>
-            <p style={{ fontSize: "0.875rem", color: "var(--text-muted)", lineHeight: 1.6 }}>
-              Dapatkan kode referral eksklusif terdaftar resmi di Okesih.com. Tenant yang mendaftar melalui Anda terkunci aman dan tidak akan direbut oleh pihak lain.
+            <p style={{ fontSize: "0.825rem", color: "var(--text-muted)", lineHeight: 1.5, margin: 0 }}>
+              Kode referral resmi mengunci tenant binaan Anda aman, tidak dapat direbut oleh pihak lain.
             </p>
           </div>
 
           <div
-            className="glass-panel"
+            className="glass-panel mobile-compact-panel"
             style={{
-              padding: "1.85rem",
-              borderRadius: "18px",
-              border: "1px solid rgba(16, 185, 129, 0.25)",
-              background: "rgba(21, 21, 24, 0.75)",
+              padding: "1.5rem",
+              borderRadius: "16px",
+              border: "1px solid var(--accent-emerald-border)",
             }}
           >
-            <div style={{ fontSize: "2.25rem", marginBottom: "0.75rem" }}>⏱️</div>
-            <h3 style={{ fontSize: "1.2rem", fontWeight: 800, marginBottom: "0.5rem", color: "#34D399" }}>
+            <div style={{ fontSize: "1.85rem", marginBottom: "0.5rem" }}>⏱️</div>
+            <h3 style={{ fontSize: "1.05rem", fontWeight: 800, marginBottom: "0.35rem", color: "var(--accent-emerald)" }}>
               100% Bebas &amp; Fleksibel
             </h3>
-            <p style={{ fontSize: "0.875rem", color: "var(--text-muted)", lineHeight: 1.6 }}>
-              Atur waktu kerja Anda sendiri. Sangat ideal bagi mahasiswa, pekerja lapangan, komunitas kuliner, atau siapa saja yang ingin penghasilan pasif tanpa ikatan kantor.
+            <p style={{ fontSize: "0.825rem", color: "var(--text-muted)", lineHeight: 1.5, margin: 0 }}>
+              Tanpa jam kerja kaku dan tanpa target bulanan. Sangat fleksibel untuk mahasiswa, pekerja, atau komunitas kuliner.
             </p>
           </div>
 
           <div
-            className="glass-panel"
+            className="glass-panel mobile-compact-panel"
             style={{
-              padding: "1.85rem",
-              borderRadius: "18px",
-              border: "1px solid rgba(16, 185, 129, 0.25)",
-              background: "rgba(21, 21, 24, 0.75)",
+              padding: "1.5rem",
+              borderRadius: "16px",
+              border: "1px solid var(--accent-emerald-border)",
             }}
           >
-            <div style={{ fontSize: "2.25rem", marginBottom: "0.75rem" }}>💳</div>
-            <h3 style={{ fontSize: "1.2rem", fontWeight: 800, marginBottom: "0.5rem", color: "#34D399" }}>
+            <div style={{ fontSize: "1.85rem", marginBottom: "0.5rem" }}>💳</div>
+            <h3 style={{ fontSize: "1.05rem", fontWeight: 800, marginBottom: "0.35rem", color: "var(--accent-emerald)" }}>
               Pencairan Cepat Langsung
             </h3>
-            <p style={{ fontSize: "0.875rem", color: "var(--text-muted)", lineHeight: 1.6 }}>
-              Rekapitulasi struk transparan. Dana komisi ditransfer langsung ke rekening bank (BCA, Mandiri, BRI, BNI) atau dompet digital (DANA, GoPay, OVO) pilihan Anda.
+            <p style={{ fontSize: "0.825rem", color: "var(--text-muted)", lineHeight: 1.5, margin: 0 }}>
+              Rekapitulasi struk transparan. Dana komisi ditransfer langsung ke rekening bank atau dompet digital pilihan Anda.
             </p>
           </div>
         </div>
@@ -362,130 +357,130 @@ export default async function MarketingProgramPage() {
         style={{
           position: "relative",
           zIndex: 1,
-          padding: "3.5rem 1.5rem",
+          padding: "3rem 1.25rem",
           maxWidth: "1000px",
           margin: "0 auto",
           width: "100%",
         }}
       >
-        <div style={{ textAlign: "center", marginBottom: "3rem" }}>
-          <h2 style={{ fontSize: "2rem", fontWeight: 900, letterSpacing: "-0.02em", marginBottom: "0.75rem" }}>
+        <div style={{ textAlign: "center", marginBottom: "2.25rem" }}>
+          <h2 style={{ fontSize: "clamp(1.5rem, 3.5vw, 2rem)", fontWeight: 900, letterSpacing: "-0.02em", marginBottom: "0.5rem" }}>
             3 Langkah Mudah Memulai
           </h2>
-          <p style={{ fontSize: "0.95rem", color: "var(--text-muted)" }}>
-            Proses simpel, cepat, dan bisa langsung action dalam hitungan menit.
+          <p style={{ fontSize: "0.9rem", color: "var(--text-muted)" }}>
+            Proses simpel, cepat, dan bisa langsung action hari ini.
           </p>
         </div>
 
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-            gap: "1.5rem",
+            gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+            gap: "1.25rem",
           }}
         >
           <div
-            className="glass-panel"
+            className="glass-panel mobile-compact-panel"
             style={{
-              padding: "2rem 1.5rem",
-              borderRadius: "18px",
+              padding: "1.75rem 1.25rem",
+              borderRadius: "16px",
               textAlign: "center",
               position: "relative",
             }}
           >
             <div
               style={{
-                width: "48px",
-                height: "48px",
+                width: "42px",
+                height: "42px",
                 borderRadius: "50%",
-                background: "rgba(16, 185, 129, 0.2)",
-                color: "#34D399",
-                fontSize: "1.25rem",
+                background: "var(--accent-emerald-bg)",
+                color: "var(--accent-emerald)",
+                fontSize: "1.15rem",
                 fontWeight: 900,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                margin: "0 auto 1.25rem",
-                border: "1px solid rgba(16, 185, 129, 0.4)",
+                margin: "0 auto 1rem",
+                border: "1px solid var(--accent-emerald-border)",
               }}
             >
               1
             </div>
-            <h3 style={{ fontSize: "1.15rem", fontWeight: 800, marginBottom: "0.5rem" }}>
+            <h3 style={{ fontSize: "1.05rem", fontWeight: 800, marginBottom: "0.35rem" }}>
               Daftar Formulir Online
             </h3>
-            <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", lineHeight: 1.6 }}>
-              Lengkapi nama, kontak WhatsApp, nomor rekening, dan wilayah Anda. Sistem menerbitkan Kode Referral Unik resmi untuk Anda.
+            <p style={{ fontSize: "0.825rem", color: "var(--text-muted)", lineHeight: 1.5, margin: 0 }}>
+              Lengkapi data diri, nomor rekening, dan wilayah Anda untuk menerima Kode Referral Resmi Okesih.com.
             </p>
           </div>
 
           <div
-            className="glass-panel"
+            className="glass-panel mobile-compact-panel"
             style={{
-              padding: "2rem 1.5rem",
-              borderRadius: "18px",
+              padding: "1.75rem 1.25rem",
+              borderRadius: "16px",
               textAlign: "center",
               position: "relative",
             }}
           >
             <div
               style={{
-                width: "48px",
-                height: "48px",
+                width: "42px",
+                height: "42px",
                 borderRadius: "50%",
-                background: "rgba(16, 185, 129, 0.2)",
-                color: "#34D399",
-                fontSize: "1.25rem",
+                background: "var(--accent-emerald-bg)",
+                color: "var(--accent-emerald)",
+                fontSize: "1.15rem",
                 fontWeight: 900,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                margin: "0 auto 1.25rem",
-                border: "1px solid rgba(16, 185, 129, 0.4)",
+                margin: "0 auto 1rem",
+                border: "1px solid var(--accent-emerald-border)",
               }}
             >
               2
             </div>
-            <h3 style={{ fontSize: "1.15rem", fontWeight: 800, marginBottom: "0.5rem" }}>
+            <h3 style={{ fontSize: "1.05rem", fontWeight: 800, marginBottom: "0.35rem" }}>
               Ajak Tenant Pasang OKESIH
             </h3>
-            <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", lineHeight: 1.6 }}>
-              Kenalkan sistem kasir pintar &amp; self-order QR OKESIH ke warkop/kafe rekanan. Biaya sewa hanya Rp {saasFeePerReceipt.toLocaleString("id-ID")}/struk yang sangat terjangkau bagi pemilik usaha.
+            <p style={{ fontSize: "0.825rem", color: "var(--text-muted)", lineHeight: 1.5, margin: 0 }}>
+              Kenalkan sistem kasir &amp; self-order QR hemat (hanya Rp {saasFeePerReceipt.toLocaleString("id-ID")}/struk) ke warkop/resto di area Anda.
             </p>
           </div>
 
           <div
-            className="glass-panel"
+            className="glass-panel mobile-compact-panel"
             style={{
-              padding: "2rem 1.5rem",
-              borderRadius: "18px",
+              padding: "1.75rem 1.25rem",
+              borderRadius: "16px",
               textAlign: "center",
               position: "relative",
             }}
           >
             <div
               style={{
-                width: "48px",
-                height: "48px",
+                width: "42px",
+                height: "42px",
                 borderRadius: "50%",
-                background: "rgba(16, 185, 129, 0.2)",
-                color: "#34D399",
-                fontSize: "1.25rem",
+                background: "var(--accent-emerald-bg)",
+                color: "var(--accent-emerald)",
+                fontSize: "1.15rem",
                 fontWeight: 900,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                margin: "0 auto 1.25rem",
-                border: "1px solid rgba(16, 185, 129, 0.4)",
+                margin: "0 auto 1rem",
+                border: "1px solid var(--accent-emerald-border)",
               }}
             >
               3
             </div>
-            <h3 style={{ fontSize: "1.15rem", fontWeight: 800, marginBottom: "0.5rem" }}>
+            <h3 style={{ fontSize: "1.05rem", fontWeight: 800, marginBottom: "0.35rem" }}>
               Nikmati Komisi Pasif Harian
             </h3>
-            <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", lineHeight: 1.6 }}>
-              Setiap struk yang keluar otomatis menghasilkan Rp {commissionPerReceipt.toLocaleString("id-ID")} bagi Anda. Pantau komisi dan terima pencairan rutin langsung ke rekening Anda.
+            <p style={{ fontSize: "0.825rem", color: "var(--text-muted)", lineHeight: 1.5, margin: 0 }}>
+              Setiap struk yang keluar otomatis menghasilkan Rp {commissionPerReceipt.toLocaleString("id-ID")} bagi Anda seumur hidup langsung ke rekening Anda.
             </p>
           </div>
         </div>
@@ -496,18 +491,18 @@ export default async function MarketingProgramPage() {
         style={{
           position: "relative",
           zIndex: 1,
-          padding: "3.5rem 1.5rem",
+          padding: "3rem 1.25rem",
           maxWidth: "860px",
           margin: "0 auto",
           width: "100%",
         }}
       >
-        <div style={{ textAlign: "center", marginBottom: "2.5rem" }}>
-          <h2 style={{ fontSize: "2rem", fontWeight: 900, letterSpacing: "-0.02em", marginBottom: "0.5rem" }}>
+        <div style={{ textAlign: "center", marginBottom: "2rem" }}>
+          <h2 style={{ fontSize: "clamp(1.5rem, 3.5vw, 2rem)", fontWeight: 900, letterSpacing: "-0.02em", marginBottom: "0.5rem" }}>
             Pertanyaan yang Sering Diajukan
           </h2>
           <p style={{ fontSize: "0.9rem", color: "var(--text-muted)" }}>
-            Hal-hal penting seputar keagenan dan kemitraan marketing OKESIH.
+            Hal-hal penting seputar kemitraan marketing resmi OKESIH.
           </p>
         </div>
 
@@ -519,7 +514,7 @@ export default async function MarketingProgramPage() {
         style={{
           position: "relative",
           zIndex: 1,
-          padding: "4rem 1.5rem 6rem",
+          padding: "3.5rem 1.25rem 5rem",
           maxWidth: "920px",
           margin: "0 auto",
           width: "100%",
@@ -527,36 +522,36 @@ export default async function MarketingProgramPage() {
         }}
       >
         <div
-          className="glass-panel-glow"
+          className="glass-panel-glow mobile-compact-panel mkt-container-card"
           style={{
-            padding: "3.5rem 2.25rem",
-            borderRadius: "24px",
-            border: "1px solid rgba(16, 185, 129, 0.45)",
+            padding: "3rem 1.75rem",
+            borderRadius: "22px",
+            border: "1px solid var(--accent-emerald-border)",
             background: "linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(13, 13, 14, 0.98) 100%)",
-            boxShadow: "0 20px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(16, 185, 129, 0.2)",
+            boxShadow: "0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(16, 185, 129, 0.15)",
           }}
         >
-          <div style={{ fontSize: "3rem", marginBottom: "0.75rem" }}>🚀</div>
+          <div style={{ fontSize: "2.5rem", marginBottom: "0.5rem" }}>🚀</div>
           <h2
             style={{
-              fontSize: "clamp(1.75rem, 3.5vw, 2.4rem)",
+              fontSize: "clamp(1.6rem, 3.5vw, 2.2rem)",
               fontWeight: 900,
               letterSpacing: "-0.02em",
-              marginBottom: "1rem",
+              marginBottom: "0.75rem",
             }}
           >
-            Siap Membangun Aset Pendapatan Pasif Anda?
+            Siap Bangun Aset Pendapatan Pasif?
           </h2>
           <p
             style={{
-              fontSize: "0.95rem",
+              fontSize: "0.925rem",
               color: "var(--text-muted)",
-              maxWidth: "620px",
-              margin: "0 auto 2.25rem",
-              lineHeight: 1.6,
+              maxWidth: "600px",
+              margin: "0 auto 2rem",
+              lineHeight: 1.55,
             }}
           >
-            Pendaftaran 100% gratis tanpa dipungut biaya apapun. Isi formulir pendaftaran untuk mendapatkan kode referral unik resmi dan bergabung bersama jaringan mitra kami.
+            Pendaftaran 100% gratis tanpa dipungut biaya apapun. Isi formulir sekarang untuk mendapatkan kode referral resmi dan amankan wilayah Anda.
           </p>
 
           <Link
@@ -564,36 +559,36 @@ export default async function MarketingProgramPage() {
             className="btn-primary"
             style={{
               background: "linear-gradient(135deg, #10B981, #059669)",
-              padding: "1.1rem 2.5rem",
-              fontSize: "1.05rem",
+              padding: "1rem 2.25rem",
+              fontSize: "1rem",
               fontWeight: 900,
-              borderRadius: "16px",
+              borderRadius: "14px",
               display: "inline-flex",
               alignItems: "center",
-              gap: "0.75rem",
-              boxShadow: "0 8px 30px rgba(16, 185, 129, 0.45)",
+              gap: "0.5rem",
+              boxShadow: "0 6px 24px rgba(16, 185, 129, 0.4)",
               textDecoration: "none",
               color: "#FFF",
             }}
           >
             <span>📝</span>
-            <span>Buka Formulir Pendaftaran Mitra Marketing Sekarang</span>
+            <span>Buka Formulir Pendaftaran Mitra Sekarang</span>
             <span>→</span>
           </Link>
 
           <div
             style={{
-              marginTop: "2rem",
+              marginTop: "1.75rem",
               display: "flex",
               justifyContent: "center",
-              gap: "1.5rem",
+              gap: "1.25rem",
               flexWrap: "wrap",
-              fontSize: "0.8rem",
+              fontSize: "0.78rem",
               color: "var(--text-dim)",
             }}
           >
-            <span>✓ 100% Gratis &amp; Tanpa Modal</span>
-            <span>✓ Kode Referral Resmi Okesih.com</span>
+            <span>✓ 100% Gratis Tanpa Modal</span>
+            <span>✓ Kode Referral Resmi</span>
             <span>✓ Notifikasi WhatsApp Langsung</span>
           </div>
         </div>

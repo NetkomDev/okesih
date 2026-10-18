@@ -47,13 +47,13 @@ export default function MarketingFaq({ faqs }: MarketingFaqProps) {
               style={{
                 fontSize: "0.95rem",
                 fontWeight: 800,
-                color: openFaq === idx ? "#059669" : "var(--text-pure-white)",
+                color: openFaq === idx ? "var(--accent-emerald)" : "var(--text-pure-white)",
                 transition: "color 0.2s ease",
               }}
             >
               {faq.q}
             </span>
-            <span style={{ fontSize: "1.2rem", fontWeight: 700, color: "#10B981", marginLeft: "1rem" }}>
+            <span style={{ fontSize: "1.2rem", fontWeight: 700, color: "var(--accent-emerald)", marginLeft: "1rem" }}>
               {openFaq === idx ? "−" : "+"}
             </span>
           </button>

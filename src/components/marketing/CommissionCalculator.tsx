@@ -52,7 +52,7 @@ export default function CommissionCalculator({
           boxShadow: "0 16px 50px rgba(0, 0, 0, 0.7)",
         }}
       >
-        <div style={{ textAlign: "center", marginBottom: "2.5rem" }}>
+        <div style={{ textAlign: "center", marginBottom: "2rem" }}>
           <div
             style={{
               display: "inline-flex",
@@ -60,10 +60,10 @@ export default function CommissionCalculator({
               gap: "0.5rem",
               padding: "0.35rem 0.95rem",
               borderRadius: "var(--radius-pill)",
-              backgroundColor: "rgba(251, 191, 36, 0.15)",
-              border: "1px solid rgba(251, 191, 36, 0.4)",
-              color: "#FBBF24",
-              fontSize: "0.8rem",
+              backgroundColor: "var(--accent-amber-bg)",
+              border: "1px solid var(--accent-amber-border)",
+              color: "var(--accent-amber)",
+              fontSize: "0.78rem",
               fontWeight: 800,
               marginBottom: "0.75rem",
               textTransform: "uppercase",
@@ -73,13 +73,13 @@ export default function CommissionCalculator({
           >
             <span>📊 KALKULATOR POTENSI PENDAPATAN</span>
             <span style={{ opacity: 0.6 }}>•</span>
-            <span style={{ color: "#34D399" }}>Tarif Komisi: Rp {commissionPerReceipt.toLocaleString("id-ID")}/struk</span>
+            <span style={{ color: "var(--accent-emerald)" }}>Tarif Komisi: Rp {commissionPerReceipt.toLocaleString("id-ID")}/struk</span>
           </div>
-          <h2 style={{ fontSize: "clamp(1.5rem, 3vw, 2.1rem)", fontWeight: 900, letterSpacing: "-0.02em" }}>
+          <h2 style={{ fontSize: "clamp(1.4rem, 3vw, 2rem)", fontWeight: 900, letterSpacing: "-0.02em" }}>
             Berapa Penghasilan Pasif yang Bisa Anda Dapatkan?
           </h2>
-          <p style={{ fontSize: "0.9rem", color: "var(--text-muted)", maxWidth: "600px", margin: "0.5rem auto 0" }}>
-            Geser slider di bawah ini untuk mensimulasikan jumlah tenant aktif dan rata-rata struk harian:
+          <p style={{ fontSize: "0.875rem", color: "var(--text-muted)", maxWidth: "560px", margin: "0.4rem auto 0" }}>
+            Geser slider di bawah ini untuk mensimulasikan potensi komisi bulanan Anda:
           </p>
         </div>
 
@@ -87,19 +87,19 @@ export default function CommissionCalculator({
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-            gap: "2rem",
+            gap: "1.75rem",
             alignItems: "center",
           }}
         >
           {/* Slider Controls */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "1.75rem" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
             <div>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
-                <label style={{ fontSize: "0.9rem", fontWeight: 700, color: "var(--text-pure-white)" }}>
-                  Jumlah Tenant / Kafe Binaan:
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.4rem" }}>
+                <label style={{ fontSize: "0.875rem", fontWeight: 700, color: "inherit" }}>
+                  Jumlah Toko / Kafe Binaan:
                 </label>
-                <span style={{ fontSize: "1.1rem", fontWeight: 900, color: "#34D399" }}>
-                  {tenantCount} Tenant
+                <span style={{ fontSize: "1.05rem", fontWeight: 900, color: "var(--accent-emerald)" }}>
+                  {tenantCount} Toko
                 </span>
               </div>
               <input
@@ -111,18 +111,18 @@ export default function CommissionCalculator({
                 style={{ width: "100%", accentColor: "#10B981", cursor: "pointer" }}
               />
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", color: "var(--text-dim)", marginTop: "0.25rem" }}>
-                <span>1 Tenant</span>
-                <span>50 Tenant</span>
-                <span>100 Tenant</span>
+                <span>1 Toko</span>
+                <span>50 Toko</span>
+                <span>100 Toko</span>
               </div>
             </div>
 
             <div>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
-                <label style={{ fontSize: "0.9rem", fontWeight: 700, color: "var(--text-pure-white)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.4rem" }}>
+                <label style={{ fontSize: "0.875rem", fontWeight: 700, color: "inherit" }}>
                   Rata-rata Transaksi per Toko / Hari:
                 </label>
-                <span style={{ fontSize: "1.1rem", fontWeight: 900, color: "#FBBF24" }}>
+                <span style={{ fontSize: "1.05rem", fontWeight: 900, color: "var(--accent-amber)" }}>
                   {avgReceipts} Struk / Hari
                 </span>
               </div>
@@ -133,7 +133,7 @@ export default function CommissionCalculator({
                 step="10"
                 value={avgReceipts}
                 onChange={(e) => setAvgReceipts(Number(e.target.value))}
-                style={{ width: "100%", accentColor: "#FBBF24", cursor: "pointer" }}
+                style={{ width: "100%", accentColor: "#F59E0B", cursor: "pointer" }}
               />
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", color: "var(--text-dim)", marginTop: "0.25rem" }}>
                 <span>30 Struk</span>
@@ -147,35 +147,35 @@ export default function CommissionCalculator({
           <div
             className="calc-result-box"
             style={{
-              padding: "2rem",
-              borderRadius: "20px",
+              padding: "1.75rem 1.5rem",
+              borderRadius: "18px",
               background: "rgba(0, 0, 0, 0.55)",
-              border: "1px solid rgba(16, 185, 129, 0.35)",
+              border: "1px solid var(--accent-emerald-border)",
               textAlign: "center",
             }}
           >
-            <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+            <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
               Estimasi Pendapatan Pasif Bulanan
             </div>
             <div
               style={{
-                fontSize: "clamp(2rem, 4vw, 2.75rem)",
+                fontSize: "clamp(1.85rem, 4vw, 2.6rem)",
                 fontWeight: 900,
-                color: "#34D399",
-                margin: "0.5rem 0 1rem",
+                color: "var(--accent-emerald)",
+                margin: "0.4rem 0 0.85rem",
                 letterSpacing: "-0.02em",
               }}
             >
               Rp {monthlyCommission.toLocaleString("id-ID")}
             </div>
-            <div style={{ fontSize: "0.825rem", color: "var(--text-muted)", lineHeight: 1.5 }}>
+            <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", lineHeight: 1.5 }}>
               Berasal dari <strong>{dailyReceiptsTotal.toLocaleString("id-ID")} struk/hari</strong> × Rp {commissionPerReceipt.toLocaleString("id-ID")} ={" "}
-              <span style={{ color: "#FBBF24" }}>Rp {dailyCommission.toLocaleString("id-ID")}/hari</span>.
+              <span style={{ color: "var(--accent-amber)", fontWeight: 700 }}>Rp {dailyCommission.toLocaleString("id-ID")}/hari</span>.
             </div>
             <div
               style={{
-                marginTop: "1.5rem",
-                paddingTop: "1.25rem",
+                marginTop: "1.25rem",
+                paddingTop: "1rem",
                 borderTop: "1px solid var(--border-subtle)",
               }}
             >

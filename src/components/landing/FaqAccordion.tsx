@@ -32,13 +32,13 @@ export default function FaqAccordion({ items }: FaqAccordionProps) {
               style={{
                 fontSize: "1rem",
                 fontWeight: 800,
-                color: openFaq === idx ? "var(--brand-orange-light)" : "var(--text-pure-white)",
+                color: openFaq === idx ? "var(--brand-orange-text)" : "var(--text-pure-white)",
                 transition: "color 0.2s ease",
               }}
             >
               {faq.q}
             </h3>
-            <span style={{ fontSize: "1.2rem", fontWeight: 700, color: "var(--brand-orange-light)" }}>
+            <span style={{ fontSize: "1.2rem", fontWeight: 700, color: "var(--brand-orange-text)" }}>
               {openFaq === idx ? "−" : "+"}
             </span>
           </div>

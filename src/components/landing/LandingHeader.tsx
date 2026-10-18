@@ -80,7 +80,7 @@ export default function LandingHeader({
           <a href="#tarif" style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: 600, textDecoration: "none" }}>
             Biaya Sewa
           </a>
-          <Link href="/marketing" style={{ color: "#34D399", fontSize: "0.85rem", fontWeight: 700, textDecoration: "none" }}>
+          <Link href="/marketing" style={{ color: "var(--accent-emerald)", fontSize: "0.85rem", fontWeight: 700, textDecoration: "none" }}>
             💼 Mitra Marketing
           </Link>
           <a href="#faq" style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: 600, textDecoration: "none" }}>
@@ -202,9 +202,9 @@ export default function LandingHeader({
             className="mobile-nav-link"
             onClick={() => setIsMobileMenuOpen(false)}
             style={{
-              background: "rgba(16, 185, 129, 0.12)",
-              border: "1px solid rgba(16, 185, 129, 0.4)",
-              color: "#34D399",
+              background: "var(--accent-emerald-bg)",
+              border: "1px solid var(--accent-emerald-border)",
+              color: "var(--accent-emerald)",
               fontWeight: 800,
             }}
           >

@@ -33,6 +33,21 @@
   --radius-xl: 28px;
   --radius-pill: 9999px;
 
+  /* Semantic Accents (Dark Mode Default) */
+  --accent-emerald: #34D399;
+  --accent-emerald-bg: rgba(16, 185, 129, 0.15);
+  --accent-emerald-border: rgba(16, 185, 129, 0.4);
+  --accent-amber: #FBBF24;
+  --accent-amber-bg: rgba(251, 191, 36, 0.15);
+  --accent-amber-border: rgba(251, 191, 36, 0.4);
+  --accent-blue: #60A5FA;
+  --accent-blue-bg: rgba(59, 130, 246, 0.15);
+  --accent-blue-border: rgba(59, 130, 246, 0.4);
+  --accent-purple: #A78BFA;
+  --accent-purple-bg: rgba(139, 92, 246, 0.15);
+  --accent-purple-border: rgba(139, 92, 246, 0.4);
+  --accent-orange-text: #FF6A00;
+
   /* Shadows */
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.45);
@@ -58,6 +73,21 @@
   --text-pure-white: #0F172A;
   --text-muted: #334155;
   --text-dim: #475569;
+
+  /* Semantic Accents (High Contrast Light Mode) */
+  --accent-emerald: #047857;
+  --accent-emerald-bg: #DCFCE7;
+  --accent-emerald-border: #86EFAC;
+  --accent-amber: #B45309;
+  --accent-amber-bg: #FEF3C7;
+  --accent-amber-border: #FCD34D;
+  --accent-blue: #1D4ED8;
+  --accent-blue-bg: #DBEAFE;
+  --accent-blue-border: #93C5FD;
+  --accent-purple: #6D28D9;
+  --accent-purple-bg: #EDE9FE;
+  --accent-purple-border: #C4B5FD;
+  --accent-orange-text: #EA580C;
 
   /* Shadows Terang */
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
@@ -149,8 +179,8 @@ button {
 
 @media (max-width: 640px) {
   .solusi-grid {
-    grid-template-columns: 1fr !important;
-    gap: 1rem !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.75rem !important;
   }
 }
 
@@ -883,6 +913,25 @@ button {
   color: #1E293B;
 }
 
+/* Badges di Light Mode (High Contrast & Legible) */
+[data-theme="light"] .badge-ready {
+  background: #DCFCE7 !important;
+  color: #166534 !important;
+  border-color: #86EFAC !important;
+}
+
+[data-theme="light"] .badge-cooking {
+  background: #FEF3C7 !important;
+  color: #92400E !important;
+  border-color: #FCD34D !important;
+}
+
+[data-theme="light"] .badge-new {
+  background: #DBEAFE !important;
+  color: #1E40AF !important;
+  border-color: #93C5FD !important;
+}
+
 /* Calculation Result Box di Halaman Marketing */
 [data-theme="light"] .calc-result-box {
   background: #F0FDF4 !important;
@@ -891,12 +940,37 @@ button {
 }
 
 /* Overwrite dark container glows in Light Mode */
+[data-theme="light"] [id="tarif"] .glass-panel,
+[data-theme="light"] [id="tarif"] .glass-panel-glow,
 [data-theme="light"] [id="biaya"] .glass-panel-glow,
 [data-theme="light"] [id="rekrutmen-marketing"] .glass-panel-glow,
-[data-theme="light"] [id="akses-sistem"] .glass-panel-glow {
+[data-theme="light"] [id="akses-sistem"] .glass-panel-glow,
+[data-theme="light"] [id="simulasi"] .glass-panel-glow,
+[data-theme="light"] .mkt-container-card,
+[data-theme="light"] .marketing-reg-card {
   background: #FFFFFF !important;
   border: 1px solid rgba(0, 0, 0, 0.1) !important;
-  box-shadow: 0 16px 45px rgba(0, 0, 0, 0.07) !important;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.06) !important;
+}
+
+/* Marketing Pill Button & Stats Grid di Light Mode */
+[data-theme="light"] .marketing-pill-btn {
+  background: var(--accent-emerald-bg) !important;
+  border-color: var(--accent-emerald-border) !important;
+  color: var(--accent-emerald) !important;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.12) !important;
+}
+
+[data-theme="light"] .marketing-pill-btn:hover {
+  background: #A7F3D0 !important;
+  border-color: #059669 !important;
+  color: #065F46 !important;
+}
+
+[data-theme="light"] .mkt-stats-grid {
+  background: #FFFFFF !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04) !important;
 }
 
 /* Header & Navbar di Light Mode */

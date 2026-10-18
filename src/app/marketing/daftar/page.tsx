@@ -191,13 +191,13 @@ export default function MarketingRegisterPage() {
 
       {/* Container Formulir Pendaftaran */}
       <div
-        className="glass-panel-glow mobile-compact-panel"
+        className="glass-panel-glow mobile-compact-panel marketing-reg-card"
         style={{
-          padding: "3rem 2.25rem",
-          borderRadius: "24px",
-          border: "1px solid rgba(16, 185, 129, 0.4)",
+          padding: "2.5rem 1.5rem",
+          borderRadius: "22px",
+          border: "1px solid var(--accent-emerald-border)",
           background: "linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(13, 13, 14, 0.98) 100%)",
-          boxShadow: "0 16px 50px rgba(0, 0, 0, 0.8), 0 0 35px rgba(16, 185, 129, 0.15)",
+          boxShadow: "0 16px 50px rgba(0, 0, 0, 0.6), 0 0 35px rgba(16, 185, 129, 0.12)",
           maxWidth: "840px",
           width: "100%",
           margin: "0 auto",
@@ -205,20 +205,20 @@ export default function MarketingRegisterPage() {
           zIndex: 1,
         }}
       >
-        <div style={{ textAlign: "center", marginBottom: "2.5rem" }}>
+        <div style={{ textAlign: "center", marginBottom: "2rem" }}>
           <div
             style={{
               display: "inline-flex",
               alignItems: "center",
               gap: "0.5rem",
-              padding: "0.4rem 1.15rem",
+              padding: "0.35rem 1rem",
               borderRadius: "var(--radius-pill)",
-              backgroundColor: "rgba(16, 185, 129, 0.15)",
-              border: "1px solid rgba(16, 185, 129, 0.4)",
-              color: "#34D399",
-              fontSize: "0.825rem",
+              backgroundColor: "var(--accent-emerald-bg)",
+              border: "1px solid var(--accent-emerald-border)",
+              color: "var(--accent-emerald)",
+              fontSize: "0.78rem",
               fontWeight: 800,
-              marginBottom: "1rem",
+              marginBottom: "0.85rem",
               textTransform: "uppercase",
               letterSpacing: "0.06em",
             }}
@@ -228,18 +228,18 @@ export default function MarketingRegisterPage() {
 
           <h1
             style={{
-              fontSize: "clamp(1.6rem, 3.5vw, 2.25rem)",
+              fontSize: "clamp(1.5rem, 3.5vw, 2.1rem)",
               fontWeight: 900,
               letterSpacing: "-0.02em",
-              marginBottom: "0.75rem",
+              marginBottom: "0.6rem",
             }}
           >
-            Formulir Pendaftaran Mitra Marketing Lapangan
+            Formulir Pendaftaran Mitra Marketing
           </h1>
 
-          <p style={{ fontSize: "0.925rem", color: "var(--text-muted)", maxWidth: "600px", margin: "0 auto", lineHeight: 1.6 }}>
+          <p style={{ fontSize: "0.9rem", color: "var(--text-muted)", maxWidth: "580px", margin: "0 auto", lineHeight: 1.55 }}>
             Dapatkan kode referral eksklusif terdaftar resmi di Okesih.com. Nikmati bagi hasil otomatis{" "}
-            <strong style={{ color: "#34D399" }}>Rp {commissionPerReceipt.toLocaleString("id-ID")} per struk transaksi</strong> seumur hidup untuk setiap warkop/resto yang Anda daftarkan!
+            <strong style={{ color: "var(--accent-emerald)" }}>Rp {commissionPerReceipt.toLocaleString("id-ID")} per struk transaksi</strong> seumur hidup untuk setiap warkop/resto binaan Anda!
           </p>
         </div>
 
@@ -247,36 +247,36 @@ export default function MarketingRegisterPage() {
         {mktSuccess && (
           <div
             style={{
-              background: "rgba(16, 185, 129, 0.12)",
-              border: "1px solid #10B981",
+              background: "var(--accent-emerald-bg)",
+              border: "1px solid var(--accent-emerald)",
               borderRadius: "16px",
-              padding: "2rem",
-              marginBottom: "2.5rem",
+              padding: "1.75rem 1.25rem",
+              marginBottom: "2rem",
               textAlign: "center",
             }}
           >
-            <div style={{ fontSize: "2.5rem", marginBottom: "0.5rem" }}>🎉</div>
-            <h2 style={{ fontSize: "1.35rem", fontWeight: 800, color: "#34D399", marginBottom: "0.5rem" }}>
+            <div style={{ fontSize: "2.25rem", marginBottom: "0.35rem" }}>🎉</div>
+            <h2 style={{ fontSize: "1.25rem", fontWeight: 800, color: "var(--accent-emerald)", marginBottom: "0.4rem" }}>
               Pendaftaran Anda Berhasil Diterima!
             </h2>
-            <p style={{ fontSize: "0.9rem", color: "#E2E8F0", marginBottom: "1.25rem" }}>
+            <p style={{ fontSize: "0.875rem", color: "inherit", marginBottom: "1rem" }}>
               Terima kasih <strong>{mktSuccess.fullName}</strong>. Data Anda telah masuk ke sistem antrean verifikasi Admin untuk wilayah <strong>{mktSuccess.cityArea}</strong>.
             </p>
 
             <div
               style={{
                 display: "inline-block",
-                background: "rgba(0, 0, 0, 0.6)",
-                border: "2px dashed #10B981",
+                background: "rgba(0, 0, 0, 0.5)",
+                border: "2px dashed var(--accent-emerald)",
                 borderRadius: "12px",
-                padding: "1rem 2rem",
-                marginBottom: "1.5rem",
+                padding: "0.85rem 1.75rem",
+                marginBottom: "1.25rem",
               }}
             >
-              <div style={{ fontSize: "0.75rem", color: "#A0AEC0", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+              <div style={{ fontSize: "0.725rem", color: "#A0AEC0", textTransform: "uppercase", letterSpacing: "0.08em" }}>
                 Kode Referral Resmi Anda
               </div>
-              <div style={{ fontSize: "1.6rem", fontWeight: 900, color: "#FBBF24", letterSpacing: "0.05em", marginTop: "0.25rem" }}>
+              <div style={{ fontSize: "1.5rem", fontWeight: 900, color: "var(--accent-amber)", letterSpacing: "0.05em", marginTop: "0.2rem" }}>
                 {mktSuccess.referralCode}
               </div>
             </div>
@@ -289,16 +289,16 @@ export default function MarketingRegisterPage() {
                   background: "#25D366",
                   color: "#FFF",
                   fontWeight: 800,
-                  fontSize: "0.95rem",
+                  fontSize: "0.9rem",
                   display: "inline-flex",
                   alignItems: "center",
                   gap: "0.5rem",
-                  padding: "0.85rem 1.6rem",
+                  padding: "0.75rem 1.5rem",
                   borderRadius: "var(--radius-pill)",
                   textDecoration: "none",
                 }}
               >
-                <span>💬 Buka Kembali Pesan WhatsApp Admin</span>
+                <span>💬 Buka WhatsApp Admin</span>
                 <span>→</span>
               </a>
             </div>
@@ -311,12 +311,12 @@ export default function MarketingRegisterPage() {
             style={{
               background: "rgba(239, 68, 68, 0.15)",
               border: "1px solid #EF4444",
-              color: "#FCA5A5",
-              padding: "1rem",
-              borderRadius: "12px",
-              fontSize: "0.875rem",
-              fontWeight: 600,
-              marginBottom: "1.5rem",
+              color: "#EF4444",
+              padding: "0.85rem 1rem",
+              borderRadius: "10px",
+              fontSize: "0.85rem",
+              fontWeight: 700,
+              marginBottom: "1.25rem",
             }}
           >
             ⚠️ {mktError}
@@ -325,9 +325,9 @@ export default function MarketingRegisterPage() {
 
         {/* Form Pendaftaran */}
         <form onSubmit={handleMarketingSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1.25rem" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "1.15rem" }}>
             <div>
-              <label style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--text-pure-white)", display: "block", marginBottom: "0.4rem" }}>
+              <label style={{ fontSize: "0.85rem", fontWeight: 700, color: "inherit", display: "block", marginBottom: "0.35rem" }}>
                 Nama Lengkap <span style={{ color: "#EF4444" }}>*</span>
               </label>
               <input
@@ -342,15 +342,15 @@ export default function MarketingRegisterPage() {
                   borderRadius: "10px",
                   background: "var(--bg-surface-1)",
                   border: "1px solid var(--border-subtle)",
-                  color: "var(--text-pure-white)",
-                  fontSize: "0.95rem",
+                  color: "inherit",
+                  fontSize: "1rem",
                   outline: "none",
                 }}
               />
             </div>
 
             <div>
-              <label style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--text-pure-white)", display: "block", marginBottom: "0.4rem" }}>
+              <label style={{ fontSize: "0.85rem", fontWeight: 700, color: "inherit", display: "block", marginBottom: "0.35rem" }}>
                 Nomor WhatsApp / HP <span style={{ color: "#EF4444" }}>*</span>
               </label>
               <input
@@ -365,17 +365,17 @@ export default function MarketingRegisterPage() {
                   borderRadius: "10px",
                   background: "var(--bg-surface-1)",
                   border: "1px solid var(--border-subtle)",
-                  color: "var(--text-pure-white)",
-                  fontSize: "0.95rem",
+                  color: "inherit",
+                  fontSize: "1rem",
                   outline: "none",
                 }}
               />
             </div>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1.25rem" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "1.15rem" }}>
             <div>
-              <label style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--text-pure-white)", display: "block", marginBottom: "0.4rem" }}>
+              <label style={{ fontSize: "0.85rem", fontWeight: 700, color: "inherit", display: "block", marginBottom: "0.35rem" }}>
                 Kota / Wilayah Jangkauan Anda <span style={{ color: "#EF4444" }}>*</span>
               </label>
               <input
@@ -390,18 +390,18 @@ export default function MarketingRegisterPage() {
                   borderRadius: "10px",
                   background: "var(--bg-surface-1)",
                   border: "1px solid var(--border-subtle)",
-                  color: "var(--text-pure-white)",
-                  fontSize: "0.95rem",
+                  color: "inherit",
+                  fontSize: "1rem",
                   outline: "none",
                 }}
               />
-              <div style={{ fontSize: "0.775rem", color: "var(--text-dim)", marginTop: "0.35rem", fontWeight: 500 }}>
-                Digunakan Admin untuk memetakan distribusi materi stiker &amp; tenant.
+              <div style={{ fontSize: "0.75rem", color: "var(--text-dim)", marginTop: "0.3rem", fontWeight: 500 }}>
+                Untuk pemetaan distribusi materi stiker &amp; tenant binaan.
               </div>
             </div>
 
             <div>
-              <label style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--text-pure-white)", display: "block", marginBottom: "0.4rem" }}>
+              <label style={{ fontSize: "0.85rem", fontWeight: 700, color: "inherit", display: "block", marginBottom: "0.35rem" }}>
                 Email (Opsional)
               </label>
               <input
@@ -415,8 +415,8 @@ export default function MarketingRegisterPage() {
                   borderRadius: "10px",
                   background: "var(--bg-surface-1)",
                   border: "1px solid var(--border-subtle)",
-                  color: "var(--text-pure-white)",
-                  fontSize: "0.95rem",
+                  color: "inherit",
+                  fontSize: "1rem",
                   outline: "none",
                 }}
               />
@@ -427,22 +427,22 @@ export default function MarketingRegisterPage() {
           <div
             className="bank-data-container"
             style={{
-              padding: "1.5rem",
+              padding: "1.25rem",
               borderRadius: "14px",
               background: "rgba(255, 255, 255, 0.02)",
               border: "1px solid rgba(255, 255, 255, 0.08)",
               display: "flex",
               flexDirection: "column",
-              gap: "1.1rem",
+              gap: "1rem",
             }}
           >
-            <div className="bank-section-title" style={{ fontSize: "0.9rem", fontWeight: 800, color: "#34D399" }}>
+            <div className="bank-section-title" style={{ fontSize: "0.875rem", fontWeight: 800, color: "var(--accent-emerald)" }}>
               🏦 Rekening Bank / E-Wallet Pencairan Komisi
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0.85rem" }}>
               <div>
-                <label style={{ fontSize: "0.825rem", fontWeight: 700, color: "var(--text-pure-white)", display: "block", marginBottom: "0.35rem" }}>
+                <label style={{ fontSize: "0.8rem", fontWeight: 700, color: "inherit", display: "block", marginBottom: "0.3rem" }}>
                   Nama Bank / E-Wallet <span style={{ color: "#EF4444" }}>*</span>
                 </label>
                 <select
@@ -454,7 +454,8 @@ export default function MarketingRegisterPage() {
                     borderRadius: "10px",
                     background: "var(--bg-surface-1)",
                     border: "1px solid var(--border-subtle)",
-                    color: "var(--text-pure-white)",
+                    color: "inherit",
+                    fontSize: "0.95rem",
                     outline: "none",
                   }}
                 >
@@ -474,8 +475,8 @@ export default function MarketingRegisterPage() {
               </div>
 
               <div>
-                <label style={{ fontSize: "0.825rem", fontWeight: 700, color: "var(--text-pure-white)", display: "block", marginBottom: "0.35rem" }}>
-                  Nomor Rekening / HP E-Wallet <span style={{ color: "#EF4444" }}>*</span>
+                <label style={{ fontSize: "0.8rem", fontWeight: 700, color: "inherit", display: "block", marginBottom: "0.3rem" }}>
+                  Nomor Rekening / HP <span style={{ color: "#EF4444" }}>*</span>
                 </label>
                 <input
                   type="text"
@@ -489,14 +490,15 @@ export default function MarketingRegisterPage() {
                     borderRadius: "10px",
                     background: "var(--bg-surface-1)",
                     border: "1px solid var(--border-subtle)",
-                    color: "var(--text-pure-white)",
+                    color: "inherit",
+                    fontSize: "1rem",
                     outline: "none",
                   }}
                 />
               </div>
 
               <div>
-                <label style={{ fontSize: "0.825rem", fontWeight: 700, color: "var(--text-pure-white)", display: "block", marginBottom: "0.35rem" }}>
+                <label style={{ fontSize: "0.8rem", fontWeight: 700, color: "inherit", display: "block", marginBottom: "0.3rem" }}>
                   Nama Pemilik Rekening <span style={{ color: "#EF4444" }}>*</span>
                 </label>
                 <input
@@ -504,14 +506,15 @@ export default function MarketingRegisterPage() {
                   required
                   value={mktBankAccountName}
                   onChange={(e) => setMktBankAccountName(e.target.value)}
-                  placeholder="Nama sesuai buku tabungan..."
+                  placeholder="Sesuai buku tabungan..."
                   style={{
                     width: "100%",
                     padding: "0.85rem 1rem",
                     borderRadius: "10px",
                     background: "var(--bg-surface-1)",
                     border: "1px solid var(--border-subtle)",
-                    color: "var(--text-pure-white)",
+                    color: "inherit",
+                    fontSize: "1rem",
                     outline: "none",
                   }}
                 />
@@ -520,23 +523,24 @@ export default function MarketingRegisterPage() {
           </div>
 
           <div>
-            <label style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--text-pure-white)", display: "block", marginBottom: "0.35rem" }}>
-              Catatan Pengalaman / Target Usaha di Area Anda (Opsional)
+            <label style={{ fontSize: "0.85rem", fontWeight: 700, color: "inherit", display: "block", marginBottom: "0.35rem" }}>
+              Catatan Pengalaman / Target Usaha (Opsional)
             </label>
             <textarea
-              rows={3}
+              rows={2}
               value={mktNotes}
               onChange={(e) => setMktNotes(e.target.value)}
-              placeholder="Misal: Sudah memiliki kenalan 8 warkop &amp; 3 kafe di kawasan kampus..."
+              placeholder="Contoh: Sudah memiliki relasi 5 warkop &amp; 2 kafe di area kampus..."
               style={{
                 width: "100%",
                 padding: "0.85rem 1rem",
                 borderRadius: "10px",
                 background: "var(--bg-surface-1)",
                 border: "1px solid var(--border-subtle)",
-                color: "var(--text-pure-white)",
+                color: "inherit",
                 outline: "none",
                 fontFamily: "inherit",
+                fontSize: "1rem",
                 resize: "vertical",
               }}
             />
@@ -544,16 +548,17 @@ export default function MarketingRegisterPage() {
 
           <div
             style={{
-              padding: "0.9rem 1rem",
-              borderRadius: "12px",
-              background: "rgba(37, 211, 102, 0.1)",
-              border: "1px solid rgba(37, 211, 102, 0.35)",
-              color: "#A7F3D0",
-              fontSize: "0.82rem",
+              padding: "0.85rem 1rem",
+              borderRadius: "10px",
+              background: "var(--accent-emerald-bg)",
+              border: "1px solid var(--accent-emerald-border)",
+              color: "var(--accent-emerald)",
+              fontSize: "0.8rem",
               lineHeight: 1.5,
+              fontWeight: 600,
             }}
           >
-            💬 Setelah data tersimpan, aplikasi WhatsApp pada perangkat ini akan dibuka dengan pesan untuk Admin yang sudah terisi. Pastikan WhatsApp aktif memakai nomor yang Anda daftarkan, lalu tekan <strong>Kirim</strong>.
+            💬 Setelah data tersimpan, aplikasi WhatsApp akan otomatis dibuka dengan pesan verifikasi untuk Admin. Tekan <strong>Kirim</strong> untuk menyelesaikan registrasi.
           </div>
 
           <button
@@ -562,21 +567,21 @@ export default function MarketingRegisterPage() {
             className="btn-primary"
             style={{
               width: "100%",
-              padding: "1.1rem",
-              fontSize: "1rem",
+              padding: "1rem",
+              fontSize: "0.975rem",
               fontWeight: 900,
               background: "linear-gradient(135deg, #10B981, #059669)",
-              boxShadow: "0 6px 24px rgba(16, 185, 129, 0.4)",
+              boxShadow: "0 6px 20px rgba(16, 185, 129, 0.4)",
               cursor: mktSubmitting ? "not-allowed" : "pointer",
               borderRadius: "12px",
               border: "none",
             }}
           >
-            {mktSubmitting ? "Memproses Pendaftaran..." : "🚀 Kirim Pendaftaran Mitra Marketing Sekarang"}
+            {mktSubmitting ? "Memproses Pendaftaran..." : "🚀 Kirim Pendaftaran Mitra Sekarang"}
           </button>
 
-          <div style={{ textAlign: "center", fontSize: "0.78rem", color: "var(--text-dim)" }}>
-            Pendaftaran 100% Gratis tanpa dipungut biaya apapun. Tim Admin OKESIH akan memvalidasi data Anda maksimal 1x24 jam kerja.
+          <div style={{ textAlign: "center", fontSize: "0.75rem", color: "var(--text-dim)" }}>
+            100% Gratis tanpa dipungut biaya apapun. Admin OKESIH memverifikasi data maksimal 1x24 jam kerja.
           </div>
         </form>
       </div>
