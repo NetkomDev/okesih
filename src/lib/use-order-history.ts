@@ -7,7 +7,7 @@ type Summary = { total: number; transactionCount: number; cash: number; qris: nu
 type History = { orders: DeviceOrder[]; pagination: Pagination };
 
 // Abort obsolete reads so changing filters cannot overwrite a newer page.
-export function useOrderHistory(enabled: boolean, params: string, periodParams: string, pin: string) {
+export function useOrderHistory(enabled: boolean, params: string, periodParams: string, pin: string, externalRevision = 0) {
   const [page, setPage] = useState<{ key: string; value: History } | null>(null);
   const [summary, setSummary] = useState<{ key: string; value: Summary } | null>(null);
   const [pageError, setPageError] = useState("");
@@ -40,7 +40,7 @@ export function useOrderHistory(enabled: boolean, params: string, periodParams: 
       } finally { if (!controller.signal.aborted) setLoading(false); }
     }, 250);
     return () => { clearTimeout(timer); controller.abort(); };
-  }, [enabled, params, pin, revision]);
+  }, [enabled, params, pin, revision, externalRevision]);
   useEffect(() => {
     if (!enabled) return;
     const controller = new AbortController();
@@ -55,7 +55,7 @@ export function useOrderHistory(enabled: boolean, params: string, periodParams: 
       } catch (error) { if (!controller.signal.aborted) setSummaryError(error instanceof Error ? error.message : "Ringkasan gagal dimuat."); }
     }, 0);
     return () => { clearTimeout(timer); controller.abort(); };
-  }, [enabled, periodParams, pin, revision]);
+  }, [enabled, periodParams, pin, revision, externalRevision]);
   return { data: page?.key === params ? page.value : null, summary: summary?.key === periodParams ? summary.value : null,
     loading: loading || (enabled && page?.key !== params && !pageError), error: pageError || summaryError, refresh: () => setRevision((n) => n + 1) };
 }

@@ -22,11 +22,17 @@ export async function GET(request: Request) {
   }
 
   const admin = createClient(url, key, { auth: { persistSession: false } });
-  const { data, error } = await admin.rpc("get_superadmin_analytics", { p_period: period });
+  const [report, tenants, marketing] = await Promise.all([
+    admin.rpc("get_superadmin_analytics", { p_period: period }),
+    admin.from("warkops").select("id", { count: "exact", head: true }),
+    admin.from("marketing_partners").select("id", { count: "exact", head: true }),
+  ]);
+  const data = report.data;
+  const error = report.error || tenants.error || marketing.error;
   if (error) {
     console.error("Gagal memuat analytics super admin:", error);
     return NextResponse.json({ error: "Riwayat pencapaian belum dapat dimuat." }, { status: 500 });
   }
 
-  return NextResponse.json({ data });
+  return NextResponse.json({ data: { ...data, totalTenants: tenants.count || 0, totalMarketing: marketing.count || 0 } }, { headers: { "Cache-Control": "no-store" } });
 }

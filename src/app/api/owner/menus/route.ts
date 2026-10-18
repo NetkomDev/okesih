@@ -49,3 +49,12 @@ export async function DELETE(request: Request) {
     return Response.json({ success: true });
   } catch (error) { return ownerErrorResponse(error); }
 }
+
+export async function GET(request: Request) {
+  try {
+    const { admin, warkopId } = await requireOwner(request);
+    const { data, error } = await admin.from("menus").select("id,nama,harga,kategori,desc_menu,is_available").eq("warkop_id", warkopId).order("created_at");
+    if (error) throw error;
+    return Response.json({ data: { menus: (data || []).map(item => ({ id: item.id, name: item.nama, price: Number(item.harga), category: item.kategori, description: item.desc_menu || "-", isAvailable: item.is_available })) } }, { headers: { "Cache-Control": "no-store" } });
+  } catch (error) { return ownerErrorResponse(error); }
+}

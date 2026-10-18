@@ -38,6 +38,8 @@ Perhitungan dampak: tab terlihat dengan polling 3 detik menghasilkan sekitar 1.2
 
 ### P1 — Pecah komponen dan data dashboard
 
+**Ditindaklanjuti:** pemisahan komponen dan data dashboard telah diterapkan sesuai [rincian modularisasi dashboard](dashboard-modularization.md). Poin di bawah merekam temuan baseline audit.
+
 - `src/app/superadmin/page.tsx`: 4.316 baris pada baseline, seluruh tab dalam satu Client Component. Ada pemuatan awal data tenant/marketing/withdrawal/pengajuan dan pemuatan ulang berbasis tab. Pecah per fitur, muat data tab sesuai kebutuhan, pertahankan data ringkasan yang memang ditampilkan dashboard.
 - `src/app/owner/page.tsx`: 2.128 baris pada baseline. Submenu me-reexport komponen ini sehingga pemisahan URL belum memisahkan implementasi fitur. Pindahkan shell/provider ke layout dan konten ke route masing-masing, lalu pisahkan payload dashboard dari menu/staf/meja. Jangan sekadar memindahkan kode ke banyak file tanpa batas lazy loading atau server/client yang jelas.
 - POS adalah Client Component besar (1.561 baris baseline), tetapi interaksi kasir memang memerlukan client. Pisahkan tabel histori, modal audit, dan pencetakan agar interaksi pesanan aktif lebih terisolasi.

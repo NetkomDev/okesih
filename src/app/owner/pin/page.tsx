@@ -1,1 +1,2 @@
-export { default } from "../page";
+import Pin from "@/components/owner/Pin";
+export default function Page() { return <Pin />; }

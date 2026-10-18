@@ -9,24 +9,20 @@ export async function GET(request: Request) {
     const start = new Date(`${today}T00:00:00+08:00`).toISOString();
     const end = new Date(new Date(start).getTime() + 86_400_000).toISOString();
 
-    const [profile, menus, members, waiters, tables, transactions, billing, activeShift] = await Promise.all([
-      admin.from("warkops").select("id,nama,slug,address,is_active,logo_url,qris_image_url,qris_merchant_name").eq("id", warkopId).single(),
-      admin.from("menus").select("id,nama,harga,kategori,desc_menu,is_available").eq("warkop_id", warkopId).order("created_at", { ascending: false }),
-      admin.from("warkop_members").select("id,username,display_name,role,is_active,user_id").eq("warkop_id", warkopId).neq("role", "OWNER").order("created_at"),
-      admin.from("waiters").select("id,name,phone,is_active").eq("warkop_id", warkopId).order("created_at"),
-      admin.from("warkop_tables").select("id,label,sort_order,is_active").eq("warkop_id", warkopId).order("sort_order"),
+    const [transactions, billing, activeShift] = await Promise.all([
       admin.rpc("report_transaction_summary", { p_warkop_id: warkopId, p_start: start, p_end: end }),
       admin.from("saas_billings").select("tagihan_pokok,kode_unik,total_tagihan,status_bayar").eq("warkop_id", warkopId).eq("tanggal", today).maybeSingle(),
       admin.from("shifts").select("id,opened_by,device_id,opened_at,last_activity_at").eq("warkop_id", warkopId).eq("status", "OPEN").order("opened_at", { ascending: false }).limit(1).maybeSingle(),
     ]);
 
-    for (const result of [profile, menus, members, waiters, tables, transactions, billing, activeShift]) {
+    for (const result of [transactions, billing, activeShift]) {
       if (result.error) throw result.error;
     }
 
-    const activeMember = activeShift.data
-      ? (members.data || []).find((item) => item.id === activeShift.data?.opened_by)
-      : null;
+    const { data: activeMember, error: memberError } = activeShift.data
+      ? await admin.from("warkop_members").select("display_name,username").eq("warkop_id", warkopId).eq("id", activeShift.data.opened_by).maybeSingle()
+      : { data: null, error: null };
+    if (memberError) throw memberError;
     const { data: activeDevice, error: activeDeviceError } = activeShift.data?.device_id
       ? await admin.from("device_installations").select("id,device_name").eq("id", activeShift.data.device_id).maybeSingle()
       : { data: null, error: null };
@@ -35,11 +31,6 @@ export async function GET(request: Request) {
 
     return Response.json({
       data: {
-        profile: profile.data,
-        menus: (menus.data || []).map((item) => ({ id: item.id, name: item.nama, price: Number(item.harga), category: item.kategori, description: item.desc_menu || "-", isAvailable: item.is_available })),
-        staff: (members.data || []).map((item) => ({ id: item.id, username: item.username, name: item.display_name || item.username, role: item.role, status: item.is_active ? "ACTIVE" : "INACTIVE", onShift: activeShift.data?.opened_by === item.id })),
-        waiters: waiters.data || [],
-        tables: tables.data || [],
         metrics: { receiptCount: transactions.data.receiptCount, cash: transactions.data.cash, qris: transactions.data.qris, total: transactions.data.total, billing: billing.data },
         activeCashier: activeShift.data ? {
           shiftId: activeShift.data.id,

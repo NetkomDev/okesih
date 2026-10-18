@@ -177,3 +177,16 @@ export async function PATCH(request: Request) {
     return ownerErrorResponse(error);
   }
 }
+
+export async function GET(request: Request) {
+  try {
+    const { admin, warkopId } = await requireOwner(request);
+    const [members, shift] = await Promise.all([
+      admin.from("warkop_members").select("id,username,display_name,role,is_active").eq("warkop_id", warkopId).neq("role", "OWNER").order("created_at"),
+      admin.from("shifts").select("opened_by").eq("warkop_id", warkopId).eq("status", "OPEN").order("opened_at", { ascending: false }).limit(1).maybeSingle(),
+    ]);
+    if (members.error) throw members.error;
+    if (shift.error) throw shift.error;
+    return Response.json({ data: { staff: (members.data || []).map(item => ({ id: item.id, username: item.username, name: item.display_name || item.username, role: item.role, status: item.is_active ? "ACTIVE" : "INACTIVE", onShift: shift.data?.opened_by === item.id })) } }, { headers: { "Cache-Control": "no-store" } });
+  } catch (error) { return ownerErrorResponse(error); }
+}
