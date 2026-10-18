@@ -97,6 +97,7 @@ export default async function MarketingProgramPage() {
 
       {/* HERO SECTION */}
       <section
+        className="mkt-hero-section"
         style={{
           position: "relative",
           zIndex: 1,
@@ -154,6 +155,7 @@ export default async function MarketingProgramPage() {
 
         {/* CTA Button Group */}
         <div
+          className="mkt-hero-cta-group"
           style={{
             display: "flex",
             justifyContent: "center",
@@ -165,7 +167,7 @@ export default async function MarketingProgramPage() {
         >
           <Link
             href="/marketing/daftar"
-            className="btn-primary"
+            className="btn-primary mkt-hero-cta-btn"
             style={{
               background: "linear-gradient(135deg, #10B981, #059669)",
               padding: "0.95rem 2rem",
@@ -187,7 +189,7 @@ export default async function MarketingProgramPage() {
 
           <a
             href="#simulasi"
-            className="btn-secondary"
+            className="btn-secondary mkt-hero-cta-btn"
             style={{
               padding: "0.95rem 1.6rem",
               fontSize: "0.9rem",

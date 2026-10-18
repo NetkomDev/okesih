@@ -135,56 +135,45 @@ export default function MarketingRegisterPage() {
           alignItems: "center",
           position: "relative",
           zIndex: 10,
+          gap: "0.5rem",
         }}
       >
         <Link
           href="/"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "0.5rem",
-            color: "var(--text-muted)",
-            fontSize: "0.875rem",
-            fontWeight: 700,
-            textDecoration: "none",
-            padding: "0.5rem 1rem",
-            borderRadius: "var(--radius-pill)",
-            background: "rgba(255, 255, 255, 0.05)",
-            border: "1px solid var(--border-subtle)",
-            transition: "all 0.2s ease",
-          }}
+          className="marketing-back-btn"
+          title="Kembali ke Beranda"
+          aria-label="Kembali ke Beranda"
         >
           <svg
-            width="20"
-            height="20"
+            width="18"
+            height="18"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
             strokeWidth="2.5"
             strokeLinecap="round"
             strokeLinejoin="round"
-            style={{ display: "inline-block", flexShrink: 0 }}
+            style={{ display: "block", flexShrink: 0 }}
           >
             <polyline points="15 18 9 12 15 6" />
           </svg>
-          <span>Kembali ke Beranda</span>
+          <span>Beranda</span>
         </Link>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexShrink: 0 }}>
           <ThemeToggle />
-          <Link href="/" style={{ textDecoration: "none", color: "inherit" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-              <img
-                src="/logo.svg?v=2"
-                alt="Logo OKESIH.COM"
-                width={40}
-                height={40}
-                style={{ width: "40px", height: "40px", objectFit: "contain", display: "block", flexShrink: 0 }}
-              />
-              <span style={{ fontWeight: 900, fontSize: "1.1rem" }}>
-                OKESIH<span style={{ color: "var(--brand-orange-light)" }}>.COM</span>
-              </span>
-            </div>
+          <Link href="/" style={{ textDecoration: "none", color: "inherit", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <img
+              src="/logo.svg?v=2"
+              alt="Logo OKESIH.COM"
+              width={38}
+              height={38}
+              className="marketing-header-logo"
+              style={{ width: "38px", height: "38px", objectFit: "contain", display: "block", flexShrink: 0 }}
+            />
+            <span className="marketing-header-brand-text" style={{ fontWeight: 900, fontSize: "1.1rem", letterSpacing: "-0.02em" }}>
+              OKESIH<span style={{ color: "var(--brand-orange-light)" }}>.COM</span>
+            </span>
           </Link>
         </div>
       </div>

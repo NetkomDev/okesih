@@ -4,98 +4,79 @@ import ThemeToggle from "@/components/ThemeToggle";
 
 export default function MarketingHeader() {
   return (
-    <header
-      style={{
-        position: "sticky",
-        top: 0,
-        zIndex: 50,
-        backdropFilter: "blur(16px)",
-        WebkitBackdropFilter: "blur(16px)",
-        backgroundColor: "rgba(13, 13, 14, 0.85)",
-        borderBottom: "1px solid var(--border-subtle)",
-        padding: "0.85rem 1.5rem",
-      }}
-    >
-      <div
-        style={{
-          maxWidth: "1200px",
-          margin: "0 auto",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "1.25rem" }}>
+    <header className="marketing-header">
+      <div className="marketing-header-inner">
+        {/* Sisi Kiri: Tombol Back & Logo Brand */}
+        <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", minWidth: 0 }}>
           <Link
             href="/"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "0.45rem",
-              color: "var(--text-muted)",
-              fontSize: "0.85rem",
-              fontWeight: 700,
-              textDecoration: "none",
-              padding: "0.45rem 0.95rem",
-              borderRadius: "var(--radius-pill)",
-              background: "rgba(255, 255, 255, 0.05)",
-              border: "1px solid var(--border-subtle)",
-              transition: "all 0.2s ease",
-            }}
+            className="marketing-back-btn"
+            title="Kembali ke Beranda"
+            aria-label="Kembali ke Beranda"
           >
             <svg
-              width="16"
-              height="16"
+              width="18"
+              height="18"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
               strokeWidth="2.5"
               strokeLinecap="round"
               strokeLinejoin="round"
-              style={{ display: "inline-block", flexShrink: 0 }}
+              style={{ display: "block", flexShrink: 0 }}
             >
               <polyline points="15 18 9 12 15 6" />
             </svg>
             <span>Beranda</span>
           </Link>
 
-          <Link href="/" style={{ textDecoration: "none", color: "inherit" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-              <Image
-                src="/logo.svg?v=2"
-                alt="Logo OKESIH.COM"
-                width={40}
-                height={40}
-                style={{ width: "40px", height: "40px", objectFit: "contain", display: "block", flexShrink: 0 }}
-              />
-              <span style={{ fontWeight: 900, fontSize: "1.1rem" }}>
-                OKESIH<span style={{ color: "var(--brand-orange-light)" }}>.COM</span>
-              </span>
-            </div>
+          <Link
+            href="/"
+            style={{
+              textDecoration: "none",
+              color: "inherit",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              minWidth: 0,
+            }}
+          >
+            <Image
+              src="/logo.svg?v=2"
+              alt="Logo OKESIH.COM"
+              width={38}
+              height={38}
+              className="marketing-header-logo"
+              style={{ width: "38px", height: "38px", objectFit: "contain", display: "block", flexShrink: 0 }}
+            />
+            <span
+              className="marketing-header-brand-text"
+              style={{
+                fontWeight: 900,
+                fontSize: "1.1rem",
+                letterSpacing: "-0.02em",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            >
+              OKESIH<span style={{ color: "var(--brand-orange-light)" }}>.COM</span>
+            </span>
           </Link>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+        {/* Sisi Kanan: Theme Toggle & Tombol CTA */}
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexShrink: 0 }}>
           <ThemeToggle />
           <Link
             href="/marketing/daftar"
-            className="btn-primary"
-            style={{
-              background: "linear-gradient(135deg, #10B981, #059669)",
-              padding: "0.55rem 1.25rem",
-              fontSize: "0.85rem",
-              fontWeight: 800,
-              borderRadius: "var(--radius-pill)",
-              textDecoration: "none",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "0.4rem",
-              boxShadow: "0 4px 14px rgba(16, 185, 129, 0.35)",
-            }}
+            className="marketing-header-cta"
+            title="Buka Formulir Pendaftaran Mitra Marketing"
           >
             <span>📝</span>
-            <span>Daftar Jadi Mitra</span>
-            <span>→</span>
+            <span className="marketing-cta-short-text">Daftar</span>
+            <span className="marketing-cta-long-text">Daftar Jadi Mitra</span>
+            <span className="marketing-cta-long-text">→</span>
           </Link>
         </div>
       </div>
