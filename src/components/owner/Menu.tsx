@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { ownerFetch } from "./helpers";
 import { useOwnerData } from "./provider";
+import OwnerSkeleton from "./OwnerSkeleton";
 function money(value: number) {
   return `Rp ${Number(value || 0).toLocaleString("id-ID")}`;
 }
@@ -45,9 +46,12 @@ const updateMenu = (event: React.FormEvent) => {
       setEditingMenu(null);
     });
   };
+if (!ready) {
+  if (error) return <div className="owner-error" role="alert">{error}</div>;
+  return <OwnerSkeleton variant="menu" />;
+}
 const { profile } = data;
 const categorySuggestions = Array.from(new Set(["Kopi", "Dingin", "Makanan", "Camilan", "Lainnya", ...data.menus.map((menu) => menu.category)])).sort((a, b) => a.localeCompare(b, "id"));
-if (!ready) return <p role="status">{error || "Memuat data..."}</p>;
 return (<>{error && <div className="owner-error" role="alert">{error}<button onClick={() => setError("")}>×</button></div>}{notice && <div className="owner-success">{notice}<button onClick={() => setNotice("")}>×</button></div>}{true && <section id="menu" className="owner-panel owner-page-panel owner-menu-catalog-page">
             <div className="owner-section-heading owner-menu-heading">
               <div className="owner-menu-heading-title">

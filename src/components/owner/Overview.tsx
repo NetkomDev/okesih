@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect,useState } from "react";
 import { ownerFetch } from "./helpers";
 import { useOwnerData } from "./provider";
+import OwnerSkeleton from "./OwnerSkeleton";
 const BillingModal = dynamic(() => import("./BillingModal"));
 type RevenuePeriod = "day" | "week" | "month" | "year";
 type RevenueData = { period: RevenuePeriod; series: { label: string; value: number }[]; total: number; average: number; transactionCount: number };
@@ -73,7 +74,10 @@ const revenuePoints = revenueSeries.map((item, index) => {
   });
 const linePath = revenuePoints.map((point, index) => `${index === 0 ? "M" : "L"}${point.x},${point.y}`).join(" ");
 const areaPath = revenuePoints.length ? `${linePath} L${revenuePoints.at(-1)?.x},${chartHeight - chartPadding} L${revenuePoints[0].x},${chartHeight - chartPadding} Z` : "";
-if (!ready) return <p role="status">{error || "Memuat data..."}</p>;
+if (!ready) {
+  if (error) return <div className="owner-error" role="alert">{error}</div>;
+  return <OwnerSkeleton variant="overview" />;
+}
 return (<>{error && <div className="owner-error" role="alert">{error}<button onClick={() => setError("")}>×</button></div>}{notice && <div className="owner-success">{notice}<button onClick={() => setNotice("")}>×</button></div>}{true && <section id="ringkasan">
             <div className="owner-section-heading"><div><h1>Ringkasan Penjualan Hari Ini</h1><p>Pantau omzet tunai vs QRIS, kas di laci kasir, dan pembayaran sewa OKESIH.</p></div></div>
             <div className={`owner-cashier-status ${data.activeCashier ? "is-active" : ""}`}>

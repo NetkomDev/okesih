@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { ownerFetch } from "./helpers";
 import { useOwnerData } from "./provider";
+import OwnerSkeleton from "./OwnerSkeleton";
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return <div className="owner-modal-backdrop"><div className="owner-modal"><header><h3>{title}</h3><button onClick={onClose}>×</button></header>{children}</div></div>;
 }
@@ -43,7 +44,10 @@ const createStaff = (event: React.FormEvent) => {
       setStaffForm({ username: "", name: "", password: "", role: "KASIR" });
     }, `Akun staf @${username} berhasil dibuat.`);
   };
-if (!ready) return <p role="status">{error || "Memuat data..."}</p>;
+if (!ready) {
+  if (error) return <div className="owner-error" role="alert">{error}</div>;
+  return <OwnerSkeleton variant="staff" />;
+}
 return (<>{error && <div className="owner-error" role="alert">{error}<button onClick={() => setError("")}>×</button></div>}{notice && <div className="owner-success">{notice}<button onClick={() => setNotice("")}>×</button></div>}{true && <section id="staf" className="owner-panel owner-page-panel">
             <div className="owner-section-heading"><div><h2>Manajemen Akun Staf (Kasir &amp; Barista, dll.)</h2><p>Akun login staf tersimpan dan terisolasi untuk usaha ini.</p></div><button className="btn-primary" onClick={() => setStaffModal(true)}>+ Tambah Staf</button></div>
             <div className="owner-table-wrap"><table><thead><tr><th>Username</th><th>Nama</th><th>Peran</th><th>Status</th><th>Aksi</th></tr></thead><tbody>{data.staff.length === 0 && <tr><td colSpan={5}><EmptyState icon="♟" title="Belum ada akun staf" text="Buat akun kasir atau barista agar akses operasional terpisah dan aman." /></td></tr>}{data.staff.map((staff) => <tr key={staff.id}><td><b>{staff.username}</b></td><td>{staff.name}</td><td><span className="owner-category">{staff.role}</span></td><td><span className={staff.onShift ? "owner-dot shift" : staff.status === "ACTIVE" ? "owner-dot active" : "owner-dot"}>{staff.onShift ? "● Sedang shift" : staff.status === "ACTIVE" ? "● Aktif" : "○ Nonaktif"}</span></td><td><button className="link-button" onClick={() => { const password = prompt(`Password baru untuk ${staff.username} (minimal 6 karakter)`); if (password) void mutate(() => ownerFetch("/api/owner/staff", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: staff.id, password }) })); }}>Reset Password</button>{staff.onShift && <button className="link-button danger" disabled={busy} onClick={() => void closeActiveCashierShift()}>Akhiri Shift</button>}<button className="link-button" disabled={staff.onShift} onClick={() => void mutate(() => ownerFetch("/api/owner/staff", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: staff.id, isActive: staff.status !== "ACTIVE" }) }))}>{staff.status === "ACTIVE" ? "Nonaktifkan" : "Aktifkan"}</button></td></tr>)}</tbody></table></div>

@@ -3,6 +3,7 @@ import { APP_HOSTS,appUrl } from "@/lib/app-origins";
 import { useState } from "react";
 import { ownerFetch } from "./helpers";
 import { useOwnerData } from "./provider";
+import OwnerSkeleton from "./OwnerSkeleton";
 function EmptyState({ icon, title, text }: { icon: string; title: string; text: string }) {
   return <div className="owner-empty"><span>{icon}</span><div><b>{title}</b><p>{text}</p></div></div>;
 }
@@ -19,7 +20,10 @@ const deviceAction = async (body: Record<string, unknown>) => {
     } catch (err) { setError(err instanceof Error ? err.message : "Perangkat gagal diperbarui."); }
     finally { setBusy(false); }
   };
-if (!ready) return <p role="status">{error || "Memuat data..."}</p>;
+if (!ready) {
+  if (error) return <div className="owner-error" role="alert">{error}</div>;
+  return <OwnerSkeleton variant="devices" />;
+}
 return (<>{error && <div className="owner-error" role="alert">{error}<button onClick={() => setError("")}>×</button></div>}{notice && <div className="owner-success">{notice}<button onClick={() => setNotice("")}>×</button></div>}{true && <section className="owner-device-page owner-page-panel">
             <div className="owner-device-setup">
               <article className="owner-panel"><span className="device-step">01</span><h2>Buka aplikasi di perangkat tujuan</h2><p>Pada tablet Kasir buka <b>{APP_HOSTS.POS}</b>. Pada layar dapur buka <b>{APP_HOSTS.KDS}</b>, kemudian pilih Buat Kode Pairing.</p><div className="owner-device-links"><a href={appUrl("POS", "/pos")} target="_blank" rel="noopener noreferrer">Buka Kasir ↗</a><a href={appUrl("KDS", "/kds")} target="_blank" rel="noopener noreferrer">Buka KDS ↗</a></div></article>

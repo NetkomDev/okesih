@@ -2079,3 +2079,74 @@
 }
 
 .owner-cashier-status{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 0 14px;padding:12px 14px;border:1px solid var(--ow-border);border-radius:12px;background:var(--ow-surface);box-shadow:var(--ow-shadow)}.owner-cashier-status>div{display:grid;gap:2px}.owner-cashier-status small{color:var(--ow-muted);font-size:10px;font-weight:900;letter-spacing:.08em}.owner-cashier-status b{color:var(--ow-text)!important;font-size:14px}.owner-cashier-status span{color:var(--ow-muted);font-size:11px}.owner-cashier-status.is-active{border-color:rgba(16,185,129,.35)}.owner-cashier-status.is-active b,.owner-dot.shift{color:#059669!important}@media(max-width:720px){.owner-cashier-status{align-items:flex-start;padding:10px 12px}.owner-cashier-status .btn-secondary{padding:8px 10px;font-size:11px;white-space:nowrap}}
+
+/* ==========================================================================
+   OWNER PORTAL — SKELETON & LAZY LOADING SYSTEM
+   ========================================================================== */
+@keyframes ownerSkeletonShimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.owner-skeleton-container {
+  width: 100%;
+  animation: ownerFadeIn 0.25s ease-out;
+}
+
+@keyframes ownerFadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.owner-skeleton-box {
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.05) 25%,
+    rgba(255, 255, 255, 0.12) 45%,
+    rgba(255, 255, 255, 0.05) 65%
+  );
+  background-size: 200% 100%;
+  animation: ownerSkeletonShimmer 1.8s ease-in-out infinite;
+}
+
+[data-theme="light"] .owner-skeleton-box {
+  background: linear-gradient(
+    90deg,
+    rgba(15, 23, 42, 0.05) 25%,
+    rgba(15, 23, 42, 0.11) 45%,
+    rgba(15, 23, 42, 0.05) 65%
+  );
+  background-size: 200% 100%;
+}
+
+.owner-skeleton-card {
+  background: var(--ow-surface, #121a26);
+  border: 1px solid var(--ow-border, rgba(148, 163, 184, 0.14));
+  border-radius: 16px;
+  padding: 22px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.15);
+}
+
+[data-theme="light"] .owner-skeleton-card {
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.07);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .owner-skeleton-box {
+    animation: none;
+    background: rgba(255, 255, 255, 0.06);
+  }
+  [data-theme="light"] .owner-skeleton-box {
+    background: rgba(15, 23, 42, 0.06);
+  }
+}
+

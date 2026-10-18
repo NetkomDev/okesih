@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useEffect,useRef,useState } from "react";
 import { ownerFetch } from "./helpers";
 import { useOwnerData } from "./provider";
+import OwnerSkeleton from "./OwnerSkeleton";
 type BusinessTable = { id: string; label: string; sort_order: number; is_active: boolean };
 type StickerConfig = {
   qrSize: number;
@@ -202,8 +203,11 @@ const printTableStickers = async (singleTableId?: string) => {
     await printer.printTableStickers(data, stickerConfig, setError, singleTableId);
   } catch (reason) { setError(reason instanceof Error ? reason.message : "Stiker gagal disiapkan."); }
 };
+if (!ready) {
+  if (error) return <div className="owner-error" role="alert">{error}</div>;
+  return <OwnerSkeleton variant="qris-tables" />;
+}
 const { profile } = data;
-if (!ready) return <p role="status">{error || "Memuat data..."}</p>;
 return (<>{error && <div className="owner-error" role="alert">{error}<button onClick={() => setError("")}>×</button></div>}{notice && <div className="owner-success">{notice}<button onClick={() => setNotice("")}>×</button></div>}{true && <section id="qris" className="owner-settings-grid owner-page-panel owner-qris-page">
             <article className="owner-panel owner-branding-panel">
               <h2>Identitas &amp; Logo Usaha</h2><p>Logo aktif otomatis tampil pada menu pelanggan, layar Kasir, dan layar Dapur. Jika belum diunggah, sistem menggunakan logo OKESIH.</p>
