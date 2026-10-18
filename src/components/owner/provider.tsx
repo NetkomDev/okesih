@@ -50,8 +50,31 @@ function useSession() {
 const OwnerContext = createContext<ReturnType<typeof useSession> | null>(null);
 export function OwnerProvider({ children }: { children: React.ReactNode }) {
   const session = useSession();
-  if (session.roleMismatch) return <PwaRoleMismatchModal isOpen pwaKind={session.roleMismatch.pwaKind} />;
-  if (!session.profile || session.loading || !session.isAuthorized) return <div className="owner-loading" role="status"><img src="/okesih-logo-animated.svg" alt="OKESIH.COM" /><p>{session.error || "Menyiapkan portal owner..."}</p>{session.error && <button onClick={() => window.location.reload()}>Coba Lagi</button>}</div>;
+  if (!session.profile || session.loading || !session.isAuthorized) {
+    return (
+      <div className="owner-loading" role="status">
+        <div className="owner-loading-glow" aria-hidden="true" />
+        <div className="owner-loading-logo-box">
+          <img src="/okesih-logo-animated.svg" alt="OKESIH Owner" />
+        </div>
+        <div className="owner-loading-copy">
+          <strong>OKESIH <span style={{ color: "var(--brand-orange-light, #ff623a)" }}>Owner</span></strong>
+          <p>{session.error || "Menyiapkan portal pemilik usaha..."}</p>
+        </div>
+        {!session.error && (
+          <div className="owner-loading-bar" aria-hidden="true">
+            <div className="owner-loading-bar-fill" />
+          </div>
+        )}
+        {session.error && (
+          <button type="button" className="owner-loading-retry-btn" onClick={() => window.location.reload()}>
+            <span>🔄</span>
+            <span>Muat Ulang Halaman</span>
+          </button>
+        )}
+      </div>
+    );
+  }
   return <OwnerContext.Provider value={session}>{children}</OwnerContext.Provider>;
 }
 export function useOwnerSession() {

@@ -12,6 +12,7 @@ export default function SplashScreen() {
   const pathname = usePathname();
   const isOperational = pathname.startsWith("/pos") || pathname.startsWith("/kds") || pathname.startsWith("/tv");
   const isTenantMenu = pathname.startsWith("/menu/");
+  const isOwner = pathname.startsWith("/owner");
   const mounted = useSyncExternalStore(() => () => {}, () => true, () => false);
   const hasSeenSplash = useSyncExternalStore(
     () => () => {},
@@ -138,27 +139,55 @@ export default function SplashScreen() {
 
         {!isTenantMenu && <>
         {/* Teks Sambutan Hangat */}
-        <div
-          style={{
-            fontSize: "1.1rem",
-            fontWeight: 800,
-            letterSpacing: "-0.02em",
-            color: "var(--text-pure-white, #FFFFFF)",
-            marginBottom: "0.35rem",
-          }}
-        >
-          Selamat Datang di <span style={{ color: "var(--brand-orange-light, #FF6F00)" }}>OKESIH.COM</span>
-        </div>
-        <div
-          style={{
-            fontSize: "0.825rem",
-            color: "var(--text-muted, #94A3B8)",
-            lineHeight: 1.5,
-            marginBottom: "1.75rem",
-          }}
-        >
-          Platform Kasir &amp; Operasional Usaha Kuliner Modern
-        </div>
+        {isOwner ? (
+          <>
+            <div
+              style={{
+                fontSize: "1.15rem",
+                fontWeight: 800,
+                letterSpacing: "-0.02em",
+                color: "var(--text-pure-white, #FFFFFF)",
+                marginBottom: "0.35rem",
+              }}
+            >
+              Selamat Datang di <span style={{ color: "var(--brand-orange-light, #FF6F00)" }}>OKESIH Owner</span>
+            </div>
+            <div
+              style={{
+                fontSize: "0.825rem",
+                color: "var(--text-muted, #94A3B8)",
+                lineHeight: 1.5,
+                marginBottom: "1.75rem",
+              }}
+            >
+              Portal Pemilik Usaha &amp; Manajemen Bisnis
+            </div>
+          </>
+        ) : (
+          <>
+            <div
+              style={{
+                fontSize: "1.1rem",
+                fontWeight: 800,
+                letterSpacing: "-0.02em",
+                color: "var(--text-pure-white, #FFFFFF)",
+                marginBottom: "0.35rem",
+              }}
+            >
+              Selamat Datang di <span style={{ color: "var(--brand-orange-light, #FF6F00)" }}>OKESIH.COM</span>
+            </div>
+            <div
+              style={{
+                fontSize: "0.825rem",
+                color: "var(--text-muted, #94A3B8)",
+                lineHeight: 1.5,
+                marginBottom: "1.75rem",
+              }}
+            >
+              Platform Kasir &amp; Operasional Usaha Kuliner Modern
+            </div>
+          </>
+        )}
 
         {/* Micro Loading Progress Indicator */}
         <div

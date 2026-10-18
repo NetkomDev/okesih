@@ -748,32 +748,8 @@
   .superadmin-main>section{border-radius:14px!important}
   .superadmin-table-container{margin-inline:-1rem;padding-inline:1rem;scroll-padding-inline:1rem}
 }
-@media(max-width:720px){
-  .owner-shell .owner-topbar{padding:14px 16px 26px;min-height:80px;gap:10px;border-radius:0 0 50% 50% / 0 0 34px 34px !important;z-index:10}
-  .owner-shell .owner-topbar.is-home{padding:6px 16px 82px;min-height:160px;border-radius:0 0 100% 100% / 0 0 62px 62px !important}
-  .owner-home-divider{width:100%;margin:8px 0 0 0}
-  .owner-subpage-title h1{font-size:18px !important}
-  .owner-subpage-title p{font-size:11px !important}
-  .owner-brand{gap:12px;min-width:0;flex:1}
-  .owner-brand img{width:46px !important;height:46px !important;border-radius:12px}
-  .owner-shell .owner-brand strong{font-size:18px !important}
-  .owner-status{display:none}
-  .owner-actions{flex:none;gap:6px}
-  .owner-actions .pwa-install{height:36px;padding:0 9px;font-size:10px}
-  .owner-main{width:100%;margin-top:-52px !important;padding:0 12px calc(84px + env(safe-area-inset-bottom)) !important;position:relative;z-index:15}
-  .owner-section-heading{margin-bottom:8px !important}
-  .owner-section-heading h1{font-size:21px !important;margin-bottom:2px !important}
-  .owner-section-heading p{font-size:12px !important}
-  .owner-sidebar{height:calc(66px + env(safe-area-inset-bottom));padding:6px 6px env(safe-area-inset-bottom)}
-  .owner-sidebar nav{grid-template-columns:repeat(6, 1fr)!important;gap:2px!important}
-  .owner-sidebar nav a{height:52px;flex-direction:column;gap:2px;padding:4px 1px}
-  .owner-sidebar nav a span{font-size:18px}
-  .owner-sidebar nav a .owner-nav-desktop-label{display:none!important}
-  .owner-sidebar nav a .owner-nav-mobile-label{display:block!important;opacity:1!important;font-size:10.5px!important;font-weight:750;max-width:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-0.01em}
-  .owner-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.owner-metrics article{min-height:145px;padding:16px}.owner-metrics strong{font-size:23px}
-}
 @media(min-width:361px) and (max-width:540px){.superadmin-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}.superadmin-kpi-card{min-height:142px;padding:16px 14px!important}}
-@media(max-width:430px){.owner-actions .theme-toggle-btn{display:none!important}.superadmin-actions .pwa-install{font-size:0;width:36px;padding:0}.superadmin-actions .pwa-install:after{content:"↓";font-size:16px}}
+@media(max-width:430px){.superadmin-actions .pwa-install{font-size:0;width:36px;padding:0}.superadmin-actions .pwa-install:after{content:"↓";font-size:16px}}
 
 /* Kasir POS — focused, touch-friendly workspace */
 .pos-redesign{--pos-accent:#f4512c;--pos-ink:#182033;--pos-muted:#667085;--pos-line:#e5e9f0;background:#f4f6f9;color:var(--pos-ink)}

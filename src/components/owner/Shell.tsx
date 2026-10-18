@@ -22,14 +22,79 @@ useEffect(() => {
     if (destination) router.replace(destination);
   }, [pathname, router]);
 const view = pathname.endsWith("/menu") ? "menu" : pathname.endsWith("/staff") ? "staff" : pathname.endsWith("/waiters") ? "waiters" : pathname.endsWith("/qris-tables") ? "qris-tables" : pathname.endsWith("/devices") ? "devices" : pathname.endsWith("/pin") ? "pin" : "overview";
+function renderNavIcon(itemView: string) {
+  switch (itemView) {
+    case "overview":
+      return (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 9.5L12 3l9 6.5V20a1.5 1.5 0 0 1-1.5 1.5h-4.5v-6h-6v6H4.5A1.5 1.5 0 0 1 3 20V9.5z" />
+        </svg>
+      );
+    case "staff":
+      return (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+        </svg>
+      );
+    case "waiters":
+      return (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M2 17h20" />
+          <path d="M4 17a8 8 0 0 1 16 0" />
+          <circle cx="12" cy="7" r="1.5" />
+        </svg>
+      );
+    case "menu":
+      return (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="3" width="7" height="7" rx="2" />
+          <rect x="14" y="3" width="7" height="7" rx="2" />
+          <rect x="3" y="14" width="7" height="7" rx="2" />
+          <rect x="14" y="14" width="7" height="7" rx="2" />
+        </svg>
+      );
+    case "devices":
+      return (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="4" y="2" width="16" height="20" rx="3" />
+          <line x1="12" y1="18" x2="12.01" y2="18" strokeWidth="3" />
+        </svg>
+      );
+    case "qris-tables":
+      return (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="3" width="6" height="6" rx="1.5" />
+          <rect x="15" y="3" width="6" height="6" rx="1.5" />
+          <rect x="3" y="15" width="6" height="6" rx="1.5" />
+          <path d="M15 15h2v2h-2z" />
+          <path d="M19 19h2v2h-2z" />
+          <path d="M15 19h2v2h-2z" />
+          <path d="M19 15h2v2h-2z" />
+        </svg>
+      );
+    case "pin":
+      return (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="5" y="11" width="14" height="10" rx="2" />
+          <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+        </svg>
+      );
+    default:
+      return null;
+  }
+}
+
 const navItems = [
-    { icon: "⌂", label: "Home", mobileLabel: "Home", href: "/owner", itemView: "overview" },
-    { icon: "♟", label: "Akun Staf", mobileLabel: "Staf", href: "/owner/staff", itemView: "staff" },
-    { icon: "♙", label: "Waiter", mobileLabel: "Waiter", href: "/owner/waiters", itemView: "waiters" },
-    { icon: "◫", label: "Katalog Menu", mobileLabel: "Katalog", href: "/owner/menu", itemView: "menu" },
-    { icon: "⌁", label: "Perangkat", mobileLabel: "Perangkat", href: "/owner/devices", itemView: "devices" },
-    { icon: "▣", label: "QRIS & Meja", mobileLabel: "Qris & Meja", href: "/owner/qris-tables", itemView: "qris-tables" },
-    { icon: "🔒", label: "PIN Keamanan", mobileLabel: "PIN", href: "/owner/pin", itemView: "pin" },
+    { label: "Home", mobileLabel: "Home", href: "/owner", itemView: "overview" },
+    { label: "Akun Staf", mobileLabel: "Staf", href: "/owner/staff", itemView: "staff" },
+    { label: "Waiter", mobileLabel: "Waiter", href: "/owner/waiters", itemView: "waiters" },
+    { label: "Katalog Menu", mobileLabel: "Menu", href: "/owner/menu", itemView: "menu" },
+    { label: "Perangkat", mobileLabel: "Device", href: "/owner/devices", itemView: "devices" },
+    { label: "QRIS & Meja", mobileLabel: "QRIS", href: "/owner/qris-tables", itemView: "qris-tables" },
+    { label: "PIN Keamanan", mobileLabel: "PIN", href: "/owner/pin", itemView: "pin" },
   ];
 return (<div className={`owner-shell ${sidebarExpanded ? "sidebar-open" : "sidebar-closed"}`}>
       {/* Popup Install Otomatis Pasca Login Khusus Owner */}
@@ -51,7 +116,7 @@ return (<div className={`owner-shell ${sidebarExpanded ? "sidebar-open" : "sideb
               className={view === item.itemView ? "active" : ""}
               aria-current={view === item.itemView ? "page" : undefined}
             >
-              <span>{item.icon}</span>
+              <span className="owner-nav-icon">{renderNavIcon(item.itemView)}</span>
               <b className="owner-nav-desktop-label">{item.label}</b>
               <b className="owner-nav-mobile-label">{item.mobileLabel}</b>
             </Link>
@@ -110,7 +175,7 @@ return (<div className={`owner-shell ${sidebarExpanded ? "sidebar-open" : "sideb
               </p>
             </div>
           )}
-          <div className="owner-actions"><ThemeToggle/><PwaInstallButton label="Install Owner" compact onInstalled={() => void onboardingAction({ action: "pwa_installed" })}/><a href={appUrl("POS", "/pos")} target="_blank" rel="noopener noreferrer" className="btn-secondary">Layar Kasir</a><a href={appUrl("KDS", "/kds")} target="_blank" rel="noopener noreferrer" className="btn-secondary">Layar Dapur</a></div>
+          <div className="owner-actions">{view !== "overview" && <ThemeToggle/>}<PwaInstallButton label="Install Owner" compact onInstalled={() => void onboardingAction({ action: "pwa_installed" })}/><a href={appUrl("POS", "/pos")} target="_blank" rel="noopener noreferrer" className="btn-secondary">Layar Kasir</a><a href={appUrl("KDS", "/kds")} target="_blank" rel="noopener noreferrer" className="btn-secondary">Layar Dapur</a></div>
         </header>
 
         <main className="owner-main">{children}</main>
