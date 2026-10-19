@@ -331,29 +331,6 @@
   font-size: 11px;
   cursor: pointer;
 }
-.owner-home-shortcuts {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-.owner-home-shortcuts a {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  color: var(--ow-muted);
-  padding: 8px 3px;
-  font-size: 11px;
-  font-weight: 650;
-  min-height: 44px;
-}
-.owner-home-shortcuts a > svg:first-child {
-  color: var(--ow-accent);
-  width: 19px;
-}
-.owner-home-shortcuts a > svg:last-child {
-  width: 12px;
-  margin-left: auto;
-}
 .owner-deferred-chart {
   min-width: 0;
 }

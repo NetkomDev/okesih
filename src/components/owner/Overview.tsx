@@ -1,6 +1,5 @@
 "use client";
 import dynamic from "next/dynamic";
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ownerFetch, money } from "./helpers";
 import { useOwnerData } from "./provider";
@@ -216,18 +215,6 @@ export default function OverviewFeature() {
           </button>
         )}
       </section>
-      <div className="owner-home-shortcuts">
-        <Link href="/owner/team" prefetch={false}>
-          <OwnerIcon name="team" />
-          <span>Kelola tim</span>
-          <OwnerIcon name="arrow" />
-        </Link>
-        <Link href="/owner/pin" prefetch={false}>
-          <OwnerIcon name="shield" />
-          <span>Keamanan PIN</span>
-          <OwnerIcon name="arrow" />
-        </Link>
-      </div>
       <DeferredRevenue />
       {billingOpen && (
         <BillingModal
