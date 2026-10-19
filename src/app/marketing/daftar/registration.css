@@ -1,0 +1,16 @@
+.marketing-registration-status { display: grid; gap: 24px; }
+.marketing-registration-status h2 { font-size: 1.15rem; line-height: 1.4; }
+.marketing-registration-summary { padding: 20px; border: 1px solid var(--accent-emerald-border); border-radius: 14px; background: var(--accent-emerald-bg); }
+.marketing-registration-summary p { margin-top: 10px; line-height: 1.6; }
+.marketing-registration-steps { display: grid; gap: 12px; list-style: none; padding: 0; }
+.marketing-registration-steps li { padding: 14px 16px; border: 1px solid var(--border-subtle); border-radius: 12px; }
+.marketing-registration-steps li[data-complete="true"] { border-color: var(--accent-emerald); }
+.marketing-registration-steps li[aria-current="step"] { background: var(--accent-emerald-bg); border-color: var(--accent-emerald-border); }
+.marketing-registration-steps span { display: block; margin-top: 5px; font-size: .875rem; color: var(--text-muted); }
+.marketing-registration-details { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 18px; }
+.marketing-registration-details div { min-width: 0; }
+.marketing-registration-details dt { color: var(--text-muted); font-size: .8rem; margin-bottom: 5px; }
+.marketing-registration-details dd { margin: 0; font-weight: 700; overflow-wrap: anywhere; white-space: pre-wrap; }
+.marketing-registration-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.marketing-registration-actions a { text-align: center; }
+.marketing-registration-hint { color: var(--text-muted); font-size: .85rem; line-height: 1.6; }

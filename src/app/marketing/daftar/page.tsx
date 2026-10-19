@@ -1,8 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import ThemeToggle from "@/components/ThemeToggle";
+import RegistrationStatus from "@/components/marketing/RegistrationStatus";
+import type { MarketingRegistration } from "@/lib/marketing-registration-types";
+import "./registration.css";
 
 export default function MarketingRegisterPage() {
   const [mktFullName, setMktFullName] = useState("");
@@ -14,14 +17,42 @@ export default function MarketingRegisterPage() {
   const [mktBankAccountName, setMktBankAccountName] = useState("");
   const [mktNotes, setMktNotes] = useState("");
   const [mktSubmitting, setMktSubmitting] = useState(false);
-  const [mktSuccess, setMktSuccess] = useState<{
-    referralCode: string;
-    fullName: string;
-    cityArea: string;
-    whatsappUrl: string;
-  } | null>(null);
+  const [mktSuccess, setMktSuccess] = useState<MarketingRegistration | null>(null);
+  const [registrationChecked, setRegistrationChecked] = useState(false);
+  const [registrationLoading, setRegistrationLoading] = useState(true);
+  const [statusError, setStatusError] = useState("");
   const [mktError, setMktError] = useState("");
   const [commissionPerReceipt, setCommissionPerReceipt] = useState<number>(15);
+
+  const refreshRegistration = useCallback(() => fetch("/api/marketing/register", { cache: "no-store" })
+    .then(async (response) => {
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Status pendaftaran gagal dimuat.");
+      setMktSuccess(result.data);
+      setRegistrationChecked(true);
+      setStatusError("");
+    })
+    .catch((error: unknown) => {
+      setStatusError(error instanceof Error ? error.message : "Status pendaftaran gagal dimuat.");
+    })
+    .finally(() => setRegistrationLoading(false)), []);
+
+  useEffect(() => { void refreshRegistration(); }, [refreshRegistration]);
+
+  useEffect(() => {
+    if (!mktSuccess) return;
+    const refresh = () => { if (document.visibilityState === "visible") void refreshRegistration(); };
+    const interval = window.setInterval(refresh, 30000);
+    window.addEventListener("focus", refresh);
+    window.addEventListener("pageshow", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", refresh);
+      window.removeEventListener("pageshow", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [mktSuccess, refreshRegistration]);
 
   useEffect(() => {
     fetch("/api/platform-settings", { cache: "no-store" })
@@ -38,7 +69,6 @@ export default function MarketingRegisterPage() {
     e.preventDefault();
     setMktSubmitting(true);
     setMktError("");
-    setMktSuccess(null);
 
     try {
       const res = await fetch("/api/marketing/register", {
@@ -63,13 +93,6 @@ export default function MarketingRegisterPage() {
       if (!result.data?.whatsappUrl) throw new Error("Tautan WhatsApp Admin gagal disiapkan.");
 
       setMktSuccess(result.data);
-      setMktFullName("");
-      setMktPhone("");
-      setMktEmail("");
-      setMktCityArea("");
-      setMktBankAccountNo("");
-      setMktBankAccountName("");
-      setMktNotes("");
       window.location.assign(result.data.whatsappUrl);
     } catch (err: unknown) {
       setMktError(err instanceof Error ? err.message : "Terjadi kesalahan sistem saat mengirim pendaftaran.");
@@ -223,7 +246,7 @@ export default function MarketingRegisterPage() {
               marginBottom: "0.6rem",
             }}
           >
-            Formulir Pendaftaran Mitra Marketing
+            {mktSuccess ? "Status Pendaftaran Mitra Marketing" : "Formulir Pendaftaran Mitra Marketing"}
           </h1>
 
           <p style={{ fontSize: "0.9rem", color: "var(--text-muted)", maxWidth: "580px", margin: "0 auto", lineHeight: 1.55 }}>
@@ -232,67 +255,9 @@ export default function MarketingRegisterPage() {
           </p>
         </div>
 
-        {/* Notifikasi Pendaftaran Berhasil */}
-        {mktSuccess && (
-          <div
-            style={{
-              background: "var(--accent-emerald-bg)",
-              border: "1px solid var(--accent-emerald)",
-              borderRadius: "16px",
-              padding: "1.75rem 1.25rem",
-              marginBottom: "2rem",
-              textAlign: "center",
-            }}
-          >
-            <div style={{ fontSize: "2.25rem", marginBottom: "0.35rem" }}>🎉</div>
-            <h2 style={{ fontSize: "1.25rem", fontWeight: 800, color: "var(--accent-emerald)", marginBottom: "0.4rem" }}>
-              Pendaftaran Anda Berhasil Diterima!
-            </h2>
-            <p style={{ fontSize: "0.875rem", color: "inherit", marginBottom: "1rem" }}>
-              Terima kasih <strong>{mktSuccess.fullName}</strong>. Data Anda telah masuk ke sistem antrean verifikasi Admin untuk wilayah <strong>{mktSuccess.cityArea}</strong>.
-            </p>
-
-            <div
-              style={{
-                display: "inline-block",
-                background: "rgba(0, 0, 0, 0.5)",
-                border: "2px dashed var(--accent-emerald)",
-                borderRadius: "12px",
-                padding: "0.85rem 1.75rem",
-                marginBottom: "1.25rem",
-              }}
-            >
-              <div style={{ fontSize: "0.725rem", color: "#A0AEC0", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                Kode Referral Resmi Anda
-              </div>
-              <div style={{ fontSize: "1.5rem", fontWeight: 900, color: "var(--accent-amber)", letterSpacing: "0.05em", marginTop: "0.2rem" }}>
-                {mktSuccess.referralCode}
-              </div>
-            </div>
-
-            <div>
-              <a
-                href={mktSuccess.whatsappUrl}
-                className="btn-primary"
-                style={{
-                  background: "#25D366",
-                  color: "#FFF",
-                  fontWeight: 800,
-                  fontSize: "0.9rem",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                  padding: "0.75rem 1.5rem",
-                  borderRadius: "var(--radius-pill)",
-                  textDecoration: "none",
-                }}
-              >
-                <span>💬 Buka WhatsApp Admin</span>
-                <span>→</span>
-              </a>
-            </div>
-          </div>
-        )}
+        {registrationLoading && <p role="status">Memuat status pendaftaran…</p>}
+        {statusError && <div role="alert" style={{ marginBottom: "1.25rem" }}><p>{statusError}</p><button type="button" className="btn-secondary" onClick={() => void refreshRegistration()}>Coba lagi</button></div>}
+        {mktSuccess && <RegistrationStatus registration={mktSuccess} />}
 
         {/* Notifikasi Error */}
         {mktError && (
@@ -313,7 +278,7 @@ export default function MarketingRegisterPage() {
         )}
 
         {/* Form Pendaftaran */}
-        <form onSubmit={handleMarketingSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+        {registrationChecked && !mktSuccess && !statusError && <form onSubmit={handleMarketingSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "1.15rem" }}>
             <div>
               <label style={{ fontSize: "0.85rem", fontWeight: 700, color: "inherit", display: "block", marginBottom: "0.35rem" }}>
@@ -572,7 +537,7 @@ export default function MarketingRegisterPage() {
           <div style={{ textAlign: "center", fontSize: "0.75rem", color: "var(--text-dim)" }}>
             100% Gratis tanpa dipungut biaya apapun. Admin OKESIH memverifikasi data maksimal 1x24 jam kerja.
           </div>
-        </form>
+        </form>}
       </div>
     </main>
   );
