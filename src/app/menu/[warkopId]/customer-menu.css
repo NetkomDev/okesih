@@ -1,0 +1,95 @@
+@media (max-width: 760px) {
+  .customer-menu-list {
+    gap: 12px;
+    margin-block: 16px;
+  }
+
+  .customer-menu-list article {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    min-width: 0;
+    padding: 12px;
+    border-radius: 18px;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, .04);
+  }
+
+  .customer-menu-list .customer-menu-icon {
+    width: 100%;
+    height: 88px;
+    flex-shrink: 0;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #fff4ec, #f0fdfa);
+    font-size: 36px;
+  }
+
+  .customer-menu-list .customer-menu-copy {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    align-items: flex-start;
+    overflow-wrap: anywhere;
+  }
+
+  .customer-menu-list article small {
+    font-size: 10px;
+    line-height: 1.4;
+    letter-spacing: .08em;
+  }
+
+  .customer-menu-list h2 {
+    margin: 5px 0 6px;
+    font-size: 16px;
+    line-height: 1.35;
+  }
+
+  .customer-menu-list p {
+    margin: 0 0 10px;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .customer-menu-list .customer-menu-copy > b {
+    margin-top: auto;
+    padding-top: 6px;
+    font-size: 16px;
+    line-height: 1.4;
+  }
+
+  .customer-menu-list .customer-qty {
+    justify-content: space-between;
+    gap: 4px;
+    padding-top: 10px;
+    border-top: 1px solid var(--cm-line);
+  }
+
+  .customer-menu-list .customer-qty button {
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    box-shadow: none;
+  }
+
+  .customer-menu-list .customer-qty button.add {
+    width: 100%;
+  }
+
+  .customer-menu-list .customer-qty button.add::before {
+    content: "Tambah";
+    font-size: 13px;
+    font-weight: 800;
+  }
+
+  .customer-menu-list .customer-qty button.add {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .customer-menu-list .customer-qty strong {
+    min-width: 0;
+    font-size: 15px;
+    overflow-wrap: anywhere;
+  }
+}

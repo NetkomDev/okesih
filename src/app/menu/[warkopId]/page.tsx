@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
+import "./customer-menu.css";
 
 type Menu = { id: string; nama: string; harga: number; kategori: string; desc_menu: string | null };
 type BusinessTable = { id: string; label: string };
@@ -230,4 +231,3 @@ export default function CustomerMenuPage() {
     </Suspense>
   );
 }
-
