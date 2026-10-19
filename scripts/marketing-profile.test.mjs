@@ -30,7 +30,7 @@ import { NextResponse } from 'next/server';
 const source = ts.transpileModule(fs.readFileSync(new URL('../src/app/api/marketing/profile/route.ts', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
 function fixture({ authError = false, dbError = false } = {}) {
   const calls=[];
-  let row={id:'partner',user_id:'user',username:'oldname',full_name:'Mitra',phone:'6281234567890',email:null,city_area:'Makassar',referral_code:'MKT-1',bank_name:'BCA',bank_account_number:'00123',bank_account_name:'Mitra',commission_rate:0,status:'ACTIVE',updated_at:'before'};
+  let row={id:'partner',user_id:'user',username:'oldname',full_name:'Mitra',phone:'6281234567890',city_area:'Makassar',referral_code:'MKT-1',bank_name:'BCA',bank_account_number:'00123',bank_account_name:'Mitra',commission_rate:0,status:'ACTIVE',updated_at:'before'};
   const admin={
     from(table) {
       let operation='read', values;

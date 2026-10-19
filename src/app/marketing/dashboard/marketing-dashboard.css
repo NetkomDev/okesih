@@ -1760,7 +1760,7 @@ html, body {
 .mkt-profile-identity > div:nth-child(2) { flex: 1; min-width: 0; }
 .mkt-profile-status { border-radius: 30px; padding: 6px 12px; color: #086452; background: #e0f2ed; font-size: 12px; font-weight: 700; }
 .mkt-profile-facts { display: grid; grid-template-columns: 1.4fr 1fr 1fr; margin: 22px 0 0; gap: 16px; border-top: 1px solid #e2e8f0; padding-top: 20px; }
-.mkt-profile-facts dt, .mkt-profile-readonly > span { color: #64748b; font-size: 12px; }
+.mkt-profile-facts dt { color: #64748b; font-size: 12px; }
 .mkt-profile-facts dd { margin: 6px 0 0; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 18px; font-weight: 800; overflow-wrap: anywhere; }
 .mkt-profile-facts small { font-size: 12px; font-weight: 500; color: #64748b; }
 .mkt-profile-facts button, .mkt-profile-reveal { border: 0; border-radius: 8px; color: #0f766e; background: #eff8f5; padding: 10px 12px; min-height: 44px; cursor: pointer; font-size: 12px; font-weight: 700; }
@@ -1769,9 +1769,6 @@ html, body {
 .mkt-profile-section-title > span { background: #fff1e9; color: #c74712; border-radius: 12px; padding: 10px; font-weight: 800; font-size: 13px; }
 .mkt-profile fieldset { margin: 0; padding: 0; border: 0; min-width: 0; display: grid; gap: 18px; }
 .mkt-profile .mkt-form input { font-size: 16px; min-height: 48px; background: #fff; }
-.mkt-profile .mkt-form small { color: #64748b; font-size: 12px; font-weight: 400; }
-.mkt-profile-readonly { display: grid; gap: 5px; padding: 14px; border-radius: 12px; background: #f8fafc; overflow-wrap: anywhere; }
-.mkt-profile-readonly strong { font-size: 14px; }
 .mkt-profile-divider { border-top: 1px solid #e2e8f0; padding-top: 20px; margin-top: 4px; }
 .mkt-profile h3 { margin: 0; font-size: 15px; }
 .mkt-profile .mkt-primary { min-height: 48px; width: 100%; justify-content: center; }

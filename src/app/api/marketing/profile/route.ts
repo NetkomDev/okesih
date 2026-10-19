@@ -5,7 +5,7 @@ import { assertSameOrigin, DeviceApiError } from "@/lib/device-auth";
 import { marketingProfile, marketingProfileUpdateSchema, type MarketingProfileRow } from "@/lib/marketing-profile";
 
 export const dynamic = "force-dynamic";
-const columns = "id,user_id,username,full_name,phone,email,city_area,referral_code,bank_name,bank_account_number,bank_account_name,commission_rate,status,updated_at";
+const columns = "id,user_id,username,full_name,phone,city_area,referral_code,bank_name,bank_account_number,bank_account_name,commission_rate,status,updated_at";
 const json = (body: object, status = 200) => NextResponse.json(body, { status, headers: { "Cache-Control": "private, no-store" } });
 
 async function getMarketingContext() {

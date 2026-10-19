@@ -18,15 +18,15 @@ export const marketingProfileUpdateSchema = z.union([
 
 export type MarketingProfileRow = {
   id: string; user_id: string; username: string | null; full_name: string;
-  phone: string; email: string | null; city_area: string; referral_code: string;
+  phone: string; city_area: string; referral_code: string;
   bank_name: string; bank_account_number: string; bank_account_name: string;
   commission_rate: number | string; status: string; updated_at: string;
 };
-export function marketingProfile(row: MarketingProfileRow, totalTenants: number, email?: string) {
+export function marketingProfile(row: MarketingProfileRow, totalTenants: number, authEmail?: string) {
   return {
     id: row.id, userId: row.user_id,
-    username: email?.endsWith("@okesih.local") ? email.slice(0, -"@okesih.local".length) : row.username || "",
-    fullName: row.full_name, phone: row.phone, email: row.email || "",
+    username: authEmail?.endsWith("@okesih.local") ? authEmail.slice(0, -"@okesih.local".length) : row.username || "",
+    fullName: row.full_name, phone: row.phone,
     cityArea: row.city_area, referralCode: row.referral_code,
     bankName: row.bank_name, bankAccountNumber: row.bank_account_number,
     bankAccountName: row.bank_account_name, commissionRate: Number(row.commission_rate),

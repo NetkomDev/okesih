@@ -11,7 +11,6 @@ type ProfileData = {
   username: string;
   fullName: string;
   phone: string;
-  email: string;
   cityArea: string;
   referralCode: string;
   bankName: string;
@@ -237,7 +236,6 @@ export default function MarketingProfilPage() {
                       <label>Nomor WhatsApp<input type="tel" required maxLength={30} autoComplete="tel" value={phone} onChange={e => setPhone(e.target.value)} /></label>
                       <label>Kota / wilayah<input required maxLength={100} value={cityArea} onChange={e => setCityArea(e.target.value)} /></label>
                     </div>
-                    <div className="mkt-profile-readonly"><span>Email pendaftaran</span><strong>{profile.email || "Belum diisi"}</strong><small>Hubungi admin untuk memperbarui email pendaftaran.</small></div>
                     <div className="mkt-profile-divider"><h3>Rekening komisi</h3><p>Pastikan rekening dan nama penerima sudah benar.</p></div>
                     <div className="mkt-form-row">
                       <label>Nama bank<input required maxLength={50} placeholder="Contoh: BCA" value={bankName} onChange={e => setBankName(e.target.value)} /></label>
