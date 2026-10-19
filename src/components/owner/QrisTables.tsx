@@ -210,7 +210,7 @@ if (!ready) {
 const { profile } = data;
 return (<>{error && <div className="owner-error" role="alert">{error}<button onClick={() => setError("")}>×</button></div>}{notice && <div className="owner-success">{notice}<button onClick={() => setNotice("")}>×</button></div>}{true && <section id="qris" className="owner-settings-grid owner-page-panel owner-qris-page">
             <article className="owner-panel owner-branding-panel">
-              <h2>Identitas &amp; Logo Usaha</h2><p>Logo aktif otomatis tampil pada menu pelanggan, layar Kasir, dan layar Dapur. Jika belum diunggah, sistem menggunakan logo OKESIH.</p>
+              <h2>Identitas &amp; Logo Bisnis</h2><p>Logo aktif otomatis tampil pada menu pelanggan, layar Kasir, dan layar Dapur. Jika belum diunggah, sistem menggunakan logo OKESIH.</p>
               <div className="owner-logo-preview"><img src={profile.logo_url || "/logo.svg?v=2"} alt={profile.logo_url ? `Logo ${profile.nama}` : "Logo OKESIH"}/></div>
               <label>Nama Usaha<input maxLength={150} value={businessName} onChange={(event) => setBusinessName(event.target.value)} /></label>
               <label>Alamat Lengkap Usaha<textarea rows={3} maxLength={500} value={businessAddress} onChange={(event) => setBusinessAddress(event.target.value)} placeholder="Nama jalan, nomor, kelurahan/kecamatan" /></label>

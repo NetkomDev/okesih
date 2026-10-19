@@ -279,29 +279,55 @@ export default function MarketingDashboardPage() {
               <p>Mitra Pemasaran {data.profile.area ? `· Wilayah ${data.profile.area}` : ""}</p>
             </div>
           </div>
-          <button
-            type="button"
-            className="mkt-logout-btn"
-            onClick={() => void logoutUser()}
-            title="Keluar dari akun marketing"
-          >
-            <svg
-              width="17"
-              height="17"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+            <Link
+              href="/marketing/dashboard/profil"
+              title="Ubah Profil, Username & Password"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "8px 14px",
+                borderRadius: "10px",
+                background: "rgba(13, 148, 136, 0.12)",
+                color: "#0f766e",
+                border: "1px solid rgba(13, 148, 136, 0.25)",
+                fontSize: "13px",
+                fontWeight: 700,
+                textDecoration: "none",
+                transition: "all 0.2s ease",
+              }}
             >
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-              <polyline points="16 17 21 12 16 7" />
-              <line x1="21" y1="12" x2="9" y2="12" />
-            </svg>
-            <span>Keluar Akun</span>
-          </button>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+              <span>Ubah Profil &amp; Akun</span>
+            </Link>
+            <button
+              type="button"
+              className="mkt-logout-btn"
+              onClick={() => void logoutUser()}
+              title="Keluar dari akun marketing"
+            >
+              <svg
+                width="17"
+                height="17"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+              <span>Keluar Akun</span>
+            </button>
+          </div>
         </section>
 
         <footer>© {new Date().getFullYear()} OKESIH.COM · Portal Mitra Marketing</footer>

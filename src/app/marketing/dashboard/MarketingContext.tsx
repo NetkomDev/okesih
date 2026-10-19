@@ -54,6 +54,7 @@ export type DashboardData = {
   profile: {
     name: string;
     phone: string;
+    username?: string;
     referralCode: string;
     area: string;
     commissionRate: number;

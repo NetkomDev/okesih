@@ -1678,8 +1678,8 @@ html, body {
   max-width: 540px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
   align-items: center;
 }
 

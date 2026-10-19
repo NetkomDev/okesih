@@ -125,7 +125,7 @@ export default function OverviewFeature() {
       <div className="owner-home-heading">
         <div>
           <span>RINGKASAN HARI INI</span>
-          <h2>Usaha Anda, dalam angka.</h2>
+          <h2>Bisnis Anda, dalam angka.</h2>
         </div>
         <span className="owner-today-badge">
           <i />

@@ -34,6 +34,7 @@ export async function GET() {
         profile: {
           name: partner.full_name,
           phone: partner.phone,
+          username: partner.username || "",
           referralCode: partner.referral_code,
           area: partner.city_area,
           commissionRate: Number(partner.commission_rate),
