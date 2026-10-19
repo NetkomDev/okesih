@@ -65,7 +65,9 @@ export async function GET() {
       console.warn("RPC report_marketing_dashboard gagal:", rpcErr);
     }
 
-    // Ambil riwayat mutasi komisi berjalan (DIRECT dan NETWORK) jika tabel mutasi sudah aktif
+    // 1. Ambil mutasi komisi untuk menghitung total pendapatan sah & riwayat mutasi
+    let allMutationsSum = 0;
+    let hasMutationsTable = false;
     let commissionEntries: Array<{
       id: string;
       kind: "DIRECT" | "NETWORK";
@@ -78,8 +80,22 @@ export async function GET() {
       createdAt: string;
     }> = [];
 
-    let networkCommissionSum = 0;
     try {
+      // Hitung total seluruh mutasi komisi (DIRECT + NETWORK) yang sudah settled, tanpa batas 50 baris
+      const { data: allMutations } = await admin
+        .from("marketing_commission_mutations")
+        .select("total_amount")
+        .eq("partner_id", partner.id);
+
+      if (allMutations && Array.isArray(allMutations)) {
+        hasMutationsTable = true;
+        allMutationsSum = allMutations.reduce(
+          (sum, m) => sum + (Number(m.total_amount) || 0),
+          0
+        );
+      }
+
+      // Ambil 50 entri mutasi terbaru untuk tampilan riwayat di UI
       const { data: mutations } = await admin
         .from("marketing_commission_mutations")
         .select(`
@@ -103,9 +119,6 @@ export async function GET() {
           const warkop = m.warkops as { nama?: string } | null;
           const sourcePartner = m.source_partner as { full_name?: string } | null;
           const amt = Number(m.total_amount) || 0;
-          if (m.kind === "NETWORK") {
-            networkCommissionSum += amt;
-          }
           return {
             id: String(m.id),
             kind: m.kind === "NETWORK" ? "NETWORK" : "DIRECT",
@@ -124,13 +137,37 @@ export async function GET() {
     }
 
     const rawTotals = (report.totals as Record<string, unknown>) || {};
-    const baseCommission = Number(rawTotals.commission || 0);
-    const totalCommission = baseCommission + networkCommissionSum;
-    const baseAvailable = Number(rawTotals.availableCommission || 0);
-    const totalAvailable = Math.max(0, baseAvailable + networkCommissionSum);
+    const commissionPaid = Number(partner.commission_paid || 0);
 
-    // ATURAN BISNIS: Jika mitra atau koordinator dinonaktifkan (status !== 'ACTIVE'),
-    // mereka TIDAK BISA melihat saldo/pendapatan dan TIDAK BISA melakukan pencairan.
+    // Ambil total pencairan pending
+    let pendingWithdrawals = Number(rawTotals.pendingWithdrawal || 0);
+    try {
+      const { data: pendingRows } = await admin
+        .from("marketing_commission_withdrawals")
+        .select("amount")
+        .eq("marketing_partner_id", partner.id)
+        .eq("status", "PENDING");
+
+      if (pendingRows && Array.isArray(pendingRows)) {
+        pendingWithdrawals = pendingRows.reduce(
+          (sum, w) => sum + (Number(w.amount) || 0),
+          0
+        );
+      }
+    } catch {
+      // Gunakan fallback
+    }
+
+    // Sumber saldo tunggal: Mutasi komisi yang sudah settled (DIRECT + NETWORK)
+    // dikurangi penarikan yang sudah dibayar dan penarikan yang sedang pending
+    const totalEarnedCommission = hasMutationsTable
+      ? allMutationsSum
+      : Number(rawTotals.commission || 0);
+    const totalAvailable = Math.max(0, totalEarnedCommission - commissionPaid - pendingWithdrawals);
+
+    // ATURAN BISNIS: Jika mitra atau koordinator dinonaktifkan (status !== 'ACTIVE'):
+    // 1. Seluruh saldo di-zero-kan dan flag saldoDisembunyikan aktif.
+    // 2. Seluruh rincian pendapatan/komisi pada daftar tenant dibersihkan agar tidak bocor via respons API.
     const totals = isSuspended
       ? {
           tenants: Number(rawTotals.tenants || 0),
@@ -149,11 +186,23 @@ export async function GET() {
           unpaidTenants: Number(rawTotals.unpaidTenants || 0),
           paidTenants: Number(rawTotals.paidTenants || 0),
           receipts: Number(rawTotals.receipts || 0),
-          commission: totalCommission,
-          pendingWithdrawal: Number(rawTotals.pendingWithdrawal || 0),
+          commission: totalEarnedCommission,
+          pendingWithdrawal: pendingWithdrawals,
           availableCommission: totalAvailable,
           saldoDisembunyikan: false,
         };
+
+    // Sanitasi data tenant agar akun suspended tidak melihat angka komisi per tenant
+    const sanitizedTenants = ((report.tenants as Array<Record<string, unknown>>) || []).map((t) => {
+      if (!isSuspended) return t;
+      return {
+        ...t,
+        commission: 0,
+        commissionPerReceipt: 0,
+        receipts: 0,
+        unpaidAmount: 0,
+      };
+    });
 
     return NextResponse.json({
       data: {
@@ -166,7 +215,7 @@ export async function GET() {
           referralCode: partner.referral_code,
           area: partner.city_area,
           commissionRate: marketingRate,
-          commissionPaid: isSuspended ? 0 : Number(partner.commission_paid || 0),
+          commissionPaid: isSuspended ? 0 : commissionPaid,
           bankName: partner.bank_name,
           bankAccountNumber: partner.bank_account_number,
           bankAccountName: partner.bank_account_name,
@@ -174,7 +223,7 @@ export async function GET() {
           isSuspended,
           saldoDisembunyikan: isSuspended,
         },
-        tenants: report.tenants || [],
+        tenants: sanitizedTenants,
         applications: report.applications || [],
         withdrawals: isSuspended ? [] : (report.withdrawals || []),
         commissionEntries: isSuspended ? [] : commissionEntries,

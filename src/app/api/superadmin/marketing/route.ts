@@ -136,7 +136,7 @@ export async function PATCH(request: Request) {
     if (!supabase) return NextResponse.json({ error: "Akses Super Admin diperlukan." }, { status: 401 });
 
     const body = await request.json();
-    const { id, status, commissionRate, notesAdmin, membershipLevel } = body;
+    const { id, status, commissionRate, notesAdmin, membershipLevel, uplineId } = body;
 
     if (!id) {
       return NextResponse.json({ error: "ID marketing partner diperlukan." }, { status: 400 });
@@ -158,14 +158,92 @@ export async function PATCH(request: Request) {
     let targetNotes = notesAdmin !== undefined ? notesAdmin : current.notes_admin;
     let targetLevel: string | undefined = undefined;
 
+    // Validasi penegakan batas 2 level kemitraan
     if (membershipLevel !== undefined) {
       const isCoord = String(membershipLevel).toUpperCase() === "COORDINATOR" || String(membershipLevel).toUpperCase() === "KOORDINATOR";
       targetLevel = isCoord ? "COORDINATOR" : "MITRA";
+
+      if (isCoord) {
+        // 1. Koordinator tidak boleh memiliki upline (dilarang multi-tier > 2 level)
+        const hasExistingUpline = Boolean(current.upline_id) ||
+          (typeof current.notes_admin === "string" && current.notes_admin.includes("[UPLINE:"));
+        if (hasExistingUpline) {
+          return NextResponse.json({
+            error: "Mitra yang masih memiliki upline tidak dapat diangkat menjadi Koordinator. Lepaskan hubungan upline terlebih dahulu agar batas 2 level kemitraan terjaga."
+          }, { status: 400 });
+        }
+
+        // 2. Koordinator harus berstatus aktif
+        const finalStatus = status || current.status;
+        if (finalStatus !== "ACTIVE") {
+          return NextResponse.json({
+            error: "Hanya mitra aktif yang dapat diangkat menjadi Koordinator Mitra."
+          }, { status: 400 });
+        }
+
+        updatePayload.upline_id = null;
+        targetNotes = (targetNotes || "").replace(/\[UPLINE:[^\]]+\]/g, "").trim();
+      } else {
+        // Jika mencabut status Koordinator, pastikan tidak ada downline yang menggantung
+        const { count: downlineCount } = await supabase
+          .from("marketing_partners")
+          .select("id", { count: "exact", head: true })
+          .eq("upline_id", id);
+
+        if (downlineCount && downlineCount > 0) {
+          return NextResponse.json({
+            error: `Tidak dapat mencabut status Koordinator karena masih memiliki ${downlineCount} mitra downline binaan. Alihkan atau lepaskan downline terlebih dahulu.`
+          }, { status: 400 });
+        }
+      }
+
       updatePayload.membership_level = targetLevel;
-      // Simpan juga flag di notes_admin sebagai fallback bila kolom DB belum dibuat
       const cleanNotes = (targetNotes || "").replace(/\[LEVEL:(?:COORDINATOR|MITRA)\]/g, "").trim();
       targetNotes = `${cleanNotes} [LEVEL:${targetLevel}]`.trim();
     }
+
+    // Validasi pengaturan upline_id
+    if (uplineId !== undefined) {
+      if (uplineId) {
+        if (uplineId === id) {
+          return NextResponse.json({ error: "Mitra tidak dapat menjadi upline untuk dirinya sendiri." }, { status: 400 });
+        }
+        if (targetLevel === "COORDINATOR" || (!targetLevel && current.membership_level === "COORDINATOR")) {
+          return NextResponse.json({ error: "Koordinator Mitra tidak diperbolehkan memiliki upline." }, { status: 400 });
+        }
+
+        const { data: uplinePartner, error: upError } = await supabase
+          .from("marketing_partners")
+          .select("id, full_name, status, membership_level, upline_id, notes_admin")
+          .eq("id", uplineId)
+          .maybeSingle();
+
+        if (upError || !uplinePartner) {
+          return NextResponse.json({ error: "Data koordinator upline tidak ditemukan." }, { status: 404 });
+        }
+        if (uplinePartner.status !== "ACTIVE") {
+          return NextResponse.json({ error: "Koordinator upline harus berstatus aktif." }, { status: 400 });
+        }
+        const isUplineCoord = uplinePartner.membership_level === "COORDINATOR" ||
+          (typeof uplinePartner.notes_admin === "string" && uplinePartner.notes_admin.includes("[LEVEL:COORDINATOR]"));
+        if (!isUplineCoord) {
+          return NextResponse.json({ error: "Upline yang dipilih harus berstatus Koordinator Mitra." }, { status: 400 });
+        }
+        const uplineHasUpline = Boolean(uplinePartner.upline_id) ||
+          (typeof uplinePartner.notes_admin === "string" && uplinePartner.notes_admin.includes("[UPLINE:"));
+        if (uplineHasUpline) {
+          return NextResponse.json({ error: "Upline tidak boleh memiliki upline lain (maksimal 2 level jaringan kemitraan)." }, { status: 400 });
+        }
+
+        updatePayload.upline_id = uplineId;
+        const cleanUplineNotes = (targetNotes || "").replace(/\[UPLINE:[^\]]+\]/g, "").trim();
+        targetNotes = `${cleanUplineNotes} [UPLINE:${uplineId}]`.trim();
+      } else {
+        updatePayload.upline_id = null;
+        targetNotes = (targetNotes || "").replace(/\[UPLINE:[^\]]+\]/g, "").trim();
+      }
+    }
+
     if (targetNotes !== undefined) updatePayload.notes_admin = targetNotes;
 
     let createdAuthUserId: string | null = null;

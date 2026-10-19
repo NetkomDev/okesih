@@ -58,13 +58,23 @@ export async function distributeBillingCommissions(
       if (match) uplineId = match[1];
     }
 
-    // 5. Catat Komisi Langsung Mitra Marketing
-    if (directRate > 0) {
+    // 5. Catat Komisi Langsung Mitra Marketing (HANYA jika status akun ACTIVE)
+    // Akun nonaktif/suspended TIDAK BERHAK atas komisi baru.
+    if (directRate > 0 && partner.status === "ACTIVE") {
       const directAmount = receipts * directRate;
-      await adminClient
+      // Kunci historis: Periksa apakah mutasi tagihan sudah pernah dicatat sebelumnya.
+      // Jika sudah ada, jangan pernah menimpa nominal historis (ledger append-only).
+      const { data: existingDirect } = await adminClient
         .from("marketing_commission_mutations")
-        .upsert(
-          {
+        .select("id")
+        .eq("billing_id", billing.id)
+        .eq("kind", "DIRECT")
+        .maybeSingle();
+
+      if (!existingDirect) {
+        await adminClient
+          .from("marketing_commission_mutations")
+          .insert({
             billing_id: billing.id,
             warkop_id: warkop.id,
             partner_id: partner.id,
@@ -74,29 +84,40 @@ export async function distributeBillingCommissions(
             rate_per_receipt: directRate,
             total_amount: directAmount,
             notes: `Komisi Struk ${warkop.nama || "Tenant"} (${receipts} struk @ Rp ${directRate})`,
-          },
-          { onConflict: "billing_id,kind" }
-        );
+          });
+      }
     }
 
-    // 6. Catat Bonus Jaringan Koordinator Mitra
+    // 6. Catat Bonus Jaringan Koordinator Mitra (HANYA jika koordinator ACTIVE dan struktur 2 level valid)
+    // Koordinator nonaktif/suspended TIDAK BERHAK atas bonus jaringan baru.
     if (uplineId && networkRate > 0) {
       const { data: upline } = await adminClient
         .from("marketing_partners")
-        .select("id, full_name, status, membership_level, notes_admin")
+        .select("id, full_name, status, membership_level, upline_id, notes_admin")
         .eq("id", uplineId)
         .maybeSingle();
 
-      if (upline) {
+      if (upline && upline.status === "ACTIVE" && upline.id !== partner.id) {
         const isCoord = isCoordinatorLevel(upline.membership_level) ||
           (typeof upline.notes_admin === "string" && upline.notes_admin.includes("[LEVEL:COORDINATOR]"));
 
-        if (isCoord) {
+        // Koordinator valid tidak boleh memiliki upline sendiri (batas ketat 2 level)
+        const coordHasNoUpline = !upline.upline_id && !(typeof upline.notes_admin === "string" && upline.notes_admin.includes("[UPLINE:"));
+
+        if (isCoord && coordHasNoUpline) {
           const networkAmount = receipts * networkRate;
-          await adminClient
+          // Kunci historis: Jangan pernah menimpa mutasi jaringan yang sudah ada
+          const { data: existingNetwork } = await adminClient
             .from("marketing_commission_mutations")
-            .upsert(
-              {
+            .select("id")
+            .eq("billing_id", billing.id)
+            .eq("kind", "NETWORK")
+            .maybeSingle();
+
+          if (!existingNetwork) {
+            await adminClient
+              .from("marketing_commission_mutations")
+              .insert({
                 billing_id: billing.id,
                 warkop_id: warkop.id,
                 partner_id: upline.id,
@@ -106,9 +127,8 @@ export async function distributeBillingCommissions(
                 rate_per_receipt: networkRate,
                 total_amount: networkAmount,
                 notes: `Bonus Jaringan: ${partner.full_name || "Mitra"} - ${warkop.nama || "Tenant"} (${receipts} struk @ Rp ${networkRate})`,
-              },
-              { onConflict: "billing_id,kind" }
-            );
+              });
+          }
         }
       }
     }

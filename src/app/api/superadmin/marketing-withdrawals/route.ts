@@ -38,6 +38,35 @@ export async function PATCH(request: Request) {
     if (!id || !["PAID", "REJECTED"].includes(decision)) {
       return NextResponse.json({ error: "ID dan keputusan pencairan wajib diisi." }, { status: 400 });
     }
+
+    // Periksa status penerima sebelum menyetujui pembayaran
+    if (decision === "PAID") {
+      const { data: withdrawal, error: wError } = await ctx.admin
+        .from("marketing_commission_withdrawals")
+        .select("id, status, marketing_partner_id")
+        .eq("id", id)
+        .maybeSingle();
+
+      if (wError || !withdrawal) {
+        return NextResponse.json({ error: "Pengajuan pencairan tidak ditemukan." }, { status: 404 });
+      }
+
+      if (withdrawal.marketing_partner_id) {
+        const { data: partner, error: pError } = await ctx.admin
+          .from("marketing_partners")
+          .select("id, full_name, status")
+          .eq("id", withdrawal.marketing_partner_id)
+          .maybeSingle();
+
+        if (pError || !partner || partner.status !== "ACTIVE") {
+          return NextResponse.json(
+            { error: `Pencairan tidak dapat disetujui karena akun mitra ${partner?.full_name || ""} berstatus nonaktif/ditangguhkan.` },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
     const { data, error } = await ctx.admin.rpc("review_marketing_commission_withdrawal", {
       p_withdrawal_id: id,
       p_decision: decision,

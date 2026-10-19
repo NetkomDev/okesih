@@ -56,12 +56,11 @@ BEGIN
     RAISE EXCEPTION 'Akun marketing tidak aktif atau tidak ditemukan.' USING ERRCODE = 'P0002';
   END IF;
 
-  SELECT COALESCE(SUM(w.marketing_commission_per_receipt), 0)
+  -- Hitung akumulasi komisi dari buku mutasi komisi (settled SaaS billings)
+  SELECT COALESCE(SUM(total_amount), 0)
   INTO v_earned
-  FROM public.transactions t
-  JOIN public.warkops w ON w.id = t.warkop_id
-  WHERE w.marketing_agent_id = p_marketing_partner_id
-    AND t.status_pesanan::TEXT NOT IN ('VOID', 'REJECTED');
+  FROM public.marketing_commission_mutations
+  WHERE partner_id = p_marketing_partner_id;
 
   SELECT COALESCE(SUM(amount), 0)
   INTO v_pending
@@ -101,6 +100,7 @@ SET search_path = public, pg_temp
 AS $$
 DECLARE
   v_withdrawal public.marketing_commission_withdrawals%ROWTYPE;
+  v_partner public.marketing_partners%ROWTYPE;
   v_decision TEXT := upper(trim(p_decision));
 BEGIN
   IF v_decision NOT IN ('PAID', 'REJECTED') THEN
@@ -120,6 +120,16 @@ BEGIN
   END IF;
 
   IF v_decision = 'PAID' THEN
+    -- Validasi status akun mitra saat persetujuan pembayaran
+    SELECT * INTO v_partner
+    FROM public.marketing_partners
+    WHERE id = v_withdrawal.marketing_partner_id
+    FOR UPDATE;
+
+    IF NOT FOUND OR v_partner.status <> 'ACTIVE' THEN
+      RAISE EXCEPTION 'Pencairan tidak dapat dibayarkan karena akun mitra tidak aktif atau ditangguhkan.' USING ERRCODE = 'P0003';
+    END IF;
+
     UPDATE public.marketing_partners
     SET commission_paid = COALESCE(commission_paid, 0) + v_withdrawal.amount
     WHERE id = v_withdrawal.marketing_partner_id;
