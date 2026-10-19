@@ -79,17 +79,4 @@ BEFORE UPDATE ON public.marketing_partners
 FOR EACH ROW
 EXECUTE FUNCTION public.handle_marketing_partners_updated_at();
 
--- Masukkan beberapa data contoh marketing agar pemetaan langsung terlihat di super admin
-INSERT INTO public.marketing_partners (
-    full_name, phone, email, city_area, referral_code, bank_name, bank_account_number, bank_account_name, status, commission_rate, total_tenants_acquired, total_receipts_generated, total_commission_earned
-) VALUES 
-(
-    'Hendra Pratama', '081234889900', 'hendra@marketing.okesih.com', 'Jakarta Selatan & Depok', 'MKT-JAKSEL', 'BCA', '8829102931', 'Hendra Pratama', 'ACTIVE', 15.00, 2, 560, 8400.00
-),
-(
-    'Bambang Irawan', '085677881122', 'bambang@marketing.okesih.com', 'Surabaya & Sidoarjo', 'MKT-SBY', 'BRI', '012901928374', 'Bambang Irawan', 'ACTIVE', 15.00, 1, 310, 4650.00
-),
-(
-    'Rian Ardiansyah', '081399887766', 'rian.ard@gmail.com', 'Bandung Kota & Cimahi', 'MKT-BDG', 'Mandiri', '1310019283741', 'Rian Ardiansyah', 'PENDING', 15.00, 0, 0, 0.00
-)
-ON CONFLICT (referral_code) DO NOTHING;
+-- Catatan: Data awal marketing dummy telah dibersihkan dari sistem.
