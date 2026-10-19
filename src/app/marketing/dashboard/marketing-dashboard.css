@@ -1749,3 +1749,43 @@ html, body {
   color: #ffffff;
   font-weight: 850;
 }
+
+/* Profile: keep the existing orange header and its curved background. */
+.mkt-profile-content { position: relative; margin-top: -36px; display: grid; gap: 20px; }
+.mkt-profile .mkt-panel { margin: 0; padding: 26px; min-width: 0; }
+.mkt-profile-identity { display: flex; align-items: center; gap: 14px; }
+.mkt-profile-avatar { display: grid; place-items: center; flex: 0 0 52px; height: 52px; border-radius: 18px; background: #e0f2ed; color: #0f766e; font-size: 24px; font-weight: 800; }
+.mkt-profile h2 { font-size: 19px; margin: 0; overflow-wrap: anywhere; }
+.mkt-profile p { margin: 5px 0 0; color: #64748b; font-size: 13px; line-height: 1.6; }
+.mkt-profile-identity > div:nth-child(2) { flex: 1; min-width: 0; }
+.mkt-profile-status { border-radius: 30px; padding: 6px 12px; color: #086452; background: #e0f2ed; font-size: 12px; font-weight: 700; }
+.mkt-profile-facts { display: grid; grid-template-columns: 1.4fr 1fr 1fr; margin: 22px 0 0; gap: 16px; border-top: 1px solid #e2e8f0; padding-top: 20px; }
+.mkt-profile-facts dt, .mkt-profile-readonly > span { color: #64748b; font-size: 12px; }
+.mkt-profile-facts dd { margin: 6px 0 0; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 18px; font-weight: 800; overflow-wrap: anywhere; }
+.mkt-profile-facts small { font-size: 12px; font-weight: 500; color: #64748b; }
+.mkt-profile-facts button, .mkt-profile-reveal { border: 0; border-radius: 8px; color: #0f766e; background: #eff8f5; padding: 10px 12px; min-height: 44px; cursor: pointer; font-size: 12px; font-weight: 700; }
+.mkt-profile-columns { display: grid; grid-template-columns: 1.3fr 1fr; gap: 20px; align-items: start; }
+.mkt-profile-section-title { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 24px; }
+.mkt-profile-section-title > span { background: #fff1e9; color: #c74712; border-radius: 12px; padding: 10px; font-weight: 800; font-size: 13px; }
+.mkt-profile fieldset { margin: 0; padding: 0; border: 0; min-width: 0; display: grid; gap: 18px; }
+.mkt-profile .mkt-form input { font-size: 16px; min-height: 48px; background: #fff; }
+.mkt-profile .mkt-form small { color: #64748b; font-size: 12px; font-weight: 400; }
+.mkt-profile-readonly { display: grid; gap: 5px; padding: 14px; border-radius: 12px; background: #f8fafc; overflow-wrap: anywhere; }
+.mkt-profile-readonly strong { font-size: 14px; }
+.mkt-profile-divider { border-top: 1px solid #e2e8f0; padding-top: 20px; margin-top: 4px; }
+.mkt-profile h3 { margin: 0; font-size: 15px; }
+.mkt-profile .mkt-primary { min-height: 48px; width: 100%; justify-content: center; }
+.mkt-profile button:focus-visible { outline: 3px solid #0f766e; outline-offset: 3px; }
+.mkt-profile fieldset:disabled { opacity: .65; }
+.mkt-profile .mkt-profile-hint { font-size: 12px; margin-top: 16px; }
+@media (max-width: 760px) {
+  .mkt-profile-columns { grid-template-columns: 1fr; }
+  .mkt-profile .mkt-panel { padding: 20px; }
+  .mkt-profile-facts { grid-template-columns: 1fr 1fr; }
+  .mkt-profile-facts > div:first-child { grid-column: 1 / -1; }
+  .mkt-profile .mkt-form-row { grid-template-columns: 1fr; gap: 18px; }
+  .mkt-profile h2 { font-size: 17px; }
+}
+/* Preserve header contrast when the global light theme overrides heading colors. */
+.mkt-profile .mkt-subpage-title-box h1 { color: #fff !important; }
+.mkt-profile .mkt-subpage-title-box p { color: rgba(255, 255, 255, .95); }
