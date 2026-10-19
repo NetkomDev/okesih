@@ -3,6 +3,7 @@ import { OwnerApiError, ownerErrorResponse, requireOwner } from "@/lib/owner-api
 import { randomUUID } from "node:crypto";
 import { billingProofStoragePath, BILLING_PROOF_RETENTION_DAYS, deleteExpiredBillingProofs } from "@/lib/billing-proof-retention";
 import { verifyBillingProof } from "@/lib/billing-proof-ocr";
+import { distributeBillingCommissions } from "@/lib/commission-distribution";
 import {
   cleanWhatsAppMessageField,
   createWhatsAppUrl,
@@ -191,6 +192,9 @@ export async function POST(request: Request) {
       await admin.storage.from("bukti-transfer").remove([storagePath]);
       throw updateError;
     }
+
+    // Distribusi komisi otomatis ke Mitra Marketing dan Koordinator Mitra
+    void distributeBillingCommissions(billing.id, admin);
 
     const previousPath = billing.bukti_transfer_url ? billingProofStoragePath(billing.bukti_transfer_url) : null;
     if (previousPath && previousPath !== storagePath) {

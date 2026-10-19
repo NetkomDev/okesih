@@ -6,6 +6,8 @@ import MarketingLoading from "../MarketingLoading";
 import "../marketing-dashboard.css";
 
 type ProfileData = {
+  membershipLevel: string;
+  coordinatorCommissionRate: number;
   id: string;
   userId: string;
   username: string;
@@ -213,15 +215,16 @@ export default function MarketingProfilPage() {
             <section className="mkt-panel mkt-profile-summary" aria-label="Ringkasan kemitraan">
               <div className="mkt-profile-identity">
                 <div className="mkt-profile-avatar" aria-hidden="true">{profile.fullName.trim().charAt(0).toUpperCase()}</div>
-                <div><h2>{profile.fullName}</h2><p>{profile.cityArea || "Wilayah belum diisi"}</p></div>
+                <div><h2>{profile.fullName}</h2><p>{profile.membershipLevel === "COORDINATOR" ? "Koordinator Mitra" : "Mitra Marketing"} · {profile.cityArea || "Wilayah belum diisi"}</p></div>
                 <span className="mkt-profile-status">{profile.status === "ACTIVE" ? "Aktif" : profile.status}</span>
               </div>
               <dl className="mkt-profile-facts">
                 <div><dt>Kode referral</dt><dd><span>{profile.referralCode}</span><button type="button" onClick={handleCopyReferral}>{copiedReferral ? "Tersalin" : "Salin"}</button></dd></div>
                 <div><dt>Tarif komisi mitra</dt><dd>Rp {profile.commissionRate.toLocaleString("id-ID")} <small>/ struk</small></dd></div>
+                {profile.membershipLevel === "COORDINATOR" && <div><dt>Bonus jaringan</dt><dd>Rp {profile.coordinatorCommissionRate.toLocaleString("id-ID")} <small>/ struk</small></dd></div>}
                 <div><dt>Tenant binaan</dt><dd>{profile.totalTenants} <small>tenant</small></dd></div>
               </dl>
-              <p className="mkt-profile-hint">Tarif tiap tenant dapat berbeda sesuai penetapan admin.</p>
+              <p className="mkt-profile-hint">Tarif mengikuti Parameter Master Global saat tagihan tenant lunas. Riwayat komisi yang sudah masuk tidak berubah.</p>
             </section>
 
             <div className="mkt-profile-columns">

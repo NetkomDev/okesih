@@ -1,5 +1,6 @@
 "use client";
 
+import type { CommissionEntry, MembershipLevel } from "@/lib/affiliate";
 import React, { createContext, useContext, useCallback, useEffect, useRef, useState } from "react";
 import { useAuthGuard } from "@/lib/auth-helpers";
 import PwaRoleMismatchModal from "@/components/PwaRoleMismatchModal";
@@ -52,6 +53,8 @@ export type CommissionWithdrawal = {
 
 export type DashboardData = {
   profile: {
+    membershipLevel: MembershipLevel;
+    coordinatorCommissionRate: number;
     name: string;
     phone: string;
     username?: string;
@@ -62,7 +65,11 @@ export type DashboardData = {
     bankName: string;
     bankAccountNumber: string;
     bankAccountName: string;
+    status?: string;
+    isSuspended?: boolean;
+    saldoDisembunyikan?: boolean;
   };
+  commissionEntries: CommissionEntry[];
   applications: Application[];
   withdrawals: CommissionWithdrawal[];
   tenants: Tenant[];
@@ -75,6 +82,7 @@ export type DashboardData = {
     commission: number;
     pendingWithdrawal: number;
     availableCommission: number;
+    saldoDisembunyikan?: boolean;
   };
 };
 
@@ -158,10 +166,14 @@ export function MarketingProvider({ children }: { children: React.ReactNode }) {
       void refresh();
     };
 
+    const syncTimer = window.setInterval(handleForegroundEvent, 30000);
+    window.addEventListener("online", handleForegroundEvent);
     window.addEventListener("visibilitychange", handleForegroundEvent);
     window.addEventListener("focus", handleForegroundEvent);
 
     return () => {
+      window.clearInterval(syncTimer);
+      window.removeEventListener("online", handleForegroundEvent);
       window.removeEventListener("visibilitychange", handleForegroundEvent);
       window.removeEventListener("focus", handleForegroundEvent);
       if (abortControllerRef.current) {

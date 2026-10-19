@@ -10,6 +10,7 @@ import {
   isValidIndonesianWhatsAppNumber,
   normalizeIndonesianWhatsAppNumber,
 } from "@/lib/whatsapp";
+import { isCoordinatorLevel } from "@/lib/affiliate";
 
 type RegistrationRow = {
   id: string; full_name: string; phone: string; email: string | null;
@@ -79,6 +80,7 @@ export async function POST(request: NextRequest) {
       bankAccountNumber,
       bankAccountName,
       experienceNotes,
+      coordinatorReferralCode,
     } = body;
 
     if (!fullName || !phone || !cityArea || !bankAccountNumber || !bankAccountName) {
@@ -114,37 +116,81 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { data: settings } = await supabase
-      .from("platform_settings")
-      .select("default_marketing_commission")
-      .eq("id", "global")
-      .maybeSingle();
-    const defaultCommission = Number(settings?.default_marketing_commission) || 15;
+    const { data: settings, error: settingsError } = await supabase.from("platform_settings")
+      .select("default_marketing_commission").eq("id", "global").single();
+    if (settingsError || !settings) return NextResponse.json({ error: "Parameter komisi belum dapat dibaca." }, { status: 503 });
+    let uplineId: string | null = null;
+    if (coordinatorReferralCode !== undefined) {
+      if (typeof coordinatorReferralCode !== "string" || !/^[a-z0-9_-]{1,50}$/i.test(coordinatorReferralCode.trim())) {
+        return NextResponse.json({ error: "Kode referral koordinator tidak valid." }, { status: 400 });
+      }
 
-    const { data, error } = await supabase
+      const { data: coordinatorCandidate, error: referralError } = await supabase
+        .from("marketing_partners")
+        .select("id, status, user_id, membership_level, notes_admin")
+        .eq("referral_code", coordinatorReferralCode.trim().toUpperCase())
+        .maybeSingle();
+
+      if (referralError && !referralError.message?.includes("membership_level")) {
+        return NextResponse.json({ error: "Referral belum dapat diperiksa." }, { status: 503 });
+      }
+
+      let validCoordinatorId: string | null = null;
+      if (coordinatorCandidate && coordinatorCandidate.status === "ACTIVE" && coordinatorCandidate.user_id) {
+        const isCoord = isCoordinatorLevel(coordinatorCandidate.membership_level) ||
+          (typeof coordinatorCandidate.notes_admin === "string" && coordinatorCandidate.notes_admin.includes("[LEVEL:COORDINATOR]"));
+        if (isCoord) validCoordinatorId = String(coordinatorCandidate.id);
+      }
+
+      if (!validCoordinatorId) {
+        return NextResponse.json({ error: "Koordinator tidak ditemukan atau sudah tidak aktif." }, { status: 400 });
+      }
+      uplineId = validCoordinatorId;
+    }
+
+    const baseInsert: Record<string, unknown> = {
+      full_name: fullName.trim(),
+      phone: marketingPhone,
+      email: email ? email.trim().toLowerCase() : null,
+      city_area: cityArea.trim(),
+      referral_code: referralCode,
+      bank_name: bankName || "BCA",
+      bank_account_number: bankAccountNumber.trim(),
+      bank_account_name: bankAccountName.trim(),
+      experience_notes: experienceNotes ? experienceNotes.trim() : null,
+      status: "PENDING",
+      commission_rate: Number(settings.default_marketing_commission),
+    };
+
+    if (uplineId) {
+      baseInsert.notes_admin = `[UPLINE:${uplineId}]`;
+    }
+
+    let { data, error } = await supabase
       .from("marketing_partners")
-      .insert([
-        {
-          full_name: fullName.trim(),
-          phone: marketingPhone,
-          email: email ? email.trim().toLowerCase() : null,
-          city_area: cityArea.trim(),
-          referral_code: referralCode,
-          bank_name: bankName || "BCA",
-          bank_account_number: bankAccountNumber.trim(),
-          bank_account_name: bankAccountName.trim(),
-          experience_notes: experienceNotes ? experienceNotes.trim() : null,
-          status: "PENDING",
-          commission_rate: defaultCommission,
-        },
-      ])
+      .insert([{
+        ...baseInsert,
+        membership_level: "MITRA",
+        upline_id: uplineId,
+      }])
       .select(registrationColumns)
       .single();
 
-    if (error) {
+    if (error && (error.message?.includes("upline_id") || error.message?.includes("membership_level"))) {
+      console.warn("Kolom upline_id/membership_level belum ada di schema DB, menyimpan dengan fallback notes_admin...");
+      const retry = await supabase
+        .from("marketing_partners")
+        .insert([baseInsert])
+        .select(registrationColumns)
+        .single();
+      data = retry.data;
+      error = retry.error;
+    }
+
+    if (error || !data) {
       console.error("Supabase insert marketing partner error:", error);
       return NextResponse.json(
-        { error: `Gagal menyimpan pendaftaran: ${error.message}` },
+        { error: error ? `Gagal menyimpan pendaftaran: ${error.message}` : "Gagal menyimpan data pendaftaran mitra." },
         { status: 500 }
       );
     }

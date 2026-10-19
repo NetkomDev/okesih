@@ -7,23 +7,31 @@ import { createWhatsAppUrl, getSuperAdminWhatsAppNumber, normalizeIndonesianWhat
 async function marketingContext() {
   const sessionClient = await createServerSupabaseClient();
   const { data: { user } } = await sessionClient.auth.getUser();
-  if (!user || String(user.app_metadata?.role).toUpperCase() !== "MARKETING") return null;
+  if (!user || String(user.app_metadata?.role).toUpperCase() !== "MARKETING") return { user: null, partner: null };
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) throw new Error("Konfigurasi database belum lengkap.");
   const admin = createAdminClient(url, key, { auth: { persistSession: false } });
   const { data: partner, error } = await admin.from("marketing_partners")
     .select("id,full_name,phone,referral_code,bank_name,bank_account_number,bank_account_name,status")
-    .eq("user_id", user.id).eq("status", "ACTIVE").single();
-  if (error || !partner) return null;
-  return { admin, partner };
+    .eq("user_id", user.id).maybeSingle();
+  if (error || !partner) return { user, partner: null, admin };
+  return { user, admin, partner };
 }
 
 export async function POST(request: Request) {
   try {
     assertSameOrigin(request);
     const ctx = await marketingContext();
-    if (!ctx) return NextResponse.json({ error: "Akun marketing tidak aktif atau tidak terhubung." }, { status: 401 });
+    if (!ctx.user || !ctx.partner || !ctx.admin) {
+      return NextResponse.json({ error: "Akun marketing tidak terhubung." }, { status: 401 });
+    }
+    if (ctx.partner.status !== "ACTIVE") {
+      return NextResponse.json(
+        { error: "Akun kemitraan Anda dinonaktifkan. Anda tidak dapat melakukan pencairan komisi." },
+        { status: 403 }
+      );
+    }
     const amount = Number((await request.json()).amount);
     if (!Number.isSafeInteger(amount) || amount <= 0 || amount > 9_999_999_999) {
       return NextResponse.json({ error: "Nominal pencairan harus berupa Rupiah bulat dan lebih dari nol." }, { status: 400 });

@@ -256,3 +256,102 @@ Urutan wajib:
 8. Deploy migrasi database lebih dahulu, lalu aplikasi Vercel, kemudian lakukan smoke test produksi.
 
 Sistem dinyatakan siap hanya jika tidak ada POS/KDS demo statis, tidak ada transaksi publik yang dapat dibaca lintas pelanggan, perangkat tercabut langsung kehilangan akses, dan semua jalur finansial memiliki idempotensi serta audit.
+
+## 16. PANDUAN KANONIS — MULTI-TIER AFFILIATE (JARINGAN KEMITRAAN 2 LEVEL - SKEMA A)
+
+Sistem pemasaran OKESIH menggunakan model *Multi-Tier Affiliate* (Jaringan Kemitraan 2 Level). Seluruh besaran komisi **tidak dikunci (hardcoded)** di dalam sistem, melainkan bersifat dinamis dan dikendalikan terpusat oleh Super Admin melalui halaman **Parameter Master Global**.
+
+### 16.1. Konsep Utama & Terminologi
+
+- **Mitra Marketing:** Pasukan penjualan di lapangan yang bertugas mengakuisisi Warkop/Tenant.
+- **Koordinator Mitra:** Level keanggotaan khusus yang bertugas membina jaringan Mitra Marketing (*downline*), diangkat langsung oleh Super Admin melalui tombol aksi **"Jadikan Koordinator"**.
+- **Parameter Master Global (`platform_settings`):** Pusat kendali variabel sistem OKESIH, di mana Super Admin menentukan nilai baku untuk:
+  - `saas_fee_per_receipt` (Biaya sewa per struk)
+  - `default_marketing_commission` (Komisi Marketing langsung)
+  - `coordinator_commission_per_receipt` (Komisi Koordinator Mitra / Bonus Jaringan)
+
+### 16.2. Skema Komisi: Skema A (Terpusat pada Parameter Global)
+
+Pendapatan perusahaan (biaya sewa per struk) dipotong untuk mendistribusikan komisi secara otomatis berdasarkan variabel yang disetel di Parameter Master Global.
+
+**Simulasi Finansial:**
+- **Biaya Sewa / Struk:** Rp 50
+- **Komisi Mitra Marketing (Akuisisi Langsung):** Rp 10 / struk (Sesuai parameter global)
+- **Komisi Koordinator Mitra (Bonus Jaringan):** Rp 5 / struk (Sesuai parameter global)
+- **Margin Bersih Perusahaan:** Rp 35 / struk (Hasil pengurangan otomatis oleh sistem: Rp 50 - Rp 10 - Rp 5)
+
+*(Catatan Dinamis: Jika sewaktu-waktu Super Admin mengubah nilai Komisi Koordinator menjadi Rp 7 di Parameter Master Global, maka seluruh perhitungan komisi tagihan yang dilunasi ke depannya akan otomatis mengikuti angka baru tersebut. Nilai komisi yang sudah tercatat pada mutasi lama tersimpan permanen sebagai snapshot dan tidak berubah).*
+
+### 16.3. Batas & Integritas Jaringan
+
+1. **Jaringan Maksimal 2 Level:**
+   `Koordinator Mitra` → `Mitra Marketing (Downline)` → `Tenant (Warkop)`.
+   Tidak ada bonus rekursif, tidak ada koordinator multi-level bertingkat, dan tidak ada komisi jaringan untuk diri sendiri.
+2. **Peran Autentikasi:**
+   Keduanya menggunakan role autentikasi `MARKETING`. Tingkat keanggotaan disimpan pada atribut profil database (`membership_level`: `'KOORDINATOR'` / `'COORDINATOR'` vs `'MITRA'`), bukan dipercayakan kepada browser.
+3. **Perekrutan Otomatis Berbasis Referral:**
+   Calon marketing yang mendaftar melalui tautan referral koordinator (`/marketing/daftar?ref=KODE_REFERRAL`) secara otomatis diikat (`upline_id`) ke koordinator tersebut. Tanpa referral valid, pendaftar menjadi mitra mandiri tanpa upline.
+4. **Akuisisi Langsung oleh Koordinator:**
+   Jika seorang Koordinator Mitra mengakuisisi tenant secara langsung tanpa perantara mitra bawahan, koordinator tersebut menerima Komisi Langsung (Marketing) dan tidak ada komisi jaringan ganda.
+5. **Kebijakan Akun Nonaktif (Suspended):**
+   Jika mitra atau koordinator dinonaktifkan (`status !== 'ACTIVE'`) setelah memperoleh tenant:
+   - Akun tersebut **tidak bisa lagi melakukan pencairan dana** (API menolak dengan HTTP 403).
+   - Akun tersebut **tidak akan melihat saldo/pendapatan** (seluruh nominal saldo disembunyikan/dimaskir dengan label penangguhan akun).
+
+### 16.4. Alur Kerja (Workflow) Sistem Pemasaran
+
+#### Fase 1: Pengaturan Master & Pengangkatan Koordinator
+1. Super Admin membuka menu **Parameter Master Global** dan memastikan nilai `Komisi Koordinator Mitra` telah ditentukan.
+2. Super Admin berpindah ke menu **Mitra Marketing** yang menampilkan daftar seluruh mitra.
+3. Super Admin memilih salah satu mitra aktif, lalu menekan tombol aksi **"Jadikan Koordinator"**.
+4. Status mitra berubah menjadi `Koordinator Mitra` dan sistem langsung mengaktifkan fitur jaringan untuk akun tersebut tanpa perlu menginput ulang besaran komisi secara manual. Jika diperlukan, Super Admin dapat mencabut status tersebut kembali ke `Mitra Marketing`.
+
+#### Fase 2: Perekrutan Jaringan (*Downline*)
+1. Koordinator Mitra membuka aplikasi PWA Marketing. Bottom navigation kini menampilkan menu **"Jaringan"** (`/marketing/dashboard/jaringan`) lengkap dengan **Link Referral** pendaftaran unik (`https://sales.okesih.com/marketing/daftar?ref=KODE_REFERRAL`).
+2. Koordinator membagikan tautan tersebut kepada calon mitra baru.
+3. Calon mitra mengisi formulir pendaftaran melalui tautan tersebut. Sistem server memverifikasi kode referral dan mengikat `upline_id` calon mitra secara otomatis ke ID Koordinator bersangkutan.
+
+#### Fase 3: Akuisisi Warkop & Operasional
+1. Mitra Marketing (downline) mendaftarkan Warkop "A" melalui formulir akuisisi di PWA Marketing.
+2. Super Admin memverifikasi dan menyetujui akun tenant Warkop "A".
+3. Warkop "A" beroperasi dan mencetak 300 struk transaksi sah dalam satu hari.
+4. Saat Tutup Shift, tagihan harian terbentuk Rp 15.000 (300 struk x Rp 50). Warkop "A" membayar tagihan melalui sistem QRIS / transfer bank.
+
+#### Fase 4: Distribusi Komisi Otomatis (Trigger / Service RPC)
+1. Saat pembayaran Warkop "A" diverifikasi dan status berubah menjadi `PAID`, sistem membaca nilai terkini dari `platform_settings`:
+   - `default_marketing_commission` (misal Rp 10)
+   - `coordinator_commission_per_receipt` (misal Rp 5)
+2. Sistem mengeksekusi split payment secara otomatis ke dalam saldo internal dan mencatat mutasi ke tabel `marketing_commission_mutations`:
+   - **Saldo Mitra Marketing:** Bertambah `300 x Rp 10 = Rp 3.000` (Jenis: `DIRECT`, Asal: Warkop "A").
+   - **Saldo Koordinator Mitra:** Bertambah `300 x Rp 5 = Rp 1.500` (Jenis: `NETWORK`, Asal: Warkop "A", Mitra Pengakuisisi: Nama Mitra Marketing).
+3. Mutasi ini langsung tampil di menu **"Komisi Berjalan"** masing-masing mitra dengan rincian nama tenant dan nama mitra downline terkait.
+4. Kunci unik `UNIQUE(billing_id, kind)` pada buku mutasi menjamin mutasi idempoten dan mencegah kredit saldo ganda bila ada request berulang.
+
+### 16.5. Skema Tabel Database
+
+```sql
+-- Tabel platform_settings (Parameter Master Global)
+ALTER TABLE public.platform_settings 
+  ADD COLUMN IF NOT EXISTS coordinator_commission_per_receipt NUMERIC(10, 2) NOT NULL DEFAULT 5.00;
+
+-- Tabel marketing_partners (Tingkat Keanggotaan & Upline)
+ALTER TABLE public.marketing_partners 
+  ADD COLUMN IF NOT EXISTS membership_level VARCHAR(20) NOT NULL DEFAULT 'MITRA',
+  ADD COLUMN IF NOT EXISTS upline_id UUID REFERENCES public.marketing_partners(id) ON DELETE SET NULL;
+
+-- Tabel Buku Mutasi Komisi (Idempoten & Audit Trail)
+CREATE TABLE IF NOT EXISTS public.marketing_commission_mutations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  billing_id UUID NOT NULL REFERENCES public.saas_billings(id) ON DELETE CASCADE,
+  warkop_id UUID NOT NULL REFERENCES public.warkops(id) ON DELETE CASCADE,
+  partner_id UUID NOT NULL REFERENCES public.marketing_partners(id) ON DELETE CASCADE,
+  source_partner_id UUID REFERENCES public.marketing_partners(id) ON DELETE SET NULL,
+  kind VARCHAR(20) NOT NULL CHECK (kind IN ('DIRECT', 'NETWORK')),
+  receipts_count INTEGER NOT NULL DEFAULT 0,
+  rate_per_receipt NUMERIC(10, 2) NOT NULL DEFAULT 0,
+  total_amount NUMERIC(12, 2) NOT NULL DEFAULT 0,
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now()),
+  CONSTRAINT uq_billing_commission_kind UNIQUE (billing_id, kind)
+);
+```

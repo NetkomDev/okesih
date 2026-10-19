@@ -8,6 +8,9 @@ import type { MarketingRegistration } from "@/lib/marketing-registration-types";
 import "./registration.css";
 
 export default function MarketingRegisterPage() {
+  const [referral, setReferral] = useState<{ name: string; code: string } | null>(null);
+  const [referralError, setReferralError] = useState("");
+  const [referralLoading, setReferralLoading] = useState(true);
   const [mktFullName, setMktFullName] = useState("");
   const [mktPhone, setMktPhone] = useState("");
   const [mktEmail, setMktEmail] = useState("");
@@ -22,7 +25,7 @@ export default function MarketingRegisterPage() {
   const [registrationLoading, setRegistrationLoading] = useState(true);
   const [statusError, setStatusError] = useState("");
   const [mktError, setMktError] = useState("");
-  const [commissionPerReceipt, setCommissionPerReceipt] = useState<number>(15);
+  const [commissionPerReceipt, setCommissionPerReceipt] = useState<number | null>(null);
 
   const refreshRegistration = useCallback(() => fetch("/api/marketing/register", { cache: "no-store" })
     .then(async (response) => {
@@ -38,6 +41,17 @@ export default function MarketingRegisterPage() {
     .finally(() => setRegistrationLoading(false)), []);
 
   useEffect(() => { void refreshRegistration(); }, [refreshRegistration]);
+  useEffect(() => {
+    const ref = new URLSearchParams(window.location.search).get("ref");
+    if (!ref) { queueMicrotask(() => setReferralLoading(false)); return; }
+    const controller = new AbortController();
+    fetch(`/api/marketing/referral?ref=${encodeURIComponent(ref)}`, { cache: "no-store", signal: controller.signal })
+      .then(async response => { const result = await response.json(); if (!response.ok) throw new Error(result.error); setReferral(result.data); })
+      .catch(cause => { if (!controller.signal.aborted) setReferralError(cause instanceof Error ? cause.message : "Referral gagal diperiksa."); })
+      .finally(() => { if (!controller.signal.aborted) setReferralLoading(false); });
+    return () => controller.abort();
+  }, []);
+
 
   useEffect(() => {
     if (!mktSuccess) return;
@@ -67,6 +81,7 @@ export default function MarketingRegisterPage() {
 
   const handleMarketingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (referralLoading || referralError) { setMktError(referralError || "Tunggu pemeriksaan referral selesai."); return; }
     setMktSubmitting(true);
     setMktError("");
 
@@ -75,6 +90,7 @@ export default function MarketingRegisterPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          coordinatorReferralCode: new URLSearchParams(window.location.search).get("ref") || undefined,
           fullName: mktFullName,
           phone: mktPhone,
           email: mktEmail,
@@ -147,6 +163,8 @@ export default function MarketingRegisterPage() {
         />
       </div>
 
+      {referral && <p role="status" style={{ position: "relative", zIndex: 1, textAlign: "center" }}>Diundang Koordinator Mitra: <strong>{referral.name}</strong> ({referral.code})</p>}
+      {referralError && <p role="alert" className="mkt-alert error">{referralError} Hubungi koordinator untuk tautan yang benar.</p>}
       {/* Header Bar */}
       <div
         style={{
@@ -251,7 +269,7 @@ export default function MarketingRegisterPage() {
 
           <p style={{ fontSize: "0.9rem", color: "var(--text-muted)", maxWidth: "580px", margin: "0 auto", lineHeight: 1.55 }}>
             Dapatkan kode referral eksklusif terdaftar resmi di Okesih.com. Nikmati bagi hasil otomatis{" "}
-            <strong style={{ color: "var(--accent-emerald)" }}>Rp {commissionPerReceipt.toLocaleString("id-ID")} per struk transaksi</strong> seumur hidup untuk setiap warkop/resto binaan Anda!
+            <strong style={{ color: "var(--accent-emerald)" }}>Rp {commissionPerReceipt?.toLocaleString("id-ID")} per struk transaksi</strong> seumur hidup untuk setiap warkop/resto binaan Anda!
           </p>
         </div>
 

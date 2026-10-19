@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getTrustedUserRole } from "@/lib/auth-role";
+import { distributeBillingCommissions } from "@/lib/commission-distribution";
 
 function getAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -159,6 +160,9 @@ export async function PATCH(request: Request) {
         return NextResponse.json({ error: "Gagal menyetujui setoran sewa." }, { status: 500 });
       }
 
+      // Distribusi komisi otomatis ke Mitra Marketing dan Koordinator Mitra
+      void distributeBillingCommissions(billingId, admin);
+
       return NextResponse.json({
         success: true,
         message: `Setoran sewa ${data.warkops?.nama || ""} berhasil diverifikasi dan ditandai Lunas.`,
@@ -258,6 +262,9 @@ export async function POST(request: Request) {
       if (updateErr) {
         return NextResponse.json({ error: "Gagal memperbarui hasil OCR AI." }, { status: 500 });
       }
+
+      // Distribusi komisi otomatis
+      void distributeBillingCommissions(billingId, admin);
 
       return NextResponse.json({
         success: true,

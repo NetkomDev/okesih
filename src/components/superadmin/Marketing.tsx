@@ -17,6 +17,7 @@ interface MarketingAgent {
   totalCommissionEarned: number;
   commissionPaid: number;
   status: "ACTIVE" | "PENDING" | "INACTIVE";
+  membershipLevel: "COORDINATOR" | "MITRA";
   experienceNotes?: string;
 }
 interface MarketingWithdrawal {
@@ -61,6 +62,7 @@ const loadMarketingPartners = async () => {
           total_commission_earned?: number;
           commission_paid?: number;
           status: "ACTIVE" | "PENDING" | "INACTIVE";
+          membership_level?: string;
           experience_notes?: string;
         }
         const mapped: MarketingAgent[] = json.data.map((row: RawMarketingPartner) => ({
@@ -79,6 +81,7 @@ const loadMarketingPartners = async () => {
           totalCommissionEarned: Number(row.total_commission_earned) || 0,
           commissionPaid: Number(row.commission_paid) || 0,
           status: row.status,
+          membershipLevel: (row.membership_level === "COORDINATOR" || row.membership_level === "KOORDINATOR") ? "COORDINATOR" : "MITRA",
           experienceNotes: row.experience_notes,
         }));
         setMarketingList(mapped);
@@ -104,6 +107,34 @@ const handleUpdateMarketingStatus = async (id: string, newStatus: "ACTIVE" | "IN
         payload.whatsappUrl
           ? "Akun marketing aktif. Kredensial siap dikirim melalui WhatsApp Anda."
           : `Status mitra marketing berhasil diubah menjadi ${newStatus}.`,
+        "success"
+      );
+      if (payload.whatsappUrl) {
+        window.location.assign(payload.whatsappUrl);
+      }
+    } catch (error) {
+      showToast("Gagal Memperbarui", error instanceof Error ? error.message : "Terjadi kesalahan jaringan ke server.", "error");
+    }
+  };
+
+  const handleToggleCoordinator = async (agent: MarketingAgent) => {
+    const newLevel = agent.membershipLevel === "COORDINATOR" ? "MITRA" : "COORDINATOR";
+    try {
+      const res = await fetch("/api/superadmin/marketing", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: agent.id, membershipLevel: newLevel }),
+      });
+      const payload = await res.json();
+      if (!res.ok) throw new Error(payload.error || "Gagal mengubah level keanggotaan.");
+      setMarketingList((prev) =>
+        prev.map((m) => (m.id === agent.id ? { ...m, membershipLevel: newLevel } : m))
+      );
+      showToast(
+        "Level Kemitraan Diperbarui",
+        newLevel === "COORDINATOR"
+          ? `${agent.name} berhasil diangkat menjadi Koordinator Mitra. Fitur jaringan aktif.`
+          : `Status ${agent.name} dikembalikan menjadi Mitra Marketing.`,
         "success"
       );
       if (payload.whatsappUrl) {
@@ -187,6 +218,7 @@ const handleCreateMarketing = async (e: React.FormEvent) => {
       totalCommissionEarned: 0,
       commissionPaid: 0,
       status: "ACTIVE",
+      membershipLevel: "MITRA",
     };
 
     setIsMarketingSaving(true);
@@ -415,21 +447,53 @@ return (<>{activeTab === "marketing" && (
                         >
                           <td style={{ padding: "1rem" }}>
                             <div style={{ fontWeight: 800, color: isDark ? "#FFF" : "#0F172A" }}>{m.name}</div>
-                            <span
-                              style={{
-                                background: isDark ? "rgba(16, 185, 129, 0.15)" : "rgba(16, 185, 129, 0.1)",
-                                border: "1px solid rgba(16, 185, 129, 0.4)",
-                                color: isDark ? "#34D399" : "#059669",
-                                padding: "0.15rem 0.5rem",
-                                borderRadius: "4px",
-                                fontWeight: 800,
-                                fontSize: "0.7rem",
-                                display: "inline-block",
-                                marginTop: "3px",
-                              }}
-                            >
-                              {m.referralCode}
-                            </span>
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.3rem", flexWrap: "wrap", marginTop: "3px" }}>
+                              <span
+                                style={{
+                                  background: isDark ? "rgba(16, 185, 129, 0.15)" : "rgba(16, 185, 129, 0.1)",
+                                  border: "1px solid rgba(16, 185, 129, 0.4)",
+                                  color: isDark ? "#34D399" : "#059669",
+                                  padding: "0.15rem 0.5rem",
+                                  borderRadius: "4px",
+                                  fontWeight: 800,
+                                  fontSize: "0.7rem",
+                                  display: "inline-block",
+                                }}
+                              >
+                                {m.referralCode}
+                              </span>
+                              {m.membershipLevel === "COORDINATOR" ? (
+                                <span
+                                  style={{
+                                    background: "rgba(99, 102, 241, 0.15)",
+                                    border: "1px solid #6366F1",
+                                    color: "#6366F1",
+                                    padding: "0.15rem 0.5rem",
+                                    borderRadius: "4px",
+                                    fontWeight: 800,
+                                    fontSize: "0.7rem",
+                                    display: "inline-block",
+                                  }}
+                                >
+                                  👑 Koordinator Mitra
+                                </span>
+                              ) : (
+                                <span
+                                  style={{
+                                    background: isDark ? "rgba(148, 163, 184, 0.15)" : "rgba(100, 116, 139, 0.1)",
+                                    border: "1px solid rgba(148, 163, 184, 0.3)",
+                                    color: isDark ? "#94A3B8" : "#64748B",
+                                    padding: "0.15rem 0.5rem",
+                                    borderRadius: "4px",
+                                    fontWeight: 700,
+                                    fontSize: "0.7rem",
+                                    display: "inline-block",
+                                  }}
+                                >
+                                  Mitra Marketing
+                                </span>
+                              )}
+                            </div>
                             {m.experienceNotes && (
                               <div style={{ fontSize: "0.72rem", color: isDark ? "#94A3B8" : "#64748B", marginTop: "4px" }}>
                                 💡 {m.experienceNotes}
@@ -559,14 +623,48 @@ return (<>{activeTab === "marketing" && (
                               ) : (
                                 <>
                                   {m.status === "ACTIVE" ? (
-                                    <button
-                                      onClick={() => handleUpdateMarketingStatus(m.id, "INACTIVE")}
-                                      className="btn-secondary"
-                                      style={{ padding: "0.4rem 0.55rem", fontSize: "0.75rem", color: isDark ? "#94A3B8" : "#64748B" }}
-                                      title="Nonaktifkan Kemitraan"
-                                    >
-                                      Suspend
-                                    </button>
+                                    <>
+                                      {m.membershipLevel === "COORDINATOR" ? (
+                                        <button
+                                          onClick={() => handleToggleCoordinator(m)}
+                                          className="btn-secondary"
+                                          style={{
+                                            padding: "0.4rem 0.65rem",
+                                            fontSize: "0.75rem",
+                                            color: "#D97706",
+                                            borderColor: "rgba(245, 158, 11, 0.4)",
+                                            fontWeight: 700,
+                                          }}
+                                          title="Cabut Status Koordinator Mitra"
+                                        >
+                                          Cabut Koordinator
+                                        </button>
+                                      ) : (
+                                        <button
+                                          onClick={() => handleToggleCoordinator(m)}
+                                          className="btn-secondary"
+                                          style={{
+                                            padding: "0.4rem 0.65rem",
+                                            fontSize: "0.75rem",
+                                            color: "#6366F1",
+                                            borderColor: "rgba(99, 102, 241, 0.4)",
+                                            fontWeight: 700,
+                                            background: "rgba(99, 102, 241, 0.08)",
+                                          }}
+                                          title="Jadikan Koordinator Mitra"
+                                        >
+                                          👑 Jadikan Koordinator
+                                        </button>
+                                      )}
+                                      <button
+                                        onClick={() => handleUpdateMarketingStatus(m.id, "INACTIVE")}
+                                        className="btn-secondary"
+                                        style={{ padding: "0.4rem 0.55rem", fontSize: "0.75rem", color: isDark ? "#94A3B8" : "#64748B" }}
+                                        title="Nonaktifkan Kemitraan"
+                                      >
+                                        Suspend
+                                      </button>
+                                    </>
                                   ) : (
                                     <button
                                       onClick={() => handleUpdateMarketingStatus(m.id, "ACTIVE")}

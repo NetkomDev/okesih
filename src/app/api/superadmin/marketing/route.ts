@@ -49,7 +49,12 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ data });
+    const enriched = (data || []).map((row: Record<string, unknown>) => ({
+      ...row,
+      membership_level: row.membership_level || (typeof row.notes_admin === "string" && row.notes_admin.includes("[LEVEL:COORDINATOR]") ? "COORDINATOR" : "MITRA"),
+    }));
+
+    return NextResponse.json({ data: enriched });
   } catch (err: unknown) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Terjadi kesalahan internal." },
@@ -131,16 +136,11 @@ export async function PATCH(request: Request) {
     if (!supabase) return NextResponse.json({ error: "Akses Super Admin diperlukan." }, { status: 401 });
 
     const body = await request.json();
-    const { id, status, commissionRate, notesAdmin } = body;
+    const { id, status, commissionRate, notesAdmin, membershipLevel } = body;
 
     if (!id) {
       return NextResponse.json({ error: "ID marketing partner diperlukan." }, { status: 400 });
     }
-
-    const updatePayload: Record<string, unknown> = {};
-    if (status) updatePayload.status = status;
-    if (commissionRate !== undefined) updatePayload.commission_rate = commissionRate;
-    if (notesAdmin !== undefined) updatePayload.notes_admin = notesAdmin;
 
     const { data: current, error: currentError } = await supabase
       .from("marketing_partners")
@@ -150,6 +150,23 @@ export async function PATCH(request: Request) {
     if (currentError || !current) {
       return NextResponse.json({ error: currentError?.message || "Mitra marketing tidak ditemukan." }, { status: 404 });
     }
+
+    const updatePayload: Record<string, unknown> = {};
+    if (status) updatePayload.status = status;
+    if (commissionRate !== undefined) updatePayload.commission_rate = commissionRate;
+
+    let targetNotes = notesAdmin !== undefined ? notesAdmin : current.notes_admin;
+    let targetLevel: string | undefined = undefined;
+
+    if (membershipLevel !== undefined) {
+      const isCoord = String(membershipLevel).toUpperCase() === "COORDINATOR" || String(membershipLevel).toUpperCase() === "KOORDINATOR";
+      targetLevel = isCoord ? "COORDINATOR" : "MITRA";
+      updatePayload.membership_level = targetLevel;
+      // Simpan juga flag di notes_admin sebagai fallback bila kolom DB belum dibuat
+      const cleanNotes = (targetNotes || "").replace(/\[LEVEL:(?:COORDINATOR|MITRA)\]/g, "").trim();
+      targetNotes = `${cleanNotes} [LEVEL:${targetLevel}]`.trim();
+    }
+    if (targetNotes !== undefined) updatePayload.notes_admin = targetNotes;
 
     let createdAuthUserId: string | null = null;
     let username: string | null = null;
@@ -173,18 +190,36 @@ export async function PATCH(request: Request) {
       updatePayload.username = username;
     }
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from("marketing_partners")
       .update(updatePayload)
       .eq("id", id)
       .select()
       .single();
 
+    // Fallback jika kolom membership_level belum ada di DB
+    if (error && error.message?.includes("membership_level")) {
+      console.warn("Kolom membership_level belum ada di schema DB, menyimpan dengan fallback notes_admin...");
+      delete updatePayload.membership_level;
+      const retry = await supabase
+        .from("marketing_partners")
+        .update(updatePayload)
+        .eq("id", id)
+        .select()
+        .single();
+      data = retry.data;
+      error = retry.error;
+    }
+
     if (error) {
       if (createdAuthUserId) await supabase.auth.admin.deleteUser(createdAuthUserId);
       console.error("Supabase update error:", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
+
+    // Normalisasi membership_level pada respons
+    const resolvedLevel = data?.membership_level || (data?.notes_admin?.includes("[LEVEL:COORDINATOR]") ? "COORDINATOR" : "MITRA");
+    const enrichedData = { ...data, membership_level: resolvedLevel };
 
     let whatsappUrl: string | null = null;
     if (username && password) {
@@ -199,9 +234,29 @@ export async function PATCH(request: Request) {
         "Silakan login, simpan kredensial dengan aman, lalu pasang aplikasi Marketing OKESIH.",
       ].join("\n");
       whatsappUrl = createWhatsAppUrl(data.phone, message);
+    } else if (membershipLevel !== undefined) {
+      const isPromoted = targetLevel === "COORDINATOR";
+      const message = isPromoted
+        ? [
+            `Halo ${cleanWhatsAppMessageField(data.full_name)}, selamat! Anda telah diangkat menjadi *Koordinator Mitra* OKESIH. 🎉`,
+            "",
+            "Fitur Jaringan kini telah aktif di akun Anda. Anda dapat mulai merekrut dan membina jaringan mitra marketing baru menggunakan link referral Anda di aplikasi.",
+            "",
+            "Buka Dashboard Marketing Anda untuk melihat menu *Jaringan Saya*.",
+            "",
+            "Salam,",
+            "Super Admin OKESIH",
+          ].join("\n")
+        : [
+            `Halo ${cleanWhatsAppMessageField(data.full_name)}, status keanggotaan Anda telah disesuaikan kembali menjadi *Mitra Marketing*.`,
+            "",
+            "Salam,",
+            "Super Admin OKESIH",
+          ].join("\n");
+      whatsappUrl = createWhatsAppUrl(data.phone, message);
     }
 
-    return NextResponse.json({ success: true, data, whatsappUrl });
+    return NextResponse.json({ success: true, data: enrichedData, whatsappUrl });
   } catch (err: unknown) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Terjadi kesalahan internal." },

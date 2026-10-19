@@ -5,6 +5,7 @@ export type PlatformSettings = {
   queueDismissSeconds: number;
   saasFeePerReceipt: number;
   defaultMarketingCommission: number;
+  coordinatorCommissionPerReceipt: number;
   qrisImageUrl: string;
   qrisMerchantName: string;
   bankName: string;
@@ -16,7 +17,8 @@ export type PlatformSettings = {
 export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
   queueDismissSeconds: 60,
   saasFeePerReceipt: 50,
-  defaultMarketingCommission: 15,
+  defaultMarketingCommission: 0,
+  coordinatorCommissionPerReceipt: 0,
   qrisImageUrl:
     "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=00020101021126570014ID.LINKAJA.WWW01189360091100210001000215ID10293847565204549953033605802ID5920OKESIH+SAAS+PUSAT6007JAKARTA61051234062070703A016304",
   qrisMerchantName: "OKESIH SAAS PUSAT (BANK CENTRAL ASIA)",
@@ -40,6 +42,7 @@ export function parsePlatformSettings(
     defaultMarketingCommission: Number(
       row.default_marketing_commission ?? DEFAULT_PLATFORM_SETTINGS.defaultMarketingCommission
     ),
+    coordinatorCommissionPerReceipt: Number(row.coordinator_commission_per_receipt ?? 0),
     qrisImageUrl:
       typeof row.qris_image_url === "string" && row.qris_image_url
         ? row.qris_image_url

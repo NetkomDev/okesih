@@ -59,6 +59,7 @@ export default function MarketingDashboardPage() {
   }
   if (!data) return null;
 
+  const isSuspended = Boolean(data.profile.isSuspended || data.totals.saldoDisembunyikan);
   const unpaidCount = data.totals.unpaidTenants ?? data.tenants.filter((t) => t.paymentStatus === "UNPAID").length;
 
   return (
@@ -80,7 +81,9 @@ export default function MarketingDashboardPage() {
             />
             <div>
               <div className="mkt-eyebrow">OKESIH.COM</div>
-              <div className="mkt-title">Marketing Partner</div>
+              <div className="mkt-title">
+                {data.profile.membershipLevel === "COORDINATOR" ? "Koordinator Mitra" : "Marketing Partner"}
+              </div>
             </div>
           </div>
 
@@ -92,6 +95,25 @@ export default function MarketingDashboardPage() {
             </div>
           </div>
         </header>
+
+        {isSuspended && (
+          <div
+            role="alert"
+            className="mkt-alert error"
+            style={{
+              background: "rgba(239, 68, 68, 0.12)",
+              border: "1px solid #EF4444",
+              color: "#DC2626",
+              fontWeight: 700,
+              padding: "0.85rem 1rem",
+              borderRadius: "8px",
+              marginBottom: "1rem",
+            }}
+          >
+            ⚠️ <strong>Akun Kemitraan Dinonaktifkan:</strong> Status kemitraan Anda saat ini dinonaktifkan/ditangguhkan.
+            Saldo komisi disembunyikan dan pencairan dibekukan. Silakan hubungi Super Admin untuk aktivasi kembali.
+          </div>
+        )}
 
         {(error || contextError) && <div className="mkt-alert error">{error || contextError}</div>}
         {notice && (
@@ -169,8 +191,8 @@ export default function MarketingDashboardPage() {
               </i>
               <div>
                 <small>Komisi berjalan</small>
-                <strong>{money(data.totals.commission)}</strong>
-                <p>Rincian komisi ↗</p>
+                <strong>{isSuspended ? "Akun Dinonaktifkan" : money(data.totals.commission)}</strong>
+                <p>{isSuspended ? "Pencairan dibekukan" : "Rincian komisi ↗"}</p>
               </div>
             </article>
           </Link>

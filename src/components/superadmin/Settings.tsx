@@ -7,7 +7,9 @@ const { isDark, showToast, activeTab } = useSuperadmin();
 
 const [globalDismissDuration, setGlobalDismissDuration] = useState<number>(60);
 const [saasFeePerReceipt, setSaasFeePerReceipt] = useState<number>(50);
-const [defaultCommissionRate, setDefaultCommissionRate] = useState<number>(15);
+const [defaultCommissionRate, setDefaultCommissionRate] = useState<number>(0);
+const [coordinatorCommission, setCoordinatorCommission] = useState(0);
+const [settingsError, setSettingsError] = useState(false);
 const [isSettingsLoading, setIsSettingsLoading] = useState<boolean>(true);
 const [isSettingsSaving, setIsSettingsSaving] = useState<boolean>(false);
 const [settingsUpdatedAt, setSettingsUpdatedAt] = useState<string | null>(null);
@@ -22,9 +24,11 @@ useEffect(() => {
           setGlobalDismissDuration(payload.data.queueDismissSeconds);
           setSaasFeePerReceipt(payload.data.saasFeePerReceipt);
           setDefaultCommissionRate(payload.data.defaultMarketingCommission);
+          setCoordinatorCommission(payload.data.coordinatorCommissionPerReceipt);
           setSettingsUpdatedAt(payload.data.updatedAt);
         }
       } catch (error) {
+        if (active) setSettingsError(true);
         if (active) showToast("Parameter Belum Dimuat", error instanceof Error ? error.message : "Terjadi kesalahan jaringan.", "error");
       } finally {
         if (active) setIsSettingsLoading(false);
@@ -43,6 +47,7 @@ const handleSavePlatformSettings = async () => {
           queueDismissSeconds: globalDismissDuration,
           saasFeePerReceipt,
           defaultMarketingCommission: defaultCommissionRate,
+          coordinatorCommissionPerReceipt: coordinatorCommission,
         }),
       });
       const payload = await response.json();
@@ -50,6 +55,7 @@ const handleSavePlatformSettings = async () => {
       setGlobalDismissDuration(payload.data.queueDismissSeconds);
       setSaasFeePerReceipt(payload.data.saasFeePerReceipt);
       setDefaultCommissionRate(payload.data.defaultMarketingCommission);
+          setCoordinatorCommission(payload.data.coordinatorCommissionPerReceipt);
       setSettingsUpdatedAt(payload.data.updatedAt);
       showToast("Parameter Global Tersimpan", "TV antrean, dashboard owner, dan halaman marketing kini menggunakan konfigurasi terbaru.", "success");
     } catch (error) {
@@ -82,7 +88,7 @@ return (<>{activeTab === "platform_config" && (
                   <button
                     key={sec}
                     onClick={() => setGlobalDismissDuration(sec)}
-                    disabled={isSettingsLoading || isSettingsSaving}
+                    disabled={isSettingsLoading || isSettingsSaving || settingsError}
                     style={{
                       padding: "0.5rem 0.85rem",
                       borderRadius: "6px",
@@ -144,7 +150,7 @@ return (<>{activeTab === "platform_config" && (
               </div>
 
               <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem" }}>
-                <span style={{ fontSize: "0.85rem", color: isDark ? "#94A3B8" : "#64748B" }}>Default Komisi Marketing:</span>
+                <span style={{ fontSize: "0.85rem", color: isDark ? "#94A3B8" : "#64748B" }}>Komisi Mitra Marketing:</span>
                 <span style={{ fontSize: "1rem", fontWeight: 800, color: isDark ? "#C084FC" : "#7C3AED" }}>Rp</span>
                 <input
                   type="number"
@@ -166,11 +172,39 @@ return (<>{activeTab === "platform_config" && (
                 <span style={{ fontSize: "0.8rem", color: isDark ? "#94A3B8" : "#64748B" }}>/ struk</span>
               </div>
 
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem" }}>
+                <span style={{ fontSize: "0.85rem", color: isDark ? "#94A3B8" : "#64748B" }}>Komisi Koordinator Mitra:</span>
+                <span style={{ fontSize: "1rem", fontWeight: 800, color: isDark ? "#818CF8" : "#4F46E5" }}>Rp</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={saasFeePerReceipt}
+                  value={coordinatorCommission}
+                  disabled={isSettingsLoading || isSettingsSaving || settingsError}
+                  onChange={(event) => setCoordinatorCommission(Number(event.target.value))}
+                  style={{
+                    background: isDark ? "rgba(15, 23, 42, 0.8)" : "#F8FAFC",
+                    border: isDark ? "1px solid rgba(129, 140, 248, 0.4)" : "1px solid rgba(0, 0, 0, 0.15)",
+                    borderRadius: "8px",
+                    padding: "0.4rem 0.65rem",
+                    fontSize: "1rem",
+                    fontWeight: 900,
+                    color: isDark ? "#818CF8" : "#4F46E5",
+                    width: "90px",
+                  }}
+                />
+                <span style={{ fontSize: "0.8rem", color: isDark ? "#94A3B8" : "#64748B" }}>/ struk</span>
+              </div>
+              <p style={{ marginBottom: "16px", fontSize: "13px", color: isDark ? "#94A3B8" : "#64748B" }}>
+                Margin per struk perusahaan: <strong>Rp {Math.max(0, saasFeePerReceipt - defaultCommissionRate - coordinatorCommission).toLocaleString("id-ID")}</strong>.
+                Komisi dihitung otomatis dari Parameter Master Global saat tagihan dilunasi.
+              </p>
+              {settingsError && <p role="alert">Parameter gagal dimuat. Muat ulang halaman sebelum menyimpan.</p>}
               <div style={{ paddingTop: "1rem", borderTop: isDark ? "1px solid rgba(255,255,255,.1)" : "1px solid rgba(15,23,42,.1)" }}>
                 <button
                   type="button"
                   onClick={handleSavePlatformSettings}
-                  disabled={isSettingsLoading || isSettingsSaving}
+                  disabled={isSettingsLoading || isSettingsSaving || settingsError}
                   className="btn-primary"
                   style={{ width: "100%", opacity: isSettingsLoading || isSettingsSaving ? 0.65 : 1 }}
                 >

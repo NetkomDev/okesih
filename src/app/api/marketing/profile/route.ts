@@ -5,7 +5,6 @@ import { assertSameOrigin, DeviceApiError } from "@/lib/device-auth";
 import { marketingProfile, marketingProfileUpdateSchema, type MarketingProfileRow } from "@/lib/marketing-profile";
 
 export const dynamic = "force-dynamic";
-const columns = "id,user_id,username,full_name,phone,city_area,referral_code,bank_name,bank_account_number,bank_account_name,commission_rate,status,updated_at";
 const json = (body: object, status = 200) => NextResponse.json(body, { status, headers: { "Cache-Control": "private, no-store" } });
 
 async function getMarketingContext() {
@@ -13,10 +12,17 @@ async function getMarketingContext() {
   const { data: { user } } = await session.auth.getUser();
   if (!user || user.app_metadata?.role !== "MARKETING") throw new DeviceApiError("Sesi login marketing tidak valid.", 401);
   const admin = createAdminClient();
-  const { data, error } = await admin.from("marketing_partners").select(columns).eq("user_id", user.id).eq("status", "ACTIVE").maybeSingle();
+  const { data, error } = await admin.from("marketing_partners").select("*").eq("user_id", user.id).eq("status", "ACTIVE").maybeSingle();
   if (error) throw error;
   if (!data) throw new DeviceApiError("Akun marketing tidak aktif atau tidak terhubung.", 403);
-  const partner = data as MarketingProfileRow;
+  const { data: rates } = await admin.from("platform_settings").select("*").eq("id", "global").maybeSingle();
+  const resolvedLevel = data.membership_level || (typeof data.notes_admin === "string" && data.notes_admin.includes("[LEVEL:COORDINATOR]") ? "COORDINATOR" : "MARKETING");
+  const partner = {
+    ...data,
+    membership_level: resolvedLevel,
+    commission_rate: rates?.default_marketing_commission !== undefined ? Number(rates.default_marketing_commission) : Number(data.commission_rate ?? 0),
+    coordinator_commission_rate: rates?.coordinator_commission_per_receipt !== undefined ? Number(rates.coordinator_commission_per_receipt) : 0,
+  } as MarketingProfileRow;
   const { count, error: countError } = await admin.from("warkops").select("id", { count: "exact", head: true }).eq("marketing_agent_id", partner.id);
   if (countError) throw countError;
   return { admin, user, partner, totalTenants: count ?? 0 };
@@ -48,7 +54,7 @@ export async function PATCH(request: Request) {
     };
     // Optimistic concurrency prevents a second tab from overwriting a concurrent save.
     const { data: saved, error } = await admin.from("marketing_partners").update(updates)
-      .eq("id", partner.id).eq("user_id", user.id).eq("status", "ACTIVE").eq("updated_at", partner.updated_at).select(columns).maybeSingle();
+      .eq("id", partner.id).eq("user_id", user.id).eq("status", "ACTIVE").eq("updated_at", partner.updated_at).select("*").maybeSingle();
     if (error) {
       if (error.code === "23505") return json({ error: "Username sudah digunakan. Pilih username lain." }, 409);
       throw error;
@@ -73,6 +79,6 @@ export async function PATCH(request: Request) {
     const audit = await admin.from("audit_logs").insert({ actor_user_id: user.id, action: "MARKETING_PROFILE_UPDATED", target_type: "marketing_partner", target_id: partner.id, metadata: { username_changed: usernameChanged, password_changed: passwordChanged, updated_fields: Object.keys(updates) } });
     if (audit.error) console.error("Marketing profile audit failed", audit.error.code);
     return json({ success: true, usernameChanged, passwordChanged, username: credentials ? body.username : current.username,
-      profile: marketingProfile(saved as MarketingProfileRow, totalTenants, credentials ? `${body.username}@okesih.local` : user.email) });
+      profile: marketingProfile({ ...saved, commission_rate: partner.commission_rate, coordinator_commission_rate: partner.coordinator_commission_rate } as MarketingProfileRow, totalTenants, credentials ? `${body.username}@okesih.local` : user.email) });
   } catch (error) { return failure(error); }
 }
