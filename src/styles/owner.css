@@ -2276,7 +2276,7 @@ img.owner-onboarding-logo {
 .owner-onboarding-input {
   display: block;
   width: 100%;
-  padding: 13px 44px 13px 14px;
+  padding: 13px 86px 13px 14px;
   border: 1px solid var(--ow-border, rgba(148, 163, 184, 0.2));
   border-radius: 12px;
   background: var(--ow-surface-raised, #172231);
@@ -2300,16 +2300,32 @@ img.owner-onboarding-logo {
 
 .owner-onboarding-toggle-pwd {
   position: absolute;
-  right: 10px;
+  right: 8px;
   background: none;
   border: none;
   cursor: pointer;
-  padding: 6px;
-  font-size: 16px;
-  display: flex;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
+  gap: 5px;
   color: var(--ow-muted, #94a3b8);
+  border-radius: 8px;
+  transition: color 0.15s ease, background 0.15s ease;
+  user-select: none;
+}
+
+.owner-onboarding-toggle-pwd:hover {
+  color: var(--ow-accent, #f4512c);
+  background: rgba(244, 81, 44, 0.08);
+}
+
+.owner-onboarding-toggle-pwd svg {
+  width: 17px;
+  height: 17px;
+  stroke-width: 2;
+  flex-shrink: 0;
 }
 
 .owner-onboarding-btn,
