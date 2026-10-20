@@ -191,7 +191,7 @@ export async function POST(request: Request) {
     const welcomeMessage = [
       `Halo ${cleanWhatsAppMessageField(ownerName)}, selamat datang di OKESIH! 🎉`,
       "",
-      `Tenant *${cleanWhatsAppMessageField(newWarkop.nama)}* Anda telah aktif dan siap digunakan.`,
+      `Aplikasi Kasir *${cleanWhatsAppMessageField(newWarkop.nama)}* Anda telah aktif dan siap digunakan.`,
       "",
       "Berikut kredensial login Owner:",
       `Username: *${finalOwnerUsername}*`,
