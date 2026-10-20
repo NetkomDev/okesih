@@ -40,9 +40,9 @@ export const PWA_ROLE_CONFIGS: Record<PwaRoleKind, PwaRoleMeta> = {
   },
   marketing: {
     kind: "marketing",
-    name: "OKESIH Sales",
-    shortName: "Sales OKESIH",
-    description: "Portal marketing dan sales OKESIH.",
+    name: "OKESIH Mitra",
+    shortName: "Mitra Okesih",
+    description: "Portal mitra marketing OKESIH.",
     allowedRoles: ["MARKETING"],
     startUrl: "/marketing/dashboard?pwa=marketing",
     scope: "/",

@@ -150,7 +150,7 @@ test("operational and dashboard manifests keep native launch targets", async () 
     ["pos", "OKESIH Kasir", "Kasir OKESIH", "/pos?pwa=pos", "/", "/"],
     ["kds", "OKESIH Dapur KDS", "Dapur OKESIH", "/kds?pwa=kds", "/", "/"],
     ["owner", "OKESIH Owner", "Owner OKESIH", "/owner?pwa=owner", "/", "/"],
-    ["marketing", "OKESIH Sales", "Sales OKESIH", "/marketing/dashboard?pwa=marketing", "/", "/"],
+    ["marketing", "OKESIH Mitra", "Mitra Okesih", "/marketing/dashboard?pwa=marketing", "/", "/"],
     ["superadmin", "OKESIH Super Admin", "Admin OKESIH", "/superadmin?pwa=superadmin", "/", "/"],
   ];
 

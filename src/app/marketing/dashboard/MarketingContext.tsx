@@ -204,7 +204,12 @@ export function MarketingProvider({ children }: { children: React.ReactNode }) {
         isAuthorized,
       }}
     >
-      <PwaRoleInstallModal pwaKind="marketing" enabled={isAuthorized} />
+      <PwaRoleInstallModal
+        pwaKind="marketing"
+        title="Pasang Aplikasi Mitra Okesih"
+        subtitle="Tambahkan aplikasi Mitra Okesih langsung ke layar utama HP Anda agar akses lebih cepat dan mudah tanpa membuka browser lagi."
+        enabled={isAuthorized}
+      />
       {children}
     </MarketingContext.Provider>
   );

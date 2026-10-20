@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "OKESIH Sales",
-  "short_name": "Sales OKESIH",
+  "name": "OKESIH Mitra",
+  "short_name": "Mitra Okesih",
   "description": "Dashboard mitra marketing OKESIH",
   "start_url": "/marketing/dashboard?pwa=marketing",
   "scope": "/",

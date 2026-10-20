@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "OKESIH Marketing",
-  applicationName: "Okesih.com",
-  manifest: "/manifest.webmanifest",
+  title: "Mitra OKESIH",
+  applicationName: "Mitra Okesih",
+  manifest: "/manifest-marketing.webmanifest",
   icons: {
     icon: "/logo.svg",
     apple: "/icons/apple-touch-icon.png",
@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Okesih.com",
+    title: "Mitra Okesih",
   },
 };
 
