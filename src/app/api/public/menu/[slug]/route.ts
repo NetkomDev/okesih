@@ -1,7 +1,14 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { DEMO_MENU_DATA, isDemoSlug } from "@/lib/demo-menu";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  if (isDemoSlug(slug)) {
+    return Response.json(DEMO_MENU_DATA, {
+      headers: { "Cache-Control": "public, max-age=60, stale-while-revalidate=120" },
+    });
+  }
+
   const admin = createAdminClient();
   const { data: profile, error } = await admin
     .from("warkops")

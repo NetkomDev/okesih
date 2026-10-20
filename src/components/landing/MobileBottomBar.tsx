@@ -12,7 +12,7 @@ export default function MobileBottomBar() {
   return (
     <div className="mobile-bottom-bar">
       <Link
-        href="/menu/giras-nusantara?table=01"
+        href="/menu/demo?table=01"
         target="_blank"
         className="btn-primary"
         style={{

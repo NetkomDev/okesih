@@ -5,6 +5,21 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const token = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
   if (!token || token.length < 30) return Response.json({ error: "Token pesanan diperlukan." }, { status: 401 });
   const { id } = await params;
+  if (id.startsWith("demo-")) {
+    return Response.json({
+      order: {
+        id,
+        table_number: "01",
+        nomor_antrean: 5,
+        total_harga: 32000,
+        payment_method: "QRIS",
+        status_pesanan: "COOKING",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+    }, { headers: { "Cache-Control": "no-store" } });
+  }
+
   const admin = createAdminClient();
   const { data: order, error } = await admin
     .from("transactions")

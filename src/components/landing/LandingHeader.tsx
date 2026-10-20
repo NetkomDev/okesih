@@ -224,7 +224,7 @@ export default function LandingHeader({
               <ThemeToggle showText={true} />
             </div>
             <Link
-              href="/menu/giras-nusantara?table=01"
+              href="/menu/demo?table=01"
               target="_blank"
               className="btn-primary"
               onClick={() => setIsMobileMenuOpen(false)}

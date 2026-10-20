@@ -35,51 +35,6 @@ function formatTableNumber(label: string): string {
   return trimmed;
 }
 
-function ToscaBatikOrnament() {
-  return (
-    <div className="batik-tosca-badge" aria-label="Ornamen Batik Nusantara OKESIH">
-      <svg className="batik-tosca-svg" viewBox="0 0 176 50" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="toscaCardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#042f2e" />
-            <stop offset="45%" stopColor="#0f766e" />
-            <stop offset="100%" stopColor="#14b8a6" />
-          </linearGradient>
-          <linearGradient id="toscaGlowLine" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#2dd4bf" stopOpacity="0.75" />
-            <stop offset="50%" stopColor="#99f6e4" stopOpacity="1" />
-            <stop offset="100%" stopColor="#2dd4bf" stopOpacity="0.75" />
-          </linearGradient>
-          <pattern id="kawungPattern" x="0" y="0" width="16" height="16" patternUnits="userSpaceOnUse">
-            <circle cx="8" cy="8" r="1.3" fill="#99f6e4" opacity="0.65" />
-            <path d="M8,0 C4.5,3 4.5,13 8,16 C11.5,13 11.5,3 8,0 Z" fill="none" stroke="#5eead4" strokeWidth="0.7" opacity="0.45" />
-            <path d="M0,8 C3,4.5 13,4.5 16,8 C13,11.5 3,11.5 0,8 Z" fill="none" stroke="#5eead4" strokeWidth="0.7" opacity="0.45" />
-            <circle cx="0" cy="0" r="1.4" fill="#2dd4bf" opacity="0.45" />
-            <circle cx="16" cy="0" r="1.4" fill="#2dd4bf" opacity="0.45" />
-            <circle cx="0" cy="16" r="1.4" fill="#2dd4bf" opacity="0.45" />
-            <circle cx="16" cy="16" r="1.4" fill="#2dd4bf" opacity="0.45" />
-          </pattern>
-        </defs>
-        <rect x="1" y="1" width="174" height="48" rx="14" fill="url(#toscaCardGrad)" stroke="url(#toscaGlowLine)" strokeWidth="1.2" />
-        <rect x="2" y="2" width="172" height="46" rx="13" fill="url(#kawungPattern)" />
-        <g transform="translate(24, 25)">
-          <circle cx="0" cy="0" r="12" fill="#042f2e" stroke="#5eead4" strokeWidth="1.2" />
-          <path d="M0,-10 C-3,-4 -3,4 0,10 C3,4 3,-4 0,-10 Z" fill="#2dd4bf" opacity="0.95" />
-          <path d="M-10,0 C-4,-3 4,-3 10,0 C4,3 -4,3 -10,0 Z" fill="#2dd4bf" opacity="0.95" />
-          <circle cx="0" cy="0" r="3" fill="#f0fdfa" />
-        </g>
-        <text x="45" y="22" fill="#99f6e4" fontSize="9" fontWeight="900" letterSpacing="0.14em">BATIK NUSANTARA</text>
-        <text x="45" y="36" fill="#ffffff" fontSize="11.5" fontWeight="800" letterSpacing="0.03em">Cita Rasa Warkop</text>
-        <g transform="translate(155, 25)">
-          <circle cx="0" cy="0" r="6" fill="#0f766e" stroke="#99f6e4" strokeWidth="0.8" opacity="0.8" />
-          <path d="M0,-5 C-1.5,-2 -1.5,2 0,5 C1.5,2 1.5,-2 0,-5 Z" fill="#5eead4" opacity="0.8" />
-          <path d="M-5,0 C-2,-1.5 2,-1.5 5,0 C2,1.5 -2,1.5 -5,0 Z" fill="#5eead4" opacity="0.8" />
-        </g>
-      </svg>
-    </div>
-  );
-}
-
 function CustomerMenuContent() {
   const urlParams = useParams();
   const searchParams = useSearchParams();
@@ -203,14 +158,12 @@ function CustomerMenuContent() {
         <div><small>MENU DIGITAL</small><h1>{payload.profile.nama}</h1></div>
       </div>
       <p>Pesan santai langsung dari tempat Anda. Kami siapkan untuk Anda.</p>
-      {tableId ? (
+      {tableId && (
         <div className="customer-table-tag" aria-label={`Nomor ${tableNumber}`}>
           <div className="customer-table-tag-box">
             <b>{tableNumber}</b>
           </div>
         </div>
-      ) : (
-        <ToscaBatikOrnament />
       )}
     </header>
     {error && <div className="customer-error">{error}<button onClick={() => setError("")}>×</button></div>}

@@ -129,7 +129,7 @@ export default async function HomePage() {
             </p>
 
             <div className="hero-cta-group">
-              <Link href="/menu/giras-nusantara?table=01" target="_blank" className="btn-primary">
+              <Link href="/menu/demo?table=01" target="_blank" className="btn-primary">
                 📱 Coba Demo QR Menu
               </Link>
               <LoginTriggerButton className="btn-secondary">

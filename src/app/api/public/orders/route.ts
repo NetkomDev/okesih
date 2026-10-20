@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { randomToken, sha256 } from "@/lib/device-auth";
+import { DEMO_MENU_DATA, isDemoSlug } from "@/lib/demo-menu";
 
 const schema = z.object({
   slug: z.string().trim().min(1).max(100),
@@ -28,6 +29,28 @@ function decodeProof(dataUrl: string) {
 export async function POST(request: Request) {
   try {
     const input = schema.parse(await request.json());
+
+    if (isDemoSlug(input.slug)) {
+      const items = input.items.map((item) => {
+        const found = DEMO_MENU_DATA.menus.find((m) => m.id === item.menuId);
+        return {
+          menu_id: item.menuId,
+          name: found ? found.nama : "Menu Demo",
+          price: found ? found.harga : 15000,
+          qty: item.qty,
+          notes: item.notes,
+        };
+      });
+      const total = items.reduce((sum, item) => sum + item.price * item.qty, 0);
+      const customerToken = randomToken();
+      const fakeOrder = {
+        id: `demo-${randomUUID()}`,
+        queueNumber: Math.floor(Math.random() * 25) + 1,
+        total,
+      };
+      return Response.json({ order: fakeOrder, customerToken }, { status: 201, headers: { "Cache-Control": "no-store" } });
+    }
+
     const admin = createAdminClient();
     const { data: profile } = await admin.from("warkops").select("id,is_active").eq("slug", input.slug).eq("is_active", true).maybeSingle();
     if (!profile) return Response.json({ error: "Usaha tidak ditemukan atau sedang tidak aktif." }, { status: 404 });
