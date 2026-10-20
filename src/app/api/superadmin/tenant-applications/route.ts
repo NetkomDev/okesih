@@ -62,6 +62,33 @@ export async function PATCH(request: Request) {
     const password = `okesih${suffix}!`;
     const { data: lastRange } = await admin.from("warkops").select("unique_code_range_end").order("unique_code_range_end", { ascending: false }).limit(1).maybeSingle();
     const rangeStart = Math.max(100, Math.ceil((Number(lastRange?.unique_code_range_end || 99) + 1) / 100) * 100);
+    if (application.marketing_partner_id) {
+      try {
+        const { data: partnerRow } = await admin
+          .from("marketing_partners")
+          .select("id, full_name, phone, city_area, referral_code, commission_rate, status, bank_name, bank_account_number, bank_account_name")
+          .eq("id", application.marketing_partner_id)
+          .maybeSingle();
+
+        if (partnerRow) {
+          await admin.from("marketing_agents").upsert({
+            id: partnerRow.id,
+            nama: partnerRow.full_name,
+            phone: partnerRow.phone,
+            area: partnerRow.city_area || "Umum",
+            referral_code: partnerRow.referral_code,
+            commission_per_receipt: Number(partnerRow.commission_rate) || 15,
+            bank_name: partnerRow.bank_name,
+            bank_account_number: partnerRow.bank_account_number,
+            bank_account_name: partnerRow.bank_account_name,
+            is_active: partnerRow.status === "ACTIVE",
+          });
+        }
+      } catch (syncErr) {
+        console.warn("Peringatan sinkronisasi marketing_agents:", syncErr);
+      }
+    }
+
     const { data: tenant, error: tenantError } = await admin.from("warkops").insert({
       nama: application.business_name, slug, owner_name: application.owner_name, owner_phone: application.owner_phone,
       address: application.address, province: application.province, city_regency: application.city_regency, unique_code_range_start: rangeStart,

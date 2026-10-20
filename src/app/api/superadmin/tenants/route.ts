@@ -88,6 +88,36 @@ export async function POST(request: Request) {
       }
     }
 
+    const targetMarketingAgentId = marketingAgentId === "direct" ? null : marketingAgentId;
+
+    // Pastikan kompatibilitas foreign key warkops_marketing_agent_id_fkey dengan menyinkronkan data partner ke marketing_agents
+    if (targetMarketingAgentId) {
+      try {
+        const { data: partnerRow } = await supabase
+          .from("marketing_partners")
+          .select("id, full_name, phone, city_area, referral_code, commission_rate, status, bank_name, bank_account_number, bank_account_name")
+          .eq("id", targetMarketingAgentId)
+          .maybeSingle();
+
+        if (partnerRow) {
+          await supabase.from("marketing_agents").upsert({
+            id: partnerRow.id,
+            nama: partnerRow.full_name,
+            phone: partnerRow.phone,
+            area: partnerRow.city_area || "Umum",
+            referral_code: partnerRow.referral_code,
+            commission_per_receipt: Number(partnerRow.commission_rate) || 15,
+            bank_name: partnerRow.bank_name,
+            bank_account_number: partnerRow.bank_account_number,
+            bank_account_name: partnerRow.bank_account_name,
+            is_active: partnerRow.status === "ACTIVE",
+          });
+        }
+      } catch (syncErr) {
+        console.warn("Peringatan sinkronisasi marketing_agents:", syncErr);
+      }
+    }
+
     // 1. Insert ke tabel warkops
     const { data: newWarkop, error: warkopErr } = await supabase
       .from("warkops")

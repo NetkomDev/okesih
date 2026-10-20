@@ -109,6 +109,22 @@ export async function POST(request: Request) {
       app_metadata: { role: "MARKETING", marketing_partner_id: data.id },
       user_metadata: { role: "MARKETING", marketing_partner_id: data.id, referral_code: data.referral_code },
     });
+    try {
+      await supabase.from("marketing_agents").upsert({
+        id: data.id,
+        nama: data.full_name,
+        phone: data.phone,
+        area: data.city_area || "Umum",
+        referral_code: data.referral_code,
+        commission_per_receipt: Number(data.commission_rate) || 15,
+        bank_name: data.bank_name,
+        bank_account_number: data.bank_account_number,
+        bank_account_name: data.bank_account_name,
+        is_active: true,
+      });
+    } catch (syncErr) {
+      console.warn("Peringatan sinkronisasi marketing_agents:", syncErr);
+    }
     const message = [
       `Halo ${cleanWhatsAppMessageField(data.full_name)}, akun Marketing OKESIH Anda sudah aktif. 🎉`, "",
       `Kode referral: *${data.referral_code}*`,

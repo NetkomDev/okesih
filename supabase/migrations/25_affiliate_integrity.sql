@@ -506,4 +506,9 @@ GRANT EXECUTE ON FUNCTION public.request_marketing_commission_withdrawal(UUID, N
 GRANT EXECUTE ON FUNCTION public.review_marketing_commission_withdrawal(UUID, TEXT, UUID, TEXT) TO service_role;
 GRANT EXECUTE ON FUNCTION public.report_marketing_dashboard(uuid) TO service_role;
 
+-- 10. PERBAIKI FOREIGN KEY WARKOPS.MARKETING_AGENT_ID AGAR MERUJUK KE MARKETING_PARTNERS
+ALTER TABLE public.warkops DROP CONSTRAINT IF EXISTS warkops_marketing_agent_id_fkey;
+ALTER TABLE public.warkops ADD CONSTRAINT warkops_marketing_agent_id_fkey
+  FOREIGN KEY (marketing_agent_id) REFERENCES public.marketing_partners(id) ON DELETE SET NULL;
+
 COMMIT;
