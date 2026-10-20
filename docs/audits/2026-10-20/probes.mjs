@@ -9,7 +9,7 @@ const nativeRequire = createRequire(path.join(root, 'package.json'));
 const ts = nativeRequire('typescript');
 
 function load(file, mocks) {
-  const module = { exports: {} };
+  const loadedModule = { exports: {} };
   const source = fs.readFileSync(path.join(root, file), 'utf8');
   const js = ts.transpileModule(source, {
     compilerOptions: {
@@ -19,8 +19,8 @@ function load(file, mocks) {
     },
   }).outputText;
   const requireMock = (id) => Object.hasOwn(mocks, id) ? mocks[id] : nativeRequire(id);
-  new Function('require', 'module', 'exports', js)(requireMock, module, module.exports);
-  return module.exports;
+  new Function('require', 'module', 'exports', js)(requireMock, loadedModule, loadedModule.exports);
+  return loadedModule.exports;
 }
 
 let cleanupCalls = 0;
