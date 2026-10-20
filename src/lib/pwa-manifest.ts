@@ -40,6 +40,12 @@ export default function dashboardManifest(): MetadataRoute.Manifest {
     ],
     shortcuts: [
       {
+        name: "Scan QR Meja",
+        short_name: "Scan QR",
+        url: "/scan",
+        description: "Buka pemindai QR Code meja kafe & warkop jaringan OKESIH",
+      },
+      {
         name: "Beranda OKESIH",
         url: "/",
         description: "Buka beranda OKESIH",
