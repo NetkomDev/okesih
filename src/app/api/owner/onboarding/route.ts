@@ -35,7 +35,9 @@ export async function PATCH(request: NextRequest) {
       await admin.from("owner_onboarding").update({ password_changed_at: now, updated_at: now }).eq("warkop_id", warkopId);
       await admin.from("audit_logs").insert({ warkop_id: warkopId, actor_user_id: user.id, action: "OWNER_INITIAL_PASSWORD_CHANGED", target_type: "owner" });
     } else if (input.action === "pwa_installed") {
-      await admin.from("owner_onboarding").update({ owner_pwa_installed_at: now, updated_at: now }).eq("warkop_id", warkopId);
+      const updatePayload: Record<string, string> = { owner_pwa_installed_at: now, updated_at: now };
+      if (onboarding.password_changed_at) updatePayload.completed_at = now;
+      await admin.from("owner_onboarding").update(updatePayload).eq("warkop_id", warkopId);
     } else {
       if (!onboarding.password_changed_at) throw new OwnerApiError("Ganti password awal sebelum menyelesaikan onboarding.", 409);
       await admin.from("owner_onboarding").update({ completed_at: now, updated_at: now }).eq("warkop_id", warkopId);

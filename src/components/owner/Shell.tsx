@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import PwaRoleInstallModal from "@/components/PwaRoleInstallModal";
@@ -43,6 +44,7 @@ export default function OwnerShell({
     newPassword,
     setNewPassword,
   } = useOwnerSession();
+  const [showPassword, setShowPassword] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
@@ -167,29 +169,59 @@ export default function OwnerShell({
         ))}
       </nav>
       {onboardingReady && onboarding && !onboarding.completed_at && (
-        <div className="owner-onboarding-backdrop">
+        <div
+          className="owner-onboarding-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="owner-onboarding-title"
+        >
           <section className="owner-onboarding-card">
-            <img src="/logo.svg?v=2" alt="OKESIH" />
-            <small>SELAMAT DATANG DI OKESIH</small>
-            <h2>Siapkan akun Owner Anda</h2>
+            <div className="owner-onboarding-icon-box">
+              <Image
+                src="/logo.svg?v=2"
+                alt="OKESIH Logo"
+                width={48}
+                height={48}
+                priority
+                style={{ width: "48px", height: "48px", objectFit: "contain" }}
+              />
+            </div>
+            <small className="owner-onboarding-badge">SELAMAT DATANG DI OKESIH</small>
+            <h2 id="owner-onboarding-title">
+              {!onboarding.password_changed_at
+                ? "Ganti Password Akun Owner"
+                : "Pasang Aplikasi Owner"}
+            </h2>
             {!onboarding.password_changed_at ? (
               <>
                 <p>
-                  Demi keamanan, ganti password awal yang diberikan Super Admin
-                  sebelum menggunakan dashboard.
+                  Demi keamanan akun usaha Anda, ganti password awal yang dibuatkan Super Admin sebelum masuk ke dashboard.
                 </p>
-                <label>
-                  Password baru
-                  <input
-                    type="password"
-                    minLength={8}
-                    value={newPassword}
-                    onChange={(event) => setNewPassword(event.target.value)}
-                    placeholder="Minimal 8 karakter"
-                  />
+                <label className="owner-onboarding-label">
+                  <span>Password Baru</span>
+                  <div className="owner-onboarding-input-wrap">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      minLength={8}
+                      value={newPassword}
+                      onChange={(event) => setNewPassword(event.target.value)}
+                      placeholder="Minimal 8 karakter"
+                      autoComplete="new-password"
+                      className="owner-onboarding-input"
+                    />
+                    <button
+                      type="button"
+                      className="owner-onboarding-toggle-pwd"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      aria-label={showPassword ? "Sembunyikan password" : "Lihat password"}
+                    >
+                      {showPassword ? "🙈" : "👁️"}
+                    </button>
+                  </div>
                 </label>
                 <button
-                  className="btn-primary"
+                  type="button"
+                  className="btn-primary owner-onboarding-btn"
                   disabled={busy || newPassword.length < 8}
                   onClick={() =>
                     void onboardingAction({
@@ -198,31 +230,46 @@ export default function OwnerShell({
                     })
                   }
                 >
-                  {busy ? "Menyimpan..." : "Ganti Password & Lanjut"}
+                  {busy ? "Menyimpan..." : "Simpan Password & Lanjut"}
                 </button>
               </>
             ) : (
               <>
                 <p>
-                  Pasang Dashboard Owner agar OKESIH dapat dibuka langsung dari
-                  layar utama. Browser tetap akan meminta persetujuan Anda.
+                  Pasang Dashboard Owner ke layar utama perangkat agar dapat dibuka cepat layaknya aplikasi native.
                 </p>
-                <PwaInstallButton
-                  label="Install OKESIH Owner"
-                  onInstalled={() =>
-                    void onboardingAction({ action: "pwa_installed" })
-                  }
-                />
-                <button
-                  className="btn-secondary"
-                  disabled={busy}
-                  onClick={() => void onboardingAction({ action: "complete" })}
-                >
-                  Lanjut ke Dashboard
-                </button>
+                <div style={{ display: "grid", gap: "10px", width: "100%" }}>
+                  <PwaInstallButton
+                    label="Install OKESIH Owner"
+                    onInstalled={() =>
+                      void onboardingAction({ action: "pwa_installed" })
+                    }
+                  />
+                  <button
+                    type="button"
+                    className="btn-secondary owner-onboarding-btn"
+                    disabled={busy}
+                    onClick={() => void onboardingAction({ action: "complete" })}
+                  >
+                    {busy ? "Memproses..." : "Lanjut ke Dashboard"}
+                  </button>
+                </div>
               </>
             )}
-            {error && <div className="owner-error">{error}</div>}
+            {error && (
+              <div className="owner-error" role="alert">
+                {error}
+              </div>
+            )}
+            <div className="owner-onboarding-footer">
+              <button
+                type="button"
+                className="owner-onboarding-logout-btn"
+                onClick={logoutUser}
+              >
+                Keluar / Ganti Akun
+              </button>
+            </div>
           </section>
         </div>
       )}

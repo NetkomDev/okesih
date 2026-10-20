@@ -2150,3 +2150,382 @@
   }
 }
 
+/* ==========================================================================
+   Owner Initial Onboarding Modal & Device Management Styles
+   ========================================================================== */
+
+.owner-onboarding-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(3, 7, 18, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.owner-onboarding-card {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  margin: auto;
+  padding: 32px 26px;
+  border-radius: 24px;
+  background: var(--ow-surface, #121a26);
+  border: 1px solid var(--ow-border, rgba(148, 163, 184, 0.16));
+  color: var(--ow-text, #f8fafc);
+  box-shadow: 0 25px 65px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  text-align: center;
+  max-height: min(92vh, 680px);
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+[data-theme="light"] .owner-onboarding-card {
+  background: #ffffff;
+  color: #172033;
+  border-color: rgba(15, 23, 42, 0.1);
+  box-shadow: 0 25px 65px rgba(15, 23, 42, 0.22);
+}
+
+.owner-onboarding-icon-box {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 16px;
+  border-radius: 20px;
+  background: rgba(244, 81, 44, 0.12);
+  border: 1.5px solid rgba(244, 81, 44, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  box-shadow: 0 8px 24px rgba(244, 81, 44, 0.2);
+}
+
+.owner-onboarding-icon-box img,
+.owner-onboarding-card img,
+img.owner-onboarding-logo {
+  width: 48px !important;
+  height: 48px !important;
+  max-width: 48px !important;
+  max-height: 48px !important;
+  object-fit: contain !important;
+  display: block;
+}
+
+.owner-onboarding-badge {
+  display: inline-block;
+  color: var(--ow-accent, #f4512c);
+  font-weight: 850;
+  letter-spacing: 0.14em;
+  font-size: 11px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.owner-onboarding-card h2 {
+  font-size: 22px;
+  font-weight: 850;
+  margin: 0 0 10px;
+  color: var(--ow-text, #f8fafc);
+  letter-spacing: -0.025em;
+  line-height: 1.25;
+}
+
+[data-theme="light"] .owner-onboarding-card h2 {
+  color: #0f172a;
+}
+
+.owner-onboarding-card p {
+  margin: 0 0 22px;
+  color: var(--ow-muted, #94a3b8);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+[data-theme="light"] .owner-onboarding-card p {
+  color: #64748b;
+}
+
+.owner-onboarding-label {
+  display: block;
+  text-align: left;
+  margin-bottom: 18px;
+  font-size: 13px;
+  font-weight: 750;
+  color: var(--ow-text, #f8fafc);
+}
+
+[data-theme="light"] .owner-onboarding-label {
+  color: #1e293b;
+}
+
+.owner-onboarding-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-top: 8px;
+  width: 100%;
+}
+
+.owner-onboarding-input {
+  display: block;
+  width: 100%;
+  padding: 13px 44px 13px 14px;
+  border: 1px solid var(--ow-border, rgba(148, 163, 184, 0.2));
+  border-radius: 12px;
+  background: var(--ow-surface-raised, #172231);
+  color: var(--ow-text, #fff);
+  font-size: 15px;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+[data-theme="light"] .owner-onboarding-input {
+  background: #f8fafc;
+  color: #0f172a;
+  border-color: #cbd5e1;
+}
+
+.owner-onboarding-input:focus {
+  border-color: var(--ow-accent, #f4512c);
+  box-shadow: 0 0 0 3px rgba(244, 81, 44, 0.25);
+}
+
+.owner-onboarding-toggle-pwd {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ow-muted, #94a3b8);
+}
+
+.owner-onboarding-btn,
+.owner-onboarding-card > .btn-primary,
+.owner-onboarding-card > .btn-secondary,
+.owner-onboarding-card .pwa-install {
+  width: 100%;
+  padding: 14px;
+  font-size: 15px;
+  font-weight: 800;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-sizing: border-box;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.owner-onboarding-btn:active,
+.owner-onboarding-card .pwa-install:active {
+  transform: scale(0.98);
+}
+
+.owner-onboarding-card .btn-primary,
+.owner-onboarding-btn.btn-primary {
+  background: linear-gradient(135deg, #ff6a3d 0%, var(--ow-accent, #f4512c) 100%);
+  color: #ffffff !important;
+  border: 0;
+  box-shadow: 0 6px 20px rgba(244, 81, 44, 0.38);
+}
+
+.owner-onboarding-card .btn-primary:disabled,
+.owner-onboarding-btn.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.owner-onboarding-card .btn-secondary,
+.owner-onboarding-btn.btn-secondary {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--ow-border, rgba(148, 163, 184, 0.2));
+  color: var(--ow-text, #fff);
+}
+
+[data-theme="light"] .owner-onboarding-card .btn-secondary,
+[data-theme="light"] .owner-onboarding-btn.btn-secondary {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #1e293b;
+}
+
+.owner-onboarding-card .pwa-install {
+  background: rgba(244, 81, 44, 0.12);
+  border: 1px solid rgba(244, 81, 44, 0.35);
+  color: var(--ow-accent, #f4512c);
+}
+
+.owner-onboarding-card .owner-error {
+  margin-top: 14px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(239, 68, 68, 0.14);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+  font-size: 13px;
+  text-align: left;
+}
+
+.owner-onboarding-footer {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--ow-border, rgba(148, 163, 184, 0.18));
+}
+
+.owner-onboarding-logout-btn {
+  background: none;
+  border: none;
+  color: var(--ow-muted, #94a3b8);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 8px;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.owner-onboarding-logout-btn:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.08);
+}
+
+/* Owner Devices feature styles */
+.owner-device-setup {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.device-step {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: var(--ow-accent-soft);
+  color: var(--ow-accent);
+  font-weight: 900;
+}
+
+.owner-device-setup h2 {
+  margin-top: 13px;
+}
+
+.owner-device-links {
+  display: flex;
+  gap: 9px;
+  margin-top: 18px;
+}
+
+.owner-device-links a {
+  padding: 9px 11px;
+  border-radius: 8px;
+  background: var(--ow-surface-raised);
+  color: var(--ow-text);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.owner-pair-form {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.owner-pair-form input {
+  font-size: 22px !important;
+  letter-spacing: 0.18em;
+  text-align: center;
+}
+
+.owner-device-list {
+  margin-top: 16px;
+}
+
+.owner-device-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.owner-device-card {
+  display: grid;
+  grid-template-columns: 42px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--ow-border);
+  border-radius: 12px;
+  background: var(--ow-surface-raised);
+}
+
+.owner-device-card > span {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: var(--ow-accent-soft);
+  color: var(--ow-accent);
+  font-size: 20px;
+}
+
+.owner-device-card b,
+.owner-device-card p,
+.owner-device-card em {
+  display: block;
+}
+
+.owner-device-card p {
+  color: var(--ow-muted);
+  font-size: 11px;
+}
+
+.owner-device-card em {
+  margin-top: 3px;
+  color: #059669;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 850;
+}
+
+.owner-device-card.revoked em,
+.owner-device-card.expired em {
+  color: #94a3b8;
+}
+
+@media (max-width: 900px) {
+  .owner-device-setup {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .owner-pair-form {
+    grid-template-columns: 1fr;
+  }
+  .owner-device-card {
+    grid-template-columns: 42px 1fr;
+  }
+  .owner-device-card > button {
+    grid-column: 2;
+  }
+}
+
+
