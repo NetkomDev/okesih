@@ -62,6 +62,7 @@ export default function CashierShiftGate({ tenant, pendingCount, onShiftChanged,
   const [session, setSession] = useState<SessionState | null>(null);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [actualCash, setActualCash] = useState("");
   const [notes, setNotes] = useState("");
   const [closing, setClosing] = useState(false);
@@ -165,6 +166,7 @@ export default function CashierShiftGate({ tenant, pendingCount, onShiftChanged,
     await createCashierClient().auth.signOut();
     setSession((current) => ({ authenticated: false, shift: current?.shift || null }));
     setError("");
+    setShowPassword(false);
   };
 
   const endShift = async (event: React.FormEvent) => {
@@ -208,7 +210,64 @@ export default function CashierShiftGate({ tenant, pendingCount, onShiftChanged,
         <button className="btn-secondary" disabled={busy} onClick={() => void changeAccount()}>Gunakan Akun Lain</button>
       </div> : <form onSubmit={login}>
         <label>Username Kasir<input autoComplete="username" value={username} onChange={(event) => setUsername(event.target.value)} required minLength={3}/></label>
-        <label>Password<input type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required minLength={6}/></label>
+        <label>
+          <span>Password</span>
+          <div style={{ position: "relative", display: "flex", alignItems: "center", width: "100%", marginTop: "8px" }}>
+            <input
+              type={showPassword ? "text" : "password"}
+              autoComplete="current-password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              required
+              minLength={6}
+              style={{
+                width: "100%",
+                marginTop: 0,
+                paddingRight: "86px",
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
+              title={showPassword ? "Sembunyikan password" : "Tampilkan password"}
+              style={{
+                position: "absolute",
+                right: "8px",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: "6px 8px",
+                fontSize: "12px",
+                fontWeight: 700,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "5px",
+                color: "#94a3b8",
+                borderRadius: "8px",
+                userSelect: "none",
+              }}
+            >
+              {showPassword ? (
+                <>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                    <line x1="1" y1="1" x2="23" y2="23" />
+                  </svg>
+                  <span>Tutup</span>
+                </>
+              ) : (
+                <>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                  <span>Lihat</span>
+                </>
+              )}
+            </button>
+          </div>
+        </label>
         {error && <p className="device-pairing-error" role="alert">{error}</p>}
         <button className="btn-primary" type="submit" disabled={busy}>{busy ? "Membuka shift..." : "Masuk & Mulai Shift"}</button>
       </form>}

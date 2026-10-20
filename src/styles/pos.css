@@ -1,4 +1,345 @@
 /* =====================================================================
+   KASIR POS BASE & HEADER (Touch-friendly & Desktop Redesign)
+   ===================================================================== */
+.pos-redesign {
+  --pos-accent: #f4512c;
+  --pos-ink: #182033;
+  --pos-muted: #667085;
+  --pos-line: #e5e9f0;
+  background: #f4f6f9;
+  color: var(--pos-ink);
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.pos-redesign svg {
+  width: 19px;
+  height: 19px;
+  display: block;
+  flex-shrink: 0;
+}
+
+.cashier-shift-button {
+  display: none !important;
+}
+
+.pos-header {
+  position: sticky;
+  top: 0;
+  z-index: 45;
+  min-height: 72px;
+  display: grid;
+  grid-template-columns: minmax(220px, auto) auto 1fr;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 24px;
+  border-bottom: 1px solid var(--pos-line);
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.04);
+  backdrop-filter: blur(18px);
+}
+
+.pos-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.pos-brand-logo {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 1px solid #f0dfda;
+  border-radius: 13px;
+  background: #fff8f5;
+  box-shadow: 0 4px 14px rgba(244, 81, 44, 0.08);
+  overflow: hidden;
+}
+
+.pos-brand-logo img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  border-radius: 9px;
+}
+
+.pos-brand small {
+  display: block;
+  color: #293247;
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+}
+
+.pos-brand small span {
+  color: var(--pos-accent);
+}
+
+.pos-brand strong {
+  display: block;
+  max-width: 200px;
+  margin-top: 2px;
+  overflow: hidden;
+  color: #172033;
+  font-size: 15px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pos-nav {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px;
+  border: 1px solid #eceff4;
+  border-radius: 14px;
+  background: #f7f8fa;
+}
+
+.pos-nav button {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #697386;
+  font-size: 12px;
+  font-weight: 850;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.pos-nav button:hover {
+  color: #1e293b;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.pos-nav button.active {
+  background: #fff;
+  color: #1e293b;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+}
+
+.pos-nav button.active svg {
+  color: var(--pos-accent);
+}
+
+.pos-nav b {
+  min-width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  padding: 0 5px;
+  border-radius: 20px;
+  background: var(--pos-accent);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.pos-header-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+.pos-connection {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 99px;
+  font-size: 10px;
+  font-weight: 900;
+  flex-shrink: 0;
+}
+
+.pos-connection i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.pos-connection.online {
+  background: #e9f9ef;
+  color: #168257;
+}
+
+.pos-connection.offline {
+  background: #fff0ed;
+  color: #cc4428;
+}
+
+.pos-icon-button,
+.pos-device-chip {
+  height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 11px;
+  border: 1px solid #e3e7ee;
+  border-radius: 10px;
+  background: #fff;
+  color: #3d4658;
+  font-size: 11px;
+  font-weight: 850;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.pos-icon-button:hover {
+  border-color: #f2b5a6;
+  color: var(--pos-accent);
+}
+
+.pos-install-button {
+  color: #d74325;
+  background: #fff7f4;
+}
+
+.pos-device-chip {
+  cursor: default;
+}
+
+.pos-device-chip span {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 22px;
+  border-radius: 6px;
+  background: #1e293b;
+  color: #fff;
+  font-size: 8px;
+  letter-spacing: 0.06em;
+}
+
+.pos-device-chip b {
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pos-cashier-badge {
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border-radius: 10px;
+  background: #0f172a;
+  border: 1px solid rgba(244, 81, 44, 0.4);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
+  transition: all 0.18s ease;
+  flex-shrink: 0;
+}
+
+.pos-cashier-badge:hover {
+  background: #1e293b;
+  border-color: #f4512c;
+  box-shadow: 0 4px 14px rgba(244, 81, 44, 0.28);
+  transform: translateY(-1px);
+}
+
+.pos-cashier-dot {
+  color: #34d399;
+  font-size: 10px;
+  line-height: 1;
+}
+
+.pos-cashier-name {
+  color: #f8fafc;
+  font-weight: 850;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pos-cashier-action {
+  padding: 3px 7px;
+  border-radius: 6px;
+  background: rgba(244, 81, 44, 0.22);
+  color: #ff8a6a;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: all 0.15s ease;
+}
+
+.pos-cashier-badge:hover .pos-cashier-action {
+  background: #f4512c;
+  color: #fff;
+}
+
+.pos-audio-notice {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 7px;
+  padding: 9px;
+  border: 0;
+  border-bottom: 1px solid #c9dcf7;
+  background: #eff6ff;
+  color: #275a9e;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.pos-audio-notice svg {
+  width: 15px;
+  height: 15px;
+}
+
+.pos-toast {
+  position: fixed;
+  top: 92px;
+  left: 50%;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 12px 17px;
+  border-radius: 12px;
+  background: #12251d;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  box-shadow: 0 15px 40px rgba(15, 23, 42, 0.25);
+  transform: translateX(-50%);
+}
+
+.pos-toast span {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #37ba78;
+}
+
+/* =====================================================================
    CLEAN OPERATIONAL PIPELINE BOARD (1. Masuk ➔ 2. Dapur ➔ 3. Waiter)
    ===================================================================== */
 .pos-pipeline-page {
