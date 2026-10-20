@@ -11,10 +11,23 @@ export function renderMultilineBizName(name: string): string[] {
 }
 export async function ownerFetch(path: string, init?: RequestInit) {
   const supabase = createClient();
-  const { data } = await supabase.auth.getSession();
-  const token = data.session?.access_token;
+  let { data } = await supabase.auth.getSession();
+  let token = data.session?.access_token;
+  if (!token) {
+    const refreshed = await supabase.auth.refreshSession().catch(() => null);
+    token = refreshed?.data.session?.access_token;
+  }
   if (!token) throw new Error("Sesi login owner berakhir. Silakan login kembali.");
-  const response = await fetch(path, { ...init, headers: { ...init?.headers, Authorization: `Bearer ${token}` } });
+
+  let response = await fetch(path, { ...init, headers: { ...init?.headers, Authorization: `Bearer ${token}` } });
+  if (response.status === 401) {
+    const refreshed = await supabase.auth.refreshSession().catch(() => null);
+    const newToken = refreshed?.data.session?.access_token;
+    if (newToken && newToken !== token) {
+      response = await fetch(path, { ...init, headers: { ...init?.headers, Authorization: `Bearer ${newToken}` } });
+    }
+  }
+
   const responseText = await response.text();
   let payload;
   try { payload = responseText ? JSON.parse(responseText) : {}; }

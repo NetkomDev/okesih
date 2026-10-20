@@ -295,7 +295,12 @@ export default function OwnerShell({
             )}
             {error && (
               <div className="owner-error" role="alert">
-                {error}
+                <p style={{ margin: 0 }}>{error}</p>
+                {error.toLowerCase().includes("sesi login") && (
+                  <p style={{ margin: "6px 0 0", fontSize: "0.82rem", opacity: 0.9 }}>
+                    Sesi perlu diperbarui setelah ganti password. Silakan masuk kembali dengan password baru Anda.
+                  </p>
+                )}
               </div>
             )}
             <div className="owner-onboarding-footer">
@@ -304,7 +309,9 @@ export default function OwnerShell({
                 className="owner-onboarding-logout-btn"
                 onClick={logoutUser}
               >
-                Keluar / Ganti Akun
+                {error.toLowerCase().includes("sesi login")
+                  ? "Masuk Kembali dengan Password Baru"
+                  : "Keluar / Ganti Akun"}
               </button>
             </div>
           </section>

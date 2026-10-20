@@ -1,14 +1,37 @@
 import "server-only";
+import type { User } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export async function requireOwner(request: Request) {
-  const token = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
-  if (!token) throw new OwnerApiError("Sesi login tidak ditemukan.", 401);
-
   const admin = createAdminClient();
-  const { data, error } = await admin.auth.getUser(token);
-  const user = data.user;
-  if (error || !user) throw new OwnerApiError("Sesi login tidak valid.", 401);
+  let user: User | null = null;
+
+  const token = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+  if (token) {
+    const { data, error } = await admin.auth.getUser(token);
+    if (!error && data?.user) {
+      user = data.user;
+    }
+  }
+
+  // Fallback ke sesi cookies jika Bearer token tidak disediakan atau tidak lagi valid
+  if (!user) {
+    try {
+      const serverSupabase = await createServerSupabaseClient();
+      const { data, error } = await serverSupabase.auth.getUser();
+      if (!error && data?.user) {
+        user = data.user;
+      }
+    } catch {
+      // Abaikan kegagalan resolusi cookie
+    }
+  }
+
+  if (!user) {
+    throw new OwnerApiError(token ? "Sesi login tidak valid." : "Sesi login tidak ditemukan.", 401);
+  }
+
   // Jangan mempercayai user_metadata karena dapat diubah oleh pengguna.
   // Keanggotaan pada database adalah sumber otorisasi yang kanonis.
   const { data: membership, error: membershipError } = await admin

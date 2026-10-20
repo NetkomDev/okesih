@@ -40,6 +40,13 @@ function useSession() {
     setBusy(true); setError("");
     try {
       const payload = await ownerFetch("/api/owner/onboarding", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      if (payload.session) {
+        const supabase = createClient();
+        await supabase.auth.setSession({
+          access_token: payload.session.access_token,
+          refresh_token: payload.session.refresh_token,
+        });
+      }
       setOnboarding(payload.onboarding);
       if (body.action === "change_password") setNewPassword("");
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Onboarding gagal diperbarui."); }
