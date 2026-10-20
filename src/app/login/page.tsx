@@ -389,7 +389,7 @@ export default function LoginPage() {
                 textUnderlineOffset: "3px",
               }}
             >
-              Lupa password? (Owner &amp; Marketing)
+              Lupa Password
             </button>
           </div>
 
