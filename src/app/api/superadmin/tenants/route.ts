@@ -286,3 +286,162 @@ export async function PATCH(request: Request) {
     );
   }
 }
+
+export async function DELETE(request: Request) {
+  try {
+    assertSameOrigin(request);
+    const supabase = await superAdminClient();
+    if (!supabase) return NextResponse.json({ error: "Akses Super Admin diperlukan." }, { status: 401 });
+
+    const url = new URL(request.url);
+    let id = url.searchParams.get("id");
+    if (!id) {
+      const body = await request.json().catch(() => ({}));
+      id = body.id;
+    }
+
+    if (!id || typeof id !== "string") {
+      return NextResponse.json({ error: "ID tenant wajib disertakan." }, { status: 400 });
+    }
+
+    // 1. Ambil data warkop
+    const { data: tenant, error: fetchErr } = await supabase
+      .from("warkops")
+      .select("id, nama, slug, marketing_agent_id, logo_url, qris_image_url")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (fetchErr || !tenant) {
+      return NextResponse.json({ error: "Tenant tidak ditemukan." }, { status: 404 });
+    }
+
+    // 2. Kumpulkan semua user_id staf & owner yang terasosiasi dengan warkop ini
+    const { data: members } = await supabase
+      .from("warkop_members")
+      .select("user_id, username, role")
+      .eq("warkop_id", tenant.id);
+
+    const userIds = Array.from(new Set(
+      (members || []).map((m) => m.user_id).filter(Boolean)
+    ));
+
+    const { data: onboarding } = await supabase
+      .from("owner_onboarding")
+      .select("owner_user_id")
+      .eq("warkop_id", tenant.id)
+      .maybeSingle();
+
+    if (onboarding?.owner_user_id && !userIds.includes(onboarding.owner_user_id)) {
+      userIds.push(onboarding.owner_user_id);
+    }
+
+    // 3. Bersihkan file storage terkait (bukti transfer, QRIS, logo usaha)
+    try {
+      const { data: proofFiles } = await supabase.storage.from("bukti-transfer").list(tenant.id);
+      if (proofFiles && proofFiles.length > 0) {
+        const filePaths = proofFiles.map((f) => `${tenant.id}/${f.name}`);
+        await supabase.storage.from("bukti-transfer").remove(filePaths);
+      }
+    } catch (storageErr) {
+      console.error("Gagal membersihkan storage bukti-transfer:", storageErr);
+    }
+
+    try {
+      const { data: qrisFiles } = await supabase.storage.from("qris-warkop").list(tenant.id);
+      if (qrisFiles && qrisFiles.length > 0) {
+        await supabase.storage.from("qris-warkop").remove(qrisFiles.map((f) => `${tenant.id}/${f.name}`));
+      }
+    } catch (storageErr) {
+      console.error("Gagal membersihkan storage qris-warkop:", storageErr);
+    }
+
+    try {
+      const { data: logoFiles } = await supabase.storage.from("business-logos").list(tenant.id);
+      if (logoFiles && logoFiles.length > 0) {
+        await supabase.storage.from("business-logos").remove(logoFiles.map((f) => `${tenant.id}/${f.name}`));
+      }
+    } catch (storageErr) {
+      console.error("Gagal membersihkan storage business-logos:", storageErr);
+    }
+
+    // 4. Bersihkan data referensial di database
+    // Hapus kode auth handoff untuk semua akun warkop ini
+    if (userIds.length > 0) {
+      await supabase.from("auth_handoff_codes").delete().in("user_id", userIds);
+    }
+
+    // Bersihkan relasi aplikasi pendaftaran (jika ada)
+    await supabase.from("tenant_applications").delete().eq("warkop_id", tenant.id);
+
+    // Hapus baris transaksi dan item
+    const { data: txList } = await supabase.from("transactions").select("id").eq("warkop_id", tenant.id);
+    if (txList && txList.length > 0) {
+      const txIds = txList.map((t) => t.id);
+      await supabase.from("transaction_items").delete().in("transaction_id", txIds);
+    }
+
+    // Hapus data operasional terkait warkop
+    await supabase.from("transactions").delete().eq("warkop_id", tenant.id);
+    await supabase.from("shifts").delete().eq("warkop_id", tenant.id);
+    await supabase.from("menus").delete().eq("warkop_id", tenant.id);
+    await supabase.from("warkop_tables").delete().eq("warkop_id", tenant.id);
+    await supabase.from("waiters").delete().eq("warkop_id", tenant.id);
+    await supabase.from("saas_billings").delete().eq("warkop_id", tenant.id);
+    await supabase.from("affiliate_commissions").delete().eq("warkop_id", tenant.id);
+    await supabase.from("device_pairing_requests").delete().eq("warkop_id", tenant.id);
+    await supabase.from("device_installations").delete().eq("warkop_id", tenant.id);
+    await supabase.from("audit_logs").delete().eq("warkop_id", tenant.id);
+    await supabase.from("owner_onboarding").delete().eq("warkop_id", tenant.id);
+    await supabase.from("warkop_security_pins").delete().eq("warkop_id", tenant.id);
+    await supabase.from("warkop_members").delete().eq("warkop_id", tenant.id);
+
+    // 5. Kurangi counter akuisisi marketing partner jika terafiliasi
+    if (tenant.marketing_agent_id && tenant.marketing_agent_id !== "direct") {
+      const { data: mktData } = await supabase
+        .from("marketing_partners")
+        .select("total_tenants_acquired")
+        .eq("id", tenant.marketing_agent_id)
+        .maybeSingle();
+
+      if (mktData && typeof mktData.total_tenants_acquired === "number") {
+        await supabase
+          .from("marketing_partners")
+          .update({
+            total_tenants_acquired: Math.max(0, mktData.total_tenants_acquired - 1),
+          })
+          .eq("id", tenant.marketing_agent_id);
+      }
+    }
+
+    // 6. Hapus warkop dari tabel utama
+    const { error: deleteWarkopError } = await supabase
+      .from("warkops")
+      .delete()
+      .eq("id", tenant.id);
+
+    if (deleteWarkopError) {
+      console.error("Gagal menghapus baris warkop:", deleteWarkopError);
+      return NextResponse.json({ error: deleteWarkopError.message }, { status: 500 });
+    }
+
+    // 7. Hapus seluruh akun pengguna (owner & staf) dari Supabase Auth
+    for (const uid of userIds) {
+      try {
+        await supabase.auth.admin.deleteUser(uid);
+      } catch (authErr) {
+        console.error(`Gagal menghapus user auth ${uid}:`, authErr);
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: `Tenant "${tenant.nama}" beserta seluruh data dan akunnya berhasil dihapus secara permanen.`,
+    });
+  } catch (err: unknown) {
+    console.error("Kesalahan saat menghapus tenant:", err);
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Terjadi kesalahan internal server." },
+      { status: 500 }
+    );
+  }
+}

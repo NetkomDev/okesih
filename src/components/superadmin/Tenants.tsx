@@ -387,7 +387,49 @@ const toggleTenantStatus = (id: string) => {
       },
     });
   };
-const filteredTenants = tenants;
+
+  const handleDeleteTenant = (tenant: TenantWarkop) => {
+    setConfirmModal({
+      isOpen: true,
+      title: "Hapus Permanen Tenant Warkop",
+      message: `PERINGATAN: Aksi ini akan menghapus tenant "${tenant.name}" beserta seluruh data operasional (menu, meja, shift, transaksi), perangkat terhubung, file storage, serta akun login owner & staf secara permanen tanpa menyisakan sampah di sistem. Lanjutkan?`,
+      confirmText: "Ya, Hapus Permanen",
+      confirmVariant: "danger",
+      onConfirm: async () => {
+        setConfirmModal((c) => ({ ...c, isOpen: false }));
+        showToast("Menghapus Tenant", `Sedang menghapus tenant ${tenant.name}...`, "info");
+        try {
+          const res = await fetch(`/api/superadmin/tenants?id=${encodeURIComponent(tenant.id)}`, {
+            method: "DELETE",
+          });
+          const payload = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            throw new Error(payload.error || "Gagal menghapus tenant.");
+          }
+          setTenants((prev) => prev.filter((t) => t.id !== tenant.id));
+          setTenantPagination((prev) => ({
+            ...prev,
+            total: Math.max(0, prev.total - 1),
+          }));
+          setTotalTenants(Math.max(0, totalTenants - 1));
+          refreshSummary();
+          showToast(
+            "Tenant Berhasil Dihapus",
+            `Tenant "${tenant.name}" dan seluruh akun serta datanya berhasil dihapus tuntas.`,
+            "success"
+          );
+        } catch (err: unknown) {
+          showToast(
+            "Gagal Menghapus Tenant",
+            err instanceof Error ? err.message : "Terjadi kesalahan saat menghapus tenant.",
+            "error"
+          );
+        }
+      },
+    });
+  };
+
+  const filteredTenants = tenants;
 useEffect(() => { const timer = setTimeout(() => void loadTenantApplications(), 0); return () => clearTimeout(timer); }, []);
 useEffect(() => { if (!isRegisterModalOpen) return; const timer = setTimeout(() => void loadMarketingPartners(), 0); return () => clearTimeout(timer); }, [isRegisterModalOpen]);
 useEffect(() => { if (createIntent !== "tenant") return; const timer = setTimeout(() => { handleOpenRegisterModal(); setCreateIntent(null); }, 0); return () => clearTimeout(timer); }, [createIntent, handleOpenRegisterModal, setCreateIntent]);
@@ -609,6 +651,31 @@ return (<>{activeTab === "tenants" && (
                             }}
                           >
                             {t.status === "ACTIVE" ? "Suspend" : "Aktifkan"}
+                          </button>
+                          <button
+                            onClick={() => handleDeleteTenant(t)}
+                            title="Hapus Tenant Permanen"
+                            style={{
+                              background: "rgba(239, 68, 68, 0.12)",
+                              border: "1px solid #EF4444",
+                              color: "#EF4444",
+                              padding: "0.35rem 0.65rem",
+                              borderRadius: "6px",
+                              fontSize: "0.75rem",
+                              fontWeight: 800,
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "4px",
+                            }}
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="3 6 5 6 21 6" />
+                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                              <line x1="10" y1="11" x2="10" y2="17" />
+                              <line x1="14" y1="11" x2="14" y2="17" />
+                            </svg>
+                            Hapus
                           </button>
                         </div>
                       </td>
