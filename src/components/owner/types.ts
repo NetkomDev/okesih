@@ -43,19 +43,3 @@ export type OwnerBillingData = {
   };
   proofRetentionDays: number;
 };
-export type StickerConfig = {
-  qrSize: number;
-  businessNameSize: number;
-  businessNameOffsetX: number;
-  businessNameAlign: "left" | "center" | "right";
-  showLogo: boolean;
-  logoSize: number;
-  tableLabelSize: number;
-  tableOffset: number;
-  tableOffsetX: number;
-  showBusinessName: boolean;
-  showInstruction: boolean;
-  instructionSize: number;
-  instructionText: string;
-  selectedTableId: string;
-};

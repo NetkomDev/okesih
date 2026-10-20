@@ -5,48 +5,11 @@ import { ownerFetch } from "./helpers";
 import { useOwnerData } from "./provider";
 import OwnerSkeleton from "./OwnerSkeleton";
 type BusinessTable = { id: string; label: string; sort_order: number; is_active: boolean };
-type StickerConfig = {
-  qrSize: number;
-  businessNameSize: number;
-  businessNameOffsetX: number;
-  businessNameAlign: "left" | "center" | "right";
-  showLogo: boolean;
-  logoSize: number;
-  tableLabelSize: number;
-  tableOffset: number;
-  tableOffsetX: number;
-  showBusinessName: boolean;
-  showInstruction: boolean;
-  instructionSize: number;
-  instructionText: string;
-  selectedTableId: string;
-};
-const DEFAULT_STICKER_CONFIG: StickerConfig = {
-  qrSize: 180,
-  businessNameSize: 18,
-  businessNameOffsetX: 0,
-  businessNameAlign: "center",
-  showLogo: true,
-  logoSize: 28,
-  tableLabelSize: 60,
-  tableOffset: 4,
-  tableOffsetX: 0,
-  showBusinessName: true,
-  showInstruction: true,
-  instructionSize: 12,
-  instructionText: "Scan untuk melihat menu & memesan",
-  selectedTableId: "",
-};
+
 function formatTableDisplay(label: string) {
   return (label || "").trim();
 }
-function renderMultilineBizName(name: string): string[] {
-  const trimmed = (name || "").trim();
-  if (!trimmed) return [];
-  const words = trimmed.split(/\s+/).filter(Boolean);
-  if (words.length <= 1) return [trimmed];
-  return words;
-}
+
 function validateImage(file: File, maxSize: number, label: string) {
   if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) throw new Error(`${label} harus berupa PNG, JPG, atau WebP.`);
   if (file.size > maxSize) throw new Error(`${label} maksimal ${Math.round(maxSize / 1024 / 1024)} MB.`);
@@ -67,58 +30,67 @@ const [editingTable, setEditingTable] = useState<BusinessTable | null>(null);
 const [tableEditError, setTableEditError] = useState("");
 const qrisInput = useRef<HTMLInputElement>(null);
 const logoInput = useRef<HTMLInputElement>(null);
-const [stickerConfig, setStickerConfig] = useState<StickerConfig>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const saved = localStorage.getItem("okesih_sticker_config");
-        if (saved) return { ...DEFAULT_STICKER_CONFIG, ...JSON.parse(saved) };
-      } catch {}
-    }
-    return DEFAULT_STICKER_CONFIG;
-  });
-const [previewQrUrl, setPreviewQrUrl] = useState<string>("");
-const [stickerConfigSaved, setStickerConfigSaved] = useState(false);
+const [selectedTableId, setSelectedTableId] = useState<string>("");
+const [pdfBusy, setPdfBusy] = useState(false);
+const [pdfProgress, setPdfProgress] = useState("");
+const previewCanvasRef = useRef<HTMLCanvasElement | null>(null);
+const [previewLoading, setPreviewLoading] = useState(false);
+
 useEffect(() => {
-    if (typeof window !== "undefined") {
-      try {
-        localStorage.setItem("okesih_sticker_config", JSON.stringify(stickerConfig));
-      } catch {}
-    }
-  }, [stickerConfig]);
-const saveStickerSettings = () => {
-    if (typeof window !== "undefined") {
-      try {
-        localStorage.setItem("okesih_sticker_config", JSON.stringify(stickerConfig));
-      } catch {}
-    }
-    setStickerConfigSaved(true);
-    setTimeout(() => setStickerConfigSaved(false), 2500);
-  };
+  if (typeof window !== "undefined") {
+    try {
+      localStorage.removeItem("okesih_sticker_config");
+    } catch {}
+  }
+}, []);
+
 useEffect(() => {
-    if (pathname !== "/owner/qris-tables") return;
-    let isMounted = true;
-    const generatePreview = async () => {
-      const slug = data?.profile?.slug || "sample";
-      const selectedTable = data?.tables?.find(t => t.id === stickerConfig.selectedTableId) || data?.tables?.[0];
-      const tableLabel = selectedTable?.label || "01";
-      const origin = typeof window !== "undefined" ? window.location.origin : "https://okesih.com";
-      // URL ringkas ?t= menghasilkan QR code Version 2 (25x25) dengan kotak-kotak yang jauh lebih besar & simpel
-      const url = `${origin}/menu/${slug}?t=${encodeURIComponent(tableLabel)}`;
-      try {
-        const { default: QRCode } = await import("qrcode");
-        const qr = await QRCode.toDataURL(url, {
-          width: Math.max(260, stickerConfig.qrSize * 2),
-          margin: 1,
-          errorCorrectionLevel: "L", // Level L (Low) menghasilkan matriks paling renggang dengan modul kotak paling besar
-        });
-        if (isMounted) setPreviewQrUrl(qr);
-      } catch (e) {
-        console.error("Gagal generate preview QR:", e);
-      }
+  if (data?.tables?.length && (!selectedTableId || !data.tables.some((t) => t.id === selectedTableId))) {
+    setSelectedTableId(data.tables[0].id);
+  }
+}, [data?.tables, selectedTableId]);
+
+useEffect(() => {
+  if (pathname !== "/owner/qris-tables") return;
+  let isMounted = true;
+
+  const renderPreview = async () => {
+    if (!previewCanvasRef.current) return;
+    const canvas = previewCanvasRef.current;
+    const origin = typeof window !== "undefined" ? window.location.origin : "https://okesih.com";
+
+    const activeTable =
+      data?.tables?.find((t) => t.id === selectedTableId) ||
+      data?.tables?.[0] || {
+        id: "sample",
+        label: "01",
+        sort_order: 1,
+        is_active: true,
+      };
+
+    const currentProfile = {
+      ...data.profile,
+      nama: (businessName || data.profile.nama || "OKESIH").trim(),
     };
-    void generatePreview();
-    return () => { isMounted = false; };
-  }, [pathname, data?.profile?.slug, data?.tables, stickerConfig.selectedTableId, stickerConfig.qrSize]);
+
+    try {
+      setPreviewLoading(true);
+      const { renderTableSignToCanvas } = await import("@/lib/table-sign");
+      if (!isMounted) return;
+      await renderTableSignToCanvas(canvas, currentProfile, activeTable, origin);
+    } catch (err) {
+      console.error("Gagal merender preview papan meja:", err);
+    } finally {
+      if (isMounted) setPreviewLoading(false);
+    }
+  };
+
+  void renderPreview();
+
+  return () => {
+    isMounted = false;
+  };
+}, [pathname, selectedTableId, data?.tables, data?.profile, businessName]);
 const addTables = () => void mutate(async () => {
     const labels = tableInput.split(/[,\n]/).map((item) => item.trim()).filter(Boolean);
     await ownerFetch("/api/owner/tables", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ labels }) });
@@ -197,11 +169,65 @@ const updateTable = async (event: React.FormEvent) => {
       setBusy(false);
     }
   };
-const printTableStickers = async (singleTableId?: string) => {
+const handleDownloadSinglePdf = async () => {
+  const activeTable =
+    data?.tables?.find((t) => t.id === selectedTableId) || data?.tables?.[0];
+  if (!activeTable) {
+    setError("Pilih meja terlebih dahulu.");
+    return;
+  }
+  setPdfBusy(true);
+  setError("");
   try {
-    const printer = await import("./print-table-stickers");
-    await printer.printTableStickers(data, stickerConfig, setError, singleTableId);
-  } catch (reason) { setError(reason instanceof Error ? reason.message : "Stiker gagal disiapkan."); }
+    const origin = typeof window !== "undefined" ? window.location.origin : "https://okesih.com";
+    const { downloadSingleTablePdf } = await import("@/lib/table-sign");
+    await downloadSingleTablePdf(data.profile, activeTable, origin);
+    setNotice(`PDF Papan Meja ${activeTable.label} berhasil diunduh.`);
+  } catch (err) {
+    setError(err instanceof Error ? err.message : "Gagal mengunduh PDF meja.");
+  } finally {
+    setPdfBusy(false);
+  }
+};
+
+const handleDownloadAllPdf = async () => {
+  if (!data.tables.length) {
+    setError("Belum ada meja yang terdaftar.");
+    return;
+  }
+  setPdfBusy(true);
+  setError("");
+  try {
+    const origin = typeof window !== "undefined" ? window.location.origin : "https://okesih.com";
+    const { downloadAllTablesPdf } = await import("@/lib/table-sign");
+    await downloadAllTablesPdf(data.profile, data.tables, origin, (current, total) => {
+      setPdfProgress(`Membuat PDF: meja ${current} dari ${total}...`);
+    });
+    setNotice(`PDF Semua Meja (${data.tables.length} meja) berhasil diunduh.`);
+  } catch (err) {
+    setError(err instanceof Error ? err.message : "Gagal mengunduh PDF semua meja.");
+  } finally {
+    setPdfBusy(false);
+    setPdfProgress("");
+  }
+};
+
+const handlePrintTableSigns = async (singleTableId?: string) => {
+  if (!data.tables.length) {
+    setError("Belum ada meja yang terdaftar untuk dicetak.");
+    return;
+  }
+  setPdfBusy(true);
+  setError("");
+  try {
+    const origin = typeof window !== "undefined" ? window.location.origin : "https://okesih.com";
+    const { printTableSigns } = await import("@/lib/table-sign");
+    await printTableSigns(data.profile, data.tables, origin, singleTableId);
+  } catch (err) {
+    setError(err instanceof Error ? err.message : "Gagal membuka jendela cetak.");
+  } finally {
+    setPdfBusy(false);
+  }
 };
 if (!ready) {
   if (error) return <div className="owner-error" role="alert">{error}</div>;
@@ -233,401 +259,85 @@ return (<>{error && <div className="owner-error" role="alert">{error}<button onC
               <h2>Cetak Stiker QR Code Meja</h2><p>Masukkan nomor atau nama meja sesuai kondisi nyata, dipisahkan koma atau baris baru.</p>
               <div className="owner-table-input"><textarea rows={3} value={tableInput} onChange={(event) => setTableInput(event.target.value)} placeholder="Contoh: 01, 02, Teras 1, VIP"/><button disabled={busy || !tableInput.trim()} className="btn-primary" onClick={addTables}>Tambah Meja</button></div>
               <div className="owner-table-chips">{data.tables.map((table) => <span key={table.id}><Link target="_blank" href={`/menu/${profile.slug}?tableId=${encodeURIComponent(table.id)}`}>{formatTableDisplay(table.label)}</Link><button aria-label={`Edit meja ${table.label}`} onClick={() => { setTableEditError(""); setEditingTable({ ...table, label: table.label.replace(/^meja\s+/i, "") }); }}>✎</button><button aria-label={`Hapus meja ${table.label}`} onClick={() => confirm(`Hapus meja ${table.label}?`) && void mutate(() => ownerFetch(`/api/owner/tables?id=${table.id}`, { method: "DELETE" }), "Meja berhasil dihapus.")}>×</button></span>)}</div>
-              <button className="btn-primary" disabled={!data.tables.length} onClick={() => void printTableStickers()}>🖨️ Cetak Semua Stiker QR Meja</button>
+              <button className="btn-primary" disabled={!data.tables.length || pdfBusy} onClick={() => void handlePrintTableSigns()}>🖨️ Cetak Semua Papan Meja</button>
             </article>
 
-            <article className="owner-panel owner-sticker-preview-card">
-              <div className="owner-sticker-header">
-                <div>
-                  <h2>Preview &amp; Desain Stiker QR Meja</h2>
-                  <p>Tata letak stiker otomatis disesuaikan secara live. Klik Simpan Desain agar pengaturan tersimpan permanen untuk cetak ulang kapan saja.</p>
-                </div>
-                <div className="owner-sticker-header-actions">
-                  <button
-                    type="button"
-                    className="owner-sticker-tool-btn primary"
-                    onClick={saveStickerSettings}
-                    title="Simpan pengaturan desain ini"
-                  >
-                    <span className="tool-icon">{stickerConfigSaved ? "✓" : "💾"}</span>
-                    <span>{stickerConfigSaved ? "Tersimpan" : "Simpan"}</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="owner-sticker-tool-btn"
-                    onClick={() => {
-                      setStickerConfig({ ...DEFAULT_STICKER_CONFIG, selectedTableId: stickerConfig.selectedTableId });
-                      if (typeof window !== "undefined") {
-                        try {
-                          localStorage.setItem("okesih_sticker_config", JSON.stringify({ ...DEFAULT_STICKER_CONFIG, selectedTableId: stickerConfig.selectedTableId }));
-                        } catch {}
-                      }
-                      setStickerConfigSaved(true);
-                      setTimeout(() => setStickerConfigSaved(false), 2000);
-                    }}
-                    title="Kembalikan ukuran dan posisi ke pengaturan default"
-                  >
-                    <span className="tool-icon">↺</span>
-                    <span>Reset</span>
-                  </button>
-                </div>
+            <article className="owner-panel owner-table-sign-card">
+              <div className="owner-table-sign-header">
+                <h2>Cetak &amp; Simpan Papan QR Meja</h2>
+                <p>Desain papan meja standar resmi OKESIH (10 × 15 cm) untuk tempat akrilik meja. QR Code menu digital terhubung otomatis dengan nomor meja dan sistem kasir.</p>
               </div>
 
-              {/* Selector Meja Sampel */}
-              <div className="owner-sticker-sample-bar">
-                <label>
-                  <span>Pilih Meja Contoh:</span>
+              <div className="owner-table-sign-toolbar">
+                <label className="owner-table-sign-select">
+                  <span>Pilih Meja:</span>
                   <select
-                    value={stickerConfig.selectedTableId}
-                    onChange={(e) => setStickerConfig({ ...stickerConfig, selectedTableId: e.target.value })}
+                    value={selectedTableId}
+                    onChange={(e) => setSelectedTableId(e.target.value)}
+                    disabled={data.tables.length === 0 || pdfBusy}
                   >
                     {data.tables.length === 0 ? (
                       <option value="">(Contoh Meja 01)</option>
                     ) : (
                       data.tables.map((table) => (
                         <option key={table.id} value={table.id}>
-                          {formatTableDisplay(table.label)}
+                          Meja {formatTableDisplay(table.label)}
                         </option>
                       ))
                     )}
                   </select>
                 </label>
+
+                <div className="owner-table-sign-actions">
+                  <button
+                    type="button"
+                    className="owner-table-sign-btn primary"
+                    disabled={data.tables.length === 0 || pdfBusy}
+                    onClick={handleDownloadSinglePdf}
+                    title="Simpan file PDF siap cetak untuk meja yang dipilih"
+                  >
+                    {pdfBusy && !pdfProgress ? "⏳ Memproses..." : "📥 Simpan PDF (Meja Ini)"}
+                  </button>
+
+                  <button
+                    type="button"
+                    className="owner-table-sign-btn"
+                    disabled={data.tables.length === 0 || pdfBusy}
+                    onClick={handleDownloadAllPdf}
+                    title="Simpan satu file PDF gabungan untuk seluruh meja"
+                  >
+                    {pdfProgress || "📥 Simpan Semua Meja (PDF)"}
+                  </button>
+
+                  <button
+                    type="button"
+                    className="owner-table-sign-btn"
+                    disabled={data.tables.length === 0 || pdfBusy}
+                    onClick={() => void handlePrintTableSigns(selectedTableId || undefined)}
+                    title="Buka dialog cetak langsung dari browser"
+                  >
+                    🖨️ Cetak Langsung
+                  </button>
+                </div>
               </div>
 
-              {/* Live Preview Display Box */}
-              <div className="owner-sticker-preview-viewport">
-                <div className="owner-sticker-badge-live">● LIVE PREVIEW</div>
-                <div className="owner-sticker-sheet">
-                  <div
-                    className="owner-sticker-top-row"
-                    style={{ marginBottom: `${stickerConfig.tableOffset}px` }}
-                  >
-                    {stickerConfig.showBusinessName && (
-                      <div
-                        className="owner-sticker-biz-header"
-                        style={{
-                          transform: `translateX(${stickerConfig.businessNameOffsetX || 0}px)`,
-                        }}
-                      >
-                        {stickerConfig.showLogo && profile.logo_url && (
-                          <img
-                            src={profile.logo_url}
-                            alt="Logo Usaha"
-                            className="owner-sticker-biz-logo"
-                            style={{
-                              width: `${stickerConfig.logoSize || 28}px`,
-                              height: `${stickerConfig.logoSize || 28}px`,
-                            }}
-                          />
-                        )}
-                        <div
-                          className="owner-sticker-biz-name"
-                          style={{
-                            fontSize: `${stickerConfig.businessNameSize}px`,
-                            textAlign: stickerConfig.businessNameAlign || "center",
-                          }}
-                        >
-                          {renderMultilineBizName(businessName || profile.nama).map((line, idx) => (
-                            <div key={idx} style={{ lineHeight: 1.15 }}>{line}</div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    <div
-                      className="owner-sticker-table-label"
-                      style={{
-                        fontSize: `${stickerConfig.tableLabelSize}px`,
-                        transform: `translateX(${stickerConfig.tableOffsetX || 0}px)`,
-                      }}
-                    >
-                      {formatTableDisplay((data.tables.find((t) => t.id === stickerConfig.selectedTableId) || data.tables[0])?.label || "01")}
-                    </div>
-                  </div>
-
-                  <div className="owner-sticker-qr-wrapper">
-                    {previewQrUrl ? (
-                      <img
-                        src={previewQrUrl}
-                        alt="QR Code Meja"
-                        style={{
-                          width: `${stickerConfig.qrSize}px`,
-                          height: `${stickerConfig.qrSize}px`,
-                        }}
-                      />
-                    ) : (
-                      <div
-                        className="owner-sticker-qr-loading"
-                        style={{
-                          width: `${stickerConfig.qrSize}px`,
-                          height: `${stickerConfig.qrSize}px`,
-                        }}
-                      >
-                        Membuat QR simpel...
-                      </div>
-                    )}
-                  </div>
-
-                  {stickerConfig.showInstruction && (
-                    <div
-                      className="owner-sticker-instruction"
-                      style={{ fontSize: `${stickerConfig.instructionSize}px` }}
-                    >
-                      {stickerConfig.instructionText || "Scan untuk melihat menu & memesan"}
+              <div className="owner-table-sign-viewport">
+                <div className="owner-table-sign-badge">● PREVIEW STANDAR RESMI</div>
+                <div className="owner-table-sign-canvas-wrapper">
+                  <canvas
+                    ref={previewCanvasRef}
+                    className="owner-table-sign-canvas"
+                    aria-label="Preview Papan Meja QR"
+                  />
+                  {previewLoading && (
+                    <div style={{ position: "absolute", color: "#ffffff", fontSize: "12px", background: "rgba(0,0,0,0.65)", padding: "6px 14px", borderRadius: "8px", fontWeight: 600 }}>
+                      Memuat preview...
                     </div>
                   )}
                 </div>
-              </div>
-
-              {/* Real-time Controls */}
-              <div className="owner-sticker-controls">
-                {/* 1. Pengaturan Nama Usaha: Ukuran & Geser Horisontal Kiri-Kanan */}
-                <div className="owner-sticker-control-row">
-                  <div className="owner-sticker-control-group">
-                    <div className="owner-sticker-control-header">
-                      <span>Ukuran Nama Usaha</span>
-                      <b>{stickerConfig.businessNameSize} px</b>
-                    </div>
-                    <input
-                      type="range"
-                      min="12"
-                      max="30"
-                      step="1"
-                      value={stickerConfig.businessNameSize}
-                      onChange={(e) => setStickerConfig({ ...stickerConfig, businessNameSize: Number(e.target.value) })}
-                    />
-                    <div className="owner-sticker-slider-hints"><span>Kecil (12px)</span><span>Besar (30px)</span></div>
-                  </div>
-
-                  <div className="owner-sticker-control-group">
-                    <div className="owner-sticker-control-header">
-                      <span>Geser Posisi Horisontal Nama Usaha</span>
-                      <b style={{ color: (stickerConfig.businessNameOffsetX || 0) === 0 ? "var(--accent)" : "inherit" }}>
-                        {(stickerConfig.businessNameOffsetX || 0) === 0 ? "0 px (Center)" : `${(stickerConfig.businessNameOffsetX || 0) > 0 ? "+" : ""}${stickerConfig.businessNameOffsetX || 0} px`}
-                      </b>
-                    </div>
-                    <input
-                      type="range"
-                      min="-50"
-                      max="50"
-                      step="1"
-                      value={stickerConfig.businessNameOffsetX || 0}
-                      onChange={(e) => setStickerConfig({ ...stickerConfig, businessNameOffsetX: Number(e.target.value) })}
-                    />
-                    <div className="owner-sticker-slider-hints">
-                      <span>◄ Kiri (-50)</span>
-                      <span style={{ fontWeight: 800, color: (stickerConfig.businessNameOffsetX || 0) === 0 ? "var(--accent)" : "var(--text-muted)" }}>0 (Center)</span>
-                      <span>Kanan (+50) ►</span>
-                    </div>
-                  </div>
+                <div className="owner-table-sign-info">
+                  Standar Akrilik A6 / 10 × 15 cm · Template Resmi OKESIH · File disimpan dalam format PDF
                 </div>
-
-                {/* 1b. Pengaturan Logo Usaha & Rata Teks Nama Usaha */}
-                <div className="owner-sticker-control-row">
-                  <div className="owner-sticker-control-group">
-                    <div className="owner-sticker-control-header">
-                      <span>Ukuran Logo Usaha</span>
-                      <b>{stickerConfig.logoSize || 28} px</b>
-                    </div>
-                    <input
-                      type="range"
-                      min="16"
-                      max="60"
-                      step="2"
-                      value={stickerConfig.logoSize || 28}
-                      onChange={(e) => setStickerConfig({ ...stickerConfig, logoSize: Number(e.target.value) })}
-                    />
-                    <div className="owner-sticker-slider-hints"><span>Kecil (16px)</span><span>Besar (60px)</span></div>
-                  </div>
-
-                  <div className="owner-sticker-control-group">
-                    <div className="owner-sticker-control-header">
-                      <span>Rata Teks Nama Usaha</span>
-                      <b>{stickerConfig.businessNameAlign === "left" ? "Rata Kiri" : stickerConfig.businessNameAlign === "right" ? "Rata Kanan" : "Rata Tengah"}</b>
-                    </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "6px", marginTop: "2px" }}>
-                      <button
-                        type="button"
-                        onClick={() => setStickerConfig({ ...stickerConfig, businessNameAlign: "left" })}
-                        style={{
-                          padding: "6px 4px",
-                          borderRadius: "6px",
-                          fontSize: "11px",
-                          fontWeight: 700,
-                          background: (stickerConfig.businessNameAlign || "center") === "left" ? "#ea580c" : "var(--bg-surface-2)",
-                          color: (stickerConfig.businessNameAlign || "center") === "left" ? "#ffffff" : "var(--text-muted)",
-                          border: "1px solid var(--border-subtle)",
-                          cursor: "pointer",
-                        }}
-                      >
-                        ⇤ Kiri
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setStickerConfig({ ...stickerConfig, businessNameAlign: "center" })}
-                        style={{
-                          padding: "6px 4px",
-                          borderRadius: "6px",
-                          fontSize: "11px",
-                          fontWeight: 700,
-                          background: (stickerConfig.businessNameAlign || "center") === "center" ? "#ea580c" : "var(--bg-surface-2)",
-                          color: (stickerConfig.businessNameAlign || "center") === "center" ? "#ffffff" : "var(--text-muted)",
-                          border: "1px solid var(--border-subtle)",
-                          cursor: "pointer",
-                        }}
-                      >
-                        ≡ Tengah
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setStickerConfig({ ...stickerConfig, businessNameAlign: "right" })}
-                        style={{
-                          padding: "6px 4px",
-                          borderRadius: "6px",
-                          fontSize: "11px",
-                          fontWeight: 700,
-                          background: (stickerConfig.businessNameAlign || "center") === "right" ? "#ea580c" : "var(--bg-surface-2)",
-                          color: (stickerConfig.businessNameAlign || "center") === "right" ? "#ffffff" : "var(--text-muted)",
-                          border: "1px solid var(--border-subtle)",
-                          cursor: "pointer",
-                        }}
-                      >
-                        Kanan ⇥
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 2. Pengaturan Nomor Meja / Kursi: Ukuran (min 50px, max 100px) & Geser Horisontal Kiri-Kanan */}
-                <div className="owner-sticker-control-row">
-                  <div className="owner-sticker-control-group">
-                    <div className="owner-sticker-control-header">
-                      <span>Ukuran Nomor Meja / Kursi</span>
-                      <b>{stickerConfig.tableLabelSize} px</b>
-                    </div>
-                    <input
-                      type="range"
-                      min="50"
-                      max="100"
-                      step="1"
-                      value={stickerConfig.tableLabelSize}
-                      onChange={(e) => setStickerConfig({ ...stickerConfig, tableLabelSize: Number(e.target.value) })}
-                    />
-                    <div className="owner-sticker-slider-hints"><span>Kecil (50px)</span><span>Besar (100px)</span></div>
-                  </div>
-
-                  <div className="owner-sticker-control-group">
-                    <div className="owner-sticker-control-header">
-                      <span>Geser Posisi Horisontal Nomor Meja</span>
-                      <b style={{ color: (stickerConfig.tableOffsetX || 0) === 0 ? "var(--accent)" : "inherit" }}>
-                        {(stickerConfig.tableOffsetX || 0) === 0 ? "0 px (Center)" : `${(stickerConfig.tableOffsetX || 0) > 0 ? "+" : ""}${stickerConfig.tableOffsetX || 0} px`}
-                      </b>
-                    </div>
-                    <input
-                      type="range"
-                      min="-50"
-                      max="50"
-                      step="1"
-                      value={stickerConfig.tableOffsetX || 0}
-                      onChange={(e) => setStickerConfig({ ...stickerConfig, tableOffsetX: Number(e.target.value) })}
-                    />
-                    <div className="owner-sticker-slider-hints">
-                      <span>◄ Kiri (-50)</span>
-                      <span style={{ fontWeight: 800, color: (stickerConfig.tableOffsetX || 0) === 0 ? "var(--accent)" : "var(--text-muted)" }}>0 (Center)</span>
-                      <span>Kanan (+50) ►</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 3. Pengaturan Jarak Vertikal & Ukuran QR Code */}
-                <div className="owner-sticker-control-row">
-                  <div className="owner-sticker-control-group">
-                    <div className="owner-sticker-control-header">
-                      <span>Jarak Vertikal Meja ke QR Code</span>
-                      <b>{stickerConfig.tableOffset} px</b>
-                    </div>
-                    <input
-                      type="range"
-                      min="-12"
-                      max="30"
-                      step="1"
-                      value={stickerConfig.tableOffset}
-                      onChange={(e) => setStickerConfig({ ...stickerConfig, tableOffset: Number(e.target.value) })}
-                    />
-                    <div className="owner-sticker-slider-hints"><span>Mendekat (-12px)</span><span>Menjauh (+30px)</span></div>
-                  </div>
-
-                  <div className="owner-sticker-control-group">
-                    <div className="owner-sticker-control-header">
-                      <span>Ukuran QR Code</span>
-                      <b>{stickerConfig.qrSize} px</b>
-                    </div>
-                    <input
-                      type="range"
-                      min="100"
-                      max="260"
-                      step="5"
-                      value={stickerConfig.qrSize}
-                      onChange={(e) => setStickerConfig({ ...stickerConfig, qrSize: Number(e.target.value) })}
-                    />
-                    <div className="owner-sticker-slider-hints"><span>Kecil (100px)</span><span>Besar (260px)</span></div>
-                  </div>
-                </div>
-
-                <div className="owner-sticker-toggles">
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "16px" }}>
-                    <label className="owner-sticker-checkbox">
-                      <input
-                        type="checkbox"
-                        checked={stickerConfig.showBusinessName}
-                        onChange={(e) => setStickerConfig({ ...stickerConfig, showBusinessName: e.target.checked })}
-                      />
-                      <span>Tampilkan Nama Usaha</span>
-                    </label>
-                    {profile.logo_url && (
-                      <label className="owner-sticker-checkbox">
-                        <input
-                          type="checkbox"
-                          checked={stickerConfig.showLogo}
-                          onChange={(e) => setStickerConfig({ ...stickerConfig, showLogo: e.target.checked })}
-                        />
-                        <span>Tampilkan Logo Usaha</span>
-                      </label>
-                    )}
-                    <label className="owner-sticker-checkbox">
-                      <input
-                        type="checkbox"
-                        checked={stickerConfig.showInstruction}
-                        onChange={(e) => setStickerConfig({ ...stickerConfig, showInstruction: e.target.checked })}
-                      />
-                      <span>Tampilkan Petunjuk Scan</span>
-                    </label>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="owner-sticker-actions">
-                <button
-                  type="button"
-                  className="btn-primary"
-                  disabled={!data.tables.length}
-                  onClick={() => void printTableStickers()}
-                >
-                  🖨️ Cetak Semua Meja ({data.tables.length})
-                </button>
-                {data.tables.length > 0 && (
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={() => {
-                      const cur = data.tables.find((t) => t.id === stickerConfig.selectedTableId) || data.tables[0];
-                      if (cur) void printTableStickers(cur.id);
-                    }}
-                  >
-                    Cetak {formatTableDisplay((data.tables.find((t) => t.id === stickerConfig.selectedTableId) || data.tables[0])?.label || "01")} Saja
-                  </button>
-                )}
               </div>
             </article>
           </section>}{editingTable && (

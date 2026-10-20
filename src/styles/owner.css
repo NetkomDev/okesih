@@ -1322,336 +1322,166 @@
 .owner-qris-page .owner-branding-panel .owner-branding-actions{margin-top:12px}
 .owner-qris-page .owner-table-chips button{color:#14b8a6}
 
-/* QR Code Table Sticker Preview & Live Customizer */
-.owner-sticker-preview-card {
+/* Official QR Code Table Sign Card */
+.owner-table-sign-card {
   display: flex;
   flex-direction: column;
 }
-.owner-sticker-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 12px;
-  flex-wrap: wrap;
+.owner-table-sign-header {
+  margin-bottom: 16px;
 }
-.owner-sticker-header > div:first-child {
-  flex: 1 1 240px;
-  min-width: 0;
-}
-.owner-sticker-header h2 {
+.owner-table-sign-header h2 {
   font-size: 18px;
-  margin: 0 0 4px;
+  margin: 0 0 6px;
+  color: var(--text-pure-white, #ffffff);
 }
-.owner-sticker-header p {
-  font-size: 12px;
-  color: var(--text-muted);
+.owner-table-sign-header p {
+  font-size: 13px;
+  color: var(--text-muted, #94a3b8);
   margin: 0;
-  line-height: 1.4;
+  line-height: 1.5;
 }
-.owner-sticker-header-actions {
+.owner-table-sign-toolbar {
   display: flex;
-  gap: 8px;
+  flex-wrap: wrap;
   align-items: center;
-  flex-shrink: 0;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
 }
-.owner-sticker-tool-btn {
+.owner-table-sign-select {
   display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  width: 76px;
-  height: 52px;
-  padding: 4px 6px;
-  border-radius: 8px;
-  font-size: 10px;
-  font-weight: 700;
-  border: 1px solid var(--border-subtle);
-  background: var(--bg-surface-2);
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  line-height: 1.1;
-  text-align: center;
-}
-.owner-sticker-tool-btn span.tool-icon {
-  font-size: 16px;
-  line-height: 1;
-}
-.owner-sticker-tool-btn:hover {
-  background: var(--bg-surface-1);
-  border-color: var(--accent);
-  color: var(--accent);
-  transform: translateY(-1px);
-}
-.owner-sticker-tool-btn.primary {
-  background: #ea580c;
-  color: #ffffff;
-  border-color: #ea580c;
-  box-shadow: 0 2px 6px rgba(234, 88, 12, 0.3);
-}
-.owner-sticker-tool-btn.primary:hover {
-  background: #c2410c;
-  border-color: #c2410c;
-  color: #ffffff;
-}
-.owner-sticker-sample-bar {
-  margin-bottom: 14px;
-}
-.owner-sticker-sample-bar label {
-  display: flex;
-  flex-direction: row;
   align-items: center;
   gap: 10px;
-  font-size: 12px;
-  color: var(--text-muted);
+  font-size: 13px;
+  color: var(--text-muted, #94a3b8);
   margin: 0;
 }
-.owner-sticker-sample-bar select {
-  flex: 1;
+.owner-table-sign-select select {
   padding: 8px 12px;
   border-radius: 8px;
-  border: 1px solid var(--border-subtle);
-  background: var(--bg-surface-1);
-  color: #fff;
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.15));
+  background: var(--bg-surface-1, #131b26);
+  color: #ffffff;
   font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
 }
-.owner-sticker-preview-viewport {
-  position: relative;
-  background: #090d16;
-  border: 1px solid var(--border-subtle);
-  border-radius: 14px;
-  padding: 22px 16px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 290px;
-  overflow: hidden;
-  box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.4);
-}
-.owner-sticker-badge-live {
-  position: absolute;
-  top: 10px;
-  right: 12px;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.5px;
-  color: #10b981;
-  background: rgba(16, 185, 129, 0.12);
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  padding: 2px 8px;
-  border-radius: 999px;
-}
-.owner-sticker-sheet {
-  background: #ffffff;
-  border: 2px solid #0f172a;
-  border-radius: 16px;
-  padding: 16px 20px;
-  text-align: center;
-  color: #0f172a;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
-  max-width: 100%;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  transition: padding 0.15s ease;
-}
-.owner-sticker-top-row {
+.owner-table-sign-actions {
   display: flex;
   flex-wrap: wrap;
+  gap: 8px;
   align-items: center;
-  justify-content: center;
-  gap: 12px 18px;
-  width: 100%;
-  max-width: 100%;
 }
-.owner-sticker-biz-header {
+.owner-table-sign-btn {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  max-width: 100%;
-}
-.owner-sticker-biz-logo {
-  object-fit: contain;
-  border-radius: 4px;
-  flex-shrink: 0;
-}
-.owner-sticker-biz-name {
-  font-weight: 800;
-  color: #0f172a;
-  line-height: 1.2;
-  word-break: break-word;
-}
-.owner-sticker-table-label {
-  font-weight: 900;
-  color: #ea580c;
-  line-height: 1.1;
-  letter-spacing: -0.5px;
-}
-.owner-sticker-qr-wrapper {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 4px 0;
-}
-.owner-sticker-qr-wrapper img {
-  display: block;
-  max-width: 100%;
-  height: auto;
-  image-rendering: pixelated;
-}
-.owner-sticker-qr-loading {
-  display: grid;
-  place-items: center;
-  background: #f1f5f9;
-  border-radius: 8px;
-  color: #64748b;
-  font-size: 11px;
-}
-.owner-sticker-instruction {
-  font-weight: 600;
-  color: #334155;
-  margin-top: 4px;
-  line-height: 1.25;
-}
-.owner-sticker-url {
-  font-size: 9px;
-  color: #94a3b8;
-  margin-top: 4px;
-  word-break: break-all;
-  max-width: 240px;
-}
-.owner-sticker-controls {
-  margin-top: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  background: rgba(255, 255, 255, 0.02);
-  padding: 14px;
-  border-radius: 12px;
-  border: 1px solid var(--border-subtle);
-}
-.owner-sticker-control-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  align-items: start;
-}
-@media (max-width: 640px) {
-  .owner-sticker-control-row {
-    grid-template-columns: 1fr;
-    gap: 10px;
-  }
-}
-.owner-sticker-control-group {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.owner-sticker-control-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 12px;
-  color: var(--text-muted);
-}
-.owner-sticker-control-header b {
-  color: #f97316;
-  font-size: 12px;
-  background: rgba(249, 115, 22, 0.1);
-  padding: 1px 6px;
-  border-radius: 4px;
-}
-.owner-sticker-control-group input[type="range"] {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 100%;
-  height: 6px;
-  border-radius: 999px;
-  background: var(--bg-surface-2);
-  outline: none;
-  margin: 4px 0;
-  padding: 0;
-  border: 0;
-  cursor: pointer;
-}
-.owner-sticker-control-group input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: #f97316;
-  box-shadow: 0 0 6px rgba(249, 115, 22, 0.5);
-  cursor: pointer;
-  transition: transform 0.1s ease;
-}
-.owner-sticker-control-group input[type="range"]::-webkit-slider-thumb:hover {
-  transform: scale(1.15);
-}
-.owner-sticker-slider-hints {
-  display: flex;
-  justify-content: space-between;
-  font-size: 10px;
-  color: #64748b;
-}
-.owner-sticker-toggles {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 2px;
-  padding-top: 10px;
-  border-top: 1px dashed var(--border-subtle);
-}
-.owner-sticker-checkbox {
-  display: flex;
-  flex-direction: row !important;
-  align-items: center;
-  gap: 8px;
-  margin: 0 !important;
-  font-size: 12px;
-  color: #cbd5e1;
-  cursor: pointer;
-}
-.owner-sticker-checkbox input[type="checkbox"] {
-  width: 16px !important;
-  height: 16px !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  accent-color: #ea580c;
-  cursor: pointer;
-}
-.owner-btn-save-sticker {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   gap: 6px;
-  padding: 6px 14px;
+  padding: 8px 14px;
   border-radius: 8px;
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 700;
-  background: #ea580c;
-  color: #ffffff;
-  border: none;
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
+  background: var(--bg-surface-2, rgba(255, 255, 255, 0.06));
+  color: var(--text-pure-white, #ffffff);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.18s ease;
+  white-space: nowrap;
 }
-.owner-btn-save-sticker:hover {
-  background: #c2410c;
+.owner-table-sign-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
   transform: translateY(-1px);
 }
-.owner-sticker-actions {
+.owner-table-sign-btn.primary {
+  background: linear-gradient(135deg, #fe5415 0%, #e03a16 100%);
+  border-color: #fe5415;
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(254, 84, 21, 0.35);
+}
+.owner-table-sign-btn.primary:hover:not(:disabled) {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+.owner-table-sign-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.owner-table-sign-viewport {
+  position: relative;
+  background: radial-gradient(circle at center, #111827 0%, #06090e 100%);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
+  border-radius: 18px;
+  padding: 32px 20px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-top: 16px;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  box-shadow: inset 0 2px 12px rgba(0, 0, 0, 0.5);
 }
-.owner-sticker-actions button {
+.owner-table-sign-badge {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: #fe5415;
+  background: rgba(254, 84, 21, 0.12);
+  border: 1px solid rgba(254, 84, 21, 0.3);
+  padding: 4px 10px;
+  border-radius: 999px;
+  text-transform: uppercase;
+}
+.owner-table-sign-canvas-wrapper {
   width: 100%;
+  max-width: 320px;
+  position: relative;
+  aspect-ratio: 2 / 3;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65), 0 2px 6px rgba(0, 0, 0, 0.3);
+  background: #090e17;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.owner-table-sign-canvas {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+.owner-table-sign-info {
+  margin-top: 16px;
+  font-size: 12px;
+  color: var(--text-muted, #94a3b8);
+  text-align: center;
+  line-height: 1.4;
+}
+@media (max-width: 720px) {
+  .owner-table-sign-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .owner-table-sign-select {
+    width: 100%;
+  }
+  .owner-table-sign-select select {
+    flex: 1;
+  }
+  .owner-table-sign-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+  .owner-table-sign-btn {
+    width: 100%;
+    justify-content: center;
+  }
 }
 @media(max-width:720px){
   .owner-qris-page{display:grid!important;gap:12px}
