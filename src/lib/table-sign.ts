@@ -59,7 +59,7 @@ export async function renderTableSignToCanvas(
   ctx.drawImage(template, 0, 0, TABLE_SIGN_WIDTH, TABLE_SIGN_HEIGHT);
 
   // 2. Gambar Nama Bisnis (di atas teks "NOMOR MEJA")
-  // Ukuran ditingkatkan 3 kali lipat (sebelumnya ~46px, kini ~115px sesuai referensi sampel)
+  // Ukuran dikurangi 10% dari sebelumnya (115px -> 104px) dengan jarak vertikal rapi
   const businessName = (profile.nama || "OKESIH").trim();
   ctx.save();
   ctx.textBaseline = "middle";
@@ -70,11 +70,11 @@ export async function renderTableSignToCanvas(
     const baseName = domainMatch[1];
     const ext = domainMatch[2];
 
-    let fontSize = 115;
+    let fontSize = 104;
     ctx.font = `800 ${fontSize}px "Outfit", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
 
     let totalWidth = ctx.measureText(baseName).width + ctx.measureText(ext).width;
-    while (totalWidth > 820 && fontSize > 36) {
+    while (totalWidth > 820 && fontSize > 32) {
       fontSize -= 2;
       ctx.font = `800 ${fontSize}px "Outfit", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
       totalWidth = ctx.measureText(baseName).width + ctx.measureText(ext).width;
@@ -83,40 +83,46 @@ export async function renderTableSignToCanvas(
     const startX = (TABLE_SIGN_WIDTH - totalWidth) / 2;
     ctx.textAlign = "left";
     ctx.fillStyle = "#ffffff";
-    ctx.fillText(baseName, startX, 115);
+    ctx.fillText(baseName, startX, 108);
 
     ctx.fillStyle = "#fe5415"; // Warna aksen oranye untuk dot extension
-    ctx.fillText(ext, startX + ctx.measureText(baseName).width, 115);
+    ctx.fillText(ext, startX + ctx.measureText(baseName).width, 108);
   } else {
     // Teks nama bisnis biasa (warna putih tebal dan bersih)
-    let fontSize = 115;
+    let fontSize = 104;
     ctx.font = `800 ${fontSize}px "Outfit", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
 
-    while (ctx.measureText(businessName).width > 820 && fontSize > 36) {
+    while (ctx.measureText(businessName).width > 820 && fontSize > 32) {
       fontSize -= 2;
       ctx.font = `800 ${fontSize}px "Outfit", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
     }
 
     ctx.textAlign = "center";
     ctx.fillStyle = "#ffffff";
-    ctx.fillText(businessName, TABLE_SIGN_WIDTH / 2, 115);
+    ctx.fillText(businessName, TABLE_SIGN_WIDTH / 2, 108);
   }
   ctx.restore();
 
-  // 3. Gambar Nomor Meja (di bawah teks "NOMOR MEJA" dan di atas garis pembatas)
+  // 3. Gambar Nomor Meja (di bawah teks "NOMOR MEJA" dan di atas garis pembatas Y: 485)
+  // Ukuran ditingkatkan ~3x lipat (sebelumnya 165px, kini 340px) mengisi penuh area vertikal
   const formattedNumber = formatTableNumberForSign(table.label);
   ctx.save();
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillStyle = "#fe5415"; // Oranye resmi OKESIH
 
-  let numFontSize = 165;
-  if (formattedNumber.length > 2) numFontSize = 125;
-  if (formattedNumber.length > 5) numFontSize = 90;
-  if (formattedNumber.length > 9) numFontSize = 65;
+  let numFontSize = 340;
+  if (formattedNumber.length > 2) numFontSize = 240;
+  if (formattedNumber.length > 4) numFontSize = 170;
+  if (formattedNumber.length > 7) numFontSize = 120;
 
   ctx.font = `900 ${numFontSize}px "Outfit", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
-  ctx.fillText(formattedNumber, TABLE_SIGN_WIDTH / 2, 282);
+  while (ctx.measureText(formattedNumber).width > 780 && numFontSize > 60) {
+    numFontSize -= 4;
+    ctx.font = `900 ${numFontSize}px "Outfit", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+  }
+
+  ctx.fillText(formattedNumber, TABLE_SIGN_WIDTH / 2, 354);
   ctx.restore();
 
   // 4. Hasilkan dan Gambar QR Code Menu Digital
