@@ -10,7 +10,7 @@ import { usePathname } from "next/navigation";
  */
 export default function SplashScreen() {
   const pathname = usePathname();
-  const isOperational = pathname.startsWith("/pos") || pathname.startsWith("/kds") || pathname.startsWith("/tv");
+  const isOperational = pathname.startsWith("/pos") || pathname.startsWith("/kds") || pathname.startsWith("/tv") || pathname.startsWith("/scan");
   const isTenantMenu = pathname.startsWith("/menu/");
   const isOwner = pathname.startsWith("/owner");
   const mounted = useSyncExternalStore(() => () => {}, () => true, () => false);

@@ -5,8 +5,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import jsQR from "jsqr";
-import { requestPwaInstallation } from "@/lib/pwa-install";
-import { isStandaloneApp } from "@/lib/pwa-routing";
 import "@/styles/scanner.css";
 
 export default function CustomerScannerPage() {
@@ -23,9 +21,6 @@ export default function CustomerScannerPage() {
   const [scanning, setScanning] = useState(true);
   const [scannedResult, setScannedResult] = useState<string | null>(null);
   const [externalUrlPrompt, setExternalUrlPrompt] = useState<string | null>(null);
-  const [isStandalone, setIsStandalone] = useState(false);
-  const [installAvailable, setInstallAvailable] = useState(false);
-  const [installSuccess, setInstallSuccess] = useState(false);
 
   const streamRef = useRef<MediaStream | null>(null);
   const animFrameRef = useRef<number | null>(null);
@@ -289,37 +284,11 @@ export default function CustomerScannerPage() {
     reader.readAsDataURL(file);
   };
 
-  // Install PWA trigger
-  const handleInstallApp = async () => {
-    const outcome = await requestPwaInstallation();
-    if (outcome === "accepted") {
-      setInstallSuccess(true);
-      setInstallAvailable(false);
-    } else if (outcome === "unavailable") {
-      alert("Untuk memasang aplikasi ini di layar utama:\n- Di Chrome Android: Ketuk menu (titik tiga) lalu pilih 'Tambahkan ke Layar Utama' / 'Instal aplikasi'.\n- Di Safari iPhone: Ketuk tombol Bagikan ⎋ lalu pilih 'Tambahkan ke Layar Utama'.");
-    }
-  };
-
   useEffect(() => {
-    setIsStandalone(isStandaloneApp());
-    setInstallAvailable(Boolean(window.__okesihInstallPrompt));
-
-    const onInstallReady = () => setInstallAvailable(Boolean(window.__okesihInstallPrompt));
-    const onAppInstalled = () => {
-      setIsStandalone(true);
-      setInstallAvailable(false);
-      setInstallSuccess(true);
-    };
-
-    window.addEventListener("okesih-install-ready", onInstallReady);
-    window.addEventListener("appinstalled", onAppInstalled);
-
     startCamera();
 
     return () => {
       stopCamera();
-      window.removeEventListener("okesih-install-ready", onInstallReady);
-      window.removeEventListener("appinstalled", onAppInstalled);
     };
   }, [startCamera, stopCamera]);
 
@@ -337,7 +306,7 @@ export default function CustomerScannerPage() {
 
       {/* Header */}
       <header className="scanner-header">
-        <Link href="/" className="scanner-brand">
+        <Link href="/?view=landing" className="scanner-brand">
           <Image src="/logo.svg?v=2" width={38} height={38} alt="OKESIH" priority />
           <div className="scanner-brand-copy">
             <span className="scanner-brand-badge">SCANNER MEJA</span>
@@ -468,37 +437,6 @@ export default function CustomerScannerPage() {
           </div>
         </div>
 
-        {/* Demo Menu & Fallback actions */}
-        <div className="scanner-quick-links">
-          <Link href="/menu/demo?t=01" className="scanner-demo-btn">
-            <span className="demo-icon">☕</span>
-            <div className="demo-copy">
-              <strong>Coba Demo Menu Digital (Meja 01)</strong>
-              <small>Simulasi pesan langsung tanpa scan QR fisik</small>
-            </div>
-            <i>→</i>
-          </Link>
-        </div>
-
-        {/* Install App Prompt Card (if opened in browser) */}
-        {!isStandalone && (
-          <section className="scanner-install-banner">
-            <div className="scanner-install-icon">
-              <Image src="/logo.svg?v=2" width={42} height={42} alt="OKESIH" />
-            </div>
-            <div className="scanner-install-copy">
-              <strong>Pasang Aplikasi Scanner OKESIH</strong>
-              <p>Simpan di layar HP untuk scan QR meja cepat tanpa repot membuka browser.</p>
-            </div>
-            <button
-              type="button"
-              className="scanner-install-action"
-              onClick={handleInstallApp}
-            >
-              {installSuccess ? "✓ Terpasang" : "Install Aplikasi"}
-            </button>
-          </section>
-        )}
       </main>
 
       {/* External URL Confirmation Modal if scanned non-menu QR */}

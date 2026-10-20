@@ -15,6 +15,10 @@ export default function CustomerInstallCard() {
   }, []);
 
   const handleInstall = async () => {
+    try {
+      localStorage.setItem("okesih_installed_pwa_role", "scanner");
+    } catch {}
+
     if (installed) {
       window.location.href = "/scan";
       return;

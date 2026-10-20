@@ -5,6 +5,7 @@ import LoginModal from "@/components/landing/LoginModal";
 import FaqAccordion from "@/components/landing/FaqAccordion";
 import MobileBottomBar from "@/components/landing/MobileBottomBar";
 import LoginTriggerButton from "@/components/landing/LoginTriggerButton";
+import StandaloneLauncher from "@/components/StandaloneLauncher";
 import { getPlatformSettings } from "@/lib/platform-settings";
 
 export default async function HomePage() {
@@ -64,7 +65,29 @@ export default async function HomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-<main
+      {/* Auto-redirect installed standalone app to scanner */}
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `(function(){
+            try {
+              var isStandalone = window.matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches || !!(navigator && navigator.standalone);
+              var search = window.location.search || '';
+              if (isStandalone && !search.includes('view=landing') && !search.includes('from=scanner')) {
+                var role = localStorage.getItem('okesih_installed_pwa_role') || '';
+                if (role === 'owner') { window.location.replace('/owner'); }
+                else if (role === 'superadmin') { window.location.replace('/superadmin'); }
+                else if (role === 'marketing') { window.location.replace('/marketing/dashboard'); }
+                else if (role === 'pos') { window.location.replace('/pos'); }
+                else if (role === 'kds') { window.location.replace('/kds'); }
+                else { window.location.replace('/scan'); }
+              }
+            } catch(e) {}
+          })();`,
+        }}
+      />
+      <StandaloneLauncher />
+
+      <main
         style={{
           minHeight: "100vh",
           display: "flex",
