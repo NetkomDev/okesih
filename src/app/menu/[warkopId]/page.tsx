@@ -155,7 +155,7 @@ function CustomerMenuContent() {
       <h1>{orderStatus === "AWAITING_CONFIRMATION" ? "Menunggu konfirmasi kasir" : orderStatus === "COOKING" ? "Pesanan sedang disiapkan" : orderStatus === "READY" ? "Pesanan siap diantar" : orderStatus === "DONE" ? "Pesanan selesai" : "Pesanan tidak dapat diproses"}</h1>
       <p>Meja {formatTableNumber(tableNumber)} · {paymentMethod === "CASH" ? "Bayar tunai saat pesanan diantar" : "QRIS sedang diverifikasi"}</p>
       <b>Rp {Number(order.total).toLocaleString("id-ID")}</b>
-      <button className="btn-secondary" onClick={() => { setOrder(null); setCart({}); setProofImage(null); }}>Pesan Tambahan</button>
+      <button className="btn-secondary" onClick={() => { setOrder(null); setCart({}); setProofImage(null); }}>Pesan Sekarang</button>
       <CustomerInstallCard />
     </main>
   );
