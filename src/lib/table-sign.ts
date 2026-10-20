@@ -59,6 +59,7 @@ export async function renderTableSignToCanvas(
   ctx.drawImage(template, 0, 0, TABLE_SIGN_WIDTH, TABLE_SIGN_HEIGHT);
 
   // 2. Gambar Nama Bisnis (di atas teks "NOMOR MEJA")
+  // Ukuran ditingkatkan 3 kali lipat (sebelumnya ~46px, kini ~115px sesuai referensi sampel)
   const businessName = (profile.nama || "OKESIH").trim();
   ctx.save();
   ctx.textBaseline = "middle";
@@ -69,11 +70,11 @@ export async function renderTableSignToCanvas(
     const baseName = domainMatch[1];
     const ext = domainMatch[2];
 
-    let fontSize = 48;
+    let fontSize = 115;
     ctx.font = `800 ${fontSize}px "Outfit", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
 
     let totalWidth = ctx.measureText(baseName).width + ctx.measureText(ext).width;
-    while (totalWidth > 680 && fontSize > 24) {
+    while (totalWidth > 820 && fontSize > 36) {
       fontSize -= 2;
       ctx.font = `800 ${fontSize}px "Outfit", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
       totalWidth = ctx.measureText(baseName).width + ctx.measureText(ext).width;
@@ -82,23 +83,23 @@ export async function renderTableSignToCanvas(
     const startX = (TABLE_SIGN_WIDTH - totalWidth) / 2;
     ctx.textAlign = "left";
     ctx.fillStyle = "#ffffff";
-    ctx.fillText(baseName, startX, 80);
+    ctx.fillText(baseName, startX, 115);
 
     ctx.fillStyle = "#fe5415"; // Warna aksen oranye untuk dot extension
-    ctx.fillText(ext, startX + ctx.measureText(baseName).width, 80);
+    ctx.fillText(ext, startX + ctx.measureText(baseName).width, 115);
   } else {
     // Teks nama bisnis biasa (warna putih tebal dan bersih)
-    let fontSize = 46;
+    let fontSize = 115;
     ctx.font = `800 ${fontSize}px "Outfit", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
 
-    while (ctx.measureText(businessName).width > 700 && fontSize > 24) {
+    while (ctx.measureText(businessName).width > 820 && fontSize > 36) {
       fontSize -= 2;
       ctx.font = `800 ${fontSize}px "Outfit", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
     }
 
     ctx.textAlign = "center";
     ctx.fillStyle = "#ffffff";
-    ctx.fillText(businessName, TABLE_SIGN_WIDTH / 2, 80);
+    ctx.fillText(businessName, TABLE_SIGN_WIDTH / 2, 115);
   }
   ctx.restore();
 
@@ -133,15 +134,16 @@ export async function renderTableSignToCanvas(
 
   const qrImg = await loadImage(qrDataUrl);
 
-  // Kotak putih presisi di tengah template:
-  // Center: X=514.5, Y=867.5. Ukuran QR: 540 x 540 px.
-  const qrSize = 540;
-  const qrX = Math.round(514.5 - qrSize / 2);
-  const qrY = Math.round(867.5 - qrSize / 2);
+  // Kotak putih presisi di tengah-tengah frame area template (Y: 681 - 1243):
+  // Center: X=512, Y=965. Ukuran QR: 480 x 480 px (diperkecil sedikit dari 540px).
+  const qrSize = 480;
+  const qrX = Math.round(512 - qrSize / 2);
+  const qrY = Math.round(965 - qrSize / 2);
+  const boxPadding = 16;
 
   // Bersihkan latar belakang kotak putih untuk menjamin kontras maksimal
   ctx.fillStyle = "#ffffff";
-  ctx.fillRect(qrX - 8, qrY - 8, qrSize + 16, qrSize + 16);
+  ctx.fillRect(qrX - boxPadding, qrY - boxPadding, qrSize + boxPadding * 2, qrSize + boxPadding * 2);
 
   // Gambar QR Code
   ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
