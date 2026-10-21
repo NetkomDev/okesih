@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { randomBytes } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { assertSameOrigin, DeviceApiError } from "@/lib/device-auth";
@@ -272,9 +273,10 @@ export async function PATCH(request: Request) {
     let username: string | null = null;
     let password: string | null = null;
     if (status === "ACTIVE" && !current.user_id) {
-      const suffix = `${Date.now()}`.slice(-6);
+      if (!isValidIndonesianWhatsAppNumber(current.phone)) return NextResponse.json({ error: "Perbaiki nomor WhatsApp sebelum mengaktifkan marketing." }, { status: 400 });
+      const suffix = randomBytes(6).toString("hex");
       username = `marketing_${suffix}`;
-      password = `okesih${suffix}!`;
+      password = randomBytes(18).toString("base64url");
       const { data: authData, error: authError } = await supabase.auth.admin.createUser({
         email: `${username}@okesih.local`,
         password,
@@ -290,31 +292,31 @@ export async function PATCH(request: Request) {
       updatePayload.username = username;
     }
 
-    let { data, error } = await supabase
-      .from("marketing_partners")
-      .update(updatePayload)
-      .eq("id", id)
-      .select()
-      .single();
+    const savePartner = () => {
+      let query = supabase.from("marketing_partners").update(updatePayload).eq("id", id);
+      if (createdAuthUserId) query = query.is("user_id", null).eq("status", current.status).eq("phone", current.phone);
+      return query.select().maybeSingle();
+    };
+    let { data, error } = await savePartner();
 
     // Fallback jika kolom membership_level belum ada di DB
     if (error && error.message?.includes("membership_level")) {
       console.warn("Kolom membership_level belum ada di schema DB, menyimpan dengan fallback notes_admin...");
       delete updatePayload.membership_level;
-      const retry = await supabase
-        .from("marketing_partners")
-        .update(updatePayload)
-        .eq("id", id)
-        .select()
-        .single();
+      const retry = await savePartner();
       data = retry.data;
       error = retry.error;
     }
 
-    if (error) {
+    if (error && createdAuthUserId) {
+      const { data: persisted, error: readError } = await supabase.from("marketing_partners").select("*").eq("id", id).maybeSingle();
+      if (readError) return NextResponse.json({ error: "Status aktivasi belum dapat dipastikan. Muat ulang untuk memeriksa akun sebelum mengulang." }, { status: 503 });
+      if (persisted?.user_id === createdAuthUserId) { data = persisted; error = null; }
+    }
+    if (error || !data) {
       if (createdAuthUserId) await supabase.auth.admin.deleteUser(createdAuthUserId);
       console.error("Supabase update error:", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: error?.message || "Data marketing sudah berubah. Muat ulang sebelum memverifikasi kembali." }, { status: error ? 500 : 409 });
     }
 
     // Normalisasi membership_level pada respons
@@ -356,7 +358,7 @@ export async function PATCH(request: Request) {
       whatsappUrl = createWhatsAppUrl(data.phone, message);
     }
 
-    return NextResponse.json({ success: true, data: enrichedData, whatsappUrl });
+    return NextResponse.json({ success: true, data: enrichedData, whatsappUrl }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (err: unknown) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Terjadi kesalahan internal." },

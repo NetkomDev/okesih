@@ -4,7 +4,7 @@ import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { assertSameOrigin } from "@/lib/device-auth";
 import { APP_ORIGINS } from "@/lib/app-origins";
-import { cleanWhatsAppMessageField, createWhatsAppUrl } from "@/lib/whatsapp";
+import { cleanWhatsAppMessageField, createWhatsAppUrl, isValidIndonesianWhatsAppNumber, normalizeIndonesianWhatsAppNumber } from "@/lib/whatsapp";
 
 async function superAdminContext() {
   const sessionClient = await createServerSupabaseClient();
@@ -32,6 +32,11 @@ export async function GET() {
 
 export async function PATCH(request: Request) {
   let applicationId = "";
+  let claimed = false;
+  let createdTenantId: string | null = null;
+  let createdUserId: string | null = null;
+  let completed = false;
+  let preparedAccess: { tenantId: string; name: string; username: string; whatsappUrl: string } | null = null;
   try {
     assertSameOrigin(request);
     const ctx = await superAdminContext();
@@ -54,6 +59,9 @@ export async function PATCH(request: Request) {
       .select("*,marketing_partners(full_name,referral_code,commission_rate,total_tenants_acquired)").maybeSingle();
     if (claimError) throw claimError;
     if (!application) return NextResponse.json({ error: "Pengajuan sudah diproses sebelumnya." }, { status: 409 });
+    claimed = true;
+    const ownerPhone = normalizeIndonesianWhatsAppNumber(application.owner_phone);
+    if (!isValidIndonesianWhatsAppNumber(ownerPhone)) throw new Error("Perbaiki nomor WhatsApp owner sebelum memverifikasi pengajuan.");
 
     const marketing = Array.isArray(application.marketing_partners) ? application.marketing_partners[0] : application.marketing_partners;
     const suffix = `${Date.now()}`.slice(-6);
@@ -91,22 +99,24 @@ export async function PATCH(request: Request) {
     }
 
     const { data: tenant, error: tenantError } = await admin.from("warkops").insert({
-      nama: application.business_name, slug, owner_name: application.owner_name, owner_phone: application.owner_phone,
+      nama: application.business_name, slug, owner_name: application.owner_name, owner_phone: ownerPhone,
       address: application.address, province: application.province, city_regency: application.city_regency, unique_code_range_start: rangeStart,
       unique_code_range_end: rangeStart + 99, marketing_agent_id: application.marketing_partner_id,
       marketing_commission_per_receipt: Number(marketing?.commission_rate || 0), is_active: true,
     }).select().single();
     if (tenantError) throw tenantError;
+    createdTenantId = tenant.id;
 
     const { data: authData, error: authError } = await admin.auth.admin.createUser({
       email: `${username}@okesih.local`, password, email_confirm: true,
       app_metadata: { role: "OWNER", warkop_id: tenant.id },
       user_metadata: { role: "OWNER", warkop_id: tenant.id, warkop_slug: slug },
     });
-    if (authError || !authData.user) { await admin.from("warkops").delete().eq("id", tenant.id); throw authError || new Error("Akun owner gagal dibuat."); }
+    if (authError || !authData.user) throw authError || new Error("Akun owner gagal dibuat.");
+    createdUserId = authData.user.id;
     const { error: memberError } = await admin.from("warkop_members").insert({ warkop_id: tenant.id, user_id: authData.user.id, username, role: "OWNER" });
     const { error: onboardingError } = memberError ? { error: null } : await admin.from("owner_onboarding").insert({ warkop_id: tenant.id, owner_user_id: authData.user.id });
-    if (memberError || onboardingError) { await admin.auth.admin.deleteUser(authData.user.id); await admin.from("warkops").delete().eq("id", tenant.id); throw memberError || onboardingError; }
+    if (memberError || onboardingError) throw memberError || onboardingError;
 
     const message = [
       `Halo ${cleanWhatsAppMessageField(application.owner_name)}, pengajuan *${cleanWhatsAppMessageField(tenant.nama)}* telah diverifikasi dan diaktifkan oleh OKESIH. 🎉`,
@@ -119,17 +129,36 @@ export async function PATCH(request: Request) {
       "",
       "Silakan login, ganti password sementara, lalu ikuti petunjuk instalasi aplikasi OKESIH Owner.",
     ].join("\n");
-    const whatsappUrl = createWhatsAppUrl(application.owner_phone, message);
+    const whatsappUrl = createWhatsAppUrl(ownerPhone, message);
+    preparedAccess = { tenantId: tenant.id, name: tenant.nama, username, whatsappUrl };
 
-    await Promise.all([
-      admin.from("tenant_applications").update({ status: "APPROVED", warkop_id: tenant.id, review_notes: String(body.notes || "Terverifikasi"), reviewed_at: new Date().toISOString() }).eq("id", applicationId),
-      admin.from("marketing_partners").update({ total_tenants_acquired: Number(marketing?.total_tenants_acquired || 0) + 1 }).eq("id", application.marketing_partner_id),
-    ]);
-    return NextResponse.json({ success: true, data: { tenantId: tenant.id, name: tenant.nama, username, whatsappUrl } });
+    const { data: approved, error: approvalError } = await admin.from("tenant_applications").update({ status: "APPROVED", warkop_id: tenant.id, owner_phone: ownerPhone, review_notes: String(body.notes || "Terverifikasi"), reviewed_at: new Date().toISOString() }).eq("id", applicationId).eq("status", "PROCESSING").select("id").maybeSingle();
+    if (approvalError || !approved) throw approvalError || new Error("Status verifikasi gagal disimpan.");
+    completed = true;
+    if (application.marketing_partner_id) {
+      try {
+        const { error: counterError } = await admin.from("marketing_partners").update({ total_tenants_acquired: Number(marketing?.total_tenants_acquired || 0) + 1 }).eq("id", application.marketing_partner_id);
+        if (counterError) console.error("Gagal memperbarui jumlah tenant marketing:", counterError);
+      } catch { console.error("Koneksi pembaruan jumlah tenant marketing gagal."); }
+    }
+    return NextResponse.json({ success: true, data: { tenantId: tenant.id, name: tenant.nama, username, whatsappUrl } }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
-    if (applicationId) {
+    if (claimed && !completed) {
       const url = process.env.NEXT_PUBLIC_SUPABASE_URL; const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-      if (url && key) await createAdminClient(url, key).from("tenant_applications").update({ status: "PENDING" }).eq("id", applicationId).eq("status", "PROCESSING");
+      if (url && key) {
+        const cleanup = createAdminClient(url, key);
+        const { data: persisted, error: statusError } = await cleanup.from("tenant_applications").select("status,warkop_id").eq("id", applicationId).maybeSingle();
+        if (statusError || !persisted) return NextResponse.json({ error: "Status verifikasi belum dapat dipastikan. Muat ulang; jangan membuat akun baru sebelum status diperiksa." }, { status: 503 });
+        if (persisted.status === "APPROVED" && persisted.warkop_id === createdTenantId && preparedAccess) return NextResponse.json({ success: true, data: preparedAccess }, { headers: { "Cache-Control": "private, no-store" } });
+        if (persisted.status !== "PROCESSING") return NextResponse.json({ error: "Status pengajuan telah berubah. Muat ulang untuk memeriksa hasil verifikasi." }, { status: 409 });
+        const authCleanup = createdUserId ? await cleanup.auth.admin.deleteUser(createdUserId) : { error: null };
+        const tenantCleanup = !authCleanup.error && createdTenantId ? await cleanup.from("warkops").delete().eq("id", createdTenantId) : { error: authCleanup.error };
+        if (!authCleanup.error && !tenantCleanup.error) {
+          await cleanup.from("tenant_applications").update({ status: "PENDING" }).eq("id", applicationId).eq("status", "PROCESSING");
+        } else {
+          return NextResponse.json({ error: "Pembuatan akun belum selesai dan pembersihan gagal. Pengajuan tetap PROCESSING agar tidak membuat akun ganda. Periksa akun dan tenant sebelum mengulang verifikasi." }, { status: 500 });
+        }
+      }
     }
     return NextResponse.json({ error: error instanceof Error ? error.message : "Pengajuan gagal diproses." }, { status: 500 });
   }

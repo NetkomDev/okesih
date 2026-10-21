@@ -5,6 +5,7 @@ import type { Pagination as PageInfo } from "@/lib/reporting";
 import Link from "next/link";
 import { useCallback,useEffect,useRef,useState } from "react";
 import { useSuperadmin } from "./context";
+import AccountAccessModal, { type AccountAccessTarget } from "./AccountAccessModal";
 interface MarketingAgent {
   id: string;
   name: string;
@@ -69,6 +70,7 @@ export default function TenantsFeature() {
 const { isDark, showToast, setConfirmModal, activeTab, totalTenants, setTotalTenants, createIntent, setCreateIntent , refreshSummary } = useSuperadmin();
 const isAuthorized = true;
 const [newTenantCredentials, setNewTenantCredentials] = useState<NewTenantCredentials | null>(null);
+const [accessTarget, setAccessTarget] = useState<AccountAccessTarget | null>(null);
 const [marketingList, setMarketingList] = useState<MarketingAgent[]>([]);
 const loadMarketingPartners = async () => {
     try {
@@ -159,6 +161,14 @@ const loadTenantApplications = async () => {
       console.error("Gagal memuat pengajuan tenant:", error);
     }
   };
+const confirmTenantApproval = (id: string) => {
+      const application = tenantApplications.find(item => item.id === id);
+      if (!application) return;
+      setConfirmModal({ isOpen: true, title: "Periksa penerima akses owner", message: `Pastikan nomor ${application.owner_phone} benar-benar milik ${application.owner_name} (${application.business_name}). Jika salah, batalkan lalu perbaiki nomor WA. Akun akan dibuat sebelum pesan WhatsApp dikirim.`, confirmText: "Nomor benar, verifikasi", confirmVariant: "success", onConfirm: async () => {
+        setConfirmModal(current => ({ ...current, isOpen: false }));
+        await reviewTenantApplication(id, "APPROVE");
+      } });
+  };
 const reviewTenantApplication = async (id: string, decision: "APPROVE" | "REJECT") => {
     setReviewingApplicationId(id);
     try {
@@ -216,7 +226,7 @@ const handleOpenRegisterModal = useCallback(() => {
     setGeneratedUsername(`owner_${randomSuffix}`);
     setGeneratedPassword(`okesih${randomSuffix}!`);
     setIsRegisterModalOpen(true);
-  }, [totalTenants]);
+  }, [totalTenants, setNewWarkopName, setNewSlug, setNewOwnerName, setNewPhone, setNewAddress, setNewProvince, setNewCityRegency, setNewCodeRange, setSelectedMarketingId, setTenantCommissionRate, setIsRegisterModalOpen]);
 const handleCreateTenant = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newWarkopName.trim() || !newOwnerName.trim() || !newPhone.trim() || !newAddress.trim() || !newProvince || !newCityRegency.trim()) {
@@ -433,7 +443,7 @@ const toggleTenantStatus = (id: string) => {
 useEffect(() => { const timer = setTimeout(() => void loadTenantApplications(), 0); return () => clearTimeout(timer); }, []);
 useEffect(() => { if (!isRegisterModalOpen) return; const timer = setTimeout(() => void loadMarketingPartners(), 0); return () => clearTimeout(timer); }, [isRegisterModalOpen]);
 useEffect(() => { if (createIntent !== "tenant") return; const timer = setTimeout(() => { handleOpenRegisterModal(); setCreateIntent(null); }, 0); return () => clearTimeout(timer); }, [createIntent, handleOpenRegisterModal, setCreateIntent]);
-return (<>{activeTab === "tenants" && (
+return (<>{accessTarget && <AccountAccessModal key={accessTarget.id} target={accessTarget} onClose={() => setAccessTarget(null)} onSaved={() => { void loadTenantApplications(); void loadTenants(); }} />}{activeTab === "tenants" && (
           <section
             className="glass-panel"
             style={{
@@ -521,7 +531,8 @@ return (<>{activeTab === "tenants" && (
                     const busy = reviewingApplicationId === item.id || item.status === "PROCESSING";
                     return <div key={item.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap", padding: "0.85rem", borderRadius: "10px", background: isDark ? "rgba(15,23,42,.75)" : "#fff", border: isDark ? "1px solid rgba(255,255,255,.08)" : "1px solid #FDE68A" }}>
                       <div><div style={{ fontWeight: 850, color: isDark ? "#fff" : "#17211B" }}>{item.business_name}</div><div style={{ fontSize: "0.75rem", color: isDark ? "#94A3B8" : "#64748B", marginTop: "3px" }}>{item.owner_name} · +{item.owner_phone} · {item.address ? `${item.address}, ` : ""}{item.city_regency}, {item.province}</div><div style={{ fontSize: "0.72rem", color: "#059669", marginTop: "3px", fontWeight: 750 }}>Marketing: {marketing?.full_name || "-"} · {marketing?.referral_code || "-"} · {marketing?.phone || "-"}</div></div>
-                      <div style={{ display: "flex", gap: "0.5rem" }}><button disabled={busy} onClick={() => void reviewTenantApplication(item.id, "REJECT")} style={{ border: "1px solid #EF4444", color: "#DC2626", background: "transparent", borderRadius: "7px", padding: "0.45rem 0.75rem", fontWeight: 800, cursor: busy ? "wait" : "pointer" }}>Tolak</button><button disabled={busy} onClick={() => void reviewTenantApplication(item.id, "APPROVE")} style={{ border: 0, color: "#fff", background: "#059669", borderRadius: "7px", padding: "0.45rem 0.8rem", fontWeight: 800, cursor: busy ? "wait" : "pointer" }}>{busy ? "Memproses..." : "Verifikasi & Aktifkan"}</button></div>
+                      <div style={{ display: "flex", gap: "0.5rem" }}><button disabled={busy} onClick={() => void reviewTenantApplication(item.id, "REJECT")} style={{ border: "1px solid #EF4444", color: "#DC2626", background: "transparent", borderRadius: "7px", padding: "0.45rem 0.75rem", fontWeight: 800, cursor: busy ? "wait" : "pointer" }}>Tolak</button><button disabled={busy} onClick={() => confirmTenantApproval(item.id)} style={{ border: 0, color: "#fff", background: "#059669", borderRadius: "7px", padding: "0.45rem 0.8rem", fontWeight: 800, cursor: busy ? "wait" : "pointer" }}>{busy ? "Memproses..." : "Verifikasi & Aktifkan"}</button></div>
+                      <button className="btn-secondary" disabled={busy} onClick={() => setAccessTarget({ kind: "APPLICATION", id: item.id, name: `${item.owner_name} — ${item.business_name}`, phone: item.owner_phone, canReset: false })}>Perbaiki nomor WA</button>
                     </div>;
                   })}
                 </div>
@@ -570,6 +581,7 @@ return (<>{activeTab === "tenants" && (
                       <td style={{ padding: "1rem", whiteSpace: "nowrap" }}>
                         <div style={{ fontWeight: 700, color: isDark ? "#E2E8F0" : "#334155" }}>{t.ownerName}</div>
                         <div style={{ fontSize: "0.75rem", color: isDark ? "#64748B" : "#94A3B8" }}>{t.phone}</div>
+                        <button className="btn-secondary" style={{ marginTop: 8, fontSize: 12 }} onClick={() => setAccessTarget({ kind: "TENANT", id: t.id, name: `${t.ownerName} — ${t.name}`, phone: t.phone, canReset: t.status === "ACTIVE" })}>Perbaiki WA & akses</button>
                       </td>
 
                       <td style={{ padding: "1rem", whiteSpace: "nowrap" }}>

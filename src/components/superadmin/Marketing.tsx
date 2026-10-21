@@ -1,6 +1,7 @@
 "use client";
 import { useCallback,useEffect,useState } from "react";
 import { useSuperadmin } from "./context";
+import AccountAccessModal, { type AccountAccessTarget } from "./AccountAccessModal";
 interface MarketingAgent {
   id: string;
   name: string;
@@ -37,6 +38,7 @@ export default function MarketingFeature() {
 const { isDark, showToast, setConfirmModal, activeTab, createIntent, setCreateIntent, refreshSummary } = useSuperadmin();
 
 const [marketingList, setMarketingList] = useState<MarketingAgent[]>([]);
+const [accessTarget, setAccessTarget] = useState<AccountAccessTarget | null>(null);
 const [marketingWithdrawals, setMarketingWithdrawals] = useState<MarketingWithdrawal[]>([]);
 const [reviewingWithdrawalId, setReviewingWithdrawalId] = useState<string | null>(null);
 const [marketingFilterStatus, setMarketingFilterStatus] = useState<MarketingFilterStatus>("ALL");
@@ -89,6 +91,14 @@ const loadMarketingPartners = async () => {
     } catch (e) {
       console.error("Gagal memuat marketing partners:", e);
     }
+  };
+const confirmMarketingActivation = (id: string) => {
+      const partner = marketingList.find(item => item.id === id);
+      if (!partner) return;
+      setConfirmModal({ isOpen: true, title: "Periksa penerima akses marketing", message: `Pastikan nomor ${partner.phone} benar-benar milik ${partner.name}. Jika salah, batalkan lalu gunakan Perbaiki WA & akses. Akun akan diaktifkan sebelum pesan WhatsApp dikirim.`, confirmText: "Nomor benar, aktifkan", confirmVariant: "success", onConfirm: async () => {
+        setConfirmModal(current => ({ ...current, isOpen: false }));
+        await handleUpdateMarketingStatus(id, "ACTIVE");
+      } });
   };
 const handleUpdateMarketingStatus = async (id: string, newStatus: "ACTIVE" | "INACTIVE") => {
     try {
@@ -235,7 +245,7 @@ const handleOpenMarketingModal = useCallback(() => {
     setNewMarketingUsername(`marketing_${suffix}`);
     setNewMarketingPassword(`okesih${suffix}!`);
     setIsMarketingModalOpen(true);
-  }, []);
+  }, [setNewMarketingUsername, setNewMarketingPassword, setIsMarketingModalOpen]);
 const handleCreateMarketing = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMarketingName.trim() || !newMarketingCode.trim()) {
@@ -283,7 +293,7 @@ const handleCreateMarketing = async (e: React.FormEvent) => {
   };
 useEffect(() => { const timer = setTimeout(() => { void loadMarketingPartners(); void loadMarketingWithdrawals(); }, 0); return () => clearTimeout(timer); }, []);
 useEffect(() => { if (createIntent !== "marketing") return; const timer = setTimeout(() => { handleOpenMarketingModal(); setCreateIntent(null); }, 0); return () => clearTimeout(timer); }, [createIntent, handleOpenMarketingModal, setCreateIntent]);
-return (<>{activeTab === "marketing" && (
+return (<>{accessTarget && <AccountAccessModal key={accessTarget.id} target={accessTarget} onClose={() => setAccessTarget(null)} onSaved={() => void loadMarketingPartners()} />}{activeTab === "marketing" && (
           <section
             className="glass-panel"
             style={{
@@ -633,11 +643,12 @@ return (<>{activeTab === "marketing" && (
                           </td>
 
                           <td style={{ padding: "1rem", textAlign: "right", whiteSpace: "nowrap" }}>
+                            <button className="btn-secondary" style={{ marginBottom: 8, fontSize: 12 }} onClick={() => setAccessTarget({ kind: "MARKETING", id: m.id, name: m.name, phone: m.phone, canReset: m.status === "ACTIVE" })}>Perbaiki WA & akses</button>
                             <div style={{ display: "flex", gap: "0.4rem", justifyContent: "flex-end" }}>
                               {m.status === "PENDING" ? (
                                 <>
                                   <button
-                                    onClick={() => handleUpdateMarketingStatus(m.id, "ACTIVE")}
+                                    onClick={() => confirmMarketingActivation(m.id)}
                                     className="btn-primary"
                                     style={{
                                       background: "linear-gradient(135deg, #10B981, #059669)",
@@ -707,7 +718,7 @@ return (<>{activeTab === "marketing" && (
                                     </>
                                   ) : (
                                     <button
-                                      onClick={() => handleUpdateMarketingStatus(m.id, "ACTIVE")}
+                                      onClick={() => confirmMarketingActivation(m.id)}
                                       className="btn-secondary"
                                       style={{ padding: "0.4rem 0.55rem", fontSize: "0.75rem", color: "#059669" }}
                                       title="Aktifkan Kembali"
