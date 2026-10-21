@@ -13,7 +13,7 @@ export default function CustomerScannerPage() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const [hasCamera, setHasCamera] = useState<boolean | null>(null);
+  const [, setHasCamera] = useState<boolean | null>(null);
   const [cameraError, setCameraError] = useState<string>("");
   const [facingMode, setFacingMode] = useState<"environment" | "user">("environment");
   const [torchAvailable, setTorchAvailable] = useState(false);
@@ -285,9 +285,10 @@ export default function CustomerScannerPage() {
   };
 
   useEffect(() => {
-    startCamera();
+    const initial = window.setTimeout(() => void startCamera(), 0);
 
     return () => {
+      clearTimeout(initial);
       stopCamera();
     };
   }, [startCamera, stopCamera]);

@@ -13,7 +13,7 @@ const schema = z.discriminatedUnion("action", [
 ]);
 
 async function ensureOnboarding(request: NextRequest) {
-  const context = await requireOwner(request);
+  const context = await requireOwner(request, { allowOnboarding: true });
   const { data, error } = await context.admin.from("owner_onboarding").upsert({ warkop_id: context.warkopId, owner_user_id: context.user.id, updated_at: new Date().toISOString() }, { onConflict: "warkop_id" }).select("password_changed_at,owner_pwa_installed_at,completed_at").single();
   if (error) throw error;
   return { ...context, onboarding: data };

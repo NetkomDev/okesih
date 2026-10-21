@@ -1,9 +1,9 @@
 import { assertSameOrigin } from "@/lib/device-auth";
 import { OwnerApiError, ownerErrorResponse, requireOwner } from "@/lib/owner-api";
-import { randomUUID } from "node:crypto";
-import { billingProofStoragePath, BILLING_PROOF_RETENTION_DAYS, deleteExpiredBillingProofs } from "@/lib/billing-proof-retention";
+import { createHash, randomUUID } from "node:crypto";
+import { BILLING_PROOF_RETENTION_DAYS } from "@/lib/billing-proof-retention";
 import { verifyBillingProof } from "@/lib/billing-proof-ocr";
-import { distributeBillingCommissions } from "@/lib/commission-distribution";
+import { enforceRateLimit } from "@/lib/api-rate-limit";
 import {
   cleanWhatsAppMessageField,
   createWhatsAppUrl,
@@ -15,7 +15,7 @@ import {
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const MAX_PROOF_SIZE = 5 * 1024 * 1024; // 5 MB
+const MAX_PROOF_SIZE = 4 * 1024 * 1024; // Below the function payload limit
 const ALLOWED_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 const EXTENSIONS: Record<string, string> = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp" };
 
@@ -23,16 +23,11 @@ export async function GET(request: Request) {
   try {
     assertSameOrigin(request);
     const { admin, warkopId } = await requireOwner(request);
-    try {
-      await deleteExpiredBillingProofs(admin, warkopId);
-    } catch (cleanupError) {
-      console.error("Pembersihan bukti billing tenant tertunda:", cleanupError);
-    }
-
-    const [platformRes, billingsRes, warkopRes] = await Promise.all([
+    const [platformRes, billingsRes, warkopRes, unpaidRes] = await Promise.all([
       admin.from("platform_settings").select("*").eq("id", "global").maybeSingle(),
       admin.from("saas_billings").select("*").eq("warkop_id", warkopId).order("tanggal", { ascending: false }).limit(15),
       admin.from("warkops").select("id,nama,unique_code_range_start,unique_code_range_end").eq("id", warkopId).single(),
+      admin.from("saas_billings").select("*").eq("warkop_id", warkopId).neq("status_bayar", "PAID").order("tanggal").order("created_at").limit(1).maybeSingle(),
     ]);
 
     if (platformRes.error) throw platformRes.error;
@@ -40,7 +35,8 @@ export async function GET(request: Request) {
     if (warkopRes.error) throw warkopRes.error;
 
     const platform = platformRes.data;
-    const billings = billingsRes.data || [];
+    if (unpaidRes.error) throw unpaidRes.error;
+    const billings = [...new Map([...(unpaidRes.data ? [unpaidRes.data] : []), ...(billingsRes.data || [])].map((row) => [row.id, row])).values()];
 
     // Cari tagihan aktif: yang berstatus UNPAID / PENDING_REVIEW terlebih dahulu, atau tagihan paling terbaru
     const activeBilling = billings.find((b) => b.status_bayar !== "PAID") || billings[0] || null;
@@ -95,6 +91,7 @@ export async function POST(request: Request) {
   try {
     assertSameOrigin(request);
     const { admin, user, warkopId } = await requireOwner(request);
+    await enforceRateLimit(admin, request, "billing-upload", 6, 300, warkopId);
     const adminPhone = getSuperAdminWhatsAppNumber(process.env.SUPERADMIN_WHATSAPP_NUMBER);
 
     const formData = await request.formData();
@@ -102,7 +99,7 @@ export async function POST(request: Request) {
     const billingId = formData.get("billingId") ? String(formData.get("billingId")) : null;
 
     if (!(file instanceof File) || !ALLOWED_TYPES.has(file.type) || file.size > MAX_PROOF_SIZE) {
-      throw new OwnerApiError("Bukti transfer wajib berupa foto/gambar (PNG/JPG/WebP) maksimal 5 MB.", 400);
+      throw new OwnerApiError("Bukti transfer wajib berupa foto/gambar (PNG/JPG/WebP) maksimal 4 MB.", 400);
     }
 
     // Cari billing yang dituju
@@ -135,6 +132,8 @@ export async function POST(request: Request) {
       throw new OwnerApiError("Tagihan sewa tidak ditemukan.", 404);
     }
 
+    if (billing.status_bayar === "PAID") throw new OwnerApiError("Tagihan sudah lunas.", 409);
+
     const { data: warkop, error: warkopError } = await admin
       .from("warkops")
       .select("nama,address,city_regency,province")
@@ -144,12 +143,10 @@ export async function POST(request: Request) {
 
     // OCR berjalan sebelum berkas atau hasilnya disimpan ke Supabase.
     const image = Buffer.from(await file.arrayBuffer());
-    const ocr = await verifyBillingProof(image, Number(billing.total_tagihan));
-    if (!ocr.verified) {
-      throw new OwnerApiError(`${ocr.reason} Pastikan foto jelas dan menampilkan nominal transfer lengkap.`, 422);
-    }
+    const ocr = await verifyBillingProof(image, Number(billing.total_tagihan)).catch(() => { throw new OwnerApiError("Gambar tidak valid atau dimensinya terlalu besar (maksimal 16 megapiksel).", 400); });
 
-    // Setelah lolos OCR, unggah file ke bucket bukti-transfer.
+
+    // Simpan bukti untuk pemeriksaan manual, terlepas dari kecocokan teks OCR.
     const ext = EXTENSIONS[file.type] || "jpg";
     const storagePath = `saas-billings/${warkopId}/${billing.id}_${randomUUID()}.${ext}`;
 
@@ -165,57 +162,18 @@ export async function POST(request: Request) {
       throw new OwnerApiError("Gagal menyimpan berkas bukti transfer ke storage.", 500);
     }
 
-    // Simpan path permanen, bukan signed URL sementara.
-    const { data: updated, error: updateError } = await admin
-      .from("saas_billings")
-      .update({
-        bukti_transfer_url: storagePath,
-        status_bayar: "PAID",
-        ocr_raw_text: JSON.stringify({
-          engine: "tesseract-lstm",
-          confidence: ocr.confidence,
-          durationMs: ocr.durationMs,
-          extractedAmount: Number(billing.total_tagihan),
-          extractedAmounts: ocr.extractedAmounts,
-          uniqueCodeMatch: true,
-          matchedUniqueCode: Number(billing.kode_unik),
-          verifiedAt: new Date().toISOString(),
-          matchNotes: `Nominal transfer cocok persis Rp ${Number(billing.total_tagihan).toLocaleString("id-ID")}.`,
-          rawText: ocr.rawText,
-        }),
-      })
-      .eq("id", billing.id)
-      .select("id, status_bayar, bukti_transfer_url, total_tagihan, tanggal")
-      .single();
-
-    if (updateError) {
-      await admin.storage.from("bukti-transfer").remove([storagePath]);
-      throw updateError;
-    }
-
-    // Distribusi komisi otomatis ke Mitra Marketing dan Koordinator Mitra
-    void distributeBillingCommissions(billing.id, admin);
-
-    const previousPath = billing.bukti_transfer_url ? billingProofStoragePath(billing.bukti_transfer_url) : null;
-    if (previousPath && previousPath !== storagePath) {
-      await admin.storage.from("bukti-transfer").remove([previousPath]);
-    }
-
-    // Catat ke audit_logs
-    await admin.from("audit_logs").insert({
-      warkop_id: warkopId,
-      actor_user_id: user.id,
-      action: "OWNER_UPLOADED_SAAS_PROOF",
-      target_type: "saas_billing",
-      target_id: billing.id,
-      metadata: {
-        total_tagihan: billing.total_tagihan,
-        tanggal: billing.tanggal,
-        file_path: storagePath,
-        ocr_confidence: ocr.confidence,
-        retention_days: BILLING_PROOF_RETENTION_DAYS,
-      },
+    const { data: updated, error: updateError } = await admin.rpc("submit_billing_proof", {
+      p_billing_id: billing.id, p_warkop_id: warkopId, p_actor: user.id,
+      p_path: storagePath, p_hash: createHash("sha256").update(image).digest("hex"),
+      p_ocr: JSON.stringify({ confidence: ocr.confidence, durationMs: ocr.durationMs,
+        extractedAmounts: ocr.extractedAmounts, amountMatches: ocr.verified, rawText: ocr.rawText,
+        matchNotes: `${ocr.reason} Pelunasan menunggu pemeriksaan Superadmin.` }),
     });
+    if (updateError) {
+      const { error: cleanupError } = await admin.from("storage_cleanup_jobs").upsert({ bucket: "bukti-transfer", path: storagePath }, { onConflict: "bucket,path" });
+      if (cleanupError) console.error("billing_orphan_cleanup_failed", { billingId: billing.id });
+      throw new OwnerApiError(updateError.code === "23505" ? "Bukti sudah digunakan untuk tagihan lain." : "Bukti belum dapat disimpan. Muat ulang tagihan.", 409);
+    }
 
     const fullAddress = [warkop.address, warkop.city_regency, warkop.province]
       .map(cleanWhatsAppMessageField)
@@ -230,12 +188,12 @@ export async function POST(request: Request) {
       `Jumlah pembayaran: *${formatWhatsAppRupiah(billing.total_tagihan)}*`,
       `ID Tagihan: ${billing.id}`,
       "",
-      "Bukti pembayaran telah diunggah dan lolos pemeriksaan sistem. Mohon cek Dashboard Super Admin.",
+      "Bukti pembayaran diunggah dan menunggu konfirmasi penerimaan dana oleh Superadmin.",
     ].join("\n");
 
     return Response.json({
       success: true,
-      message: "Bukti transfer terverifikasi. Pesan WhatsApp konfirmasi siap dikirim ke Super Admin.",
+      message: "Bukti tersimpan. Tagihan menunggu persetujuan Superadmin.",
       data: {
         ...updated,
         whatsappUrl: createWhatsAppUrl(adminPhone, message),

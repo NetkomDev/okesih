@@ -1,5 +1,5 @@
 import "server-only";
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes, randomInt } from "node:crypto";
 import type { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -25,7 +25,7 @@ export function randomToken(bytes = 32) {
 }
 
 export function pairingCode() {
-  return String(100000 + Math.floor(Math.random() * 900000));
+  return String(randomInt(100000, 1000000));
 }
 
 export function assertSameOrigin(request: Request) {
@@ -69,8 +69,13 @@ export async function requireDevice(request: NextRequest, allowedTypes: DeviceTy
     throw new DeviceApiError("Sesi perangkat kedaluwarsa. Lakukan pairing ulang.", 401);
   }
 
+  const { data: tenant, error: tenantError } = await admin.from("warkops").select("is_active").eq("id", device.warkop_id).maybeSingle();
+  if (tenantError) throw new DeviceApiError("Status usaha belum dapat diperiksa.", 503);
+  if (!tenant?.is_active) throw new DeviceApiError("Usaha sedang nonaktif.", 403);
+
   if (Date.now() - new Date(device.last_seen_at).getTime() > 5 * 60_000) {
-    void admin.from("device_installations").update({ last_seen_at: new Date().toISOString() }).eq("id", device.id);
+    const { error: heartbeatError } = await admin.from("device_installations").update({ last_seen_at: new Date().toISOString() }).eq("id", device.id);
+    if (heartbeatError) console.error("device_heartbeat_failed", { code: heartbeatError.code });
   }
 
   return { admin, device, warkopId: device.warkop_id as string, deviceType: device.device_type as DeviceType };
@@ -99,6 +104,6 @@ export function clearDeviceCookie(response: NextResponse, type: DeviceType) {
 
 export function deviceErrorResponse(error: unknown) {
   const status = error instanceof DeviceApiError ? error.status : 500;
-  const message = error instanceof Error ? error.message : "Terjadi kesalahan internal.";
+  const message = error instanceof DeviceApiError ? error.message : "Terjadi kesalahan internal.";
   return Response.json({ error: message }, { status, headers: { "Cache-Control": "no-store" } });
 }

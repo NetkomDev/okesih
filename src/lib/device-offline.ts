@@ -7,6 +7,9 @@ const STORE_QUEUE = "operations";
 export type QueuedOperation = {
   id: string;
   deviceType: "POS" | "KDS";
+  deviceId?: string;
+  failure?: string;
+  blocked?: boolean;
   path: string;
   body: Record<string, unknown>;
   createdAt: string;
@@ -99,27 +102,6 @@ export async function cacheDeviceSnapshot(
   }
 }
 
-export async function touchDeviceSnapshotTime(type: "POS" | "KDS") {
-  const cached = await readDeviceSnapshot<unknown>(type);
-  if (!cached || !cached.value) return;
-  const now = new Date();
-  const db = await openDatabase();
-  const transaction = db.transaction(STORE_CACHE, "readwrite");
-  const done = transactionDone(transaction);
-  transaction.objectStore(STORE_CACHE).put(
-    {
-      value: cached.value,
-      cachedAt: now.toISOString(),
-      dataVersion: cached.dataVersion,
-    },
-    type
-  );
-  await done;
-  if (cached.dataVersion) {
-    lastSnapshotMeta.set(type, { dataVersion: cached.dataVersion, cachedAtTime: now.getTime() });
-  }
-}
-
 export async function readDeviceSnapshot<T>(type: "POS" | "KDS") {
   const db = await openDatabase();
   const record = await requestValue<StoredSnapshot<T> | undefined>(
@@ -156,12 +138,13 @@ export async function removeDeviceOperation(id: string) {
   await done;
 }
 
-export async function clearDeviceData(type: "POS" | "KDS") {
+export async function clearDeviceData(type: "POS" | "KDS", preserveOperations = true) {
   const db = await openDatabase();
   const cacheTx = db.transaction(STORE_CACHE, "readwrite");
   const cacheDone = transactionDone(cacheTx);
   cacheTx.objectStore(STORE_CACHE).delete(type);
   await cacheDone;
+  if (preserveOperations) return;
   const operations = await listDeviceOperations(type);
   const queueTx = db.transaction(STORE_QUEUE, "readwrite");
   const queueDone = transactionDone(queueTx);

@@ -1,3 +1,4 @@
+import { enforceRateLimit } from "@/lib/api-rate-limit";
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { requireOwner, ownerErrorResponse, OwnerApiError } from "@/lib/owner-api";
@@ -37,35 +38,9 @@ export async function POST(request: NextRequest) {
     const now = new Date().toISOString();
 
     if (input.action === "approve") {
-      const { data: pairing, error } = await admin
-        .from("device_pairing_requests")
-        .select("id,device_type,device_name,poll_secret_hash,status,expires_at")
-        .eq("code_hash", sha256(input.code))
-        .eq("status", "PENDING")
-        .gt("expires_at", now)
-        .maybeSingle();
-      if (error || !pairing) throw new OwnerApiError("Kode pairing tidak valid atau sudah kedaluwarsa.", 404);
-
-      const expiresAt = new Date(Date.now() + 180 * 24 * 60 * 60_000).toISOString();
-      const { data: device, error: deviceError } = await admin
-        .from("device_installations")
-        .insert({
-          warkop_id: warkopId,
-          pairing_request_id: pairing.id,
-          device_type: pairing.device_type,
-          device_name: pairing.device_name,
-          token_hash: pairing.poll_secret_hash,
-          paired_by: user.id,
-          expires_at: expiresAt,
-        })
-        .select("id,device_type,device_name,status,paired_at,last_seen_at,expires_at,revoked_at")
-        .single();
-      if (deviceError) throw deviceError;
-
-      await Promise.all([
-        admin.from("device_pairing_requests").update({ warkop_id: warkopId, status: "APPROVED", approved_by: user.id, approved_at: now }).eq("id", pairing.id),
-        admin.from("audit_logs").insert({ warkop_id: warkopId, actor_user_id: user.id, device_id: device.id, action: "DEVICE_PAIRED", target_type: "device", target_id: device.id, metadata: { device_type: device.device_type, device_name: device.device_name } }),
-      ]);
+      await enforceRateLimit(admin, request, "pairing-approve", 10, 300, user.id);
+      const { data: device, error } = await admin.rpc("approve_device_pairing", { p_warkop_id: warkopId, p_actor: user.id, p_code_hash: sha256(input.code) });
+      if (error) throw new OwnerApiError("Kode pairing tidak valid, kedaluwarsa, atau telah digunakan.", 409);
       return Response.json({ device }, { status: 201 });
     }
 

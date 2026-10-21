@@ -1,4 +1,5 @@
 "use client";
+import { orderIntentKey, completeOrderIntent } from "@/lib/order-intent";
 
 import Image from "next/image";
 import { Suspense, useEffect, useMemo, useState } from "react";
@@ -135,12 +136,14 @@ function CustomerMenuContent() {
     if (paymentMethod === "QRIS" && !proofImage) return setError("Unggah bukti pembayaran QRIS terlebih dahulu.");
     setBusy(true); setError("");
     try {
-      const response = await fetch("/api/public/orders", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
-        slug: warkopId, tableId, paymentMethod, proofImage: paymentMethod === "QRIS" ? proofImage : null, idempotencyKey: crypto.randomUUID(),
+      const input = {
+        slug: warkopId, tableId, paymentMethod, proofImage: paymentMethod === "QRIS" ? proofImage : null,
         items: Object.values(cart).map((item) => ({ menuId: item.menu.id, qty: item.qty, notes: item.notes })),
-      }) });
+      };
+      const response = await fetch("/api/public/orders", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...input, idempotencyKey: await orderIntentKey(localStorage, `customer:${warkopId}:${tableId}`, input) }) });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "Pesanan gagal disimpan.");
+      completeOrderIntent(localStorage, `customer:${warkopId}:${tableId}`);
       setOrder(body.order); setCustomerToken(body.customerToken); setCheckout(false);
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Pesanan gagal disimpan."); }
     finally { setBusy(false); }

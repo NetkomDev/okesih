@@ -1,15 +1,17 @@
+import { auditPinSettings } from "@/lib/audit-access";
+import { readAllRows } from "@/lib/database-pages";
 import { NextRequest } from "next/server";
 import { deviceErrorResponse, requireDevice } from "@/lib/device-auth";
 
 export async function GET(request: NextRequest) {
   try {
     const { admin, device, warkopId, deviceType } = await requireDevice(request, ["POS", "KDS"]);
-    const includeHistory = deviceType === "POS" && request.nextUrl.searchParams.get("history") !== "0";
+
     const clientMetaVersion = request.nextUrl.searchParams.get("meta_version");
     const statuses = deviceType === "POS"
       ? ["AWAITING_CONFIRMATION", "COOKING", "READY"]
       : ["COOKING", "READY"];
-    const since = new Date(Date.now() - 24 * 60 * 60_000).toISOString();
+
 
     // 1. Ambil profil warkop untuk memeriksa status aktif dan versi metadata (updated_at)
     const profileResult = await admin
@@ -28,7 +30,7 @@ export async function GET(request: NextRequest) {
     );
 
     // 2. Jika versi metadata sama, lewati query menu, meja, dan pelayan
-    const [menuResult, tableResult, waiterResult, shiftResult, orderResult, historyResult, ownerMemberResult] = await Promise.all([
+    const [menuResult, tableResult, waiterResult, shiftResult, orderResult, pinSettings] = await Promise.all([
       deviceType === "POS" && !isMetadataUnchanged
         ? admin.from("menus").select("id,nama,harga,kategori,desc_menu,is_available").eq("warkop_id", warkopId).order("kategori").order("nama")
         : Promise.resolve({ data: null, error: null }),
@@ -39,32 +41,26 @@ export async function GET(request: NextRequest) {
         ? admin.from("waiters").select("id,name,phone,is_active").eq("warkop_id", warkopId).eq("is_active", true).order("name")
         : Promise.resolve({ data: null, error: null }),
       deviceType === "POS"
-        ? admin.from("shifts").select("id,opened_at,status,opened_by").eq("warkop_id", warkopId).eq("status", "OPEN").order("opened_at", { ascending: false }).limit(1).maybeSingle()
+        ? admin.from("shifts").select("id,opened_at,status,opened_by").eq("warkop_id", warkopId).eq("device_id", device.id).eq("status", "OPEN").order("opened_at", { ascending: false }).limit(1).maybeSingle()
         : Promise.resolve({ data: null, error: null }),
-      admin.from("transactions").select("id,table_number,nomor_antrean,total_harga,payment_method,payment_proof_url,status_pesanan,waiter_name,created_at,updated_at").eq("warkop_id", warkopId).in("status_pesanan", statuses).gte("created_at", since).order("created_at"),
-      includeHistory
-        ? admin.from("transactions").select("id,table_number,nomor_antrean,total_harga,payment_method,payment_proof_url,status_pesanan,waiter_name,created_at,updated_at").eq("warkop_id", warkopId).order("created_at", { ascending: false }).limit(200)
-        : Promise.resolve({ data: [], error: null }),
-      deviceType === "POS"
-        ? admin.from("warkop_members").select("display_name").eq("warkop_id", warkopId).eq("role", "OWNER").order("created_at").limit(1).maybeSingle()
-        : Promise.resolve({ data: null, error: null }),
+      readAllRows(() => admin.from("transactions").select("id,table_number,nomor_antrean,total_harga,payment_method,payment_proof_url,status_pesanan,waiter_name,created_at,updated_at").eq("warkop_id", warkopId).in("status_pesanan", statuses).order("created_at").order("id")),
+      auditPinSettings(admin, warkopId),
     ]);
 
-    const firstError = [menuResult.error, tableResult.error, waiterResult.error, shiftResult.error, orderResult.error, historyResult.error, ownerMemberResult.error].find(Boolean);
+    const firstError = [menuResult.error, tableResult.error, waiterResult.error, shiftResult.error, orderResult.error].find(Boolean);
     if (firstError) throw firstError;
 
-    const hasAuditPin = Boolean(ownerMemberResult.data?.display_name && ownerMemberResult.data.display_name.startsWith("AUDIT_PIN:"));
-
-    const allOrdersList = [
-      ...(orderResult.data || []),
-      ...(historyResult.data || []),
-    ];
+    const hasAuditPin = pinSettings.hasPin;
+    const allOrdersList = orderResult.data || [];
     const uniqueOrderIds = [...new Set(allOrdersList.map((order) => order.id))];
 
-    const { data: items, error: itemError } = uniqueOrderIds.length
-      ? await admin.from("transaction_items").select("id,transaction_id,menu_id,nama_menu,harga_satuan,qty,notes").in("transaction_id", uniqueOrderIds)
-      : { data: [], error: null };
-    if (itemError) throw itemError;
+    const readItems = (ids: string[]) => readAllRows(() => admin.from("transaction_items").select("id,transaction_id,menu_id,nama_menu,harga_satuan,qty,notes").in("transaction_id", ids).order("id"));
+    const items: NonNullable<Awaited<ReturnType<typeof readItems>>["data"]> = [];
+    for (let offset = 0; offset < uniqueOrderIds.length; offset += 100) {
+      const batch = await readItems(uniqueOrderIds.slice(offset, offset + 100));
+      if (batch.error) throw batch.error;
+      items.push(...(batch.data || []));
+    }
 
     const itemsByOrder = new Map<string, typeof items>();
     for (const item of items || []) {
@@ -101,11 +97,7 @@ export async function GET(request: NextRequest) {
         payment_proof_url: signedProofs.get(order.id) || null,
         items: itemsByOrder.get(order.id) || [],
       })),
-      ...(includeHistory ? { historyOrders: (historyResult.data || []).map((order) => ({
-        ...order,
-        payment_proof_url: signedProofs.get(order.id) || null,
-        items: itemsByOrder.get(order.id) || [],
-      })) } : {}),
+      historyOrders: [],
       hasAuditPin,
     }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {

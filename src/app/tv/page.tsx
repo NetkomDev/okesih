@@ -108,6 +108,7 @@ export default function TvQueuePage() {
         overflow: "hidden",
       }}
     >
+      <div role="note" style={{ padding: "12px 24px", background: "#854d0e", textAlign: "center", fontWeight: 700 }}>DEMO — Data simulasi. Layar ini belum terhubung ke antrean operasional usaha.</div>
       {/* Smart TV Header */}
       <header
         style={{

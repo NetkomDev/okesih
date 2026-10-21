@@ -39,7 +39,7 @@ interface TenantWarkop {
   todayTransactions: number;
   totalSaasBilling: number;
   paymentStatus: "PAID" | "UNPAID" | "GRACE_PERIOD";
-  status: "ACTIVE" | "SUSPENDED";
+  status: "ACTIVE" | "SUSPENDED" | "ARCHIVED";
   joinedDate: string;
 }
 interface TenantApplication {
@@ -391,9 +391,9 @@ const toggleTenantStatus = (id: string) => {
   const handleDeleteTenant = (tenant: TenantWarkop) => {
     setConfirmModal({
       isOpen: true,
-      title: "Hapus Permanen Tenant Warkop",
-      message: `PERINGATAN: Aksi ini akan menghapus tenant "${tenant.name}" beserta seluruh data operasional (menu, meja, shift, transaksi), perangkat terhubung, file storage, serta akun login owner & staf secara permanen tanpa menyisakan sampah di sistem. Lanjutkan?`,
-      confirmText: "Ya, Hapus Permanen",
+      title: "Arsipkan Tenant dan Hapus Histori Keuangan",
+      message: `Tenant "${tenant.name}" akan dinonaktifkan dan akses perangkat dicabut. Transaksi, billing, serta komisi terkait tenant dihapus permanen. Akun, katalog, dan pencairan mitra tetap disimpan. Lanjutkan?`,
+      confirmText: "Arsipkan dan Hapus Histori",
       confirmVariant: "danger",
       onConfirm: async () => {
         setConfirmModal((c) => ({ ...c, isOpen: false }));
@@ -414,8 +414,8 @@ const toggleTenantStatus = (id: string) => {
           setTotalTenants(Math.max(0, totalTenants - 1));
           refreshSummary();
           showToast(
-            "Tenant Berhasil Dihapus",
-            `Tenant "${tenant.name}" dan seluruh akun serta datanya berhasil dihapus tuntas.`,
+            "Tenant Berhasil Diarsipkan",
+            `Tenant "${tenant.name}" diarsipkan dan histori keuangan terkait dihapus.`,
             "success"
           );
         } catch (err: unknown) {
@@ -621,7 +621,7 @@ return (<>{activeTab === "tenants" && (
                             <span className="badge badge-ready" style={{ width: "fit-content" }}>AKTIF</span>
                           ) : (
                             <span style={{ background: "rgba(239, 68, 68, 0.15)", border: "1px solid #EF4444", color: "#EF4444", padding: "0.15rem 0.5rem", borderRadius: "var(--radius-pill)", fontSize: "0.7rem", fontWeight: 800, width: "fit-content" }}>
-                              SUSPEND
+                              {t.status === "ARCHIVED" ? "DIARSIPKAN" : "SUSPEND"}
                             </span>
                           )}
                         </div>
@@ -638,6 +638,7 @@ return (<>{activeTab === "tenants" && (
                             Cek QR Menu
                           </Link>
                           <button
+                            disabled={t.status === "ARCHIVED"}
                             onClick={() => toggleTenantStatus(t.id)}
                             style={{
                               background: t.status === "ACTIVE" ? "rgba(239, 68, 68, 0.1)" : "rgba(16, 185, 129, 0.1)",
@@ -650,11 +651,12 @@ return (<>{activeTab === "tenants" && (
                               cursor: "pointer",
                             }}
                           >
-                            {t.status === "ACTIVE" ? "Suspend" : "Aktifkan"}
+                            {t.status === "ARCHIVED" ? "Diarsipkan" : t.status === "ACTIVE" ? "Suspend" : "Aktifkan"}
                           </button>
                           <button
+                            disabled={t.status === "ARCHIVED"}
                             onClick={() => handleDeleteTenant(t)}
-                            title="Hapus Tenant Permanen"
+                            title="Arsipkan dan Hapus Histori"
                             style={{
                               background: "rgba(239, 68, 68, 0.12)",
                               border: "1px solid #EF4444",

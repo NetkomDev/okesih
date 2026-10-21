@@ -143,12 +143,14 @@ useEffect(() => {
     }
   }, [activeTab, loadSaasBillings]);
 const handleApproveBilling = async (billingId: string, notes?: string) => {
+    const reference = window.prompt("Masukkan nomor referensi transaksi dari mutasi rekening yang sudah Anda periksa:")?.trim();
+    if (!reference) return;
     setIsBillingActionBusy(billingId);
     try {
       const res = await fetch("/api/superadmin/saas-billings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ billingId, action: "APPROVE", notes }),
+        body: JSON.stringify({ billingId, action: "APPROVE", notes, reference }),
       });
       const payload = await res.json();
       if (!res.ok) throw new Error(payload.error || "Gagal memverifikasi setoran.");
@@ -176,31 +178,10 @@ const handleRejectBilling = async (billingId: string, notes?: string) => {
       showToast("Setoran Ditolak", payload.message || "Status setoran ditandai perlu review warkop.", "info");
       await loadSaasBillings(); refreshSummary();
       if (selectedBillingDetail?.id === billingId) {
-        setSelectedBillingDetail((prev) => prev ? { ...prev, statusBayar: "PENDING_REVIEW", statusBadge: "PENDING_REVIEW" } : null);
+        setSelectedBillingDetail((prev) => prev ? { ...prev, statusBayar: "UNPAID", statusBadge: "UNPAID" } : null);
       }
     } catch (err) {
       showToast("Gagal Memperbarui", err instanceof Error ? err.message : "Terjadi kendala sistem.", "error");
-    } finally {
-      setIsBillingActionBusy(null);
-    }
-  };
-const handleSimulateOcr = async (billingId: string) => {
-    setIsBillingActionBusy(billingId);
-    try {
-      const res = await fetch("/api/superadmin/saas-billings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ billingId }),
-      });
-      const payload = await res.json();
-      if (!res.ok) throw new Error(payload.error || "Gagal menjalankan OCR AI.");
-      showToast("OCR AI Selesai", payload.message || "Bukti transfer berhasil diverifikasi secara cerdas.", "success");
-      await loadSaasBillings(); refreshSummary();
-      if (selectedBillingDetail?.id === billingId) {
-        setSelectedBillingDetail((prev) => prev ? { ...prev, statusBayar: "PAID", statusBadge: "PAID", ocrConfidence: 98.7 } : null);
-      }
-    } catch (err) {
-      showToast("OCR AI Gagal", err instanceof Error ? err.message : "Gagal memproses gambar.", "error");
     } finally {
       setIsBillingActionBusy(null);
     }
@@ -611,7 +592,7 @@ return (<>{activeTab === "qris_billing" && (
                     </span>
                   </div>
                   <p style={{ fontSize: "0.825rem", color: isDark ? "#94A3B8" : "#64748B", margin: "0.35rem 0 0" }}>
-                    Pemeriksaan bukti transfer bank warkop yang dicocokkan otomatis dengan kode unik alokasi dan status OCR AI.
+                    OCR membantu membaca nominal. Pelunasan hanya setelah Superadmin memeriksa penerimaan dana pada rekening.
                   </p>
                 </div>
 
@@ -902,24 +883,7 @@ return (<>{activeTab === "qris_billing" && (
 
                               {!isPaid && (
                                 <>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleSimulateOcr(item.id)}
-                                    disabled={isBillingActionBusy === item.id}
-                                    style={{
-                                      padding: "5px 10px",
-                                      borderRadius: "6px",
-                                      fontSize: "0.75rem",
-                                      fontWeight: 800,
-                                      background: "linear-gradient(135deg, #0284C7, #0369A1)",
-                                      color: "#FFF",
-                                      border: "none",
-                                      cursor: "pointer",
-                                    }}
-                                    title="Jalankan verifikasi cerdas OCR AI"
-                                  >
-                                    {isBillingActionBusy === item.id ? "..." : "⚡ Verifikasi OCR"}
-                                  </button>
+
 
                                   <button
                                     type="button"
@@ -1100,7 +1064,7 @@ return (<>{activeTab === "qris_billing" && (
                       <br />
                       • Kecocokan Kode: <b>{selectedBillingDetail.kodeUnik} (Klop)</b>
                       <br />
-                      • Skor Akurasi: <b style={{ color: "#059669" }}>{selectedBillingDetail.ocrConfidence}%</b>
+                      • Keyakinan pembacaan teks: <b style={{ color: "#059669" }}>{selectedBillingDetail.ocrConfidence}%</b>
                     </div>
                   </div>
                   {selectedBillingDetail.ocrNotes && (
@@ -1115,15 +1079,7 @@ return (<>{activeTab === "qris_billing" && (
               <div style={{ display: "flex", gap: "8px" }}>
                 {selectedBillingDetail.statusBayar !== "PAID" && (
                   <>
-                    <button
-                      type="button"
-                      onClick={() => handleSimulateOcr(selectedBillingDetail.id)}
-                      disabled={isBillingActionBusy === selectedBillingDetail.id}
-                      className="btn-secondary"
-                      style={{ flex: 1, fontSize: "0.8rem", fontWeight: 800 }}
-                    >
-                      ⚡ Tes OCR AI
-                    </button>
+
                     <button
                       type="button"
                       onClick={() => handleApproveBilling(selectedBillingDetail.id)}

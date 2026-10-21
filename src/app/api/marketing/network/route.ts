@@ -65,7 +65,7 @@ export async function GET() {
     }
 
     // Fallback TypeScript calculation jika RPC belum dipasang di database
-    let members: Array<{
+    const members: Array<{
       id: string;
       name: string;
       area: string;

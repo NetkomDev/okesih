@@ -1,57 +1,38 @@
-import fs from "fs";
-import path from "path";
+import fs from 'node:fs';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+import nextEnv from '@next/env';
 
-/**
- * Script verifikasi keamanan pasca-build (post-build secret guard).
- * Memindai seluruh bundle client-side (.next/static/) untuk memastikan
- * Kunci Service Role atau pola kredensial sensitif tidak bocor ke browser.
- */
-
-const STATIC_DIR = path.join(process.cwd(), ".next", "static");
-const FORBIDDEN_PATTERNS = [
-  /service_role/i,
-  /eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+/g, // Pola JWT jika ada
-];
-
-// Token signature service role spesifik dari environment jika diset
-if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
-  FORBIDDEN_PATTERNS.push(new RegExp(escapeRegex(process.env.SUPABASE_SERVICE_ROLE_KEY)));
-}
-
-function escapeRegex(string) {
-  return string.replace(/[/\-\\^$*+?.()|[\]{}]/g, "\\$&");
-}
-
-function scanDir(dir) {
-  if (!fs.existsSync(dir)) {
-    console.log(`[OKESIH Security Guard] Direktori ${dir} belum ada, lewati pemindaian.`);
-    return;
+export function containsSecret(content, env = {}) {
+  for (const name of ['SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_SECRET_API_KEY', 'CRON_SECRET']) {
+    if (env[name] && env[name].length >= 8 && content.includes(env[name])) return true;
   }
-
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
-  for (const entry of entries) {
-    const fullPath = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      scanDir(fullPath);
-    } else if (entry.isFile() && (entry.name.endsWith(".js") || entry.name.endsWith(".json"))) {
-      const content = fs.readFileSync(fullPath, "utf-8");
-      
-      // Khusus untuk substring 'service_role' dalam payload JWT base64 ("role":"service_role")
-      // base64 dari "service_role" adalah "c2VydmljZV9yb2xl"
-      if (content.includes("c2VydmljZV9yb2xl")) {
-        console.error(`\n🚨 [PELANGGARAN KEAMANAN FATAL] Ditemukan payload 'service_role' di file client bundle: ${fullPath}`);
-        console.error("Build dibatalkan demi keamanan kredensial database!\n");
-        process.exit(1);
-      }
-
-      if (process.env.SUPABASE_SERVICE_ROLE_KEY && content.includes(process.env.SUPABASE_SERVICE_ROLE_KEY)) {
-        console.error(`\n🚨 [PELANGGARAN KEAMANAN FATAL] SUPABASE_SERVICE_ROLE_KEY ditemukan di file client: ${fullPath}`);
-        process.exit(1);
-      }
+  if (/sb_secret_[A-Za-z0-9_-]{10,}/.test(content)) return true;
+  for (const match of content.matchAll(/eyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g)) {
+    try { if (JSON.parse(Buffer.from(match[0].split('.')[1], 'base64url').toString()).role === 'service_role') return true; } catch {}
+  }
+  return false;
+}
+export function scanDirectory(directory, env = {}) {
+  if (!fs.existsSync(directory)) throw new Error('Client build directory is missing');
+  let count = 0;
+  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+    const file = path.join(directory, entry.name);
+    if (entry.isDirectory()) count += scanDirectory(file, env);
+    else if (/\.(js|json|html|css|map)$/.test(entry.name)) {
+      count++;
+      if (containsSecret(fs.readFileSync(file, 'utf8'), env)) throw new Error(`Server credential detected in ${file}`);
     }
   }
+  return count;
 }
-
-console.log("[OKESIH Security Guard] Memulai pemindaian client bundles...");
-scanDir(STATIC_DIR);
-console.log("✅ [OKESIH Security Guard] Bersih! Tidak ada Service Role Key yang bocor ke frontend.");
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  try {
+    nextEnv.loadEnvConfig(process.cwd(), false);
+    const count = scanDirectory(path.join(process.cwd(), '.next/static'), process.env);
+    if (!count) throw new Error('Client build contains no scannable files');
+    const sw = path.join(process.cwd(), 'public/sw.js');
+    if (fs.existsSync(sw) && containsSecret(fs.readFileSync(sw, 'utf8'), process.env)) throw new Error('Server credential detected in service worker');
+    console.log(`[Security Guard] ${count} client files checked.`);
+  } catch (error) { console.error(error.message); process.exitCode = 1; }
+}

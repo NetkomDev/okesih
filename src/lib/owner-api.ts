@@ -3,7 +3,7 @@ import type { User } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
-export async function requireOwner(request: Request) {
+export async function requireOwner(request: Request, options: { allowOnboarding?: boolean } = {}) {
   const admin = createAdminClient();
   let user: User | null = null;
 
@@ -43,6 +43,14 @@ export async function requireOwner(request: Request) {
     .single();
   if (membershipError || !membership) throw new OwnerApiError("Akses khusus owner.", 403);
 
+  if (!options.allowOnboarding) {
+    const { data: tenant, error: tenantError } = await admin.from("warkops").select("archived_at").eq("id", membership.warkop_id).single();
+    if (tenantError) throw tenantError;
+    if (tenant.archived_at) throw new OwnerApiError("Usaha telah diarsipkan.", 403);
+    const { data: onboarding, error } = await admin.from("owner_onboarding").select("password_changed_at").eq("warkop_id", membership.warkop_id).maybeSingle();
+    if (error) throw error;
+    if (!onboarding?.password_changed_at) throw new OwnerApiError("Ganti password awal untuk melanjutkan.", 403);
+  }
   return { admin, user, warkopId: membership.warkop_id };
 }
 

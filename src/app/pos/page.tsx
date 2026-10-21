@@ -1,4 +1,5 @@
 "use client";
+import { DeviceSyncQueue } from "@/components/DeviceSyncQueue";
 import { Icon,getOrderCashier } from "@/components/pos/helpers";
 
 import dynamic from "next/dynamic";
@@ -278,6 +279,7 @@ export default function PosModulePage() {
     </header>
     {app.cachedAt && <div className="ops-warning">Mode offline · data terakhir {new Date(app.cachedAt).toLocaleTimeString("id-ID")}. Perubahan akan disinkronkan otomatis.</div>}
     {!audioUnlocked && <button className="pos-audio-notice" onClick={toggleOrTestAudio}><Icon name="bell"/> Ketuk untuk mengaktifkan dering pesanan masuk.</button>}
+    <DeviceSyncQueue operations={app.pendingOperations} resolve={app.resolveOperation} />
     {app.error && <div className="ops-error" role="alert">{app.error}<button onClick={() => app.setError("")}>×</button></div>}
     {saleMessage && <div className="pos-toast"><span>✓</span>{saleMessage}</div>}
 

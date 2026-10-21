@@ -1,5 +1,8 @@
 "use client";
 
+import { canOperateOffline, syncFailureKind } from "@/lib/offline-policy";
+import { orderIntentKey, completeOrderIntent } from "@/lib/order-intent";
+import type { QueuedOperation } from "@/lib/device-offline";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cacheDeviceSnapshot, clearDeviceData, enqueueDeviceOperation, listDeviceOperations, readDeviceSnapshot, removeDeviceOperation } from "@/lib/device-offline";
 import { createCashierClient, createClient } from "@/lib/supabase/client";
@@ -61,6 +64,8 @@ export function useDeviceApp(type: "POS" | "KDS", includeHistory = true) {
   const [error, setError] = useState("");
   const snapshot = useRef<DeviceBootstrap | null>(null);
   const syncing = useRef(false);
+  const [pendingOperations, setPendingOperations] = useState<QueuedOperation[]>([]);
+  const pollDelay = useRef(3000);
   const refreshInFlight = useRef<Promise<void> | null>(null);
 
   const flushQueue = useCallback(async () => {
@@ -68,22 +73,27 @@ export function useDeviceApp(type: "POS" | "KDS", includeHistory = true) {
     syncing.current = true;
     try {
       const operations = await listDeviceOperations(type);
-      setPendingCount(operations.length);
+      setPendingCount(operations.length); setPendingOperations(operations);
       for (const operation of operations) {
-        const response = await fetch(operation.path, { method: "POST", headers: await deviceHeaders(type), body: JSON.stringify(operation.body) });
-        if (response.status === 401) {
-          const body = await response.json().catch(() => ({}));
-          setError(body.error || "Sesi operator berakhir. Masuk kembali untuk menyinkronkan perubahan.");
-          break;
+        if (operation.deviceId !== snapshot.current?.device.id) {
+          await enqueueDeviceOperation({ ...operation, blocked: true, failure: "Perubahan berasal dari pairing lama. Periksa pesanan sebelum mengabaikannya." });
+          continue;
         }
-        if (!response.ok && response.status >= 500) break;
+        if (operation.blocked) break;
+        let response: Response;
+        try {
+          response = await fetch(operation.path, { method: "POST", headers: await deviceHeaders(type), body: JSON.stringify(operation.body) });
+        } catch { setError("Koneksi terputus. Perubahan tetap tersimpan untuk disinkronkan."); break; }
         if (!response.ok) {
           const body = await response.json().catch(() => ({}));
-          setError(body.error || "Satu perubahan offline gagal disinkronkan.");
+          const failure = body.error || "Perubahan belum dapat disinkronkan.";
+          await enqueueDeviceOperation({ ...operation, failure, blocked: syncFailureKind(response.status) === "blocked" });
+          setError(failure); break;
         }
         await removeDeviceOperation(operation.id);
       }
-      setPendingCount((await listDeviceOperations(type)).length);
+      const remaining = await listDeviceOperations(type);
+      setPendingCount(remaining.length); setPendingOperations(remaining);
     } finally { syncing.current = false; }
   }, [type]);
 
@@ -91,17 +101,17 @@ export function useDeviceApp(type: "POS" | "KDS", includeHistory = true) {
     if (refreshInFlight.current) return refreshInFlight.current;
     const pending = (async () => {
       try {
-        const withHistory = includeHistory || !snapshot.current;
+        void includeHistory;
         const currentMetaVer = snapshot.current?.metadataVersion || snapshot.current?.profile?.updated_at || "";
         const queryParams = new URLSearchParams();
-        if (!withHistory) queryParams.set("history", "0");
+
         if (currentMetaVer) queryParams.set("meta_version", currentMetaVer);
 
         const response = await fetch(`/api/device/bootstrap?${queryParams.toString()}`, {
           cache: "no-store",
           headers: { "X-Device-Type": type },
         });
-        if (response.status === 401) { setAuthorized(false); setData(null); snapshot.current = null; await clearDeviceData(type); return; }
+        if (response.status === 401 || response.status === 403) { setAuthorized(false); setData(null); snapshot.current = null; setError("Akses perangkat tidak aktif. Perubahan tertunda tetap disimpan."); await clearDeviceData(type); return; }
         const body = await response.json();
         if (!response.ok) throw new Error(body.error || "Data perangkat gagal dimuat.");
 
@@ -109,6 +119,7 @@ export function useDeviceApp(type: "POS" | "KDS", includeHistory = true) {
         const next: DeviceBootstrap = {
           ...snapshot.current,
           ...body,
+          historyOrders: [],
           menus: body.menus ?? snapshot.current?.menus ?? [],
           tables: body.tables ?? snapshot.current?.tables ?? [],
           waiters: body.waiters ?? snapshot.current?.waiters ?? [],
@@ -116,15 +127,29 @@ export function useDeviceApp(type: "POS" | "KDS", includeHistory = true) {
         };
 
         snapshot.current = next;
-        setAuthorized(true); setData(next); setCachedAt(null); setError("");
+        const pendingOps = await listDeviceOperations(type);
+        const pendingOrders = next.orders.map((order) => {
+          const changes = pendingOps.filter((op) => op.deviceId === next.device.id && op.body.orderId === order.id && !op.blocked);
+          return changes.length ? { ...order, status_pesanan: String(changes.at(-1)!.body.status) } : order;
+        });
+        setAuthorized(true); setData({ ...next, orders: pendingOrders }); setCachedAt(null); setError("");
+        pollDelay.current = next.orders.length ? 3000 : 15_000;
 
         const dataVersion = computeSnapshotVersion(next);
         await cacheDeviceSnapshot(type, next, { dataVersion });
         await flushQueue();
       } catch (reason) {
+        pollDelay.current = Math.min(60_000, pollDelay.current * 2);
         const cached = await readDeviceSnapshot<DeviceBootstrap>(type);
-        if (cached) { snapshot.current = cached.value; setAuthorized(true); setData(cached.value); setCachedAt(cached.cachedAt); }
-        else if (!quiet) setError(reason instanceof Error ? reason.message : "Data perangkat gagal dimuat.");
+        if (cached && canOperateOffline(cached.value)) {
+          const ops = await listDeviceOperations(type);
+          const restored = { ...cached.value, historyOrders: [], orders: cached.value.orders.map((order) => {
+            const last = ops.filter((op) => op.deviceId === cached.value.device.id && op.body.orderId === order.id && !op.blocked).at(-1);
+            return last ? { ...order, status_pesanan: String(last.body.status) } : order;
+          }) };
+          snapshot.current = restored; setAuthorized(true); setData(restored); setCachedAt(cached.value.serverTime);
+          setPendingCount(ops.length); setPendingOperations(ops);
+        } else { setAuthorized(false); setData(null); if (!quiet) setError(reason instanceof Error ? reason.message : "Izin offline berakhir. Sambungkan internet."); }
       }
     })();
     refreshInFlight.current = pending;
@@ -138,24 +163,24 @@ export function useDeviceApp(type: "POS" | "KDS", includeHistory = true) {
     const refreshVisible = () => {
       if (navigator.onLine && document.visibilityState === "visible") void refresh(true);
     };
-    const timer = window.setInterval(refreshVisible, 3000);
+    let timer: ReturnType<typeof setTimeout>;
+    let disposed = false;
+    const poll = async () => {
+      if (navigator.onLine && document.visibilityState === "visible") await refresh(true);
+      if (!disposed) timer = setTimeout(poll, pollDelay.current);
+    };
+    timer = setTimeout(poll, pollDelay.current);
     const handleOnline = () => { setOnline(true); refreshVisible(); };
     document.addEventListener("visibilitychange", refreshVisible);
-    const handleOffline = () => {
-      setOnline(false);
-      if (snapshot.current) {
-        const dataVersion = computeSnapshotVersion(snapshot.current);
-        void cacheDeviceSnapshot(type, snapshot.current, { dataVersion, force: true });
-      }
-    };
+    const handleOffline = () => { setOnline(false); setCachedAt(snapshot.current?.serverTime || null); };
     window.addEventListener("online", handleOnline); window.addEventListener("offline", handleOffline);
-    return () => { window.clearTimeout(initialTimer); window.clearInterval(timer); document.removeEventListener("visibilitychange", refreshVisible); window.removeEventListener("online", handleOnline); window.removeEventListener("offline", handleOffline); };
+    return () => { disposed = true; window.clearTimeout(initialTimer); clearTimeout(timer); document.removeEventListener("visibilitychange", refreshVisible); window.removeEventListener("online", handleOnline); window.removeEventListener("offline", handleOffline); };
   }, [flushQueue, refresh, type]);
 
   useEffect(() => {
     const profileId = data?.profile?.id;
     if (!profileId) return;
-    const supabase = createClient();
+    const supabase = type === "POS" ? createCashierClient() : createClient();
     const channel = supabase
       .channel(`device-orders-${type}-${profileId}`)
       .on(
@@ -204,22 +229,26 @@ export function useDeviceApp(type: "POS" | "KDS", includeHistory = true) {
   };
 
   const transitionOrder = async (orderId: string, status: "COOKING" | "READY" | "DONE" | "REJECTED") => {
-    const idempotencyKey = crypto.randomUUID();
-    const body = { orderId, status, idempotencyKey, ...(type === "POS" && data?.shift?.id ? { shiftId: data.shift.id } : {}) };
+    if (!data || (!navigator.onLine && !canOperateOffline(snapshot.current))) throw new Error("Batas operasi offline telah habis. Sambungkan internet.");
+    const intent = { orderId, status, ...(type === "POS" && data.shift?.id ? { shiftId: data.shift.id } : {}) };
+    const scope = `transition:${data.device.id}:${orderId}:${status}`;
+    const idempotencyKey = await orderIntentKey(localStorage, scope, intent);
+    const body = { ...intent, idempotencyKey };
+    // Persist before network submission, including uncertain online responses.
+    await enqueueDeviceOperation({ id: idempotencyKey, deviceType: type, deviceId: data.device.id, path: "/api/device/orders", body, createdAt: new Date().toISOString() });
+    const ops = await listDeviceOperations(type); setPendingCount(ops.length); setPendingOperations(ops);
     if (!navigator.onLine) {
-      const offlineSince = cachedAt ? new Date(cachedAt).getTime() : Date.now();
-      const offlineLimitMs = Number(data?.profile.offline_limit_hours || 0) * 60 * 60_000;
-      if (!offlineLimitMs || Date.now() - offlineSince > offlineLimitMs) {
-        throw new Error("Batas operasi offline telah habis. Sambungkan internet untuk memperbarui izin perangkat.");
-      }
-      await enqueueDeviceOperation({ id: idempotencyKey, deviceType: type, path: "/api/device/orders", body, createdAt: new Date().toISOString() });
-      setPendingCount((await listDeviceOperations(type)).length);
       setData((current) => current ? { ...current, orders: current.orders.map((order) => order.id === orderId ? { ...order, status_pesanan: status } : order) } : current);
       return;
     }
     const response = await fetch("/api/device/orders", { method: "POST", headers: await deviceHeaders(type), body: JSON.stringify(body) });
     const result = await response.json();
-    if (!response.ok) throw new Error(result.error || "Status pesanan gagal diperbarui.");
+    if (!response.ok) {
+      await enqueueDeviceOperation({ id: idempotencyKey, deviceType: type, deviceId: data.device.id, path: "/api/device/orders", body, createdAt: new Date().toISOString(), failure: result.error, blocked: syncFailureKind(response.status) === "blocked" });
+      throw new Error(result.error || "Status pesanan gagal diperbarui.");
+    }
+    await removeDeviceOperation(idempotencyKey);
+    completeOrderIntent(localStorage, scope);
     // A read started before this write may contain stale data.
     await refreshInFlight.current;
     await refresh(true);
@@ -227,18 +256,29 @@ export function useDeviceApp(type: "POS" | "KDS", includeHistory = true) {
 
   const createCashierOrder = async (input: CashierOrderInput) => {
     if (!navigator.onLine) throw new Error("Pesanan langsung memerlukan koneksi agar segera masuk ke layar dapur.");
+    if (!data?.shift?.id) throw new Error("Shift belum aktif.");
+    const scope = `cashier:${data.device.id}:${data.shift.id}`;
+    const intent = { ...input, shiftId: data.shift.id };
     const response = await fetch("/api/device/cashier-orders", {
       method: "POST",
       headers: await deviceHeaders(type),
-      body: JSON.stringify({ ...input, idempotencyKey: crypto.randomUUID() }),
+      body: JSON.stringify({ ...intent, idempotencyKey: await orderIntentKey(localStorage, scope, intent) }),
     });
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || "Pesanan kasir gagal disimpan.");
+    completeOrderIntent(localStorage, scope);
     // A read started before this write may contain stale data.
     await refreshInFlight.current;
     await refresh(true);
     return result.order as { id: string; nomor_antrean: number; total_harga: number; status_pesanan: string };
   };
 
-  return { data, authorized, pairing, online, cachedAt, pendingCount, error, setError, beginPairing, transitionOrder, createCashierOrder, refresh };
+  const resolveOperation = async (id: string, discard: boolean) => {
+    const operation = (await listDeviceOperations(type)).find((op) => op.id === id);
+    if (!operation) return;
+    if (discard) await removeDeviceOperation(id);
+    else await enqueueDeviceOperation({ ...operation, blocked: false, failure: undefined });
+    await refresh();
+  };
+  return { pendingOperations, resolveOperation, data, authorized, pairing, online, cachedAt, pendingCount, error, setError, beginPairing, transitionOrder, createCashierOrder, refresh };
 }

@@ -34,7 +34,7 @@ interface MarketingWithdrawal {
 }
 type MarketingFilterStatus = "ALL" | "PENDING" | "ACTIVE" | "INACTIVE";
 export default function MarketingFeature() {
-const { isDark, showToast, activeTab, createIntent, setCreateIntent , refreshSummary } = useSuperadmin();
+const { isDark, showToast, setConfirmModal, activeTab, createIntent, setCreateIntent, refreshSummary } = useSuperadmin();
 
 const [marketingList, setMarketingList] = useState<MarketingAgent[]>([]);
 const [marketingWithdrawals, setMarketingWithdrawals] = useState<MarketingWithdrawal[]>([]);
@@ -143,6 +143,46 @@ const handleUpdateMarketingStatus = async (id: string, newStatus: "ACTIVE" | "IN
     } catch (error) {
       showToast("Gagal Memperbarui", error instanceof Error ? error.message : "Terjadi kesalahan jaringan ke server.", "error");
     }
+  };
+
+  const handleDeleteMarketing = (agent: MarketingAgent) => {
+    setConfirmModal({
+      isOpen: true,
+      title: "Hapus Akun & Data Mitra Marketing",
+      message: `Mitra "${agent.name}" (${agent.referralCode}) akan dihapus permanen beserta akun login, data rekening, dan riwayat mutasi komisinya.${
+        agent.totalTenantsAcquired > 0
+          ? ` Sebanyak ${agent.totalTenantsAcquired} tenant binaannya tetap aman dan beroperasi normal sebagai tenant langsung tanpa pemotongan komisi marketing.`
+          : ""
+      } Tindakan ini permanen dan tidak dapat dibatalkan. Lanjutkan?`,
+      confirmText: "Ya, Hapus Permanen",
+      confirmVariant: "danger",
+      onConfirm: async () => {
+        setConfirmModal((c) => ({ ...c, isOpen: false }));
+        showToast("Menghapus Marketing", `Sedang menghapus mitra ${agent.name}...`, "info");
+        try {
+          const res = await fetch(`/api/superadmin/marketing?id=${encodeURIComponent(agent.id)}`, {
+            method: "DELETE",
+          });
+          const payload = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            throw new Error(payload.error || "Gagal menghapus mitra marketing.");
+          }
+          setMarketingList((prev) => prev.filter((m) => m.id !== agent.id));
+          refreshSummary();
+          showToast(
+            "Marketing Berhasil Dihapus",
+            `Mitra "${agent.name}" dan seluruh datanya berhasil dibersihkan dari database.`,
+            "success"
+          );
+        } catch (err: unknown) {
+          showToast(
+            "Gagal Menghapus Marketing",
+            err instanceof Error ? err.message : "Terjadi kesalahan saat menghapus mitra marketing.",
+            "error"
+          );
+        }
+      },
+    });
   };
 const loadMarketingWithdrawals = async () => {
     try {
@@ -677,6 +717,21 @@ return (<>{activeTab === "marketing" && (
                                   )}
                                 </>
                               )}
+                              <button
+                                onClick={() => handleDeleteMarketing(m)}
+                                className="btn-secondary"
+                                style={{
+                                  padding: "0.4rem 0.65rem",
+                                  fontSize: "0.75rem",
+                                  color: "#EF4444",
+                                  borderColor: "rgba(239, 68, 68, 0.4)",
+                                  fontWeight: 700,
+                                  background: "rgba(239, 68, 68, 0.08)",
+                                }}
+                                title="Hapus Akun & Seluruh Data Marketing"
+                              >
+                                Hapus
+                              </button>
                             </div>
                           </td>
                         </tr>

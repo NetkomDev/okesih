@@ -11,7 +11,7 @@ export function renderMultilineBizName(name: string): string[] {
 }
 export async function ownerFetch(path: string, init?: RequestInit) {
   const supabase = createClient();
-  let { data } = await supabase.auth.getSession();
+  const { data } = await supabase.auth.getSession();
   let token = data.session?.access_token;
   if (!token) {
     const refreshed = await supabase.auth.refreshSession().catch(() => null);

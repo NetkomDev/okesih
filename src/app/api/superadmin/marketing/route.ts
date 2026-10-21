@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { assertSameOrigin } from "@/lib/device-auth";
+import { assertSameOrigin, DeviceApiError } from "@/lib/device-auth";
 import { APP_ORIGINS } from "@/lib/app-origins";
 import {
   cleanWhatsAppMessageField,
@@ -11,13 +11,19 @@ import {
 } from "@/lib/whatsapp";
 
 async function superAdminClient() {
-  const sessionClient = await createServerSupabaseClient();
-  const { data: { user } } = await sessionClient.auth.getUser();
-  if (!user || String(user.app_metadata?.role).toUpperCase() !== "SUPERADMIN") return null;
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) throw new Error("Konfigurasi database belum lengkap.");
-  return createClient(url, key, { auth: { persistSession: false } });
+  try {
+    const sessionClient = await createServerSupabaseClient();
+    const { data: { user } } = await sessionClient.auth.getUser();
+    if (!user || String(user.app_metadata?.role).toUpperCase() !== "SUPERADMIN") return null;
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!url || !key) throw new Error("Konfigurasi database belum lengkap.");
+    const client = createClient(url, key, { auth: { persistSession: false } });
+    (client as unknown as { currentUser: typeof user }).currentUser = user;
+    return client;
+  } catch {
+    return null;
+  }
 }
 
 export async function GET(request: Request) {
@@ -354,6 +360,146 @@ export async function PATCH(request: Request) {
   } catch (err: unknown) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Terjadi kesalahan internal." },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    assertSameOrigin(request);
+    const supabase = await superAdminClient();
+    if (!supabase) {
+      return NextResponse.json({ error: "Akses Super Admin diperlukan." }, { status: 401 });
+    }
+    const user = (supabase as unknown as { currentUser: { id: string; email?: string } }).currentUser;
+
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
+    if (!id) {
+      return NextResponse.json({ error: "ID mitra marketing diperlukan." }, { status: 400 });
+    }
+
+    // 1. Ambil data mitra marketing yang akan dihapus
+    const { data: partner, error: fetchError } = await supabase
+      .from("marketing_partners")
+      .select("id, full_name, phone, referral_code, user_id, username")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (fetchError || !partner) {
+      return NextResponse.json({ error: fetchError?.message || "Data mitra marketing tidak ditemukan." }, { status: 404 });
+    }
+
+    // 2. Putuskan hubungan upline bagi mitra lain yang menjadikan mitra ini sebagai upline
+    await supabase
+      .from("marketing_partners")
+      .update({ upline_id: null })
+      .eq("upline_id", id);
+
+    // 3. Putuskan hubungan tenant binaan dan reset komisi marketing per struk menjadi 0
+    // Tenant binaan tetap aman, aktif, dan beroperasi normal seperti tenant yang didaftar langsung oleh Super Admin
+    const { data: affectedWarkops, error: warkopUpdateError } = await supabase
+      .from("warkops")
+      .update({
+        marketing_agent_id: null,
+        marketing_commission_per_receipt: 0,
+      })
+      .eq("marketing_agent_id", id)
+      .select("id, nama");
+
+    if (warkopUpdateError) {
+      console.error("Gagal melepaskan tenant binaan:", warkopUpdateError);
+      return NextResponse.json({ error: "Gagal memperbarui relasi tenant binaan." }, { status: 500 });
+    }
+
+    // 4. Bersihkan antrean pengajuan tenant dari mitra ini
+    await supabase
+      .from("tenant_applications")
+      .delete()
+      .eq("marketing_partner_id", id);
+
+    // 5. Bersihkan riwayat pengajuan pencairan komisi mitra ini
+    await supabase
+      .from("marketing_commission_withdrawals")
+      .delete()
+      .eq("marketing_partner_id", id);
+
+    // 6. Bersihkan buku mutasi komisi mitra ini (baik sebagai partner_id maupun source_partner_id)
+    await supabase
+      .from("marketing_commission_mutations")
+      .delete()
+      .or(`partner_id.eq.${id},source_partner_id.eq.${id}`);
+
+    // 7. Bersihkan data sinkronisasi di tabel marketing_agents
+    await supabase
+      .from("marketing_agents")
+      .delete()
+      .eq("id", id);
+
+    // 8. Hapus record utama dari marketing_partners
+    const { error: deletePartnerError } = await supabase
+      .from("marketing_partners")
+      .delete()
+      .eq("id", id);
+
+    if (deletePartnerError) {
+      console.error("Gagal menghapus marketing_partners:", deletePartnerError);
+      return NextResponse.json({ error: deletePartnerError.message }, { status: 500 });
+    }
+
+    // 9. Hapus akun Supabase Auth marketing jika terdaftar
+    if (partner.user_id) {
+      try {
+        await supabase.auth.admin.deleteUser(partner.user_id);
+      } catch (authDeleteErr) {
+        console.warn("Peringatan saat menghapus auth user marketing:", authDeleteErr);
+      }
+    } else if (partner.username) {
+      try {
+        const { data: usersData } = await supabase.auth.admin.listUsers();
+        const targetEmail = `${partner.username.toLowerCase()}@okesih.local`;
+        const matched = usersData?.users?.find((u) => u.email?.toLowerCase() === targetEmail);
+        if (matched) {
+          await supabase.auth.admin.deleteUser(matched.id);
+        }
+      } catch (authListErr) {
+        console.warn("Peringatan saat mencari auth user marketing:", authListErr);
+      }
+    }
+
+    // 10. Catat aktivitas ke audit_logs
+    try {
+      await supabase.from("audit_logs").insert({
+        actor_user_id: user.id,
+        action: "MARKETING_PARTNER_DELETED",
+        target_type: "marketing_partner",
+        target_id: id,
+        metadata: {
+          partner_name: partner.full_name,
+          phone: partner.phone,
+          referral_code: partner.referral_code,
+          username: partner.username,
+          user_id: partner.user_id,
+          detached_tenants_count: affectedWarkops?.length || 0,
+          detached_tenants: (affectedWarkops || []).map((w: { id: string; nama: string }) => ({ id: w.id, nama: w.nama })),
+        },
+      });
+    } catch (auditErr) {
+      console.warn("Peringatan pencatatan audit log:", auditErr);
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: `Mitra marketing ${partner.full_name} (${partner.referral_code}) berhasil dihapus permanen.`,
+      detachedTenantsCount: affectedWarkops?.length || 0,
+    });
+  } catch (err: unknown) {
+    if (err instanceof DeviceApiError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Terjadi kesalahan internal saat menghapus marketing." },
       { status: 500 }
     );
   }

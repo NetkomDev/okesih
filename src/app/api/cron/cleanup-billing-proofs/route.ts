@@ -7,8 +7,7 @@ export const maxDuration = 60;
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET;
   const authorizedBySecret = Boolean(secret) && request.headers.get("authorization") === `Bearer ${secret}`;
-  const authorizedVercelCron = request.headers.get("user-agent") === "vercel-cron/1.0";
-  if (!authorizedBySecret && !authorizedVercelCron) return Response.json({ error: "Unauthorized" }, { status: 401 });
+  if (!authorizedBySecret) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
     const result = await deleteExpiredBillingProofs(createAdminClient());

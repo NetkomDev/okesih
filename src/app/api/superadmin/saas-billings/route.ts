@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getTrustedUserRole } from "@/lib/auth-role";
-import { distributeBillingCommissions } from "@/lib/commission-distribution";
+import { assertSameOrigin } from "@/lib/device-auth";
+import { z } from "zod";
 
 function getAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -16,7 +17,7 @@ export async function GET() {
     const sessionClient = await createServerSupabaseClient();
     const { data: { user } } = await sessionClient.auth.getUser();
     const role = getTrustedUserRole(user);
-    const isSuperAdmin = role === "SUPERADMIN" || user?.email?.toLowerCase().startsWith("superadmin");
+    const isSuperAdmin = role === "SUPERADMIN";
 
     if (!user || !isSuperAdmin) {
       return NextResponse.json({ error: "Hanya super admin yang berhak mengakses log setoran sewa." }, { status: 403 });
@@ -42,6 +43,10 @@ export async function GET() {
 
     const now = new Date();
 
+    const paths = [...new Set((rawBillings || []).flatMap((b) => b.bukti_transfer_url && !b.bukti_transfer_url.startsWith("http") ? [b.bukti_transfer_url as string] : []))];
+    const signed = paths.length ? await admin.storage.from("bukti-transfer").createSignedUrls(paths, 600) : { data: [], error: null };
+    if (signed.error) throw signed.error;
+    const urls = new Map((signed.data || []).map((item) => [item.path, item.signedUrl]));
     const billings = (rawBillings || []).map((b) => {
       const graceTime = b.grace_until ? new Date(b.grace_until) : null;
       const isGrace = b.status_bayar === "UNPAID" && graceTime && graceTime.getTime() > now.getTime();
@@ -80,10 +85,10 @@ export async function GET() {
         totalTagihan: Number(b.total_tagihan || 0),
         statusBayar: b.status_bayar,
         statusBadge,
-        buktiTransferUrl: b.bukti_transfer_url || null,
+        buktiTransferUrl: urls.get(b.bukti_transfer_url) || b.bukti_transfer_url || null,
         ocrRawText: b.ocr_raw_text || null,
         ocrBank: parsedOcr.bankName || "Transfer Bank / QRIS",
-        ocrConfidence: parsedOcr.confidence || (b.status_bayar === "PAID" ? 99 : 0),
+        ocrConfidence: parsedOcr.confidence || 0,
         ocrNotes: parsedOcr.matchNotes || null,
         graceUntil: b.grace_until,
         createdAt: b.created_at,
@@ -115,167 +120,18 @@ export async function GET() {
 
 export async function PATCH(request: Request) {
   try {
-    const sessionClient = await createServerSupabaseClient();
-    const { data: { user } } = await sessionClient.auth.getUser();
-    const role = getTrustedUserRole(user);
-    const isSuperAdmin = role === "SUPERADMIN" || user?.email?.toLowerCase().startsWith("superadmin");
-
-    if (!user || !isSuperAdmin) {
-      return NextResponse.json({ error: "Hanya super admin yang berhak memverifikasi setoran sewa." }, { status: 403 });
-    }
-
+    assertSameOrigin(request);
+    const session = await createServerSupabaseClient();
+    const { data: { user } } = await session.auth.getUser();
+    if (!user || getTrustedUserRole(user) !== "SUPERADMIN") return NextResponse.json({ error: "Akses Superadmin diperlukan." }, { status: 403 });
+    const input = z.object({ billingId: z.string().uuid(), action: z.enum(["APPROVE", "REJECT"]), reference: z.string().trim().min(4).max(160).optional(), notes: z.string().max(1000).optional() }).parse(await request.json());
+    if (input.action === "APPROVE" && !input.reference) return NextResponse.json({ error: "Nomor referensi pembayaran wajib diisi." }, { status: 400 });
     const admin = getAdminClient();
-    if (!admin) {
-      return NextResponse.json({ error: "Konfigurasi server database belum lengkap." }, { status: 500 });
-    }
-
-    const body = await request.json();
-    const { billingId, action, notes } = body;
-
-    if (!billingId || typeof billingId !== "string") {
-      return NextResponse.json({ error: "ID tagihan setoran sewa wajib diisi." }, { status: 400 });
-    }
-
-    if (action === "APPROVE") {
-      const ocrMetadata = JSON.stringify({
-        bankName: "Verifikasi Manual Super Admin",
-        confidence: 100,
-        verifiedBy: user.email || "Super Admin",
-        verifiedAt: new Date().toISOString(),
-        matchNotes: notes || "Disetujui secara manual oleh Super Admin Pusat",
-      });
-
-      const { data, error } = await admin
-        .from("saas_billings")
-        .update({
-          status_bayar: "PAID",
-          ocr_raw_text: ocrMetadata,
-        })
-        .eq("id", billingId)
-        .select("*, warkops(nama)")
-        .single();
-
-      if (error) {
-        console.error("Gagal menyetujui setoran sewa:", error);
-        return NextResponse.json({ error: "Gagal menyetujui setoran sewa." }, { status: 500 });
-      }
-
-      // Distribusi komisi otomatis ke Mitra Marketing dan Koordinator Mitra
-      void distributeBillingCommissions(billingId, admin);
-
-      return NextResponse.json({
-        success: true,
-        message: `Setoran sewa ${data.warkops?.nama || ""} berhasil diverifikasi dan ditandai Lunas.`,
-        data,
-      });
-    }
-
-    if (action === "REJECT") {
-      const { data, error } = await admin
-        .from("saas_billings")
-        .update({
-          status_bayar: "PENDING_REVIEW",
-          ocr_raw_text: JSON.stringify({
-            bankName: "Ditolak Super Admin",
-            confidence: 0,
-            rejectedBy: user.email || "Super Admin",
-            rejectedAt: new Date().toISOString(),
-            matchNotes: notes || "Bukti transfer tidak sesuai. Silakan upload ulang.",
-          }),
-        })
-        .eq("id", billingId)
-        .select("*, warkops(nama)")
-        .single();
-
-      if (error) {
-        console.error("Gagal menolak setoran sewa:", error);
-        return NextResponse.json({ error: "Gagal memperbarui status setoran." }, { status: 500 });
-      }
-
-      return NextResponse.json({
-        success: true,
-        message: `Status setoran sewa ${data.warkops?.nama || ""} berhasil diperbarui.`,
-        data,
-      });
-    }
-
-    return NextResponse.json({ error: "Aksi tidak dikenali." }, { status: 400 });
+    if (!admin) throw new Error("Database unavailable");
+    const { data, error } = await admin.rpc("review_billing", { p_billing_id: input.billingId, p_actor: user.id, p_action: input.action, p_reference: input.reference || null, p_notes: input.notes || null });
+    if (error) return NextResponse.json({ error: error.code === "23505" ? "Referensi pembayaran sudah digunakan." : "Tagihan tidak dapat diproses. Muat ulang dan periksa status bukti." }, { status: 409 });
+    return NextResponse.json({ success: true, data, message: input.action === "APPROVE" ? "Penerimaan dana dikonfirmasi dan tagihan dilunasi." : "Bukti ditolak. Owner dapat mengunggah ulang." });
   } catch (error) {
-    console.error("PATCH saas_billings error:", error);
-    return NextResponse.json({ error: "Gagal memperbarui data setoran sewa." }, { status: 500 });
-  }
-}
-
-// Simulasi / Tes Otomasi OCR AI pada Setoran Sewa
-export async function POST(request: Request) {
-  try {
-    const sessionClient = await createServerSupabaseClient();
-    const { data: { user } } = await sessionClient.auth.getUser();
-    const role = getTrustedUserRole(user);
-    const isSuperAdmin = role === "SUPERADMIN" || user?.email?.toLowerCase().startsWith("superadmin");
-
-    if (!user || !isSuperAdmin) {
-      return NextResponse.json({ error: "Hanya super admin yang berhak menjalankan simulasi OCR AI." }, { status: 403 });
-    }
-
-    const admin = getAdminClient();
-    if (!admin) {
-      return NextResponse.json({ error: "Konfigurasi server database belum lengkap." }, { status: 500 });
-    }
-
-    const body = await request.json().catch(() => ({}));
-    const { billingId } = body;
-
-    // Jika ada billingId spesifik, jalankan OCR AI verifikasi pada billing tersebut
-    if (billingId) {
-      const { data: billing, error: getErr } = await admin
-        .from("saas_billings")
-        .select("*, warkops(nama)")
-        .eq("id", billingId)
-        .single();
-
-      if (getErr || !billing) {
-        return NextResponse.json({ error: "Tagihan tidak ditemukan." }, { status: 404 });
-      }
-
-      const ocrMetadata = JSON.stringify({
-        bankName: "BCA Mobile Transfer",
-        confidence: 98.7,
-        extractedAmount: billing.total_tagihan,
-        uniqueCodeMatch: true,
-        matchedUniqueCode: billing.kode_unik,
-        transferDate: new Date().toLocaleDateString("id-ID"),
-        matchNotes: `Kode Unik ${billing.kode_unik} klop dengan nominal tagihan Rp ${Number(billing.total_tagihan).toLocaleString("id-ID")}`,
-      });
-
-      const { data, error: updateErr } = await admin
-        .from("saas_billings")
-        .update({
-          status_bayar: "PAID",
-          ocr_raw_text: ocrMetadata,
-          bukti_transfer_url: billing.bukti_transfer_url || "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=500&auto=format&fit=crop&q=80",
-        })
-        .eq("id", billingId)
-        .select("*, warkops(nama)")
-        .single();
-
-      if (updateErr) {
-        return NextResponse.json({ error: "Gagal memperbarui hasil OCR AI." }, { status: 500 });
-      }
-
-      // Distribusi komisi otomatis
-      void distributeBillingCommissions(billingId, admin);
-
-      return NextResponse.json({
-        success: true,
-        message: `OCR AI berhasil memverifikasi setoran sewa ${data.warkops?.nama || ""} dengan akurasi 98.7%. Kode unik ${billing.kode_unik} klop!`,
-        data,
-      });
-    }
-
-    return NextResponse.json({ error: "Parameter billingId diperlukan." }, { status: 400 });
-  } catch (error) {
-    console.error("POST saas_billings OCR simulation error:", error);
-    return NextResponse.json({ error: "Gagal menjalankan verifikasi OCR AI." }, { status: 500 });
+    return NextResponse.json({ error: error instanceof z.ZodError ? "Data review tidak valid." : "Review belum dapat diproses." }, { status: error instanceof z.ZodError ? 400 : 500 });
   }
 }

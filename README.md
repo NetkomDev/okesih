@@ -1,91 +1,41 @@
-# OKESIH.COM — Micro-SaaS POS & Kitchen Display System
+# OKESIH.COM
 
-Aplikasi manajemen operasional warkop berkecepatan tinggi (*high-throughput*) dengan arsitektur PWA *Offline-First*, KDS real-time, layar antrean Smart TV, dan penagihan sewa otomatis berbasis validasi bukti transfer QRIS via OCR.
+Aplikasi POS dan KDS berbasis Next.js, React, Supabase, dan Serwist. Penyimpanan offline memakai IndexedDB native. Halaman `/tv` merupakan demo dan belum terhubung ke antrean operasional.
 
-## 🛠️ Tech Stack & Infrastruktur
-* **Frontend:** Next.js (App Router, TypeScript)
-* **Styling:** Vanilla CSS Design Tokens (Oranye Kemerahan Hangat + Hitam Pekat + Putih Bersih)
-* **PWA & Offline:** Serwist Service Worker + IndexedDB (Dexie.js)
-* **Backend-as-a-Service (BaaS):** Supabase (PostgreSQL, Row Level Security, Realtime WebSockets, Storage)
-* **Deployment & CI/CD:** Vercel (Auto-deploy dari GitHub repo `NetkomDev/okesih`)
+## Alur bisnis
 
----
+- Pelanggan membuat pesanan `AWAITING_CONFIRMATION`. Omzet dihitung setelah kasir mengonfirmasi (`COOKING`, `READY`, `DONE`). Pesanan langsung dari kasir dikonfirmasi pada saat dibuat.
+- Unggah bukti tagihan SaaS menghasilkan `PENDING_REVIEW`. OCR hanya membantu membaca teks. Superadmin memeriksa penerimaan dana dan memasukkan referensi pembayaran sebelum menyetujui pelunasan. Distribusi komisi dilakukan atomik oleh database.
+- Aksi arsip tenant menonaktifkan tenant, mencabut perangkat, dan menghapus transaksi, billing, serta komisi terkait tenant secara atomik. Profil dan akun tetap ada. Bukti di Storage masuk antrean penghapusan.
+- POS/KDS mempertahankan operasi gagal sinkron. Konflik perlu dicoba ulang atau diabaikan secara eksplisit. Masa offline dihitung dari validasi server terakhir dan tidak diperpanjang oleh perubahan lokal.
 
-## 🔒 Arsitektur Keamanan & Isolasi Kunci Supabase
-1. **Frontend PWA / Client Components:**
-   - Hanya mengakses `NEXT_PUBLIC_SUPABASE_URL` dan `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
-   - Seluruh akses data dibatasi secara ketat oleh aturan **Row Level Security (RLS)** PostgreSQL Supabase.
-2. **Backend Server / API Routes:**
-   - Menggunakan `SUPABASE_SERVICE_ROLE_KEY` via utilitas `@/lib/supabase/admin`.
-   - File admin dilindungi oleh `import "server-only"`; build bundler akan otomatis membatalkan kompilasi jika file ini terimpor secara tidak sengaja oleh Client Component.
-3. **Automated Secret Guard:**
-   - Script `scripts/check-secrets.mjs` dijalankan otomatis setelah `next build` untuk memastikan tidak ada kunci rahasia atau payload JWT `service_role` yang masuk ke dalam bundle `.next/static`.
-4. **Credential Sanitation:**
-   - File `blueprint_okesih.md` yang memuat kunci asli masuk ke dalam `.gitignore`. Versi dokumentasi publik yang telah disensor tersimpan di `docs/blueprint.md`.
+## Pengembangan
 
----
+Gunakan Node.js 22. Salin `.env.example` ke `.env.local`, isi konfigurasi Supabase, lalu:
 
-## 📁 Struktur Modul Aplikasi
-* `/pos` — **Modul Kasir (POS):** Tap-tap cepat, antrean pesanan, bluetooth printer, offline fallback.
-* `/kds` — **Modul Dapur (KDS):** Tiket real-time berkedip dengan timer SLA status masak.
-* `/tv` — **Modul Antrean TV:** Tampilan Smart TV memanggil nomor otomatis via TTS (Web Speech API).
-* `/menu/[warkopId]` — **Modul Katalog QR Menu:** Pelanggan pesan mandiri dari meja.
-* `/admin` — **Modul Superadmin & Owner:** Manajemen warkop, pembuatan akun staf praktis (username + password), audit tagihan harian Rp 50/struk.
-
----
-
-## 🚀 Panduan Memulai Secara Lokal
-
-### 1. Salin Environment Variables
-```bash
-cp .env.example .env.local
-```
-Sesuaikan nilai `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, dan `SUPABASE_SERVICE_ROLE_KEY` di `.env.local`.
-
-### 2. Install Dependensi
-```bash
-npm install
-```
-
-### 3. Jalankan Server Pengembangan
-```bash
+```sh
+npm ci
 npm run dev
 ```
-Buka [http://localhost:3000](http://localhost:3000) di browser Anda.
 
-### 4. Build & Uji Keamanan Bundle
-```bash
-npm run build
+Server memakai `SUPABASE_SERVICE_ROLE_KEY`; browser hanya memakai URL dan anon key publik. Jangan memasukkan kunci server ke variabel `NEXT_PUBLIC_*`.
+
+```sh
+npm run check
 ```
 
----
+Perintah tersebut menjalankan lint, tes, build, dan pemindaian secret pada bundle browser. Build membutuhkan akses Google Fonts. Tes database memakai PostgreSQL disposable kosong bernama `okesih_remediation_test`:
 
-## ☁️ Panduan Deploy ke Vercel
-1. Hubungkan repositori GitHub: `https://github.com/NetkomDev/okesih.git` ke project Vercel baru.
-2. Tambahkan Environment Variables di Dashboard Vercel:
-   * `NEXT_PUBLIC_APP_URL` (contoh: `https://okesih.com`)
-   * `NEXT_PUBLIC_SUPABASE_URL`
-   * `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   * `SUPABASE_SERVICE_ROLE_KEY` (Tandai opsi **Sensitive**)
-3. Vercel akan otomatis men-deploy setiap kali ada push ke branch `main`.
+```sh
+TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/okesih_remediation_test npm run test:database
+```
 
-## 📲 Pengirim Otomatis WhatsApp Tenant (Tanpa WhatsApp API)
+Jangan menjalankan fixture database pada produksi. CI menjalankan seluruh migrasi dan tes regresi di PostgreSQL terpisah.
 
-Pendaftaran tenant menambahkan pesan selamat datang dan kredensial ke tabel
-`whatsapp_outbox`. Pesan dikirim oleh aplikasi WhatsApp Desktop pada Mac super
-admin yang selalu aktif. WhatsApp Desktop harus login sebagai nomor
-**+62 856-9448-8510**.
+## Operasi dan deployment
 
-1. Jalankan migration `supabase/migrations/09_whatsapp_outbox.sql` pada Supabase.
-2. Pada Mac super admin, clone aplikasi dan isi `.env.local` dengan
-   `NEXT_PUBLIC_SUPABASE_URL` serta `SUPABASE_SERVICE_ROLE_KEY` yang sama dengan
-   production.
-3. Install dependency dengan `npm install`.
-4. Pastikan WhatsApp Desktop sudah login sebagai **+62 856-9448-8510**.
-5. Jalankan `npm run whatsapp:worker`. Saat pertama kali mengirim, izinkan
-   Terminal/Node mengendalikan WhatsApp pada **System Settings → Privacy &
-   Security → Accessibility**.
-6. Biarkan proses hidup 24/7 menggunakan LaunchAgent macOS.
+Branch `main` memicu deployment Vercel. Terapkan migrasi yang sudah diuji sebelum merilis aplikasi yang membutuhkan RPC/kolom baru. `CRON_SECRET` harus tersedia di Vercel untuk endpoint cleanup; header User-Agent tidak memberikan otorisasi.
 
-Otomasi WhatsApp Desktop ini bukan integrasi resmi WhatsApp; sesi dapat terputus dan akun
-tetap tunduk pada ketentuan serta pembatasan WhatsApp.
+Route utama: `/owner`, `/superadmin`, `/marketing/dashboard`, `/pos`, `/kds`, `/menu/[warkopId]`, `/scan`, dan demo `/tv`.
+
+Lihat [laporan audit](docs/audits/2026-10-20/laporan-audit.md), [rencana perbaikan](docs/audits/2026-10-20/rencana-perbaikan.md), dan [runbook operasi](docs/operations.md). Tidak ada worker WhatsApp Desktop dalam repositori ini; tautan WhatsApp dibuka dan dikirim oleh pengguna.

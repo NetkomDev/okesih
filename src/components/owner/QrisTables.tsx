@@ -30,7 +30,8 @@ const [editingTable, setEditingTable] = useState<BusinessTable | null>(null);
 const [tableEditError, setTableEditError] = useState("");
 const qrisInput = useRef<HTMLInputElement>(null);
 const logoInput = useRef<HTMLInputElement>(null);
-const [selectedTableId, setSelectedTableId] = useState<string>("");
+const [selectedTableChoice, setSelectedTableId] = useState<string>("");
+const selectedTableId = data.tables.some(t => t.id === selectedTableChoice) ? selectedTableChoice : (data.tables[0]?.id || "");
 const [pdfBusy, setPdfBusy] = useState(false);
 const [pdfProgress, setPdfProgress] = useState("");
 const previewCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -44,11 +45,7 @@ useEffect(() => {
   }
 }, []);
 
-useEffect(() => {
-  if (data?.tables?.length && (!selectedTableId || !data.tables.some((t) => t.id === selectedTableId))) {
-    setSelectedTableId(data.tables[0].id);
-  }
-}, [data?.tables, selectedTableId]);
+
 
 useEffect(() => {
   if (pathname !== "/owner/qris-tables") return;

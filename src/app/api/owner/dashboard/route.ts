@@ -11,7 +11,7 @@ export async function GET(request: Request) {
 
     const [transactions, billing, activeShift] = await Promise.all([
       admin.rpc("report_transaction_summary", { p_warkop_id: warkopId, p_start: start, p_end: end }),
-      admin.from("saas_billings").select("tagihan_pokok,kode_unik,total_tagihan,status_bayar").eq("warkop_id", warkopId).eq("tanggal", today).maybeSingle(),
+      admin.rpc("report_daily_billing", { p_warkop_id: warkopId, p_date: today }),
       admin.from("shifts").select("id,opened_by,device_id,opened_at,last_activity_at").eq("warkop_id", warkopId).eq("status", "OPEN").order("opened_at", { ascending: false }).limit(1).maybeSingle(),
     ]);
 

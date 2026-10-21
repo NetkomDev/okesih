@@ -69,8 +69,8 @@ const handleSelectProofFile = (e: React.ChangeEvent<HTMLInputElement>) => {
       setBillingError("Format berkas harus PNG, JPG, atau WebP.");
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      setBillingError("Ukuran berkas maksimal 5 MB.");
+    if (file.size > 4 * 1024 * 1024) {
+      setBillingError("Ukuran berkas maksimal 4 MB.");
       return;
     }
     setBillingProofFile(file);
@@ -318,7 +318,7 @@ return (isBillingModalOpen && (
                       >
                         <span style={{ fontSize: "20px" }}>📸</span>
                         <strong style={{ fontSize: "12px", color: "var(--ow-text)" }}>Pilih Foto / Screenshot Struk</strong>
-                        <span style={{ fontSize: "10px", color: "var(--ow-muted)" }}>Format PNG, JPG, WebP (Maks. 5 MB)</span>
+                        <span style={{ fontSize: "10px", color: "var(--ow-muted)" }}>Format PNG, JPG, WebP (Maks. 4 MB)</span>
                       </button>
                     )}
 

@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -59,7 +60,7 @@ export async function PATCH(request: Request) {
     const baseSlug = application.business_name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "tenant";
     const slug = `${baseSlug}-${suffix}`;
     const username = `owner_${suffix}`;
-    const password = `okesih${suffix}!`;
+    const password = randomBytes(18).toString("base64url");
     const { data: lastRange } = await admin.from("warkops").select("unique_code_range_end").order("unique_code_range_end", { ascending: false }).limit(1).maybeSingle();
     const rangeStart = Math.max(100, Math.ceil((Number(lastRange?.unique_code_range_end || 99) + 1) / 100) * 100);
     if (application.marketing_partner_id) {

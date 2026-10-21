@@ -1,3 +1,4 @@
+import { enforceRateLimit } from "@/lib/api-rate-limit";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -27,37 +28,20 @@ export async function POST(request: NextRequest) {
     assertSameOrigin(request);
     const input = requestSchema.parse(await request.json());
     const admin = createAdminClient();
+    await enforceRateLimit(admin, request, "pairing-create", 10, 300);
     const pollSecret = randomToken();
-    let code = pairingCode();
-
-    for (let attempt = 0; attempt < 5; attempt += 1) {
-      const { data: conflict } = await admin
-        .from("device_pairing_requests")
-        .select("id")
-        .eq("code_hash", sha256(code))
-        .eq("status", "PENDING")
-        .gt("expires_at", new Date().toISOString())
-        .maybeSingle();
-      if (!conflict) break;
-      code = pairingCode();
-    }
-
     const expiresAt = new Date(Date.now() + 5 * 60_000).toISOString();
-    const { data, error } = await admin
-      .from("device_pairing_requests")
-      .insert({
-        device_type: input.deviceType,
-        device_name: input.deviceName,
-        code_hash: sha256(code),
-        poll_secret_hash: sha256(pollSecret),
-        expires_at: expiresAt,
-      })
-      .select("id")
-      .single();
-    if (error) throw error;
-
+    let code = "";
+    let pairingId = "";
+    for (let attempt = 0; attempt < 8; attempt++) {
+      code = pairingCode();
+      const { data, error } = await admin.from("device_pairing_requests").insert({ device_type: input.deviceType, device_name: input.deviceName, code_hash: sha256(code), poll_secret_hash: sha256(pollSecret), expires_at: expiresAt }).select("id").single();
+      if (!error) { pairingId = data.id; break; }
+      if (error.code !== "23505") throw error;
+    }
+    if (!pairingId) throw new DeviceApiError("Kode belum tersedia. Coba kembali.", 503);
     return NextResponse.json(
-      { pairingId: data.id, pollSecret, code, expiresAt },
+      { pairingId, pollSecret, code, expiresAt },
       { status: 201, headers: { "Cache-Control": "no-store" } },
     );
   } catch (error) {
@@ -71,6 +55,7 @@ export async function PATCH(request: NextRequest) {
     assertSameOrigin(request);
     const input = pollSchema.parse(await request.json());
     const admin = createAdminClient();
+    await enforceRateLimit(admin, request, "pairing-poll", 60, 60, input.pairingId);
     const { data: pairing, error } = await admin
       .from("device_pairing_requests")
       .select("id,device_type,status,expires_at")

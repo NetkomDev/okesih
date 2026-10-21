@@ -1,4 +1,5 @@
 "use client";
+import { DeviceSyncQueue } from "@/components/DeviceSyncQueue";
 
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -356,7 +357,8 @@ export default function KdsModulePage() {
           🔔 Ketuk layar tablet dapur sekali untuk mengaktifkan dering pesanan siap diantar otomatis.
         </div>
       )}
-      {app.error && (
+      <DeviceSyncQueue operations={app.pendingOperations} resolve={app.resolveOperation} />
+    {app.error && (
         <div className="kds-notice kds-notice-error">
           <span>{app.error}</span>
           <button onClick={() => app.setError("")}>×</button>

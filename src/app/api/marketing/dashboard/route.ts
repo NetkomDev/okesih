@@ -53,21 +53,9 @@ export async function GET() {
     const isSuspended = partner.status !== "ACTIVE";
 
     // Panggil RPC report_marketing_dashboard untuk data agregasi dasar
-    let report: Record<string, unknown> = {};
-    try {
-      const { data: rpcReport, error: rpcError } = await admin.rpc("report_marketing_dashboard", {
-        p_partner_id: partner.id,
-      });
-      if (!rpcError && rpcReport) {
-        report = rpcReport as Record<string, unknown>;
-      }
-    } catch (rpcErr) {
-      console.warn("RPC report_marketing_dashboard gagal:", rpcErr);
-    }
-
-    // 1. Ambil mutasi komisi untuk menghitung total pendapatan sah & riwayat mutasi
-    let allMutationsSum = 0;
-    let hasMutationsTable = false;
+    const { data: reportData, error: reportError } = await admin.rpc("report_marketing_dashboard", { p_partner_id: partner.id });
+    if (reportError || !reportData) throw reportError || new Error("Laporan tidak tersedia.");
+    const report = reportData as Record<string, unknown>;
     let commissionEntries: Array<{
       id: string;
       kind: "DIRECT" | "NETWORK";
@@ -81,20 +69,6 @@ export async function GET() {
     }> = [];
 
     try {
-      // Hitung total seluruh mutasi komisi (DIRECT + NETWORK) yang sudah settled, tanpa batas 50 baris
-      const { data: allMutations } = await admin
-        .from("marketing_commission_mutations")
-        .select("total_amount")
-        .eq("partner_id", partner.id);
-
-      if (allMutations && Array.isArray(allMutations)) {
-        hasMutationsTable = true;
-        allMutationsSum = allMutations.reduce(
-          (sum, m) => sum + (Number(m.total_amount) || 0),
-          0
-        );
-      }
-
       // Ambil 50 entri mutasi terbaru untuk tampilan riwayat di UI
       const { data: mutations } = await admin
         .from("marketing_commission_mutations")
@@ -139,31 +113,9 @@ export async function GET() {
     const rawTotals = (report.totals as Record<string, unknown>) || {};
     const commissionPaid = Number(partner.commission_paid || 0);
 
-    // Ambil total pencairan pending
-    let pendingWithdrawals = Number(rawTotals.pendingWithdrawal || 0);
-    try {
-      const { data: pendingRows } = await admin
-        .from("marketing_commission_withdrawals")
-        .select("amount")
-        .eq("marketing_partner_id", partner.id)
-        .eq("status", "PENDING");
-
-      if (pendingRows && Array.isArray(pendingRows)) {
-        pendingWithdrawals = pendingRows.reduce(
-          (sum, w) => sum + (Number(w.amount) || 0),
-          0
-        );
-      }
-    } catch {
-      // Gunakan fallback
-    }
-
-    // Sumber saldo tunggal: Mutasi komisi yang sudah settled (DIRECT + NETWORK)
-    // dikurangi penarikan yang sudah dibayar dan penarikan yang sedang pending
-    const totalEarnedCommission = hasMutationsTable
-      ? allMutationsSum
-      : Number(rawTotals.commission || 0);
-    const totalAvailable = Math.max(0, totalEarnedCommission - commissionPaid - pendingWithdrawals);
+    const pendingWithdrawals = Number(rawTotals.pendingWithdrawal || 0);
+    const totalEarnedCommission = Number(rawTotals.commission || 0);
+    const totalAvailable = Number(rawTotals.availableCommission || 0);
 
     // ATURAN BISNIS: Jika mitra atau koordinator dinonaktifkan (status !== 'ACTIVE'):
     // 1. Seluruh saldo di-zero-kan dan flag saldoDisembunyikan aktif.

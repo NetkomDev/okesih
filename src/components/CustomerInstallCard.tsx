@@ -8,10 +8,10 @@ export default function CustomerInstallCard() {
   const [installed, setInstalled] = useState(false);
 
   useEffect(() => {
-    setInstalled(isStandaloneApp());
+    const initial = window.setTimeout(() => setInstalled(isStandaloneApp()), 0);
     const onAppInstalled = () => setInstalled(true);
     window.addEventListener("appinstalled", onAppInstalled);
-    return () => window.removeEventListener("appinstalled", onAppInstalled);
+    return () => { clearTimeout(initial); window.removeEventListener("appinstalled", onAppInstalled); };
   }, []);
 
   const handleInstall = async () => {

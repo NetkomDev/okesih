@@ -20,11 +20,11 @@ export default function MarketingNetworkPage() {
   useEffect(() => {
     if (!isAuthorized || dashboard?.profile.membershipLevel !== "COORDINATOR") return;
     const controller = new AbortController();
-    void load(controller.signal);
+    const initial = window.setTimeout(() => void load(controller.signal), 0);
     const sync = () => { if (document.visibilityState === "visible") void load(controller.signal); };
     const timer = window.setInterval(sync, 30000);
     window.addEventListener("focus", sync);
-    return () => { controller.abort(); clearInterval(timer); window.removeEventListener("focus", sync); };
+    return () => { controller.abort(); clearTimeout(initial); clearInterval(timer); window.removeEventListener("focus", sync); };
   }, [isAuthorized, dashboard?.profile.membershipLevel, load]);
   if (!isAuthorized || loading) return <MarketingLoading />;
   const shareText = [
