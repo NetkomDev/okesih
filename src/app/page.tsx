@@ -65,14 +65,15 @@ export default async function HomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      {/* Auto-redirect installed standalone app to scanner */}
+      {/* Auto-redirect installed standalone app on mobile to scanner */}
       <script
         dangerouslySetInnerHTML={{
           __html: `(function(){
             try {
-              var isStandalone = window.matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches || !!(navigator && navigator.standalone);
+              var isStandalone = window.matchMedia('(display-mode: standalone), (display-mode: window-controls-overlay), (display-mode: minimal-ui)').matches || !!(navigator && navigator.standalone);
+              var isMobile = window.matchMedia('(max-width: 768px), (pointer: coarse)').matches;
               var search = window.location.search || '';
-              if (isStandalone && !search.includes('view=landing') && !search.includes('from=scanner')) {
+              if (isStandalone && isMobile && !search.includes('view=landing') && !search.includes('from=scanner')) {
                 var role = localStorage.getItem('okesih_installed_pwa_role') || '';
                 if (role === 'owner') { window.location.replace('/owner'); }
                 else if (role === 'superadmin') { window.location.replace('/superadmin'); }

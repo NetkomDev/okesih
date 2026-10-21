@@ -91,9 +91,10 @@ export function isDashboardLaunch(path: string) {
  */
 export function isStandaloneApp(): boolean {
   if (typeof window === "undefined") return false;
+  const nav = window.navigator || (typeof navigator !== "undefined" ? navigator : null);
   return (
-    window.matchMedia("(display-mode: standalone), (display-mode: fullscreen)").matches ||
-    Boolean((navigator as Navigator & { standalone?: boolean }).standalone)
+    window.matchMedia("(display-mode: standalone), (display-mode: window-controls-overlay), (display-mode: minimal-ui)").matches ||
+    Boolean((nav as (Navigator & { standalone?: boolean }) | null)?.standalone)
   );
 }
 

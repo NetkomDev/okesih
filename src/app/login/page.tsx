@@ -147,7 +147,7 @@ export default function LoginPage() {
       {/* Navigasi Kembali & Theme Toggle */}
       <div style={{ position: "absolute", top: "2rem", left: "2rem", zIndex: 10 }}>
         <Link
-          href="/"
+          href="/?view=landing"
           style={{
             display: "inline-flex",
             alignItems: "center",

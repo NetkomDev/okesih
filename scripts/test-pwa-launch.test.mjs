@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { test } from "node:test";
-import { detectActivePwaKind, installationKind, isDashboardLaunch, isRoleAllowedForPwa, pwaKindForHostname, PWA_ROLE_CONFIGS } from "../src/lib/pwa-routing.ts";
+import { detectActivePwaKind, installationKind, isDashboardLaunch, isRoleAllowedForPwa, isStandaloneApp, pwaKindForHostname, PWA_ROLE_CONFIGS } from "../src/lib/pwa-routing.ts";
 import { APP_HOSTS, isApiAllowedOnSurface, roleHomeUrl, surfaceForHostname, surfaceForPath } from "../src/lib/app-origins.ts";
 import { createDevicePin, hashDevicePin, readDevicePin, devicePinKey } from "../src/lib/device-pin.ts";
 import dashboardManifestModule from "../src/lib/pwa-manifest.ts";
@@ -218,5 +218,39 @@ test("credential and billing flows use manual WhatsApp links, not the legacy out
     const source = await readFile(new URL(relativePath, import.meta.url), "utf8");
     assert.equal(source.includes('.from("whatsapp_outbox")'), false, relativePath);
     assert.equal(source.includes("createWhatsAppUrl"), true, relativePath);
+  }
+});
+
+test("isStandaloneApp rejects desktop browser fullscreen and accepts standalone PWA", () => {
+  const originalWindow = globalThis.window;
+  try {
+    // 1. Browser desktop dalam mode fullscreen biasa (misal tombol hijau macOS / F11)
+    globalThis.window = {
+      matchMedia: (query) => ({
+        matches: query.includes("fullscreen") && !query.includes("standalone"),
+      }),
+    };
+    assert.equal(isStandaloneApp(), false);
+
+    // 2. Aplikasi PWA yang benar-benar terpasang (display-mode: standalone)
+    globalThis.window = {
+      matchMedia: (query) => ({
+        matches: query.includes("standalone"),
+      }),
+    };
+    assert.equal(isStandaloneApp(), true);
+
+    // 3. iOS standalone
+    globalThis.window = {
+      matchMedia: () => ({ matches: false }),
+      navigator: { standalone: true },
+    };
+    assert.equal(isStandaloneApp(), true);
+  } finally {
+    if (originalWindow) {
+      globalThis.window = originalWindow;
+    } else {
+      delete globalThis.window;
+    }
   }
 });

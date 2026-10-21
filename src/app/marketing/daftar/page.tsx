@@ -180,7 +180,7 @@ export default function MarketingRegisterPage() {
         }}
       >
         <Link
-          href="/"
+          href="/?view=landing"
           className="marketing-back-btn"
           title="Kembali ke Beranda"
           aria-label="Kembali ke Beranda"

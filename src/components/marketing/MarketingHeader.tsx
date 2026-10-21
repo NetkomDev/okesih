@@ -9,7 +9,7 @@ export default function MarketingHeader() {
         {/* Sisi Kiri: Tombol Back & Logo Brand */}
         <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", minWidth: 0 }}>
           <Link
-            href="/"
+            href="/?view=landing"
             className="marketing-back-btn"
             title="Kembali ke Beranda"
             aria-label="Kembali ke Beranda"

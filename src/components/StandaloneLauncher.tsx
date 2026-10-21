@@ -7,6 +7,10 @@ export default function StandaloneLauncher() {
   useEffect(() => {
     if (!isStandaloneApp()) return;
 
+    // Desktop/laptop jangan pernah diarahkan otomatis ke scanner meja
+    const isMobile = window.matchMedia("(max-width: 768px), (pointer: coarse)").matches;
+    if (!isMobile) return;
+
     // Jika pengguna sengaja membuka beranda dengan parameter view=landing atau from=scanner
     const params = new URLSearchParams(window.location.search);
     if (params.get("view") === "landing" || params.get("from") === "scanner") {
@@ -36,7 +40,7 @@ export default function StandaloneLauncher() {
       return;
     }
 
-    // Default: PWA terpasang di origin publik yang dibuka pengguna adalah aplikasi scanner meja
+    // Default: PWA terpasang di HP yang dibuka pengguna adalah aplikasi scanner meja
     window.location.replace("/scan");
   }, []);
 
