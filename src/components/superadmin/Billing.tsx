@@ -493,7 +493,7 @@ return (<>{activeTab === "qris_billing" && (
                           <label style={{ display: "block", fontSize: "0.72rem", color: isDark ? "#94A3B8" : "#64748B", fontWeight: 700, marginBottom: "0.2rem" }}>
                             Nomor Rekening
                           </label>
-                          <input
+                          <input inputMode="numeric"
                             type="text"
                             value={centralBankAccountNumber}
                             onChange={(e) => setCentralBankAccountNumber(e.target.value)}

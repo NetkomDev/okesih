@@ -1,5 +1,6 @@
+import { createAccount } from "@/lib/create-account";
 import { NextResponse } from "next/server";
-import { randomBytes } from "node:crypto";
+import { randomDigits } from "@/lib/generated-credentials";
 import { createClient } from "@supabase/supabase-js";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { assertSameOrigin, DeviceApiError } from "@/lib/device-auth";
@@ -83,15 +84,15 @@ export async function POST(request: Request) {
 
     const phone = normalizeIndonesianWhatsAppNumber(body.phone);
     if (!isValidIndonesianWhatsAppNumber(phone)) return NextResponse.json({ error: "Nomor WhatsApp marketing tidak valid." }, { status: 400 });
-    const username = String(body.username).trim().toLowerCase().replace(/[^a-z0-9_-]/g, "");
+    let username = String(body.username).trim().toLowerCase().replace(/[^a-z0-9_-]/g, "");
     if (username.length < 4) return NextResponse.json({ error: "Username marketing minimal 4 karakter." }, { status: 400 });
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-      email: `${username}@okesih.local`,
+    const { data: authData, error: authError, username: assignedUsername } = await createAccount(supabase, username, {
       password: String(body.password),
       email_confirm: true,
       app_metadata: { role: "MARKETING" },
       user_metadata: { role: "MARKETING" },
     });
+    username = assignedUsername;
     if (authError || !authData.user) return NextResponse.json({ error: authError?.message || "Akun marketing gagal dibuat." }, { status: 500 });
 
     const { data, error } = await supabase.from("marketing_partners").insert({
@@ -135,8 +136,8 @@ export async function POST(request: Request) {
     const message = [
       `Halo ${cleanWhatsAppMessageField(data.full_name)}, akun Marketing OKESIH Anda sudah aktif. 🎉`, "",
       `Kode referral: *${data.referral_code}*`,
-      `Username: *${username}*`,
-      `Password: *${String(body.password)}*`,
+      `Username:\n\`${username}\``,
+      `Password:\n\`${String(body.password)}\``,
       `Login: ${APP_ORIGINS.PUBLIC}/login`, "",
       "Setelah login, buka Dashboard Marketing lalu tekan Install Aplikasi agar OKESIH tersimpan di layar utama HP.",
       "Mohon segera ganti dan simpan kredensial dengan aman.", "", "Salam,", "Tim OKESIH",
@@ -274,16 +275,16 @@ export async function PATCH(request: Request) {
     let password: string | null = null;
     if (status === "ACTIVE" && !current.user_id) {
       if (!isValidIndonesianWhatsAppNumber(current.phone)) return NextResponse.json({ error: "Perbaiki nomor WhatsApp sebelum mengaktifkan marketing." }, { status: 400 });
-      const suffix = randomBytes(6).toString("hex");
+      const suffix = randomDigits(3);
       username = `marketing_${suffix}`;
-      password = randomBytes(18).toString("base64url");
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: `${username}@okesih.local`,
+      password = randomDigits(6);
+      const { data: authData, error: authError, username: assignedUsername } = await createAccount(supabase, username, {
         password,
         email_confirm: true,
         app_metadata: { role: "MARKETING", marketing_partner_id: id },
         user_metadata: { role: "MARKETING", marketing_partner_id: id, referral_code: current.referral_code },
       });
+      username = assignedUsername;
       if (authError || !authData.user) {
         return NextResponse.json({ error: authError?.message || "Akun marketing gagal dibuat." }, { status: 500 });
       }
@@ -329,11 +330,11 @@ export async function PATCH(request: Request) {
         `Halo ${cleanWhatsAppMessageField(data.full_name)}, pendaftaran Marketing OKESIH Anda telah disetujui. 🎉`,
         "",
         `Kode referral: *${cleanWhatsAppMessageField(data.referral_code)}*`,
-        `Username: *${username}*`,
-        `Password sementara: *${password}*`,
+        `Username:\n\`${username}\``,
+        `Password sementara:\n\`${password}\``,
         `Login: ${APP_ORIGINS.PUBLIC}/login`,
         "",
-        "Silakan login, simpan kredensial dengan aman, lalu pasang aplikasi Marketing OKESIH.",
+        "Silakan login, ganti password sementara di dashboard, lalu pasang aplikasi Marketing OKESIH.",
       ].join("\n");
       whatsappUrl = createWhatsAppUrl(data.phone, message);
     } else if (membershipLevel !== undefined) {

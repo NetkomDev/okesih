@@ -129,7 +129,7 @@ return (<>{activeTab === "platform_config" && (
 
               <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem" }}>
                 <span style={{ fontSize: "1.1rem", fontWeight: 800, color: isDark ? "#94A3B8" : "#64748B" }}>Rp</span>
-                <input
+                <input inputMode="numeric"
                   type="number"
                   min={0}
                   max={100000}
@@ -152,7 +152,7 @@ return (<>{activeTab === "platform_config" && (
               <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem" }}>
                 <span style={{ fontSize: "0.85rem", color: isDark ? "#94A3B8" : "#64748B" }}>Komisi Mitra Marketing:</span>
                 <span style={{ fontSize: "1rem", fontWeight: 800, color: isDark ? "#C084FC" : "#7C3AED" }}>Rp</span>
-                <input
+                <input inputMode="numeric"
                   type="number"
                   min={0}
                   max={saasFeePerReceipt}
@@ -175,7 +175,7 @@ return (<>{activeTab === "platform_config" && (
               <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem" }}>
                 <span style={{ fontSize: "0.85rem", color: isDark ? "#94A3B8" : "#64748B" }}>Komisi Koordinator Mitra:</span>
                 <span style={{ fontSize: "1rem", fontWeight: 800, color: isDark ? "#818CF8" : "#4F46E5" }}>Rp</span>
-                <input
+                <input inputMode="numeric"
                   type="number"
                   min={0}
                   max={saasFeePerReceipt}

@@ -1,4 +1,7 @@
 "use client";
+import { randomDigits } from "@/lib/generated-credentials";
+import CopyCredential from "./CopyCredential";
+import AccessMessage from "./AccessMessage";
 import Pagination from "@/components/Pagination";
 import { INDONESIA_PROVINCES } from "@/lib/indonesia-regions";
 import type { Pagination as PageInfo } from "@/lib/reporting";
@@ -70,6 +73,7 @@ export default function TenantsFeature() {
 const { isDark, showToast, setConfirmModal, activeTab, totalTenants, setTotalTenants, createIntent, setCreateIntent , refreshSummary } = useSuperadmin();
 const isAuthorized = true;
 const [newTenantCredentials, setNewTenantCredentials] = useState<NewTenantCredentials | null>(null);
+const [accessMessageUrl, setAccessMessageUrl] = useState<string | null>(null);
 const [accessTarget, setAccessTarget] = useState<AccountAccessTarget | null>(null);
 const [marketingList, setMarketingList] = useState<MarketingAgent[]>([]);
 const loadMarketingPartners = async () => {
@@ -179,7 +183,7 @@ const reviewTenantApplication = async (id: string, decision: "APPROVE" | "REJECT
       await Promise.all([loadTenantApplications(), loadTenants(), loadMarketingPartners()]);
       showToast(decision === "APPROVE" ? "Tenant Disetujui" : "Pengajuan Ditolak", decision === "APPROVE" ? "Tenant dan akun owner dibuat. Pesan kredensial siap dikirim melalui WhatsApp Anda." : "Status pengajuan telah diperbarui.", "success");
       if (decision === "APPROVE" && payload.data?.whatsappUrl) {
-        window.location.assign(payload.data.whatsappUrl);
+        setAccessMessageUrl(payload.data.whatsappUrl);
       }
     } catch (error) {
       showToast("Review Gagal", error instanceof Error ? error.message : "Terjadi kesalahan jaringan.", "error");
@@ -212,7 +216,7 @@ const [generatedUsername, setGeneratedUsername] = useState<string>("");
 const [generatedPassword, setGeneratedPassword] = useState<string>("");
 const [isTenantSaving, setIsTenantSaving] = useState<boolean>(false);
 const handleOpenRegisterModal = useCallback(() => {
-    const randomSuffix = Math.floor(Math.random() * 899) + 100;
+    const randomSuffix = randomDigits(3);
     setNewWarkopName("");
     setNewSlug("");
     setNewOwnerName("");
@@ -224,7 +228,7 @@ const handleOpenRegisterModal = useCallback(() => {
     setSelectedMarketingId("direct");
     setTenantCommissionRate(""); // default kosong (mengikuti standar global komisi)
     setGeneratedUsername(`owner_${randomSuffix}`);
-    setGeneratedPassword(`okesih${randomSuffix}!`);
+    setGeneratedPassword(randomDigits(6));
     setIsRegisterModalOpen(true);
   }, [totalTenants, setNewWarkopName, setNewSlug, setNewOwnerName, setNewPhone, setNewAddress, setNewProvince, setNewCityRegency, setNewCodeRange, setSelectedMarketingId, setTenantCommissionRate, setIsRegisterModalOpen]);
 const handleCreateTenant = async (e: React.FormEvent) => {
@@ -332,7 +336,7 @@ const handleCreateTenant = async (e: React.FormEvent) => {
         uniqueCodeRange: newTenant.uniqueCodeRange,
         marketingAgentName: newTenant.marketingAgentName || "Direct HQ",
         commissionPerReceipt: newTenant.commissionPerReceipt,
-        username: generatedUsername,
+        username: payload.data.username,
         password: generatedPassword,
         whatsappUrl: payload.data.whatsappUrl,
       });
@@ -341,7 +345,6 @@ const handleCreateTenant = async (e: React.FormEvent) => {
         `Pesan selamat datang dan kredensial ${newTenant.name} siap dikirim melalui WhatsApp Anda.`,
         "success"
       );
-      window.location.assign(payload.data.whatsappUrl);
     } catch (err) {
       console.error("Gagal sinkron tenant ke Supabase:", err);
       setTenants((prev) => prev.filter((tenant) => tenant.id !== newTenant.id));
@@ -443,7 +446,7 @@ const toggleTenantStatus = (id: string) => {
 useEffect(() => { const timer = setTimeout(() => void loadTenantApplications(), 0); return () => clearTimeout(timer); }, []);
 useEffect(() => { if (!isRegisterModalOpen) return; const timer = setTimeout(() => void loadMarketingPartners(), 0); return () => clearTimeout(timer); }, [isRegisterModalOpen]);
 useEffect(() => { if (createIntent !== "tenant") return; const timer = setTimeout(() => { handleOpenRegisterModal(); setCreateIntent(null); }, 0); return () => clearTimeout(timer); }, [createIntent, handleOpenRegisterModal, setCreateIntent]);
-return (<>{accessTarget && <AccountAccessModal key={accessTarget.id} target={accessTarget} onClose={() => setAccessTarget(null)} onSaved={() => { void loadTenantApplications(); void loadTenants(); }} />}{activeTab === "tenants" && (
+return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={() => setAccessMessageUrl(null)} />}{accessTarget && <AccountAccessModal key={accessTarget.id} target={accessTarget} onClose={() => setAccessTarget(null)} onSaved={() => { void loadTenantApplications(); void loadTenants(); }} />}{activeTab === "tenants" && (
           <section
             className="glass-panel"
             style={{
@@ -851,22 +854,11 @@ return (<>{accessTarget && <AccountAccessModal key={accessTarget.id} target={acc
                 <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: isDark ? "#94A3B8" : "#475569", marginBottom: "0.35rem" }}>
                   Tetapkan Rentang Kode Unik POS
                 </label>
-                <input
-                  type="text"
-                  value={newCodeRange}
-                  onChange={(e) => setNewCodeRange(e.target.value)}
-                  placeholder="500 - 599"
-                  style={{
-                    width: "100%",
-                    padding: "0.75rem 1rem",
-                    borderRadius: "8px",
-                    background: isDark ? "rgba(15, 23, 42, 0.8)" : "#F8FAFC",
-                    border: isDark ? "1px solid rgba(56, 189, 248, 0.3)" : "1px solid rgba(0, 0, 0, 0.15)",
-                    color: isDark ? "#FFF" : "#0F172A",
-                    fontSize: "0.85rem",
-                    outline: "none",
-                  }}
-                />
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <input aria-label="Awal rentang kode unik" type="text" inputMode="numeric" pattern="[0-9]+" required value={newCodeRange.split("-")[0]?.trim() || ""} onChange={event => setNewCodeRange(`${event.target.value.replace(/\D/g, "")} - ${newCodeRange.split("-")[1]?.trim() || ""}`)} style={{ width: "45%", padding: "0.75rem", color: "inherit", background: "transparent" }} />
+                  <span>–</span>
+                  <input aria-label="Akhir rentang kode unik" type="text" inputMode="numeric" pattern="[0-9]+" required value={newCodeRange.split("-")[1]?.trim() || ""} onChange={event => setNewCodeRange(`${newCodeRange.split("-")[0]?.trim() || ""} - ${event.target.value.replace(/\D/g, "")}`)} style={{ width: "45%", padding: "0.75rem", color: "inherit", background: "transparent" }} />
+                </div>
                 <div style={{ fontSize: "0.72rem", color: isDark ? "#94A3B8" : "#64748B", marginTop: "0.25rem" }}>
                   Alokasi 3 digit unik untuk identifikasi mutasi otomatis QRIS kasir tenant ini.
                 </div>
@@ -910,7 +902,7 @@ return (<>{accessTarget && <AccountAccessModal key={accessTarget.id} target={acc
                   <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: isDark ? "#C084FC" : "#7C3AED", marginBottom: "0.35rem" }}>
                     Komisi Bagi Hasil (Rp/Struk)
                   </label>
-                  <input
+                  <input inputMode="numeric"
                     type="number"
                     min={0}
                     disabled={selectedMarketingId === "direct"}
@@ -1006,14 +998,8 @@ return (<>{accessTarget && <AccountAccessModal key={accessTarget.id} target={acc
                   🔑 Kredensial Login Owner yang Di-generate Sistem:
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", fontSize: "0.85rem" }}>
-                  <div>
-                    <span style={{ color: isDark ? "#94A3B8" : "#64748B" }}>Username: </span>
-                    <strong style={{ color: isDark ? "#FFF" : "#0F172A" }}>{generatedUsername}</strong>
-                  </div>
-                  <div>
-                    <span style={{ color: isDark ? "#94A3B8" : "#64748B" }}>Password: </span>
-                    <strong style={{ color: "#0284C7" }}>{generatedPassword}</strong>
-                  </div>
+                  <CopyCredential label="Username" value={generatedUsername} />
+                  <CopyCredential label="Password" value={generatedPassword} />
                 </div>
                 <div style={{ fontSize: "0.7rem", color: isDark ? "#94A3B8" : "#64748B", marginTop: "0.5rem" }}>
                   *Owner dapat langsung login menggunakan kredensial ini tanpa verifikasi email ataupun OTP.
@@ -1117,18 +1103,8 @@ return (<>{accessTarget && <AccountAccessModal key={accessTarget.id} target={acc
                 <div style={{ fontSize: "0.75rem", fontWeight: 800, color: "#0284C7", marginBottom: "0.4rem" }}>
                   KREDENSIAL LOGIN OWNER INSTAN:
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.25rem" }}>
-                  <span style={{ color: isDark ? "#94A3B8" : "#64748B" }}>Username:</span>
-                  <code style={{ background: isDark ? "#06090E" : "#E2E8F0", padding: "0.15rem 0.5rem", borderRadius: "4px", fontWeight: 800 }}>
-                    {newTenantCredentials.username}
-                  </code>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span style={{ color: isDark ? "#94A3B8" : "#64748B" }}>Password:</span>
-                  <code style={{ background: isDark ? "#06090E" : "#E2E8F0", padding: "0.15rem 0.5rem", borderRadius: "4px", color: "#0284C7", fontWeight: 800 }}>
-                    {newTenantCredentials.password}
-                  </code>
-                </div>
+                <CopyCredential label="Username" value={newTenantCredentials.username} />
+                <CopyCredential label="Password" value={newTenantCredentials.password} />
               </div>
             </div>
 
@@ -1150,10 +1126,14 @@ return (<>{accessTarget && <AccountAccessModal key={accessTarget.id} target={acc
               </a>
               <button
                 type="button"
-                onClick={() => {
+                onClick={async () => {
                   const text = `*KREDENSIAL LOGIN WARKOP OKESIH*\nNama: ${newTenantCredentials.name}\nURL Menu: https://www.okesih.com/menu/${newTenantCredentials.slug}\nKode Unik: ${newTenantCredentials.uniqueCodeRange}\n\n*Username:* ${newTenantCredentials.username}\n*Password:* ${newTenantCredentials.password}\n\nSilakan login di https://www.okesih.com/login`;
-                  navigator.clipboard.writeText(text);
-                  showToast("Kredensial Disalin", "Teks informasi akun berhasil disalin ke clipboard.", "success");
+                  try {
+                    await navigator.clipboard.writeText(text);
+                    showToast("Kredensial Disalin", "Teks informasi akun berhasil disalin ke clipboard.", "success");
+                  } catch {
+                    showToast("Salin manual", "Pilih teks username atau password untuk menyalin.", "error");
+                  }
                 }}
                 className="btn-primary"
                 style={{

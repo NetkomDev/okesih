@@ -1,3 +1,4 @@
+import { createAccount } from "@/lib/create-account";
 import { z } from "zod";
 import { paginationSchema } from "@/lib/reporting";
 import { NextResponse } from "next/server";
@@ -144,15 +145,14 @@ export async function POST(request: Request) {
     }
 
     // 2. Buat akun Auth owner yang benar-benar bisa dipakai login.
-    const finalOwnerUsername = username || `owner_${slug.replace(/[^a-z0-9]/g, "").slice(0, 8)}`;
-    const ownerEmail = `${finalOwnerUsername.toLowerCase()}@okesih.local`;
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-      email: ownerEmail,
+    let finalOwnerUsername = String(username).trim().toLowerCase();
+    const { data: authData, error: authError, username: assignedUsername } = await createAccount(supabase, finalOwnerUsername, {
       password: String(password),
       email_confirm: true,
       app_metadata: { role: "OWNER", warkop_id: newWarkop.id },
       user_metadata: { role: "OWNER", warkop_id: newWarkop.id, warkop_slug: newWarkop.slug },
     });
+    finalOwnerUsername = assignedUsername;
     if (authError || !authData.user) {
       await supabase.from("warkops").delete().eq("id", newWarkop.id);
       return NextResponse.json({ error: authError?.message || "Akun owner gagal dibuat." }, { status: 500 });
@@ -194,8 +194,8 @@ export async function POST(request: Request) {
       `Aplikasi Kasir *${cleanWhatsAppMessageField(newWarkop.nama)}* Anda telah aktif dan siap digunakan.`,
       "",
       "Berikut kredensial login Owner:",
-      `Username: *${finalOwnerUsername}*`,
-      `Password: *${String(password)}*`,
+      `Username:\n\`${finalOwnerUsername}\``,
+      `Password:\n\`${String(password)}\``,
       `Login: ${APP_ORIGINS.PUBLIC}/login`,
       `Menu usaha: ${APP_ORIGINS.PUBLIC}/menu/${newWarkop.slug}`,
       "",
@@ -229,6 +229,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       data: {
+        username: finalOwnerUsername,
         id: newWarkop.id,
         name: newWarkop.nama,
         slug: newWarkop.slug,

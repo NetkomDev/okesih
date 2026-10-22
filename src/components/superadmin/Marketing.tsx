@@ -1,4 +1,7 @@
 "use client";
+import { randomDigits } from "@/lib/generated-credentials";
+import CopyCredential from "./CopyCredential";
+import AccessMessage from "./AccessMessage";
 import { useCallback,useEffect,useState } from "react";
 import { useSuperadmin } from "./context";
 import AccountAccessModal, { type AccountAccessTarget } from "./AccountAccessModal";
@@ -38,6 +41,7 @@ export default function MarketingFeature() {
 const { isDark, showToast, setConfirmModal, activeTab, createIntent, setCreateIntent, refreshSummary } = useSuperadmin();
 
 const [marketingList, setMarketingList] = useState<MarketingAgent[]>([]);
+const [accessMessageUrl, setAccessMessageUrl] = useState<string | null>(null);
 const [accessTarget, setAccessTarget] = useState<AccountAccessTarget | null>(null);
 const [marketingWithdrawals, setMarketingWithdrawals] = useState<MarketingWithdrawal[]>([]);
 const [reviewingWithdrawalId, setReviewingWithdrawalId] = useState<string | null>(null);
@@ -120,7 +124,7 @@ const handleUpdateMarketingStatus = async (id: string, newStatus: "ACTIVE" | "IN
         "success"
       );
       if (payload.whatsappUrl) {
-        window.location.assign(payload.whatsappUrl);
+        setAccessMessageUrl(payload.whatsappUrl);
       }
     } catch (error) {
       showToast("Gagal Memperbarui", error instanceof Error ? error.message : "Terjadi kesalahan jaringan ke server.", "error");
@@ -241,9 +245,9 @@ const [newMarketingUsername, setNewMarketingUsername] = useState<string>("");
 const [newMarketingPassword, setNewMarketingPassword] = useState<string>("");
 const [isMarketingSaving, setIsMarketingSaving] = useState<boolean>(false);
 const handleOpenMarketingModal = useCallback(() => {
-    const suffix = Math.floor(Math.random() * 9000) + 1000;
+    const suffix = randomDigits(3);
     setNewMarketingUsername(`marketing_${suffix}`);
-    setNewMarketingPassword(`okesih${suffix}!`);
+    setNewMarketingPassword(randomDigits(6));
     setIsMarketingModalOpen(true);
   }, [setNewMarketingUsername, setNewMarketingPassword, setIsMarketingModalOpen]);
 const handleCreateMarketing = async (e: React.FormEvent) => {
@@ -284,7 +288,7 @@ const handleCreateMarketing = async (e: React.FormEvent) => {
       await loadMarketingPartners(); refreshSummary();
       setIsMarketingModalOpen(false);
       showToast("Marketing Berhasil Didaftarkan", `Kredensial ${newMkt.name} siap dikirim melalui WhatsApp Anda.`, "success");
-      window.location.assign(payload.whatsappUrl);
+      setAccessMessageUrl(payload.whatsappUrl);
     } catch (error) {
       showToast("Gagal Menyimpan", error instanceof Error ? error.message : "Terjadi kesalahan jaringan.", "error");
     } finally {
@@ -293,7 +297,7 @@ const handleCreateMarketing = async (e: React.FormEvent) => {
   };
 useEffect(() => { const timer = setTimeout(() => { void loadMarketingPartners(); void loadMarketingWithdrawals(); }, 0); return () => clearTimeout(timer); }, []);
 useEffect(() => { if (createIntent !== "marketing") return; const timer = setTimeout(() => { handleOpenMarketingModal(); setCreateIntent(null); }, 0); return () => clearTimeout(timer); }, [createIntent, handleOpenMarketingModal, setCreateIntent]);
-return (<>{accessTarget && <AccountAccessModal key={accessTarget.id} target={accessTarget} onClose={() => setAccessTarget(null)} onSaved={() => void loadMarketingPartners()} />}{activeTab === "marketing" && (
+return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={() => setAccessMessageUrl(null)} />}{accessTarget && <AccountAccessModal key={accessTarget.id} target={accessTarget} onClose={() => setAccessTarget(null)} onSaved={() => void loadMarketingPartners()} />}{activeTab === "marketing" && (
           <section
             className="glass-panel"
             style={{
@@ -826,8 +830,8 @@ return (<>{accessTarget && <AccountAccessModal key={accessTarget.id} target={acc
                   <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: isDark ? "#94A3B8" : "#475569", marginBottom: "0.35rem" }}>
                     Nomor WhatsApp
                   </label>
-                  <input
-                    type="text"
+                  <input inputMode="tel"
+                    type="tel"
                     required
                     value={newMarketingPhone}
                     onChange={(e) => setNewMarketingPhone(e.target.value)}
@@ -897,7 +901,7 @@ return (<>{accessTarget && <AccountAccessModal key={accessTarget.id} target={acc
                   <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: isDark ? "#94A3B8" : "#475569", marginBottom: "0.35rem" }}>
                     Komisi (Rp / Struk)
                   </label>
-                  <input
+                  <input inputMode="numeric"
                     type="number"
                     value={newMarketingCommRate}
                     onChange={(e) => setNewMarketingCommRate(parseInt(e.target.value) || 15)}
@@ -943,7 +947,7 @@ return (<>{accessTarget && <AccountAccessModal key={accessTarget.id} target={acc
                       fontSize: "0.85rem",
                     }}
                   />
-                  <input
+                  <input inputMode="numeric"
                     type="text"
                     value={newMarketingAccountNo}
                     onChange={(e) => setNewMarketingAccountNo(e.target.value)}
@@ -977,11 +981,11 @@ return (<>{accessTarget && <AccountAccessModal key={accessTarget.id} target={acc
 
               <div style={{ background: isDark ? "rgba(14, 165, 233, 0.1)" : "#F0F9FF", border: "1px dashed #38BDF8", borderRadius: "8px", padding: "1rem" }}>
                 <div style={{ fontSize: "0.75rem", fontWeight: 800, color: "#0284C7", marginBottom: "0.65rem" }}>
-                  🔑 Kredensial login PWA Marketing — otomatis dikirim ke WhatsApp
+                  🔑 Kredensial login PWA Marketing — siap disalin dan dikirim ke WhatsApp
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
-                  <input required value={newMarketingUsername} onChange={(e) => setNewMarketingUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ""))} aria-label="Username marketing" style={{ padding: "0.6rem", borderRadius: "6px", border: "1px solid #BAE6FD", background: isDark ? "#0F172A" : "#FFF", color: isDark ? "#FFF" : "#0F172A", fontWeight: 700 }} />
-                  <input required value={newMarketingPassword} onChange={(e) => setNewMarketingPassword(e.target.value)} aria-label="Password awal marketing" style={{ padding: "0.6rem", borderRadius: "6px", border: "1px solid #BAE6FD", background: isDark ? "#0F172A" : "#FFF", color: "#0284C7", fontWeight: 700 }} />
+                  <CopyCredential label="Username" value={newMarketingUsername} />
+                  <CopyCredential label="Password" value={newMarketingPassword} />
                 </div>
               </div>
 

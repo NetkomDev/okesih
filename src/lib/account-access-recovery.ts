@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { randomDigits } from "@/lib/generated-credentials";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { APP_ORIGINS } from "@/lib/app-origins";
 import { createWhatsAppUrl, cleanWhatsAppMessageField, isValidIndonesianWhatsAppNumber, normalizeIndonesianWhatsAppNumber } from "@/lib/whatsapp";
@@ -65,11 +65,11 @@ export async function recoverAccountAccess(admin: SupabaseClient, actorId: strin
 
   let whatsappUrl: string | null = null;
   if (input.resetPassword && userId && username) {
-    const password = randomBytes(18).toString("base64url");
+    const password = randomDigits(6);
     const message = [
       `Halo ${cleanWhatsAppMessageField(input.kind === "MARKETING" ? record.full_name : record.owner_name)}, akses akun OKESIH Anda telah diperbarui oleh Super Admin.`, "",
-      `Username: *${cleanWhatsAppMessageField(username)}*`,
-      `Password baru: *${password}*`,
+      `Username:\n\`${cleanWhatsAppMessageField(username)}\``,
+      `Password baru:\n\`${password}\``,
       `Login: ${APP_ORIGINS.PUBLIC}/login`, "",
       "Password sebelumnya sudah tidak berlaku. Simpan akses ini dengan aman dan ganti password setelah masuk.",
     ].join("\n");

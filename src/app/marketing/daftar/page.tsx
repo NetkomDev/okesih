@@ -325,7 +325,7 @@ export default function MarketingRegisterPage() {
               <label style={{ fontSize: "0.85rem", fontWeight: 700, color: "inherit", display: "block", marginBottom: "0.35rem" }}>
                 Nomor WhatsApp / HP <span style={{ color: "#EF4444" }}>*</span>
               </label>
-              <input
+              <input inputMode="tel"
                 type="tel"
                 required
                 value={mktPhone}
@@ -450,7 +450,7 @@ export default function MarketingRegisterPage() {
                 <label style={{ fontSize: "0.8rem", fontWeight: 700, color: "inherit", display: "block", marginBottom: "0.3rem" }}>
                   Nomor Rekening / HP <span style={{ color: "#EF4444" }}>*</span>
                 </label>
-                <input
+                <input inputMode="numeric"
                   type="text"
                   required
                   value={mktBankAccountNo}

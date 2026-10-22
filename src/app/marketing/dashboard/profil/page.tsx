@@ -236,7 +236,7 @@ export default function MarketingProfilPage() {
                   <fieldset disabled={busy}>
                     <label>Nama lengkap<input required minLength={2} maxLength={150} autoComplete="name" value={fullName} onChange={e => setFullName(e.target.value)} /></label>
                     <div className="mkt-form-row">
-                      <label>Nomor WhatsApp<input type="tel" required maxLength={30} autoComplete="tel" value={phone} onChange={e => setPhone(e.target.value)} /></label>
+                      <label>Nomor WhatsApp<input inputMode="tel" type="tel" required maxLength={30} autoComplete="tel" value={phone} onChange={e => setPhone(e.target.value)} /></label>
                       <label>Kota / wilayah<input required maxLength={100} value={cityArea} onChange={e => setCityArea(e.target.value)} /></label>
                     </div>
                     <div className="mkt-profile-divider"><h3>Rekening komisi</h3><p>Pastikan rekening dan nama penerima sudah benar.</p></div>

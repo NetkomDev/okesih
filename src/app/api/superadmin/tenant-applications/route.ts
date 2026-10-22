@@ -1,4 +1,5 @@
-import { randomBytes } from "node:crypto";
+import { createAccount } from "@/lib/create-account";
+import { randomDigits } from "@/lib/generated-credentials";
 import { NextResponse } from "next/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -67,8 +68,8 @@ export async function PATCH(request: Request) {
     const suffix = `${Date.now()}`.slice(-6);
     const baseSlug = application.business_name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "tenant";
     const slug = `${baseSlug}-${suffix}`;
-    const username = `owner_${suffix}`;
-    const password = randomBytes(18).toString("base64url");
+    let username = `owner_${randomDigits(3)}`;
+    const password = randomDigits(6);
     const { data: lastRange } = await admin.from("warkops").select("unique_code_range_end").order("unique_code_range_end", { ascending: false }).limit(1).maybeSingle();
     const rangeStart = Math.max(100, Math.ceil((Number(lastRange?.unique_code_range_end || 99) + 1) / 100) * 100);
     if (application.marketing_partner_id) {
@@ -107,11 +108,11 @@ export async function PATCH(request: Request) {
     if (tenantError) throw tenantError;
     createdTenantId = tenant.id;
 
-    const { data: authData, error: authError } = await admin.auth.admin.createUser({
-      email: `${username}@okesih.local`, password, email_confirm: true,
+    const { data: authData, error: authError, username: assignedUsername } = await createAccount(admin, username, { password, email_confirm: true,
       app_metadata: { role: "OWNER", warkop_id: tenant.id },
       user_metadata: { role: "OWNER", warkop_id: tenant.id, warkop_slug: slug },
     });
+    username = assignedUsername;
     if (authError || !authData.user) throw authError || new Error("Akun owner gagal dibuat.");
     createdUserId = authData.user.id;
     const { error: memberError } = await admin.from("warkop_members").insert({ warkop_id: tenant.id, user_id: authData.user.id, username, role: "OWNER" });
@@ -122,8 +123,8 @@ export async function PATCH(request: Request) {
       `Halo ${cleanWhatsAppMessageField(application.owner_name)}, pengajuan *${cleanWhatsAppMessageField(tenant.nama)}* telah diverifikasi dan diaktifkan oleh OKESIH. 🎉`,
       "",
       "*KREDENSIAL OWNER*",
-      `Username: *${username}*`,
-      `Password sementara: *${password}*`,
+      `Username:\n\`${username}\``,
+      `Password sementara:\n\`${password}\``,
       `Login: ${APP_ORIGINS.PUBLIC}/login`,
       `Menu usaha: ${APP_ORIGINS.PUBLIC}/menu/${slug}`,
       "",

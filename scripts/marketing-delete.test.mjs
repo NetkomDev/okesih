@@ -1,6 +1,8 @@
 process.env.NEXT_PUBLIC_SUPABASE_URL = "https://mock.supabase.co";
 process.env.SUPABASE_SERVICE_ROLE_KEY = "mock-service-role-key-test";
 import test from 'node:test';
+import { createAccount } from '../src/lib/create-account.ts';
+import { randomDigits } from '../src/lib/generated-credentials.ts';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import ts from 'typescript';
@@ -118,6 +120,8 @@ function createFixture({ userRole = 'SUPERADMIN', partnerExists = true, hasTenan
         }
       },
     },
+    '@/lib/create-account': { createAccount },
+    '@/lib/generated-credentials': { randomDigits },
     '@/lib/app-origins': {
       APP_ORIGINS: { PUBLIC: 'https://www.okesih.com' },
     },
