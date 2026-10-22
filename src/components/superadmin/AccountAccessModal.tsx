@@ -1,4 +1,5 @@
 "use client";
+import ModalFrame from "./ModalFrame";
 import AccessMessage from "./AccessMessage";
 
 import { useState } from "react";
@@ -40,8 +41,8 @@ export default function AccountAccessModal({ target, onClose, onSaved }: {
     } finally { setBusy(false); }
   }
 
-  return <div className="ops-modal-backdrop">
-    <section className="ops-modal" role="dialog" aria-modal="true" aria-labelledby="account-access-title">
+  return <ModalFrame label="Perbaiki WhatsApp dan akses akun" onClose={() => { if (!busy) onClose(); }}>
+    <section className="ops-modal">
       <button className="ops-modal-close" aria-label="Tutup pemulihan akses" onClick={onClose} disabled={busy}>×</button>
       <h2 id="account-access-title" style={{ fontSize: 22, paddingRight: 32 }}>Perbaiki WA & akses akun</h2>
       <p style={{ margin: "12px 0", overflowWrap: "anywhere" }}>{target.name}</p>
@@ -64,5 +65,5 @@ export default function AccountAccessModal({ target, onClose, onSaved }: {
         <button className="btn-primary" type="submit" disabled={busy || !confirmed}>{busy ? "Memproses…" : resetPassword ? "Simpan nomor & reset akses" : "Simpan nomor WhatsApp"}</button>
       </form>}
     </section>
-  </div>;
+  </ModalFrame>;
 }

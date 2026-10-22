@@ -83,7 +83,7 @@ return (<>{activeTab === "platform_config" && (
                 Berapa lama pesanan berstatus <strong>HIJAU (Siap Diantar)</strong> bertahan di layar Dapur / TV tenant warkop sebelum otomatis dianggap telah diambil oleh waiter dan dihapus dari antrean.
               </p>
 
-              <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", marginBottom: "1rem" }}>
+              <div className="sa-duration-options" style={{ display: "flex", gap: "0.5rem", alignItems: "center", marginBottom: "1rem" }}>
                 {[30, 45, 60, 90, 120].map((sec) => (
                   <button
                     key={sec}

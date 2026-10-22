@@ -1,4 +1,6 @@
 "use client";
+import ModalFrame from "./ModalFrame";
+import MobileNav from "./MobileNav";
 import PwaInstallButton from "@/components/PwaInstallButton";
 import PwaRoleInstallModal from "@/components/PwaRoleInstallModal";
 import PwaRoleMismatchModal from "@/components/PwaRoleMismatchModal";
@@ -6,7 +8,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import { logoutUser,useAuthGuard } from "@/lib/auth-helpers";
 import dynamic from "next/dynamic";
 import Image from "next/image";
-import { useCallback,useEffect,useState } from "react";
+import { useCallback,useEffect,useState,useRef } from "react";
 import { SuperadminContext } from "./context";
 const Overview=dynamic(() => import("./Overview"), { loading: () => <p role="status">Memuat fitur...</p> });
 const Tenants=dynamic(() => import("./Tenants"), { loading: () => <p role="status">Memuat fitur...</p> });
@@ -76,7 +78,34 @@ useEffect(() => {
 const isDark = theme === "dark";
 const [activeTab, setActiveTab] = useState<"overview" | "tenants" | "marketing" | "qris_billing" | "platform_config">("overview");
 const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
+const sidebarRef = useRef<HTMLElement>(null);
+const menuButtonRef = useRef<HTMLButtonElement>(null);
+const [compactScreen, setCompactScreen] = useState(false);
 const [mobileSidebarOpen, setMobileSidebarOpen] = useState<boolean>(false);
+useEffect(() => {
+  const query = window.matchMedia("(max-width: 1024px)");
+  const sync = () => { setCompactScreen(query.matches); if (!query.matches) setMobileSidebarOpen(false); };
+  sync(); query.addEventListener("change", sync);
+  return () => query.removeEventListener("change", sync);
+}, []);
+useEffect(() => {
+  if (!mobileSidebarOpen || !compactScreen) return;
+  const previousOverflow = document.body.style.overflow;
+  document.body.style.overflow = "hidden";
+  const sidebar = sidebarRef.current!;
+  const menuButton = menuButtonRef.current;
+  sidebar.querySelector<HTMLButtonElement>(".sa-mobile-close")?.focus();
+  const keydown = (event: KeyboardEvent) => {
+    if (event.key === "Escape") setMobileSidebarOpen(false);
+    if (event.key !== "Tab") return;
+    const buttons = [...sidebar.querySelectorAll<HTMLElement>('button, a[href]')].filter(node => node.getClientRects().length && !node.hasAttribute("disabled"));
+    const first = buttons[0], last = buttons.at(-1);
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+  };
+  sidebar.addEventListener("keydown", keydown);
+  return () => { document.body.style.overflow = previousOverflow; sidebar.removeEventListener("keydown", keydown); menuButton?.focus(); };
+}, [mobileSidebarOpen, compactScreen]);
 const [autoHideEnabled, setAutoHideEnabled] = useState<boolean>(false);
 const [isHovered, setIsHovered] = useState<boolean>(false);
 useEffect(() => {
@@ -111,6 +140,7 @@ const toggleAutoHide = () => {
 const openDashboardView = (view: typeof activeTab) => {
     setActiveTab(view);
     setMobileSidebarOpen(false);
+    window.scrollTo({ top: 0, behavior: "instant" });
   };
 const [toast, setToast] = useState<ToastNotification | null>(null);
 const showToast = useCallback((title: string, message: string, type: "success" | "error" | "info" = "success") => {
@@ -195,7 +225,7 @@ return (<SuperadminContext.Provider value={{ isDark, showToast, setConfirmModal,
       {/* Toast Notification Floating Container */}
 
       {toast && (
-        <div
+        <div className="sa-toast" role="status"
           style={{
             position: "fixed",
             top: "1.5rem",
@@ -252,11 +282,12 @@ return (<SuperadminContext.Provider value={{ isDark, showToast, setConfirmModal,
       />
 
       {/* Collapsible & Auto-Hide Sidebar */}
-      <aside
+      <aside ref={sidebarRef} id="sa-sidebar" inert={compactScreen && !mobileSidebarOpen} aria-label="Menu Super Admin"
         className={`superadmin-sidebar ${sidebarCollapsed ? "is-collapsed" : "is-expanded"} ${mobileSidebarOpen ? "is-mobile-open" : ""} ${autoHideEnabled ? "is-autohide" : ""} ${isHovered && sidebarCollapsed ? "is-peek" : ""}`}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
+        <button type="button" className="sa-mobile-close" onClick={() => setMobileSidebarOpen(false)} aria-label="Tutup menu">✕</button>
         {/* Sidebar Header */}
         <div className="superadmin-sidebar-header">
           <div
@@ -281,7 +312,7 @@ return (<SuperadminContext.Provider value={{ isDark, showToast, setConfirmModal,
             onClick={toggleSidebar}
             className="superadmin-sidebar-toggle-btn"
             title={sidebarCollapsed ? "Perluas Sidebar" : "Lipat Sidebar (Collapse)"}
-            aria-label="Toggle Sidebar"
+            aria-label="Buka atau tutup menu"
           >
             <svg
               width="15"
@@ -534,21 +565,21 @@ return (<SuperadminContext.Provider value={{ isDark, showToast, setConfirmModal,
       <div className="superadmin-workspace">
         {/* Topbar */}
         <header className="superadmin-topbar">
-          <div style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
+          <div className="sa-topbar-title" style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
             {/* Toggle Button (Desktop & Mobile) */}
             <button
               type="button"
               onClick={() => {
-                if (typeof window !== "undefined" && window.innerWidth < 1024) {
+                if (typeof window !== "undefined" && window.innerWidth <= 1024) {
                   setMobileSidebarOpen((prev) => !prev);
                 } else {
                   toggleSidebar();
                 }
               }}
-              className="superadmin-topbar-toggle"
+              className="superadmin-topbar-toggle" ref={menuButtonRef} aria-controls="sa-sidebar" aria-expanded={compactScreen ? mobileSidebarOpen : !sidebarCollapsed}
               style={{ display: "inline-flex" }}
               title={sidebarCollapsed ? "Perluas Sidebar" : "Lipat Sidebar"}
-              aria-label="Toggle Sidebar"
+              aria-label="Buka atau tutup menu"
             >
               ☰
             </button>
@@ -566,7 +597,7 @@ return (<SuperadminContext.Provider value={{ isDark, showToast, setConfirmModal,
               </span>
             </div>
 
-            <div
+            <div className="sa-server-badge"
               style={{
                 display: "inline-flex",
                 alignItems: "center",
@@ -591,7 +622,7 @@ return (<SuperadminContext.Provider value={{ isDark, showToast, setConfirmModal,
 
             <button
               onClick={() => { openDashboardView("tenants"); setCreateIntent("tenant"); }}
-              className="btn-primary"
+              className="btn-primary sa-header-create"
               style={{
                 background: "linear-gradient(135deg, #0EA5E9, #0284C7)",
                 padding: "0.45rem 0.95rem",
@@ -605,7 +636,7 @@ return (<SuperadminContext.Provider value={{ isDark, showToast, setConfirmModal,
 
             <button
               onClick={() => { openDashboardView("marketing"); setCreateIntent("marketing"); }}
-              className="btn-primary"
+              className="btn-primary sa-header-create"
               style={{
                 background: "linear-gradient(135deg, #10B981, #059669)",
                 padding: "0.45rem 0.95rem",
@@ -620,7 +651,7 @@ return (<SuperadminContext.Provider value={{ isDark, showToast, setConfirmModal,
         </header>
 
         {/* Main Container */}
-        <main className="superadmin-main">
+        <main className="superadmin-main" id="sa-main">
           {/* RESUME FINANSIAL & EKOSISTEM SAAS GLOBAL */}
           {activeTab === "overview" && <Overview />}
 
@@ -639,6 +670,7 @@ return (<SuperadminContext.Provider value={{ isDark, showToast, setConfirmModal,
         {/* TAB CONTENT 4: PARAMETER MASTER GLOBAL */}
         {activeTab === "platform_config" && <Settings />}
       </main>
+      <MobileNav activeTab={activeTab} onNavigate={openDashboardView} />
     </div>
 
     {/* MODAL 1: DAFTARKAN TENANT WARKOP BARU */}
@@ -652,19 +684,7 @@ return (<SuperadminContext.Provider value={{ isDark, showToast, setConfirmModal,
 
       {/* MODAL 4: KONFIRMASI MODERN (PENGGANTI WINDOW.CONFIRM) */}
       {confirmModal.isOpen && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0, 0, 0, 0.75)",
-            backdropFilter: "blur(4px)",
-            zIndex: 120,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "1rem",
-          }}
-        >
+        <ModalFrame label="Konfirmasi tindakan" onClose={() => setConfirmModal(c => ({ ...c, isOpen: false }))}>
           <div
             className="glass-panel"
             style={{
@@ -724,7 +744,7 @@ return (<SuperadminContext.Provider value={{ isDark, showToast, setConfirmModal,
               </button>
             </div>
           </div>
-        </div>
+        </ModalFrame>
       )}
     </div></SuperadminContext.Provider>);
 }

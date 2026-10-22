@@ -1,4 +1,5 @@
 "use client";
+import ModalFrame from "./ModalFrame";
 import { randomDigits } from "@/lib/generated-credentials";
 import CopyCredential from "./CopyCredential";
 import AccessMessage from "./AccessMessage";
@@ -495,7 +496,7 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
                   type="text"
                   value={searchQuery}
                   onChange={(e) => { setSearchQuery(e.target.value); setTenantPage(1); }}
-                  placeholder="Cari warkop, slug, owner..."
+                  aria-label="Cari tenant" placeholder="Cari warkop, slug, owner..."
                   style={{
                     background: isDark ? "rgba(15, 23, 42, 0.8)" : "#F8FAFC",
                     border: isDark ? "1px solid rgba(56, 189, 248, 0.3)" : "1px solid rgba(0, 0, 0, 0.15)",
@@ -543,8 +544,8 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
             )}
 
             <div className="superadmin-table-container">
-              <table style={{ width: "100%", minWidth: "1050px", borderCollapse: "collapse", textAlign: "left", fontSize: "0.875rem" }}>
-                <thead>
+              <table className="sa-data-table" role="table" style={{ width: "100%", minWidth: "1050px", borderCollapse: "collapse", textAlign: "left", fontSize: "0.875rem" }}>
+                <thead role="rowgroup">
                   <tr
                     style={{
                       borderBottom: isDark ? "1px solid rgba(56, 189, 248, 0.2)" : "1px solid rgba(14, 165, 233, 0.2)",
@@ -563,7 +564,7 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
                     <th style={{ padding: "0.85rem 1rem", textAlign: "right", whiteSpace: "nowrap" }}>Aksi Pusat</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody role="rowgroup">
                   {filteredTenants.map((t) => (
                     <tr
                       key={t.id}
@@ -571,7 +572,7 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
                         borderBottom: isDark ? "1px solid rgba(255, 255, 255, 0.05)" : "1px solid rgba(0, 0, 0, 0.05)",
                       }}
                     >
-                      <td style={{ padding: "1rem" }}>
+                      <td role="cell" data-label="Tenant" style={{ padding: "1rem" }}>
                         <div style={{ fontWeight: 800, color: isDark ? "#FFF" : "#0F172A" }}>{t.name}</div>
                         <div style={{ fontSize: "0.75rem", color: "#0284C7", marginTop: "2px" }}>
                           🔗 /menu/{t.slug}
@@ -581,13 +582,13 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
                         </div>
                       </td>
 
-                      <td style={{ padding: "1rem", whiteSpace: "nowrap" }}>
+                      <td role="cell" data-label="Owner & kontak" style={{ padding: "1rem", whiteSpace: "nowrap" }}>
                         <div style={{ fontWeight: 700, color: isDark ? "#E2E8F0" : "#334155" }}>{t.ownerName}</div>
                         <div style={{ fontSize: "0.75rem", color: isDark ? "#64748B" : "#94A3B8" }}>{t.phone}</div>
                         <button className="btn-secondary" style={{ marginTop: 8, fontSize: 12 }} onClick={() => setAccessTarget({ kind: "TENANT", id: t.id, name: `${t.ownerName} — ${t.name}`, phone: t.phone, canReset: t.status === "ACTIVE" })}>Perbaiki WA & akses</button>
                       </td>
 
-                      <td style={{ padding: "1rem", whiteSpace: "nowrap" }}>
+                      <td role="cell" data-label="Kode POS" style={{ padding: "1rem", whiteSpace: "nowrap" }}>
                         <span
                           style={{
                             background: isDark ? "rgba(14, 165, 233, 0.1)" : "rgba(14, 165, 233, 0.08)",
@@ -603,7 +604,7 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
                         </span>
                       </td>
 
-                      <td style={{ padding: "1rem", whiteSpace: "nowrap" }}>
+                      <td role="cell" data-label="Mitra marketing" style={{ padding: "1rem", whiteSpace: "nowrap" }}>
                         <div style={{ fontWeight: 700, color: isDark ? "#34D399" : "#059669" }}>
                           {t.marketingAgentName || "Direct HQ"}
                         </div>
@@ -612,7 +613,7 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
                         </div>
                       </td>
 
-                      <td style={{ padding: "1rem", whiteSpace: "nowrap" }}>
+                      <td role="cell" data-label="Struk & tagihan" style={{ padding: "1rem", whiteSpace: "nowrap" }}>
                         <div style={{ fontWeight: 800, color: isDark ? "#FFF" : "#0F172A" }}>
                           {t.todayTransactions} Struk
                         </div>
@@ -621,7 +622,7 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
                         </div>
                       </td>
 
-                      <td style={{ padding: "1rem", whiteSpace: "nowrap" }}>
+                      <td role="cell" data-label="Status" style={{ padding: "1rem", whiteSpace: "nowrap" }}>
                         <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
                           <span
                             style={{
@@ -642,7 +643,7 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
                         </div>
                       </td>
 
-                      <td style={{ padding: "1rem", textAlign: "right", whiteSpace: "nowrap" }}>
+                      <td role="cell" data-label="Aksi tenant" style={{ padding: "1rem", textAlign: "right", whiteSpace: "nowrap" }}>
                         <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
                           <Link
                             href={`/menu/${t.slug}?table=01`}
@@ -707,19 +708,7 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
           </section>
         )}
 {isRegisterModalOpen && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0, 0, 0, 0.75)",
-            backdropFilter: "blur(4px)",
-            zIndex: 100,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "1rem",
-          }}
-        >
+        <ModalFrame label="Daftarkan tenant" onClose={() => setIsRegisterModalOpen(false)}>
           <div
             className="glass-panel"
             style={{
@@ -790,7 +779,7 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
               </div>
 
               {/* Wilayah */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+              <div className="sa-responsive-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
                 <div>
                   <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: isDark ? "#94A3B8" : "#475569", marginBottom: "0.35rem" }}>
                     Provinsi / Wilayah
@@ -865,7 +854,7 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
               </div>
 
               {/* Marketing Lapangan & Komisi Bagi Hasil */}
-              <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: "1rem" }}>
+              <div className="sa-responsive-grid" style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: "1rem" }}>
                 <div>
                   <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: isDark ? "#34D399" : "#059669", marginBottom: "0.35rem" }}>
                     Marketing Lapangan yang Mengakuisisi
@@ -936,7 +925,7 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
                 </div>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "1rem" }}>
+              <div className="sa-responsive-grid" style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "1rem" }}>
                 <div>
                   <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: isDark ? "#94A3B8" : "#475569", marginBottom: "0.35rem" }}>
                     Nama Pemilik / Owner
@@ -997,7 +986,7 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
                 <div style={{ fontSize: "0.75rem", fontWeight: 800, color: "#0284C7", marginBottom: "0.5rem" }}>
                   🔑 Kredensial Login Owner yang Di-generate Sistem:
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", fontSize: "0.85rem" }}>
+                <div className="sa-responsive-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", fontSize: "0.85rem" }}>
                   <CopyCredential label="Username" value={generatedUsername} />
                   <CopyCredential label="Password" value={generatedPassword} />
                 </div>
@@ -1025,22 +1014,10 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
               </button>
             </form>
           </div>
-        </div>
+        </ModalFrame>
       )}
 {newTenantCredentials && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0, 0, 0, 0.8)",
-            backdropFilter: "blur(5px)",
-            zIndex: 110,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "1rem",
-          }}
-        >
+        <ModalFrame label="Kredensial owner" onClose={() => setNewTenantCredentials(null)}>
           <div
             className="glass-panel"
             style={{
@@ -1156,6 +1133,6 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
               </button>
             </div>
           </div>
-        </div>
+        </ModalFrame>
       )}</>);
 }

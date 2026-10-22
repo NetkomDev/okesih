@@ -23,10 +23,10 @@ return (<>{activeTab === "overview" && (
                   color: isDark ? "#FFFFFF" : "#0F172A",
                 }}
               >
-                Resume Ekosistem Platform SaaS OKESIH
+                Ringkasan Platform
               </h1>
               <p style={{ fontSize: "0.85rem", color: isDark ? "#94A3B8" : "#64748B" }}>
-                Monitoring performa seluruh tenant warkop, bagi hasil komisi marketing lapangan, dan net revenue platform.
+                Pantau tenant, transaksi, dan pendapatan OKESIH.
               </p>
             </div>
             <div className="superadmin-period-filter" aria-label="Filter periode analytics">
@@ -234,7 +234,7 @@ return (<>{activeTab === "overview" && (
           </div>
 
               {/* Quick Action Shortcuts inside Overview */}
-              <div
+              <div className="sa-responsive-grid"
                 style={{
                   display: "grid",
                   gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",

@@ -1,4 +1,5 @@
 "use client";
+import ModalFrame from "./ModalFrame";
 import Image from "next/image";
 import { useCallback,useEffect,useRef,useState } from "react";
 import { useSuperadmin } from "./context";
@@ -189,7 +190,7 @@ const handleRejectBilling = async (billingId: string, notes?: string) => {
 return (<>{activeTab === "qris_billing" && (
           <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
             {/* 1. KPI Strip Ringkasan Finansial Setoran Sewa */}
-            <div
+            <div className="sa-responsive-grid sa-billing-summary"
               style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
@@ -272,7 +273,7 @@ return (<>{activeTab === "qris_billing" && (
                   {billingLogs.filter((b) => b.statusBadge === "PENDING_REVIEW" || b.statusBadge === "UNPAID" || b.statusBadge === "OVERDUE").length} <span style={{ fontSize: "0.85rem", fontWeight: 600 }}>Menunggu</span>
                 </div>
                 <div style={{ fontSize: "0.72rem", color: "#1D4ED8", marginTop: "4px", fontWeight: 600 }}>
-                  ⚡ Verifikasi otomatis atau cek bukti transfer
+                  Periksa bukti dan mutasi rekening
                 </div>
               </div>
             </div>
@@ -321,7 +322,7 @@ return (<>{activeTab === "qris_billing" && (
                   <div>
                     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                       <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: isDark ? "#FBBF24" : "#D97706", margin: 0 }}>
-                        💳 QRIS &amp; Rekening Setoran Sewa SaaS (Pusat OKESIH)
+                        QRIS &amp; Rekening Pusat
                       </h3>
                       <span
                         style={{
@@ -334,7 +335,7 @@ return (<>{activeTab === "qris_billing" && (
                           border: "1px solid #10B981",
                         }}
                       >
-                        ● Aktif untuk Seluruh Tenant
+                        ● Semua tenant
                       </span>
                     </div>
                     <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginTop: "4px", fontSize: "0.78rem", color: isDark ? "#CBD5E1" : "#475569" }}>
@@ -376,7 +377,7 @@ return (<>{activeTab === "qris_billing" && (
                     QRIS dan rekening ini otomatis ditampilkan kepada seluruh Tenant / Owner Warkop saat mereka melakukan penutupan toko/shift untuk menyetorkan biaya sewa Rp {saasFeePerReceipt}/struk + nominal kode unik alokasi mereka.
                   </p>
 
-                  <div style={{ display: "grid", gridTemplateColumns: "160px 1fr", gap: "1.5rem", alignItems: "flex-start" }}>
+                  <div className="sa-responsive-grid" style={{ display: "grid", gridTemplateColumns: "160px 1fr", gap: "1.5rem", alignItems: "flex-start" }}>
                     {/* Upload & Preview */}
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
                       <div
@@ -468,7 +469,7 @@ return (<>{activeTab === "qris_billing" && (
                         />
                       </div>
 
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginBottom: "0.65rem" }}>
+                      <div className="sa-responsive-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginBottom: "0.65rem" }}>
                         <div>
                           <label style={{ display: "block", fontSize: "0.72rem", color: isDark ? "#94A3B8" : "#64748B", fontWeight: 700, marginBottom: "0.2rem" }}>
                             Bank Tujuan
@@ -576,7 +577,7 @@ return (<>{activeTab === "qris_billing" && (
                 <div>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                     <h2 style={{ fontSize: "1.35rem", fontWeight: 800, color: "#0284C7", margin: 0 }}>
-                      🤖 Log Verifikasi Setoran Sewa (OCR AI)
+                      Verifikasi Setoran
                     </h2>
                     <span
                       style={{
@@ -744,7 +745,7 @@ return (<>{activeTab === "qris_billing" && (
                             transition: "all 0.15s ease",
                           }}
                         >
-                          <div
+                          <div className="sa-responsive-grid"
                             style={{
                               display: "grid",
                               gridTemplateColumns: "1.8fr 1.8fr 1.6fr 1.4fr auto",
@@ -935,19 +936,7 @@ return (<>{activeTab === "qris_billing" && (
           </div>
         )}
 {selectedBillingDetail && (
-          <div
-            style={{
-              position: "fixed",
-              inset: 0,
-              background: "rgba(0, 0, 0, 0.75)",
-              backdropFilter: "blur(4px)",
-              zIndex: 100,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "1rem",
-            }}
-          >
+          <ModalFrame label="Detail bukti pembayaran" onClose={() => setSelectedBillingDetail(null)}>
             <div
               className="glass-panel"
               style={{
@@ -1017,7 +1006,7 @@ return (<>{activeTab === "qris_billing" && (
               </div>
 
               {/* Preview Bukti Transfer & Hasil OCR */}
-              <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", gap: "12px", marginBottom: "1.25rem" }}>
+              <div className="sa-responsive-grid" style={{ display: "grid", gridTemplateColumns: "120px 1fr", gap: "12px", marginBottom: "1.25rem" }}>
                 <div
                   style={{
                     height: "140px",
@@ -1123,6 +1112,6 @@ return (<>{activeTab === "qris_billing" && (
                 </button>
               </div>
             </div>
-          </div>
+          </ModalFrame>
         )}</>);
 }

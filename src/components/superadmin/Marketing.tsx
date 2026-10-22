@@ -1,4 +1,5 @@
 "use client";
+import ModalFrame from "./ModalFrame";
 import { randomDigits } from "@/lib/generated-credentials";
 import CopyCredential from "./CopyCredential";
 import AccessMessage from "./AccessMessage";
@@ -436,10 +437,10 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
               </div>
 
               {/* Search & Map Wilayah Input */}
-              <div style={{ minWidth: "260px" }}>
+              <div className="sa-search-field" style={{ minWidth: "260px" }}>
                 <input
                   type="text"
-                  placeholder="🔍 Cari Kota / Wilayah / Nama..."
+                  aria-label="Cari mitra marketing" placeholder="Cari kota, wilayah, atau nama..."
                   value={marketingSearchQuery}
                   onChange={(e) => setMarketingSearchQuery(e.target.value)}
                   style={{
@@ -457,8 +458,8 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
             </div>
 
             <div className="superadmin-table-container">
-              <table style={{ width: "100%", minWidth: "1150px", borderCollapse: "collapse", textAlign: "left", fontSize: "0.875rem" }}>
-                <thead>
+              <table className="sa-data-table" role="table" style={{ width: "100%", minWidth: "1150px", borderCollapse: "collapse", textAlign: "left", fontSize: "0.875rem" }}>
+                <thead role="rowgroup">
                   <tr
                     style={{
                       borderBottom: isDark ? "1px solid rgba(16, 185, 129, 0.2)" : "1px solid rgba(16, 185, 129, 0.25)",
@@ -478,7 +479,7 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
                     <th style={{ padding: "0.85rem 1rem", textAlign: "right", whiteSpace: "nowrap" }}>Aksi Manajemen</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody role="rowgroup">
                   {marketingList
                     .filter((m) => {
                       const matchStatus = marketingFilterStatus === "ALL" || m.status === marketingFilterStatus;
@@ -499,7 +500,7 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
                             borderBottom: isDark ? "1px solid rgba(255, 255, 255, 0.05)" : "1px solid rgba(0, 0, 0, 0.05)",
                           }}
                         >
-                          <td style={{ padding: "1rem" }}>
+                          <td role="cell" data-label="Mitra marketing" style={{ padding: "1rem" }}>
                             <div style={{ fontWeight: 800, color: isDark ? "#FFF" : "#0F172A" }}>{m.name}</div>
                             <div style={{ display: "flex", alignItems: "center", gap: "0.3rem", flexWrap: "wrap", marginTop: "3px" }}>
                               <span
@@ -555,14 +556,14 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
                             )}
                           </td>
 
-                          <td style={{ padding: "1rem" }}>
+                          <td role="cell" data-label="WhatsApp & wilayah" style={{ padding: "1rem" }}>
                             <div style={{ color: isDark ? "#E2E8F0" : "#334155" }}>{m.phone}</div>
                             <div style={{ fontSize: "0.75rem", color: "#0284C7", fontWeight: 700, marginTop: "2px" }}>
                               📍 {m.area}
                             </div>
                           </td>
 
-                          <td style={{ padding: "1rem" }}>
+                          <td role="cell" data-label="Status akun" style={{ padding: "1rem" }}>
                             {m.status === "PENDING" && (
                               <span
                                 style={{
@@ -610,13 +611,13 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
                             )}
                           </td>
 
-                          <td style={{ padding: "1rem", whiteSpace: "nowrap" }}>
+                          <td role="cell" data-label="Tarif komisi" style={{ padding: "1rem", whiteSpace: "nowrap" }}>
                             <span style={{ fontWeight: 800, color: isDark ? "#FBBF24" : "#D97706" }}>
                               Rp {m.commissionPerReceipt} / struk
                             </span>
                           </td>
 
-                          <td style={{ padding: "1rem", whiteSpace: "nowrap" }}>
+                          <td role="cell" data-label="Performa" style={{ padding: "1rem", whiteSpace: "nowrap" }}>
                             <div style={{ fontWeight: 800, color: "#0284C7" }}>
                               {m.totalTenantsAcquired} Tenant
                             </div>
@@ -625,7 +626,7 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
                             </div>
                           </td>
 
-                          <td style={{ padding: "1rem", whiteSpace: "nowrap" }}>
+                          <td role="cell" data-label="Total komisi" style={{ padding: "1rem", whiteSpace: "nowrap" }}>
                             <div style={{ fontWeight: 900, color: isDark ? "#34D399" : "#059669" }}>
                               Rp {m.totalCommissionEarned.toLocaleString("id-ID")}
                             </div>
@@ -639,14 +640,14 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
                             )}
                           </td>
 
-                          <td style={{ padding: "1rem", whiteSpace: "nowrap" }}>
+                          <td role="cell" data-label="Rekening" style={{ padding: "1rem", whiteSpace: "nowrap" }}>
                             <div style={{ fontWeight: 700, fontSize: "0.8rem", color: isDark ? "#FFF" : "#0F172A" }}>
                               💳 {m.bankName} - {m.accountNumber}
                             </div>
                             <div style={{ fontSize: "0.72rem", color: isDark ? "#64748B" : "#94A3B8" }}>a/n {m.accountName}</div>
                           </td>
 
-                          <td style={{ padding: "1rem", textAlign: "right", whiteSpace: "nowrap" }}>
+                          <td role="cell" data-label="Aksi mitra" style={{ padding: "1rem", textAlign: "right", whiteSpace: "nowrap" }}>
                             <button className="btn-secondary" style={{ marginBottom: 8, fontSize: 12 }} onClick={() => setAccessTarget({ kind: "MARKETING", id: m.id, name: m.name, phone: m.phone, canReset: m.status === "ACTIVE" })}>Perbaiki WA & akses</button>
                             <div style={{ display: "flex", gap: "0.4rem", justifyContent: "flex-end" }}>
                               {m.status === "PENDING" ? (
@@ -758,19 +759,7 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
           </section>
         )}
 {isMarketingModalOpen && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0, 0, 0, 0.75)",
-            backdropFilter: "blur(4px)",
-            zIndex: 100,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "1rem",
-          }}
-        >
+        <ModalFrame label="Daftarkan marketing" onClose={() => setIsMarketingModalOpen(false)}>
           <div
             className="glass-panel"
             style={{
@@ -825,7 +814,7 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
                 />
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+              <div className="sa-responsive-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
                 <div>
                   <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: isDark ? "#94A3B8" : "#475569", marginBottom: "0.35rem" }}>
                     Nomor WhatsApp
@@ -872,7 +861,7 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
                 </div>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "1rem" }}>
+              <div className="sa-responsive-grid" style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "1rem" }}>
                 <div>
                   <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: isDark ? "#94A3B8" : "#475569", marginBottom: "0.35rem" }}>
                     Kode Referral Unik Marketing
@@ -932,7 +921,7 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
                 <div style={{ fontSize: "0.75rem", fontWeight: 800, color: "#059669", marginBottom: "0.5rem" }}>
                   🏦 Rekening Bank / E-Wallet Pencairan Komisi:
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1.5fr", gap: "0.75rem", marginBottom: "0.5rem" }}>
+                <div className="sa-responsive-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1.5fr", gap: "0.75rem", marginBottom: "0.5rem" }}>
                   <input
                     type="text"
                     value={newMarketingBank}
@@ -983,7 +972,7 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
                 <div style={{ fontSize: "0.75rem", fontWeight: 800, color: "#0284C7", marginBottom: "0.65rem" }}>
                   🔑 Kredensial login PWA Marketing — siap disalin dan dikirim ke WhatsApp
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+                <div className="sa-responsive-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
                   <CopyCredential label="Username" value={newMarketingUsername} />
                   <CopyCredential label="Password" value={newMarketingPassword} />
                 </div>
@@ -1006,6 +995,6 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
               </button>
             </form>
           </div>
-        </div>
+        </ModalFrame>
       )}</>);
 }
