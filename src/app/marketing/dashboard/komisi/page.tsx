@@ -265,7 +265,7 @@ export default function MarketingKomisiPage() {
                                 fontWeight: 800,
                               }}
                             >
-                              Komisi Langsung
+                              {entry.kind === "OPENING" ? "Saldo Awal" : "Komisi Langsung"}
                             </span>
                           )}
                         </td>

@@ -37,17 +37,18 @@ export async function GET() {
     const { admin, partner } = ctx;
 
     // Ambil parameter global dengan aman
-    const { data: settingsRow } = await admin
+    const { data: settingsRow, error: settingsError } = await admin
       .from("platform_settings")
       .select("*")
       .eq("id", "global")
       .maybeSingle();
 
-    const marketingRate = Number(settingsRow?.default_marketing_commission ?? 10);
-    const coordinatorRate = Number(settingsRow?.coordinator_commission_per_receipt ?? 5);
+    if (settingsError || !settingsRow) throw new Error("Parameter komisi belum dapat dibaca.");
+    const marketingRate = Number(settingsRow.default_marketing_commission);
+    const coordinatorRate = Number(settingsRow.coordinator_commission_per_receipt);
 
     const membershipLevel = toMembershipLevel(
-      partner.membership_level || (typeof partner.notes_admin === "string" && partner.notes_admin.includes("[LEVEL:COORDINATOR]") ? "COORDINATOR" : "MARKETING")
+      partner.membership_level
     );
 
     const isSuspended = partner.status !== "ACTIVE";
@@ -58,7 +59,7 @@ export async function GET() {
     const report = reportData as Record<string, unknown>;
     let commissionEntries: Array<{
       id: string;
-      kind: "DIRECT" | "NETWORK";
+      kind: "DIRECT" | "NETWORK" | "OPENING";
       amount: number;
       receipts: number;
       rate: number;
@@ -70,7 +71,7 @@ export async function GET() {
 
     try {
       // Ambil 50 entri mutasi terbaru untuk tampilan riwayat di UI
-      const { data: mutations } = await admin
+      const { data: mutations, error: mutationsError } = await admin
         .from("marketing_commission_mutations")
         .select(`
           id,
@@ -88,6 +89,7 @@ export async function GET() {
         .order("created_at", { ascending: false })
         .limit(50);
 
+      if (mutationsError) throw mutationsError;
       if (mutations && Array.isArray(mutations)) {
         commissionEntries = mutations.map((m: Record<string, unknown>) => {
           const warkop = m.warkops as { nama?: string } | null;
@@ -95,7 +97,7 @@ export async function GET() {
           const amt = Number(m.total_amount) || 0;
           return {
             id: String(m.id),
-            kind: m.kind === "NETWORK" ? "NETWORK" : "DIRECT",
+            kind: m.kind === "NETWORK" ? "NETWORK" : m.kind === "OPENING" ? "OPENING" : "DIRECT",
             amount: amt,
             receipts: Number(m.receipts_count) || 0,
             rate: Number(m.rate_per_receipt) || 0,
@@ -107,7 +109,7 @@ export async function GET() {
         });
       }
     } catch {
-      // Tabel mutasi belum tersedia di schema cache, lewati
+      throw new Error("Riwayat komisi belum dapat dimuat.");
     }
 
     const rawTotals = (report.totals as Record<string, unknown>) || {};
@@ -146,7 +148,7 @@ export async function GET() {
 
     // Sanitasi data tenant agar akun suspended tidak melihat angka komisi per tenant
     const sanitizedTenants = ((report.tenants as Array<Record<string, unknown>>) || []).map((t) => {
-      if (!isSuspended) return t;
+      if (!isSuspended) return { ...t, commissionPerReceipt: marketingRate };
       return {
         ...t,
         commission: 0,

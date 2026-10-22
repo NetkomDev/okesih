@@ -15,8 +15,9 @@ async function getMarketingContext() {
   const { data, error } = await admin.from("marketing_partners").select("*").eq("user_id", user.id).eq("status", "ACTIVE").maybeSingle();
   if (error) throw error;
   if (!data) throw new DeviceApiError("Akun marketing tidak aktif atau tidak terhubung.", 403);
-  const { data: rates } = await admin.from("platform_settings").select("*").eq("id", "global").maybeSingle();
-  const resolvedLevel = data.membership_level || (typeof data.notes_admin === "string" && data.notes_admin.includes("[LEVEL:COORDINATOR]") ? "COORDINATOR" : "MARKETING");
+  const { data: rates, error: ratesError } = await admin.from("platform_settings").select("*").eq("id", "global").maybeSingle();
+  if (ratesError || !rates) throw new Error("Parameter komisi belum dapat dibaca.");
+  const resolvedLevel = data.membership_level;
   const partner = {
     ...data,
     membership_level: resolvedLevel,

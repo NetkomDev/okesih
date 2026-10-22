@@ -144,7 +144,7 @@ export async function PATCH(request: Request) {
     updated_by: user.id,
   };
 
-  let { data, error } = await admin
+  const { data, error } = await admin
     .from("platform_settings")
     .upsert({
       ...basePayload,
@@ -153,16 +153,6 @@ export async function PATCH(request: Request) {
     .select("*")
     .single();
 
-  if (error && error.message?.includes("coordinator_commission_per_receipt")) {
-    console.warn("Kolom coordinator_commission_per_receipt belum ada di schema DB, menyimpan field dasar...");
-    const retry = await admin
-      .from("platform_settings")
-      .upsert(basePayload)
-      .select("*")
-      .single();
-    data = retry.data;
-    error = retry.error;
-  }
 
   if (error) {
     console.error("Gagal menyimpan platform settings:", error);

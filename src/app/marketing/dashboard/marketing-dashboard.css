@@ -1786,3 +1786,27 @@ html, body {
 /* Preserve header contrast when the global light theme overrides heading colors. */
 .mkt-profile .mkt-subpage-title-box h1 { color: #fff !important; }
 .mkt-profile .mkt-subpage-title-box p { color: rgba(255, 255, 255, .95); }
+
+/* KorMit: readable cards and touch-friendly recruitment on phones. */
+.kormit-recruit { padding-bottom: 24px; margin-bottom: 24px; border-bottom: 1px solid #e2e8f0; }
+.kormit-fields { border: 0; padding: 0; margin: 16px 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; min-width: 0; }
+.kormit-fields label { display: grid; gap: 6px; min-width: 0; }
+.kormit-fields input, .kormit-fields textarea { width: 100%; box-sizing: border-box; font-size: 16px; min-height: 44px; }
+.kormit-fields small { font-size: 12px; font-weight: 400; }
+.kormit-result { display: grid; gap: 12px; padding: 16px; border-radius: 12px; background: #f0fdfa; }
+.kormit-result .mkt-primary { text-align: center; text-decoration: none; }
+.kormit-result button { min-height: 44px; }
+.kormit-rate { padding: 16px; border-radius: 12px; background: #f8fafc; line-height: 1.6; }
+.kormit-members { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 16px; }
+.kormit-member { border: 1px solid #e2e8f0; padding: 16px; border-radius: 14px; min-width: 0; overflow-wrap: anywhere; }
+.kormit-member h3 { margin: 0; font-size: 16px; }
+.kormit-member p { margin: 4px 0 12px; color: #64748b; }
+.kormit-status { display: inline-block; padding: 5px 10px; border-radius: 8px; background: #f1f5f9; font-size: 12px; }
+.kormit-status.active { background: #dcfce7; color: #166534; }
+.kormit-status.pending { background: #fef3c7; color: #92400e; }
+.kormit-member dl { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; margin-bottom: 0; }
+.kormit-member dt { font-size: 12px; color: #64748b; }
+.kormit-member dd { margin: 4px 0 0; font-weight: 700; }
+@media (max-width: 600px) {
+  .kormit-fields, .kormit-members { grid-template-columns: minmax(0, 1fr); }
+}

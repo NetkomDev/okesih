@@ -370,3 +370,79 @@ Pendapatan perusahaan (biaya sewa per struk) dipotong untuk mendistribusikan kom
 370:   CONSTRAINT uq_billing_commission_kind UNIQUE (billing_id, kind)
 371: );
 372: ```
+
+## Audit PWA Mitra dan KorMit — 22 Oktober 2026
+
+### Alur yang menjadi acuan
+
+1. Super Admin mengangkat mitra aktif dengan akun login melalui **Jadikan Koordinator** pada Mitra Marketing Lapangan. Koordinator tidak boleh memiliki upline. Jaringan maksimal dua tingkat: KorMit → Mitra; mitra binaan tidak dapat dipromosikan sebelum hubungannya dilepas.
+2. KorMit memperoleh menu **KorMit** (`/marketing/dashboard/kormit`). URL lama `/marketing/dashboard/jaringan` diarahkan ke halaman ini. Halaman memuat status mitra binaan, jumlah tenant, bonus jaringan yang sudah dikreditkan, tautan undangan, dan formulir rekrutmen. Mitra biasa tidak mendapat akses endpoint KorMit meskipun memanggil URL secara langsung.
+3. Formulir KorMit menyimpan calon mitra sebagai `PENDING` dan `MITRA`. `upline_id` berasal dari sesi koordinator yang divalidasi server, bukan nilai kiriman browser. UUID pendaftaran dipakai ulang saat mencoba ulang permintaan agar gangguan koneksi tidak membuat baris duplikat. Nomor rekening tetap string agar nol di awal tidak hilang.
+4. Setelah data tersimpan, KorMit mendapat tombol WhatsApp ke Super Admin. Pesan menyebut koordinator, calon mitra, wilayah, kode referral, dan **nomor calon mitra**. Pendaftaran tampil di dashboard Super Admin dengan nama KorMit perekrut.
+5. Super Admin memverifikasi pendaftaran. Jika diterima, sistem membuat akun Auth, username `marketing_###`, dan password sementara **6 digit angka**; hubungan upline dipertahankan. Pesan kredensial ditujukan ke **`phone` milik mitra baru**, bukan koordinator. KorMit tidak menerima password. Persetujuan bersamaan tetap memakai pengamanan aktivasi akun yang telah ada.
+6. WhatsApp menggunakan mekanisme aplikasi yang tersedia: buka tautan `wa.me`, lalu pengguna menekan **Kirim**. Respons API bukan bukti pesan sudah dikirim/diterima. Integrasi pengiriman otomatis WhatsApp API belum diaktifkan dan memerlukan keputusan serta konfigurasi layanan tersendiri.
+
+### Rumus komisi dan pencairan
+
+Parameter produksi yang dibaca saat audit: biaya SaaS Rp50/struk, komisi langsung Rp20/struk, bonus KorMit Rp5/struk. Tarif tidak diubah dalam audit ini. **Parameter Master Global** menjadi sumber tarif; kolom tarif lama pada profil/tenant bukan pengganti parameter global.
+
+| Hubungan tenant | Penerima langsung | Penerima bonus jaringan |
+|---|---|---|
+| Tenant milik mitra mandiri | Mitra: jumlah struk × Rp20 | Tidak ada |
+| Tenant langsung KorMit | KorMit: jumlah struk × Rp20 | Tidak ada bonus untuk dirinya sendiri |
+| Tenant milik mitra binaan KorMit | Mitra: jumlah struk × Rp20 | KorMit: jumlah struk × Rp5 |
+
+Contoh: 100 struk tenant mitra binaan yang tagihannya sudah lunas menghasilkan Rp2.000 untuk mitra dan Rp500 untuk KorMit. Jika KorMit juga memiliki 100 struk dari tenant langsungnya, total komisi KorMit menjadi Rp2.500.
+
+- Komisi masuk ke `marketing_commission_mutations` saat tagihan SaaS menjadi `PAID`, bukan saat order dibuat atau bukti diunggah. Hanya pesanan `COOKING`, `READY`, dan `DONE` masuk perhitungan tagihan shift; `AWAITING_CONFIRMATION`, `VOID`, dan `REJECTED` tidak dihitung.
+- Satu shift menghasilkan satu tagihan. Pemanggilan ulang tutup shift mengembalikan tagihan yang sama. Shift berikutnya tidak menambah nominal tagihan yang sudah lunas.
+- Tarif dan relasi penerima dibaca saat pelunasan, sesuai mekanisme yang sudah ada. Perubahan tarif berlaku pada pelunasan berikutnya; mutasi yang sudah terbentuk tidak dihitung ulang. Total komisi langsung + jaringan tidak boleh melebihi pokok tagihan.
+- Penerima komisi harus `ACTIVE`. Mitra nonaktif tidak menerima komisi langsung baru; KorMit nonaktif tidak menerima bonus baru. Sesuai aturan penerima yang sudah ada, KorMit aktif tetap dapat menerima bonus tenant mitra binaannya meskipun mitra tersebut nonaktif. Mengubah kebijakan ini membutuhkan keputusan bisnis tersendiri.
+- Kunci unik `(billing_id, kind)` mencegah kredit ganda. Nominal ledger dan tagihan lunas dijaga trigger database.
+- **Saldo tersedia = seluruh kredit ledger − komisi yang sudah dibayar − pengajuan `PENDING`**, minimum nol. Saldo dashboard Mitra, daftar Super Admin, dan pemeriksaan pencairan memakai ledger yang sama. Bonus jaringan ikut menjadi saldo KorMit.
+- Permintaan pencairan mengunci baris mitra dan mencadangkan saldo dalam satu transaksi. API tidak boleh melakukan INSERT cadangan apabila RPC menolak.
+- Persetujuan pencairan mengunci mitra dan pengajuan, memeriksa role Super Admin, status mitra, saldo, serta pengajuan lain sebelum menambah `commission_paid`. Persetujuan berulang ditolak. `REJECTED` melepaskan saldo tertahan dan tidak menambah saldo dibayar.
+- Penandaan `PAID` di dashboard adalah pencatatan pembayaran setelah admin benar-benar mentransfer dana; aplikasi ini tidak mengeksekusi transfer bank.
+
+### Temuan dan perbaikan
+
+| Temuan | Dampak | Perbaikan |
+|---|---|---|
+| RPC pencairan produksi menjumlah transaksi × tarif tenant, sedangkan ledger memakai tagihan lunas | Saldo bisa berasal dari tagihan belum dibayar dan bonus KorMit terlewat | RPC, dashboard, dan daftar admin memakai agregat ledger |
+| API memasukkan pengajuan langsung ketika RPC gagal | Penolakan saldo dapat dilewati; race antarpengajuan | Jalur cadangan dihapus; seluruh reservasi melalui RPC atomik |
+| Review pencairan tidak mengunci mitra dan tidak memeriksa ulang saldo | Saldo berubah atau akun nonaktif masih berisiko dibayar | Kunci mitra → pengajuan, cek role/status/saldo/pending lain dalam transaksi |
+| Tutup shift lama dapat menghitung ulang struk dan menggabungkan tagihan harian lunas | Penghitungan berulang atau perubahan komisi historis | Tagihan unik per shift, tutup ulang idempoten, tagihan lunas tidak berubah |
+| Fungsi review/unggah bukti yang dipanggil aplikasi belum tersedia di produksi | Rantai pelunasan menuju kredit komisi tidak lengkap | Prasyarat billing terkait komisi disertakan dalam migrasi 31 |
+| Fallback laporan jaringan tidak memilih `upline_id`, memindai semua mitra, dan terbatasi hasil API | Mitra binaan atau total bonus hilang; kegagalan terlihat seperti saldo nol | Gunakan RPC agregasi jaringan; kegagalan dikembalikan sebagai error |
+| Tag catatan admin bisa dianggap sebagai otorisasi koordinator | Tampilan dan database berbeda; relasi bisa tersimpan hanya sebagai teks | Endpoint recruitment/referral memakai kolom kanonis; tidak fallback ke catatan |
+| Penyimpanan pengaturan dapat melaporkan sukses tanpa kolom komisi koordinator | Bonus yang ditampilkan tidak sesuai tarif tersimpan | Gagal secara eksplisit jika parameter tidak tersimpan lengkap |
+| Dashboard memakai tarif cadangan dan tarif profil/tenant lama | Pengguna melihat nilai yang berbeda dari perhitungan | Baca parameter global, tampilkan error jika gagal; hapus input tarif per-mitra yang tidak mengatur ledger |
+| Total admin berasal dari counter lama; pending belum dikurangkan | Saldo admin berbeda dari saldo mitra | RPC agregasi ledger, tenant, dan pending; label saldo tersedia |
+| Penghapusan mitra dilakukan bertahap dan mencoba menghapus riwayat keuangan | Kegagalan bisa meninggalkan relasi atau riwayat terhapus sebagian | RPC penghapusan atomik; mitra dengan mutasi/pencairan wajib dinonaktifkan, bukan dihapus |
+| KorMit menambah navigasi keenam pada grid lima kolom | Tombol turun ke baris kedua pada HP | Jumlah kolom mengikuti jumlah menu; kartu mitra dan form responsif |
+
+### Kondisi database produksi dan migrasi
+
+Pemeriksaan read-only sebelum perubahan menunjukkan 5 mitra, 0 koordinator, 0 relasi binaan, 0 mutasi komisi, 0 pengajuan pencairan, 0 tagihan SaaS, dan total `commission_paid` nol. Karena itu tidak diperlukan backfill atau perubahan saldo historis.
+
+Riwayat CLI produksi mencatat migrasi 01–23, sementara sebagian struktur 24 sudah ada dari penerapan manual. Fungsi lama pencairan masih memakai transaksi; perlindungan dari 25–30 belum seluruhnya ada. **Jangan menganggap keberadaan file migrasi berarti database telah diperbarui.**
+
+`supabase/migrations/31_kormit_payout_integrity.sql` memuat prasyarat afiliasi dan billing yang dibutuhkan alur ini secara eksplisit. Migrasi tersebut dapat diuji pada baseline 01–24 maupun baseline lengkap 01–30. Migrasi tidak mengubah tarif global, membuat akun pengguna, membayar pengajuan, atau menghapus data bisnis. Semua DDL dijalankan dalam transaksi, dengan pemeriksaan produksi menggunakan ROLLBACK terlebih dahulu.
+
+Jangan menjalankan semua migrasi tertunda 25–30 secara sembarang: selain menyentuh modul lain, beberapa fungsi di dalamnya akan menimpa perbaikan 31. Rekonsiliasi migrasi lama harus ditangani sebagai pekerjaan terpisah dan diakhiri penerapan ulang versi fungsi terbaru.
+
+### Temuan yang memerlukan keputusan terpisah
+
+File migrasi 27 memiliki fitur arsip tenant yang ikut menghapus ledger komisi. Fungsi arsip tersebut **belum terpasang di produksi saat audit**, dan audit KorMit ini tidak memasangnya. Sebelum fitur itu diaktifkan, tentukan apakah komisi yang sudah sah harus dipertahankan; pertanyaan konfirmasi telah diajukan. Sampai ada keputusan, jangan menjalankan migrasi arsip/purge sebagai bagian deployment KorMit. Perubahan pada kebijakan arsip tidak diperlukan untuk rekrutmen dan pencairan KorMit yang dibangun di sini.
+
+### Validasi
+
+- `npm run check`: lint tanpa error (18 peringatan yang sudah ada), 61 pengujian aplikasi lulus, build produksi dan pemeriksaan kebocoran secret lulus.
+- `scripts/kormit.test.mjs`: otorisasi KorMit, catatan legacy yang bukan otorisasi, input nomor/rekening, asal permintaan, upline dari sesi, status pending, pendaftaran ulang idempoten, kegagalan RPC tanpa fallback, serta kredensial persetujuan menuju nomor mitra baru dengan password enam digit.
+- `scripts/fixtures/kormit-assertions.sql`: mitra mandiri, tenant langsung KorMit, mitra binaan, total DIRECT + NETWORK, perubahan tarif historis, tarif nol/berlebih, akun nonaktif, larangan tingkat ketiga, reservasi, penolakan/pembayaran, pembayaran berulang, dan pelestarian riwayat saat penghapusan mitra.
+- Uji rantai billing: struk valid → tutup shift → unggah bukti → review Super Admin → satu kredit komisi; tutup ulang dan review ulang tidak menggandakan hasil; shift baru tidak mengubah tagihan lunas.
+- `scripts/test-kormit-concurrency.mjs`: dua permintaan Rp1.500 bersamaan dari saldo Rp2.000 menghasilkan tepat satu pengajuan; dua persetujuan pengajuan yang sama menghasilkan tepat satu pembayaran. Runner dibatasi ke database disposable localhost.
+- Browser Chrome dengan data fiktif: 320, 360, 390, 430, 768 px; navigasi enam item satu baris, target sentuh minimal 44 px, form submit/daftar berikutnya, tanpa overflow elemen utama, keypad HP/rekening, serta tidak tampilnya fitur rekrutmen untuk mitra biasa. Ini simulasi viewport, bukan pengujian langsung perangkat Android/iOS.
+- Tidak ada pesan WhatsApp nyata, akun marketing produksi fiktif, atau transfer uang yang dibuat selama pengujian.
+
+Status penerapan database: migrasi 31 berhasil COMMIT di produksi dan dicatat sebagai applied melalui Supabase CLI. Verifikasi read-only sesudahnya memastikan seluruh lima saldo dashboard sama dengan agregat daftar Super Admin; tarif tetap Rp20/Rp5/Rp50. Migrasi 25–30 tidak dijalankan sekaligus.

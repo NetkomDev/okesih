@@ -10,6 +10,8 @@ import {
   isValidIndonesianWhatsAppNumber,
   normalizeIndonesianWhatsAppNumber,
 } from "@/lib/whatsapp";
+import { recruitmentSchema } from "@/lib/marketing-recruitment";
+import { randomDigits } from "@/lib/generated-credentials";
 import { isCoordinatorLevel } from "@/lib/affiliate";
 
 type RegistrationRow = {
@@ -70,7 +72,11 @@ export async function POST(request: NextRequest) {
     assertSameOrigin(request);
     if (request.cookies.has(MARKETING_REGISTRATION_COOKIE)) return GET(request);
     getSuperAdminWhatsAppNumber(process.env.SUPERADMIN_WHATSAPP_NUMBER);
-    const body = await request.json();
+    const raw = await request.json().catch(() => null);
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return NextResponse.json({ error: "Data pendaftaran tidak valid." }, { status: 400 });
+    const parsed = recruitmentSchema.omit({ requestId: true }).safeParse({ ...raw, bankName: raw.bankName || "BCA" });
+    if (!parsed.success) return NextResponse.json({ error: "Periksa nama, WhatsApp, wilayah, email, dan nomor rekening angka." }, { status: 400 });
+    const body = { ...parsed.data, coordinatorReferralCode: raw.coordinatorReferralCode };
     const {
       fullName,
       phone,
@@ -101,8 +107,7 @@ export async function POST(request: NextRequest) {
     // Buat kode referral unik otomatis jika belum ada
     // Format: MKT-[KODE_WILAYAH]-[ANGKA_ACAK]
     const cleanCity = cityArea.replace(/[^a-zA-Z]/g, "").slice(0, 3).toUpperCase() || "IDN";
-    const randomSuffix = Math.floor(100 + Math.random() * 900);
-    const referralCode = `MKT-${cleanCity}-${randomSuffix}`;
+    const referralCode = `MKT-${cleanCity}-${randomDigits(3)}`;
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -127,18 +132,17 @@ export async function POST(request: NextRequest) {
 
       const { data: coordinatorCandidate, error: referralError } = await supabase
         .from("marketing_partners")
-        .select("id, status, user_id, membership_level, notes_admin")
+        .select("id, status, user_id, membership_level, upline_id")
         .eq("referral_code", coordinatorReferralCode.trim().toUpperCase())
         .maybeSingle();
 
-      if (referralError && !referralError.message?.includes("membership_level")) {
+      if (referralError) {
         return NextResponse.json({ error: "Referral belum dapat diperiksa." }, { status: 503 });
       }
 
       let validCoordinatorId: string | null = null;
       if (coordinatorCandidate && coordinatorCandidate.status === "ACTIVE" && coordinatorCandidate.user_id) {
-        const isCoord = isCoordinatorLevel(coordinatorCandidate.membership_level) ||
-          (typeof coordinatorCandidate.notes_admin === "string" && coordinatorCandidate.notes_admin.includes("[LEVEL:COORDINATOR]"));
+        const isCoord = isCoordinatorLevel(coordinatorCandidate.membership_level) && !coordinatorCandidate.upline_id;
         if (isCoord) validCoordinatorId = String(coordinatorCandidate.id);
       }
 
@@ -166,25 +170,17 @@ export async function POST(request: NextRequest) {
       baseInsert.notes_admin = `[UPLINE:${uplineId}]`;
     }
 
-    let { data, error } = await supabase
-      .from("marketing_partners")
-      .insert([{
+    let data: RegistrationRow | null = null;
+    let error: { code?: string; message: string } | null = null;
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const result = await supabase.from("marketing_partners").insert([{
         ...baseInsert,
-        membership_level: "MITRA",
-        upline_id: uplineId,
-      }])
-      .select(registrationColumns)
-      .single();
-
-    if (error && (error.message?.includes("upline_id") || error.message?.includes("membership_level"))) {
-      console.warn("Kolom upline_id/membership_level belum ada di schema DB, menyimpan dengan fallback notes_admin...");
-      const retry = await supabase
-        .from("marketing_partners")
-        .insert([baseInsert])
-        .select(registrationColumns)
-        .single();
-      data = retry.data;
-      error = retry.error;
+        referral_code: attempt === 0 ? referralCode : `MKT-${cleanCity}-${randomDigits(3)}`,
+        membership_level: "MITRA", upline_id: uplineId,
+      }]).select(registrationColumns).single();
+      data = result.data;
+      error = result.error;
+      if (!error || error.code !== "23505") break;
     }
 
     if (error || !data) {

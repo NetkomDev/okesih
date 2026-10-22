@@ -13,7 +13,7 @@ const source = ts.transpileModule(
   { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }
 ).outputText;
 
-function createFixture({ userRole = 'SUPERADMIN', partnerExists = true, hasTenants = true } = {}) {
+function createFixture({ userRole = 'SUPERADMIN', partnerExists = true, hasTenants = true, financialHistory = false } = {}) {
   const calls = [];
   const partner = {
     id: 'partner-uuid-1',
@@ -29,6 +29,12 @@ function createFixture({ userRole = 'SUPERADMIN', partnerExists = true, hasTenan
     : [];
 
   const adminClient = {
+    async rpc(name, args) {
+      calls.push({ op: 'rpc', name, args });
+      if (!partnerExists) return { error: { code: 'P0002', message: 'Mitra tidak ditemukan.' } };
+      if (financialHistory) return { error: { code: 'P0001', message: 'Mitra memiliki riwayat komisi. Nonaktifkan akun.' } };
+      return { data: { name: partner.full_name, userId: partner.user_id, detachedTenantsCount: warkops.length }, error: null };
+    },
     from(table) {
       const q = {
         _table: table,
@@ -188,34 +194,21 @@ test('DELETE marketing returns 404 when partner not found', async () => {
   assert.equal(res.status, 404);
 });
 
-test('DELETE marketing successfully cleans up downlines, tenants, applications, withdrawals, mutations, partner, and auth user', async () => {
-  const { route, calls } = createFixture({ partnerExists: true, hasTenants: true });
-  const req = new NextRequest('https://www.okesih.com/api/superadmin/marketing?id=partner-uuid-1', {
-    method: 'DELETE',
-    headers: { origin: 'https://www.okesih.com' },
-  });
+test('DELETE marketing uses an atomic database operation before deleting Auth', async () => {
+  const { route, calls } = createFixture();
+  const req = new NextRequest('https://www.okesih.com/api/superadmin/marketing?id=partner-uuid-1', { method: 'DELETE', headers: { origin: 'https://www.okesih.com' } });
   const res = await route.DELETE(req);
   const data = await res.json();
   assert.equal(res.status, 200);
-  assert.equal(data.success, true);
-  assert.match(data.message, /Mitra Sukses/);
-
-  // Verify upline disconnect for downlines
-  const downlineUpdate = calls.find(c => c.table === 'marketing_partners' && c.op === 'update' && c.values?.upline_id === null);
-  assert.ok(downlineUpdate, 'Harus memutuskan upline_id bagi mitra binaan');
-
-  // Verify warkop detachment and commission reset
-  const warkopUpdate = calls.find(c => c.table === 'warkops' && c.op === 'update' && c.values?.marketing_agent_id === null && c.values?.marketing_commission_per_receipt === 0);
-  assert.ok(warkopUpdate, 'Harus mendetach tenant warkop dan mereset komisi');
-
-  // Verify cleanup of applications, withdrawals, commissions
-  assert.ok(calls.find(c => c.table === 'tenant_applications' && c.op === 'delete'), 'Harus menghapus permohonan tenant');
-  assert.ok(calls.find(c => c.table === 'marketing_commission_withdrawals' && c.op === 'delete'), 'Harus menghapus data withdrawal');
-  assert.ok(calls.find(c => c.table === 'marketing_commission_mutations' && c.op === 'delete'), 'Harus menghapus riwayat mutasi komisi');
-
-  // Verify deletion of marketing_partners record
-  assert.ok(calls.find(c => c.table === 'marketing_partners' && c.op === 'delete'), 'Harus menghapus data marketing partner');
-
-  // Verify deletion of Supabase auth user
-  assert.ok(calls.find(c => c.op === 'deleteUser' && c.userId === 'auth-user-uuid-1'), 'Harus menghapus user auth supabase');
+  assert.equal(data.detachedTenantsCount, 2);
+  assert.equal(calls[0].name, 'delete_marketing_partner_safely');
+  assert.equal(calls[1].op, 'deleteUser');
+  assert.equal(calls.some(c => c.op === 'delete' || c.op === 'update'), false);
+});
+test('DELETE marketing preserves Auth and every relationship when financial history exists', async () => {
+  const { route, calls } = createFixture({ financialHistory: true });
+  const res = await route.DELETE(new NextRequest('https://www.okesih.com/api/superadmin/marketing?id=partner-uuid-1', { method: 'DELETE', headers: { origin: 'https://www.okesih.com' } }));
+  assert.equal(res.status, 409);
+  assert.equal(calls.length, 1);
+  assert.match((await res.json()).error, /Nonaktifkan/);
 });

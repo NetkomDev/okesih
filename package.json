@@ -11,7 +11,7 @@
     "lint": "eslint",
     "check-secrets": "node scripts/check-secrets.mjs",
     "test:reporting": "node --import tsx --test scripts/reporting.test.mjs",
-    "test": "node --import tsx --test scripts/reporting.test.mjs scripts/generated-credentials.test.mjs scripts/marketing-profile.test.mjs scripts/test-pwa-launch.test.mjs scripts/remediation.test.mjs && node --conditions=react-server --import tsx --test scripts/marketing-registration.test.mjs scripts/security-regression.test.mjs scripts/marketing-delete.test.mjs",
+    "test": "node --import tsx --test scripts/reporting.test.mjs scripts/generated-credentials.test.mjs scripts/marketing-profile.test.mjs scripts/test-pwa-launch.test.mjs scripts/remediation.test.mjs && node --conditions=react-server --import tsx --test scripts/marketing-registration.test.mjs scripts/security-regression.test.mjs scripts/marketing-delete.test.mjs scripts/kormit.test.mjs",
     "test:database": "bash scripts/test-database.sh",
     "check": "npm run lint && npm test && npm run build"
   },

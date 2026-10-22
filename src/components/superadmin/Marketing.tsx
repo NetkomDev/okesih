@@ -24,6 +24,8 @@ interface MarketingAgent {
   status: "ACTIVE" | "PENDING" | "INACTIVE";
   membershipLevel: "COORDINATOR" | "MITRA";
   experienceNotes?: string;
+  coordinatorName?: string;
+  pendingWithdrawal?: number;
 }
 interface MarketingWithdrawal {
   id: string;
@@ -71,6 +73,8 @@ const loadMarketingPartners = async () => {
           status: "ACTIVE" | "PENDING" | "INACTIVE";
           membership_level?: string;
           experience_notes?: string;
+          coordinator_name?: string;
+          pending_withdrawal?: number;
         }
         const mapped: MarketingAgent[] = json.data.map((row: RawMarketingPartner) => ({
           id: row.id,
@@ -79,7 +83,7 @@ const loadMarketingPartners = async () => {
           email: row.email,
           area: row.city_area,
           referralCode: row.referral_code,
-          commissionPerReceipt: Number(row.commission_rate) || 15,
+          commissionPerReceipt: Number(row.commission_rate) || 0,
           bankName: row.bank_name,
           accountNumber: row.bank_account_number,
           accountName: row.bank_account_name,
@@ -90,6 +94,8 @@ const loadMarketingPartners = async () => {
           status: row.status,
           membershipLevel: (row.membership_level === "COORDINATOR" || row.membership_level === "KOORDINATOR") ? "COORDINATOR" : "MITRA",
           experienceNotes: row.experience_notes,
+          coordinatorName: row.coordinator_name,
+          pendingWithdrawal: Number(row.pending_withdrawal) || 0,
         }));
         setMarketingList(mapped);
       }
@@ -223,7 +229,7 @@ const reviewMarketingWithdrawal = async (id: string, decision: "PAID" | "REJECTE
       setReviewingWithdrawalId(null);
     }
   };
-const [defaultCommissionRate, setDefaultCommissionRate] = useState<number>(15);
+const [defaultCommissionRate, setDefaultCommissionRate] = useState<number | null>(null);
 useEffect(() => {
   const controller = new AbortController();
   void fetch("/api/platform-settings", { signal: controller.signal, cache: "no-store" })
@@ -241,7 +247,6 @@ const [newMarketingCode, setNewMarketingCode] = useState<string>("");
 const [newMarketingBank, setNewMarketingBank] = useState<string>("BCA");
 const [newMarketingAccountNo, setNewMarketingAccountNo] = useState<string>("");
 const [newMarketingAccountName, setNewMarketingAccountName] = useState<string>("");
-const [newMarketingCommRate, setNewMarketingCommRate] = useState<number>(15);
 const [newMarketingUsername, setNewMarketingUsername] = useState<string>("");
 const [newMarketingPassword, setNewMarketingPassword] = useState<string>("");
 const [isMarketingSaving, setIsMarketingSaving] = useState<boolean>(false);
@@ -258,13 +263,12 @@ const handleCreateMarketing = async (e: React.FormEvent) => {
       return;
     }
 
-    const newMkt: MarketingAgent = {
+    const newMkt: Omit<MarketingAgent, "commissionPerReceipt"> = {
       id: `mkt-${Date.now()}`,
       name: newMarketingName.trim(),
       phone: newMarketingPhone || "-",
       area: newMarketingArea || "Nasional",
       referralCode: newMarketingCode.toUpperCase().trim(),
-      commissionPerReceipt: newMarketingCommRate || 15,
       bankName: newMarketingBank,
       accountNumber: newMarketingAccountNo || "-",
       accountName: newMarketingAccountName || newMarketingName,
@@ -348,7 +352,6 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
                     setNewMarketingArea("");
                     setNewMarketingCode(`MKT-${codeSuffix}`);
                     setNewMarketingAccountNo("");
-                    setNewMarketingCommRate(defaultCommissionRate);
                     handleOpenMarketingModal();
                   }}
                   className="btn-primary"
@@ -492,7 +495,7 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
                       return matchStatus && matchQuery;
                     })
                     .map((m) => {
-                      const sisaKomisi = m.totalCommissionEarned - m.commissionPaid;
+                      const sisaKomisi = Math.max(0, m.totalCommissionEarned - m.commissionPaid - (m.pendingWithdrawal || 0));
                       return (
                         <tr
                           key={m.id}
@@ -549,6 +552,7 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
                                 </span>
                               )}
                             </div>
+                            {m.coordinatorName && <p style={{ fontSize: "0.8rem", marginTop: 6 }}>Binaan KorMit: <b>{m.coordinatorName}</b></p>}
                             {m.experienceNotes && (
                               <div style={{ fontSize: "0.72rem", color: isDark ? "#94A3B8" : "#64748B", marginTop: "4px" }}>
                                 💡 {m.experienceNotes}
@@ -635,7 +639,7 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
                             </div>
                             {sisaKomisi > 0 && (
                               <div style={{ fontSize: "0.75rem", color: "#EF4444", fontWeight: 700 }}>
-                                Sisa: Rp {sisaKomisi.toLocaleString("id-ID")}
+                                Tersedia: Rp {sisaKomisi.toLocaleString("id-ID")}
                               </div>
                             )}
                           </td>
@@ -886,26 +890,8 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
                   />
                 </div>
 
-                <div>
-                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: isDark ? "#94A3B8" : "#475569", marginBottom: "0.35rem" }}>
-                    Komisi (Rp / Struk)
-                  </label>
-                  <input inputMode="numeric"
-                    type="number"
-                    value={newMarketingCommRate}
-                    onChange={(e) => setNewMarketingCommRate(parseInt(e.target.value) || 15)}
-                    style={{
-                      width: "100%",
-                      padding: "0.75rem 1rem",
-                      borderRadius: "8px",
-                      background: isDark ? "rgba(15, 23, 42, 0.8)" : "#F8FAFC",
-                      border: isDark ? "1px solid rgba(16, 185, 129, 0.4)" : "1px solid rgba(0, 0, 0, 0.15)",
-                      color: isDark ? "#FBBF24" : "#D97706",
-                      fontWeight: 800,
-                      fontSize: "0.9rem",
-                      outline: "none",
-                    }}
-                  />
+                <div style={{ alignSelf: "center", fontSize: "0.85rem", lineHeight: 1.6 }}>
+                  Komisi tenant langsung: <b>{defaultCommissionRate === null ? "Memuat parameter…" : `Rp ${defaultCommissionRate}/struk`}</b>. Tarif dan bonus KorMit diatur pada Parameter Master Global.
                 </div>
               </div>
 

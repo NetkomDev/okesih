@@ -37,32 +37,12 @@ export async function GET(request: Request) {
     const status = searchParams.get("status");
     const city = searchParams.get("city");
 
-    let query = supabase
-      .from("marketing_partners")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (status && status !== "ALL") {
-      query = query.eq("status", status);
-    }
-
-    if (city && city !== "ALL") {
-      query = query.ilike("city_area", `%${city}%`);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      console.error("Supabase query error:", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    const enriched = (data || []).map((row: Record<string, unknown>) => ({
-      ...row,
-      membership_level: row.membership_level || (typeof row.notes_admin === "string" && row.notes_admin.includes("[LEVEL:COORDINATOR]") ? "COORDINATOR" : "MITRA"),
-    }));
-
-    return NextResponse.json({ data: enriched });
+    const { data, error } = await supabase.rpc("report_superadmin_marketing", {
+      p_status: status && status !== "ALL" ? status : null,
+      p_city: city && city !== "ALL" ? city : null,
+    });
+    if (error) return NextResponse.json({ error: "Data komisi mitra belum dapat dimuat." }, { status: 503 });
+    return NextResponse.json({ data: data || [] }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (err: unknown) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Terjadi kesalahan internal." },
@@ -86,6 +66,8 @@ export async function POST(request: Request) {
     if (!isValidIndonesianWhatsAppNumber(phone)) return NextResponse.json({ error: "Nomor WhatsApp marketing tidak valid." }, { status: 400 });
     let username = String(body.username).trim().toLowerCase().replace(/[^a-z0-9_-]/g, "");
     if (username.length < 4) return NextResponse.json({ error: "Username marketing minimal 4 karakter." }, { status: 400 });
+    const { data: rates, error: ratesError } = await supabase.from("platform_settings").select("default_marketing_commission").eq("id", "global").single();
+    if (ratesError || !rates) return NextResponse.json({ error: "Parameter komisi belum dapat dibaca." }, { status: 503 });
     const { data: authData, error: authError, username: assignedUsername } = await createAccount(supabase, username, {
       password: String(body.password),
       email_confirm: true,
@@ -100,7 +82,7 @@ export async function POST(request: Request) {
       phone,
       city_area: String(body.area).trim(),
       referral_code: String(body.referralCode).trim().toUpperCase(),
-      commission_rate: Number(body.commissionPerReceipt) || 0,
+      commission_rate: Number(rates.default_marketing_commission),
       bank_name: String(body.bankName || "-").trim(),
       bank_account_number: String(body.accountNumber).trim(),
       bank_account_name: String(body.accountName || body.name).trim(),
@@ -124,7 +106,7 @@ export async function POST(request: Request) {
         phone: data.phone,
         area: data.city_area || "Umum",
         referral_code: data.referral_code,
-        commission_per_receipt: Number(data.commission_rate) || 15,
+        commission_per_receipt: Number(data.commission_rate) || 0,
         bank_name: data.bank_name,
         bank_account_number: data.bank_account_number,
         bank_account_name: data.bank_account_name,
@@ -177,7 +159,7 @@ export async function PATCH(request: Request) {
 
     const updatePayload: Record<string, unknown> = {};
     if (status) updatePayload.status = status;
-    if (commissionRate !== undefined) updatePayload.commission_rate = commissionRate;
+    if (commissionRate !== undefined) return NextResponse.json({ error: "Tarif komisi diatur melalui Parameter Master Global." }, { status: 400 });
 
     let targetNotes = notesAdmin !== undefined ? notesAdmin : current.notes_admin;
     let targetLevel: string | undefined = undefined;
@@ -209,11 +191,12 @@ export async function PATCH(request: Request) {
         targetNotes = (targetNotes || "").replace(/\[UPLINE:[^\]]+\]/g, "").trim();
       } else {
         // Jika mencabut status Koordinator, pastikan tidak ada downline yang menggantung
-        const { count: downlineCount } = await supabase
+        const { count: downlineCount, error: downlineError } = await supabase
           .from("marketing_partners")
           .select("id", { count: "exact", head: true })
           .eq("upline_id", id);
 
+        if (downlineError) return NextResponse.json({ error: "Relasi mitra belum dapat diperiksa." }, { status: 503 });
         if (downlineCount && downlineCount > 0) {
           return NextResponse.json({
             error: `Tidak dapat mencabut status Koordinator karena masih memiliki ${downlineCount} mitra downline binaan. Alihkan atau lepaskan downline terlebih dahulu.`
@@ -248,8 +231,7 @@ export async function PATCH(request: Request) {
         if (uplinePartner.status !== "ACTIVE") {
           return NextResponse.json({ error: "Koordinator upline harus berstatus aktif." }, { status: 400 });
         }
-        const isUplineCoord = uplinePartner.membership_level === "COORDINATOR" ||
-          (typeof uplinePartner.notes_admin === "string" && uplinePartner.notes_admin.includes("[LEVEL:COORDINATOR]"));
+        const isUplineCoord = uplinePartner.membership_level === "COORDINATOR";
         if (!isUplineCoord) {
           return NextResponse.json({ error: "Upline yang dipilih harus berstatus Koordinator Mitra." }, { status: 400 });
         }
@@ -300,15 +282,6 @@ export async function PATCH(request: Request) {
     };
     let { data, error } = await savePartner();
 
-    // Fallback jika kolom membership_level belum ada di DB
-    if (error && error.message?.includes("membership_level")) {
-      console.warn("Kolom membership_level belum ada di schema DB, menyimpan dengan fallback notes_admin...");
-      delete updatePayload.membership_level;
-      const retry = await savePartner();
-      data = retry.data;
-      error = retry.error;
-    }
-
     if (error && createdAuthUserId) {
       const { data: persisted, error: readError } = await supabase.from("marketing_partners").select("*").eq("id", id).maybeSingle();
       if (readError) return NextResponse.json({ error: "Status aktivasi belum dapat dipastikan. Muat ulang untuk memeriksa akun sebelum mengulang." }, { status: 503 });
@@ -343,9 +316,9 @@ export async function PATCH(request: Request) {
         ? [
             `Halo ${cleanWhatsAppMessageField(data.full_name)}, selamat! Anda telah diangkat menjadi *Koordinator Mitra* OKESIH. 🎉`,
             "",
-            "Fitur Jaringan kini telah aktif di akun Anda. Anda dapat mulai merekrut dan membina jaringan mitra marketing baru menggunakan link referral Anda di aplikasi.",
+            "Menu KorMit kini telah aktif di akun Anda. Anda dapat mulai merekrut dan membina jaringan mitra marketing baru menggunakan link referral Anda di aplikasi.",
             "",
-            "Buka Dashboard Marketing Anda untuk melihat menu *Jaringan Saya*.",
+            "Buka Dashboard Marketing Anda untuk melihat menu *KorMit*.",
             "",
             "Salam,",
             "Super Admin OKESIH",
@@ -383,119 +356,20 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: "ID mitra marketing diperlukan." }, { status: 400 });
     }
 
-    // 1. Ambil data mitra marketing yang akan dihapus
-    const { data: partner, error: fetchError } = await supabase
-      .from("marketing_partners")
-      .select("id, full_name, phone, referral_code, user_id, username")
-      .eq("id", id)
-      .maybeSingle();
-
-    if (fetchError || !partner) {
-      return NextResponse.json({ error: fetchError?.message || "Data mitra marketing tidak ditemukan." }, { status: 404 });
+    const { data, error } = await supabase.rpc("delete_marketing_partner_safely", { p_partner_id: id, p_admin_id: user.id });
+    if (error || !data) {
+      const status = error?.code === "P0001" ? 409 : error?.code === "P0002" ? 404 : 503;
+      return NextResponse.json({ error: status === 503 ? "Penghapusan belum dapat dipastikan. Muat ulang data sebelum mencoba lagi." : error?.message }, { status });
     }
-
-    // 2. Putuskan hubungan upline bagi mitra lain yang menjadikan mitra ini sebagai upline
-    await supabase
-      .from("marketing_partners")
-      .update({ upline_id: null })
-      .eq("upline_id", id);
-
-    // 3. Putuskan hubungan tenant binaan dan reset komisi marketing per struk menjadi 0
-    // Tenant binaan tetap aman, aktif, dan beroperasi normal seperti tenant yang didaftar langsung oleh Super Admin
-    const { data: affectedWarkops, error: warkopUpdateError } = await supabase
-      .from("warkops")
-      .update({
-        marketing_agent_id: null,
-        marketing_commission_per_receipt: 0,
-      })
-      .eq("marketing_agent_id", id)
-      .select("id, nama");
-
-    if (warkopUpdateError) {
-      console.error("Gagal melepaskan tenant binaan:", warkopUpdateError);
-      return NextResponse.json({ error: "Gagal memperbarui relasi tenant binaan." }, { status: 500 });
+    let authCleanupPending = false;
+    if (data.userId) {
+      const result = await supabase.auth.admin.deleteUser(data.userId);
+      authCleanupPending = Boolean(result.error);
+      if (result.error) console.error("Marketing auth cleanup pending", { partnerId: id, userId: data.userId });
     }
-
-    // 4. Bersihkan antrean pengajuan tenant dari mitra ini
-    await supabase
-      .from("tenant_applications")
-      .delete()
-      .eq("marketing_partner_id", id);
-
-    // 5. Bersihkan riwayat pengajuan pencairan komisi mitra ini
-    await supabase
-      .from("marketing_commission_withdrawals")
-      .delete()
-      .eq("marketing_partner_id", id);
-
-    // 6. Bersihkan buku mutasi komisi mitra ini (baik sebagai partner_id maupun source_partner_id)
-    await supabase
-      .from("marketing_commission_mutations")
-      .delete()
-      .or(`partner_id.eq.${id},source_partner_id.eq.${id}`);
-
-    // 7. Bersihkan data sinkronisasi di tabel marketing_agents
-    await supabase
-      .from("marketing_agents")
-      .delete()
-      .eq("id", id);
-
-    // 8. Hapus record utama dari marketing_partners
-    const { error: deletePartnerError } = await supabase
-      .from("marketing_partners")
-      .delete()
-      .eq("id", id);
-
-    if (deletePartnerError) {
-      console.error("Gagal menghapus marketing_partners:", deletePartnerError);
-      return NextResponse.json({ error: deletePartnerError.message }, { status: 500 });
-    }
-
-    // 9. Hapus akun Supabase Auth marketing jika terdaftar
-    if (partner.user_id) {
-      try {
-        await supabase.auth.admin.deleteUser(partner.user_id);
-      } catch (authDeleteErr) {
-        console.warn("Peringatan saat menghapus auth user marketing:", authDeleteErr);
-      }
-    } else if (partner.username) {
-      try {
-        const { data: usersData } = await supabase.auth.admin.listUsers();
-        const targetEmail = `${partner.username.toLowerCase()}@okesih.local`;
-        const matched = usersData?.users?.find((u) => u.email?.toLowerCase() === targetEmail);
-        if (matched) {
-          await supabase.auth.admin.deleteUser(matched.id);
-        }
-      } catch (authListErr) {
-        console.warn("Peringatan saat mencari auth user marketing:", authListErr);
-      }
-    }
-
-    // 10. Catat aktivitas ke audit_logs
-    try {
-      await supabase.from("audit_logs").insert({
-        actor_user_id: user.id,
-        action: "MARKETING_PARTNER_DELETED",
-        target_type: "marketing_partner",
-        target_id: id,
-        metadata: {
-          partner_name: partner.full_name,
-          phone: partner.phone,
-          referral_code: partner.referral_code,
-          username: partner.username,
-          user_id: partner.user_id,
-          detached_tenants_count: affectedWarkops?.length || 0,
-          detached_tenants: (affectedWarkops || []).map((w: { id: string; nama: string }) => ({ id: w.id, nama: w.nama })),
-        },
-      });
-    } catch (auditErr) {
-      console.warn("Peringatan pencatatan audit log:", auditErr);
-    }
-
-    return NextResponse.json({
-      success: true,
-      message: `Mitra marketing ${partner.full_name} (${partner.referral_code}) berhasil dihapus permanen.`,
-      detachedTenantsCount: affectedWarkops?.length || 0,
+    return NextResponse.json({ success: true, authCleanupPending,
+      message: `Mitra marketing ${data.name} berhasil dihapus.${authCleanupPending ? " Akun login belum terhapus; akses mitra telah terputus." : ""}`,
+      detachedTenantsCount: data.detachedTenantsCount,
     });
   } catch (err: unknown) {
     if (err instanceof DeviceApiError) {

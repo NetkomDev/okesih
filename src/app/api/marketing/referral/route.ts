@@ -11,11 +11,11 @@ export async function GET(request: Request) {
   const admin = createAdminClient();
   const { data: partner, error } = await admin
     .from("marketing_partners")
-    .select("full_name, referral_code, status, membership_level, notes_admin, user_id")
+    .select("full_name, referral_code, status, membership_level, upline_id, user_id")
     .eq("referral_code", code)
     .maybeSingle();
 
-  if (error && !error.message?.includes("membership_level")) {
+  if (error) {
     return NextResponse.json({ error: "Referral belum dapat diperiksa." }, { status: 503 });
   }
 
@@ -23,8 +23,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Koordinator tidak ditemukan atau sudah tidak aktif." }, { status: 404 });
   }
 
-  const isCoord = isCoordinatorLevel(partner.membership_level as string | undefined) ||
-    (typeof partner.notes_admin === "string" && partner.notes_admin.includes("[LEVEL:COORDINATOR]"));
+  const isCoord = isCoordinatorLevel(partner.membership_level) && !partner.upline_id;
 
   if (!isCoord) {
     return NextResponse.json({ error: "Kode referral ini bukan milik Koordinator Mitra." }, { status: 404 });
