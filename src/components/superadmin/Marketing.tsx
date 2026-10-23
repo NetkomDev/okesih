@@ -29,6 +29,7 @@ interface MarketingAgent {
   experienceNotes?: string;
   coordinatorName?: string;
   pendingWithdrawal?: number;
+  coordinatorCommissionOverride?: number | null;
 }
 interface MarketingWithdrawal {
   id: string;
@@ -94,6 +95,7 @@ const loadMarketingPartners = useCallback(async () => {
           experience_notes?: string;
           coordinator_name?: string;
           pending_withdrawal?: number;
+          coordinator_commission_override?: number | null;
         }
         const mapped: MarketingAgent[] = json.data.map((row: RawMarketingPartner) => ({
           id: row.id,
@@ -115,6 +117,7 @@ const loadMarketingPartners = useCallback(async () => {
           experienceNotes: row.experience_notes,
           coordinatorName: row.coordinator_name,
           pendingWithdrawal: Number(row.pending_withdrawal) || 0,
+          coordinatorCommissionOverride: row.coordinator_commission_override == null ? null : Number(row.coordinator_commission_override),
         }));
         setMarketingList(mapped);
       }
@@ -155,6 +158,39 @@ const handleUpdateMarketingStatus = async (id: string, newStatus: "ACTIVE" | "IN
     }
   };
 
+  const [coordinatorTarget, setCoordinatorTarget] = useState<MarketingAgent | null>(null);
+  const [coordinatorBonus, setCoordinatorBonus] = useState("");
+  const [coordinatorRates, setCoordinatorRates] = useState<{ global: number; max: number } | null>(null);
+  const [coordinatorError, setCoordinatorError] = useState("");
+  const [coordinatorSaving, setCoordinatorSaving] = useState(false);
+  const openCoordinatorSettings = async (agent: MarketingAgent) => {
+    setCoordinatorTarget(agent); setCoordinatorBonus(agent.coordinatorCommissionOverride == null ? "" : String(agent.coordinatorCommissionOverride));
+    setCoordinatorRates(null); setCoordinatorError("");
+    try {
+      const response = await fetch("/api/platform-settings", { cache: "no-store" });
+      const payload = await response.json();
+      if (!response.ok || !payload.data) throw new Error("Parameter bonus belum dapat dimuat. Tutup lalu coba lagi.");
+      setCoordinatorRates({ global: Number(payload.data.coordinatorCommissionPerReceipt), max: Number(payload.data.saasFeePerReceipt) - Number(payload.data.defaultMarketingCommission) });
+    } catch (error) { setCoordinatorError(error instanceof Error ? error.message : "Parameter gagal dimuat."); }
+  };
+  const saveCoordinatorSettings = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!coordinatorTarget || !coordinatorRates || coordinatorSaving) return;
+    const bonus = coordinatorBonus.trim() === "" ? null : Number(coordinatorBonus);
+    if (bonus !== null && (!/^\d+$/.test(coordinatorBonus) || !Number.isSafeInteger(bonus) || bonus > coordinatorRates.max)) {
+      setCoordinatorError(`Bonus harus angka bulat antara Rp0–Rp${coordinatorRates.max.toLocaleString("id-ID")}, atau kosong untuk mengikuti global.`); return;
+    }
+    setCoordinatorSaving(true); setCoordinatorError("");
+    try {
+      const response = await fetch("/api/superadmin/marketing", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: coordinatorTarget.id, membershipLevel: "COORDINATOR", coordinatorCommissionOverride: bonus }) });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Pengaturan koordinator gagal disimpan.");
+      setDirectoryRevision(value => value + 1); setCoordinatorTarget(null);
+      showToast("Pengaturan KorMit Disimpan", "Bonus dan status koordinator tersimpan. Pesan WhatsApp siap dikirim ke mitra.", "success");
+      if (payload.whatsappUrl) window.location.assign(payload.whatsappUrl);
+    } catch (error) { setCoordinatorError(error instanceof Error ? error.message : "Pengaturan gagal disimpan."); }
+    finally { setCoordinatorSaving(false); }
+  };
   const handleToggleCoordinator = async (agent: MarketingAgent) => {
     const newLevel = agent.membershipLevel === "COORDINATOR" ? "MITRA" : "COORDINATOR";
     try {
@@ -324,6 +360,7 @@ useEffect(() => {
 }, [loadMarketingPartners, directoryRevision]);
 const selected = marketingList.find(m => m.id === selectedId);
 const renderMarketingActions = (m: MarketingAgent) => <>
+  {m.membershipLevel === "COORDINATOR" && m.status === "ACTIVE" && <button className="btn-secondary" onClick={() => void openCoordinatorSettings(m)}>Atur bonus KorMit</button>}
                             <button className="btn-secondary" style={{ marginBottom: 8, fontSize: 12 }} onClick={() => setAccessTarget({ kind: "MARKETING", id: m.id, name: m.name, phone: m.phone, canReset: m.status === "ACTIVE" })}>Perbaiki WA & akses</button>
                             <div style={{ display: "flex", gap: "0.4rem", justifyContent: "flex-end" }}>
                               {m.status === "PENDING" ? (
@@ -373,7 +410,7 @@ const renderMarketingActions = (m: MarketingAgent) => <>
                                         </button>
                                       ) : (
                                         <button
-                                          onClick={() => handleToggleCoordinator(m)}
+                                          onClick={() => void openCoordinatorSettings(m)}
                                           className="btn-secondary"
                                           style={{
                                             padding: "0.4rem 0.65rem",
@@ -787,10 +824,24 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
             </div>
           </section>
         )}
+{coordinatorTarget && <ModalFrame label="Pengaturan Koordinator Mitra" onClose={() => { if (!coordinatorSaving) setCoordinatorTarget(null); }}>
+  <form className="glass-panel sa-coordinator-settings" onSubmit={saveCoordinatorSettings}>
+    <h2>{coordinatorTarget.membershipLevel === "COORDINATOR" ? "Atur bonus KorMit" : "Jadikan Koordinator"}</h2>
+    <p><strong>{coordinatorTarget.name}</strong></p>
+    <p>Bonus berlaku untuk struk tenant milik mitra yang direkrut langsung. Upline yang sudah ada tetap dipertahankan.</p>
+    <label htmlFor="coordinator-bonus">Bonus khusus KorMit (Rp / struk)</label>
+    <input id="coordinator-bonus" type="text" inputMode="numeric" pattern="[0-9]*" value={coordinatorBonus} onChange={event => setCoordinatorBonus(event.target.value)} disabled={coordinatorSaving} placeholder="Kosong = mengikuti global" aria-describedby="coordinator-bonus-help" />
+    <p id="coordinator-bonus-help">{coordinatorRates ? `Bonus global Rp${coordinatorRates.global.toLocaleString("id-ID")}/struk. Batas bonus khusus Rp${coordinatorRates.max.toLocaleString("id-ID")}/struk. Nilai 0 berarti tanpa bonus.` : "Memuat parameter global…"}</p>
+    {coordinatorError && <p role="alert">{coordinatorError}</p>}
+    <p>Setelah disimpan, WhatsApp dibuka untuk mengirim pemberitahuan langsung kepada mitra ini.</p>
+    <div><button type="button" className="btn-secondary" disabled={coordinatorSaving} onClick={() => setCoordinatorTarget(null)}>Batal</button><button type="submit" className="btn-primary" disabled={coordinatorSaving || !coordinatorRates}>{coordinatorSaving ? "Menyimpan…" : "Simpan"}</button></div>
+  </form>
+</ModalFrame>}
 {selected && <DirectoryDetail title={selected.name} subtitle={selected.membershipLevel === "COORDINATOR" ? "Koordinator Mitra" : "Mitra Marketing"} onClose={() => setSelectedId(null)} fields={[
   ["Status", selected.status === "ACTIVE" ? "Aktif" : selected.status === "PENDING" ? "Menunggu persetujuan" : "Nonaktif"],
   ["WhatsApp", selected.phone], ["Email", selected.email], ["Wilayah", selected.area], ["Kode referral", selected.referralCode],
-  ["Koordinator perekrut", selected.coordinatorName], ["Tenant binaan langsung", selected.totalTenantsAcquired],
+  ["Koordinator perekrut", selected.coordinatorName],
+  ["Bonus KorMit", selected.coordinatorCommissionOverride == null ? "Mengikuti parameter global" : `Rp ${selected.coordinatorCommissionOverride.toLocaleString("id-ID")}/struk (khusus)`], ["Tenant binaan langsung", selected.totalTenantsAcquired],
   ["Struk terkredit", selected.totalReceiptsGenerated], ["Tarif komisi langsung", `Rp ${selected.commissionPerReceipt.toLocaleString("id-ID")}/struk`],
   ["Total komisi", `Rp ${selected.totalCommissionEarned.toLocaleString("id-ID")}`], ["Sudah dibayar", `Rp ${selected.commissionPaid.toLocaleString("id-ID")}`],
   ["Pencairan menunggu", `Rp ${(selected.pendingWithdrawal || 0).toLocaleString("id-ID")}`],

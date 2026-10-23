@@ -45,7 +45,7 @@ export async function GET() {
 
     if (settingsError || !settingsRow) throw new Error("Parameter komisi belum dapat dibaca.");
     const marketingRate = Number(settingsRow.default_marketing_commission);
-    const coordinatorRate = Number(settingsRow.coordinator_commission_per_receipt);
+    const coordinatorRate = Number(partner.coordinator_commission_override ?? settingsRow.coordinator_commission_per_receipt);
 
     const membershipLevel = toMembershipLevel(
       partner.membership_level

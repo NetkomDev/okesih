@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
 
       let validCoordinatorId: string | null = null;
       if (coordinatorCandidate && coordinatorCandidate.status === "ACTIVE" && coordinatorCandidate.user_id) {
-        const isCoord = isCoordinatorLevel(coordinatorCandidate.membership_level) && !coordinatorCandidate.upline_id;
+        const isCoord = isCoordinatorLevel(coordinatorCandidate.membership_level);
         if (isCoord) validCoordinatorId = String(coordinatorCandidate.id);
       }
 

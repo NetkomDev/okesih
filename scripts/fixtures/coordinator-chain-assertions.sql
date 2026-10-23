@@ -1,0 +1,43 @@
+\set ON_ERROR_STOP on
+BEGIN;
+DO $$
+DECLARE a uuid:=gen_random_uuid(); b uuid:=gen_random_uuid(); c uuid:=gen_random_uuid(); d uuid:=gen_random_uuid(); wb uuid:=gen_random_uuid(); wc uuid:=gen_random_uuid(); wd uuid:=gen_random_uuid(); bill_b uuid; bill_c uuid; bill_d uuid; report jsonb;
+BEGIN
+ UPDATE public.platform_settings SET default_marketing_commission=20,coordinator_commission_per_receipt=5,saas_fee_per_receipt=50 WHERE id='global';
+ INSERT INTO auth.users(id) VALUES(a),(b),(c),(d);
+ INSERT INTO public.marketing_partners(id,user_id,full_name,phone,city_area,referral_code,bank_account_number,bank_account_name,status,membership_level) VALUES(a,a,'A','628100000001','QA','QA-'||a,'0012345','QA','ACTIVE','COORDINATOR');
+ INSERT INTO public.marketing_partners(id,user_id,full_name,phone,city_area,referral_code,bank_account_number,bank_account_name,status,membership_level,upline_id) VALUES(b,b,'B','628100000002','QA','QA-'||b,'0012345','QA','ACTIVE','MITRA',a);
+ UPDATE public.marketing_partners SET membership_level='COORDINATOR',coordinator_commission_override=7 WHERE id=b;
+ IF (SELECT upline_id FROM public.marketing_partners WHERE id=b)<>a THEN RAISE EXCEPTION 'Lost A->B relationship'; END IF;
+ INSERT INTO public.marketing_partners(id,user_id,full_name,phone,city_area,referral_code,bank_account_number,bank_account_name,status,membership_level,upline_id) VALUES(c,c,'C','628100000003','QA','QA-'||c,'0012345','QA','ACTIVE','COORDINATOR',b),(d,d,'D','628100000004','QA','QA-'||d,'0012345','QA','ACTIVE','MITRA',c);
+ INSERT INTO public.warkops(id,nama,slug,marketing_agent_id) VALUES(wb,'B tenant','qa-'||wb,b),(wc,'C tenant','qa-'||wc,c),(wd,'D tenant','qa-'||wd,d);
+ INSERT INTO public.saas_billings(warkop_id,tanggal,total_transactions,tagihan_pokok,kode_unik,total_tagihan,status_bayar) VALUES(wb,current_date,100,5000,101,5101,'PAID') RETURNING id INTO bill_b;
+ INSERT INTO public.saas_billings(warkop_id,tanggal,total_transactions,tagihan_pokok,kode_unik,total_tagihan,status_bayar) VALUES(wc,current_date,100,5000,102,5102,'PAID') RETURNING id INTO bill_c;
+ INSERT INTO public.saas_billings(warkop_id,tanggal,total_transactions,tagihan_pokok,kode_unik,total_tagihan,status_bayar) VALUES(wd,current_date,100,5000,103,5103,'PAID') RETURNING id INTO bill_d;
+ IF (SELECT total_amount FROM public.marketing_commission_mutations WHERE billing_id=bill_b AND partner_id=a) IS DISTINCT FROM 500::numeric THEN RAISE EXCEPTION 'A must receive B tenant bonus'; END IF;
+ IF (SELECT total_amount FROM public.marketing_commission_mutations WHERE billing_id=bill_b AND partner_id=b) IS DISTINCT FROM 2000::numeric THEN RAISE EXCEPTION 'B direct commission wrong'; END IF;
+ IF (SELECT total_amount FROM public.marketing_commission_mutations WHERE billing_id=bill_c AND partner_id=b) IS DISTINCT FROM 700::numeric THEN RAISE EXCEPTION 'Custom B bonus wrong'; END IF;
+ IF EXISTS(SELECT FROM public.marketing_commission_mutations WHERE billing_id=bill_c AND partner_id=a) THEN RAISE EXCEPTION 'A incorrectly receives C bonus'; END IF;
+ IF EXISTS(SELECT FROM public.marketing_commission_mutations WHERE billing_id=bill_d AND partner_id IN(a,b)) THEN RAISE EXCEPTION 'Bonus traversed beyond immediate parent'; END IF;
+ IF (SELECT count(*) FROM public.marketing_commission_mutations WHERE billing_id IN(bill_b,bill_c,bill_d))<>6 THEN RAISE EXCEPTION 'Each bill must have two recipients'; END IF;
+ report:=public.report_marketing_network(a);
+ IF jsonb_array_length(report->'members')<>1 OR (report->'members'->0->>'id')<>b::text OR (report->>'totalCommission')::numeric<>500 THEN RAISE EXCEPTION 'Network report includes grandchildren'; END IF;
+ BEGIN UPDATE public.marketing_partners SET upline_id=c WHERE id=a; RAISE EXCEPTION 'Cycle allowed' USING ERRCODE='XX000'; EXCEPTION WHEN check_violation THEN NULL; END;
+ BEGIN UPDATE public.marketing_partners SET upline_id=a WHERE id=a; RAISE EXCEPTION 'Self cycle allowed' USING ERRCODE='XX000'; EXCEPTION WHEN check_violation THEN NULL; END;
+ BEGIN UPDATE public.marketing_partners SET coordinator_commission_override=31 WHERE id=b; RAISE EXCEPTION 'Excessive rate allowed' USING ERRCODE='XX000'; EXCEPTION WHEN check_violation THEN NULL; END;
+ BEGIN UPDATE public.marketing_partners SET coordinator_commission_override=1.5 WHERE id=b; RAISE EXCEPTION 'Fractional rate allowed' USING ERRCODE='XX000'; EXCEPTION WHEN check_violation THEN NULL; END;
+ BEGIN UPDATE public.platform_settings SET default_marketing_commission=44 WHERE id='global'; RAISE EXCEPTION 'Global update breaks custom rate' USING ERRCODE='XX000'; EXCEPTION WHEN check_violation THEN NULL; END;
+ UPDATE public.marketing_partners SET coordinator_commission_override=0 WHERE id=b;
+ INSERT INTO public.saas_billings(warkop_id,tanggal,total_transactions,tagihan_pokok,kode_unik,total_tagihan,status_bayar) VALUES(wc,current_date+1,10,500,104,604,'PAID');
+ IF (SELECT sum(total_amount) FROM public.marketing_commission_mutations WHERE partner_id=b AND kind='NETWORK')<>700 THEN RAISE EXCEPTION 'Zero override fell back to global'; END IF;
+ UPDATE public.marketing_partners SET coordinator_commission_override=NULL WHERE id=b;
+ UPDATE public.platform_settings SET coordinator_commission_per_receipt=8 WHERE id='global';
+ INSERT INTO public.saas_billings(warkop_id,tanggal,total_transactions,tagihan_pokok,kode_unik,total_tagihan,status_bayar) VALUES(wc,current_date+2,10,500,105,605,'PAID');
+ IF (SELECT sum(total_amount) FROM public.marketing_commission_mutations WHERE partner_id=b AND kind='NETWORK')<>780 THEN RAISE EXCEPTION 'NULL override must use new global rate'; END IF;
+ UPDATE public.saas_billings SET status_bayar='PAID' WHERE id=bill_c;
+ IF (SELECT total_amount FROM public.marketing_commission_mutations WHERE billing_id=bill_c AND partner_id=b)<>700 THEN RAISE EXCEPTION 'Historical rate rewritten'; END IF;
+ UPDATE public.marketing_partners SET status='INACTIVE' WHERE id=b;
+ INSERT INTO public.saas_billings(warkop_id,tanggal,total_transactions,tagihan_pokok,kode_unik,total_tagihan,status_bayar) VALUES(wc,current_date+3,10,500,106,606,'PAID');
+ IF (SELECT sum(total_amount) FROM public.marketing_commission_mutations WHERE partner_id=b AND kind='NETWORK')<>780 THEN RAISE EXCEPTION 'Inactive coordinator received bonus'; END IF;
+END $$;
+ROLLBACK;

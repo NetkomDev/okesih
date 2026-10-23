@@ -7,6 +7,8 @@ import ts from 'typescript';
 import { NextResponse } from 'next/server';
 import { recruitmentSchema } from '../src/lib/marketing-recruitment.ts';
 import * as whatsapp from '../src/lib/whatsapp.ts';
+import * as profileModule from '../src/lib/marketing-profile.ts';
+import * as affiliateModule from '../src/lib/affiliate.ts';
 import { randomDigits } from '../src/lib/generated-credentials.ts';
 process.env.NEXT_PUBLIC_SUPABASE_URL='https://test.supabase.co';
 process.env.SUPABASE_SERVICE_ROLE_KEY='test-service-key';
@@ -14,12 +16,12 @@ class DeviceApiError extends Error { constructor(message,status) {super(message)
 const id='19e09b4a-dd38-4afd-a413-ad608745941c';
 const applicant={requestId:id,fullName:'Mitra Baru',phone:'081234567890',cityArea:'Makassar',bankName:'BRI',bankAccountNumber:'00123456',bankAccountName:'Mitra Baru'};
 const request=(body,origin='https://www.okesih.com')=>new Request('https://www.okesih.com/api/marketing/network',{method:'POST',headers:{origin,'content-type':'application/json'},body:JSON.stringify(body)});
-function fixture({role='MARKETING',level='COORDINATOR',status='ACTIVE',rpcError=null,existing=null}={}) {
+function fixture({role='MARKETING',level='COORDINATOR',status='ACTIVE',rpcError=null,existing=null,upline=null,override=null}={}) {
  const calls=[];
- const partner={id:'coordinator-id',full_name:'Koordinator',phone:'6289999999999',referral_code:'MKT-MAK-123',membership_level:level,status,upline_id:null,user_id:'auth',notes_admin:'[LEVEL:COORDINATOR]'};
+ const partner={id:'coordinator-id',full_name:'Koordinator',phone:'6289999999999',referral_code:'MKT-MAK-123',membership_level:level,status,coordinator_commission_override:override,upline_id:upline,user_id:'auth',notes_admin:'[LEVEL:COORDINATOR]'};
  const db={from(table){let op='select',value,filters={};const q={select(){return q},eq(k,v){filters[k]=v;return q},is(){return q},insert(v){op='insert';value=v;return q},update(v){op='update';value=v;return q},async maybeSingle(){return run()},async single(){return run()},then(a,b){return run().then(a,b)}};
  async function run(){calls.push({table,op,value,filters});
- if(table==='platform_settings')return {data:{default_marketing_commission:20},error:null};
+ if(table==='platform_settings')return {data:{default_marketing_commission:20,coordinator_commission_per_receipt:5,saas_fee_per_receipt:50},error:null};
  if(table==='marketing_partners'){
   if(op==='insert'){existing={...value};return {data:existing,error:null};}
   if(op==='update'){existing={...existing,...value};return {data:existing,error:null};}
@@ -27,7 +29,7 @@ function fixture({role='MARKETING',level='COORDINATOR',status='ACTIVE',rpcError=
  }
  return {data:null,error:null};}return q;},async rpc(name,args){calls.push({rpc:name,args});return {data:rpcError?null:{members:[],totalCommission:0},error:rpcError}},auth:{admin:{deleteUser:async()=>({error:null})}}};
  function route(file){const source=ts.transpileModule(fs.readFileSync(new URL('../src/app/api/'+file+'/route.ts',import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
- const modules={'zod': { z }, '@/lib/reporting': { paginationSchema }, 'next/server':{NextResponse},'@supabase/supabase-js':{createClient:()=>db},'@/lib/supabase/admin':{createAdminClient:()=>db},'@/lib/supabase/server':{createServerSupabaseClient:async()=>({auth:{getUser:async()=>({data:{user:role?{id:'auth',app_metadata:{role}}:null}})}})},'@/lib/device-auth':{DeviceApiError,assertSameOrigin(req){if(req.headers.get('origin')!==new URL(req.url).origin)throw new DeviceApiError('Lintas situs',403)}},'@/lib/marketing-recruitment':{recruitmentSchema},'@/lib/generated-credentials':{randomDigits},'@/lib/whatsapp':whatsapp,'@/lib/app-origins':{APP_ORIGINS:{PUBLIC:'https://www.okesih.com'}},'@/lib/create-account':{createAccount:async(_db,username)=>({username,data:{user:{id:'new-auth'}},error:null})}};
+ const modules={'@/lib/marketing-profile':profileModule,'@/lib/affiliate':affiliateModule,'zod': { z }, '@/lib/reporting': { paginationSchema }, 'next/server':{NextResponse},'@supabase/supabase-js':{createClient:()=>db},'@/lib/supabase/admin':{createAdminClient:()=>db},'@/lib/supabase/server':{createServerSupabaseClient:async()=>({auth:{getUser:async()=>({data:{user:role?{id:'auth',app_metadata:{role}}:null}})}})},'@/lib/device-auth':{DeviceApiError,assertSameOrigin(req){if(req.headers.get('origin')!==new URL(req.url).origin)throw new DeviceApiError('Lintas situs',403)}},'@/lib/marketing-recruitment':{recruitmentSchema},'@/lib/generated-credentials':{randomDigits},'@/lib/whatsapp':whatsapp,'@/lib/app-origins':{APP_ORIGINS:{PUBLIC:'https://www.okesih.com'}},'@/lib/create-account':{createAccount:async(_db,username)=>({username,data:{user:{id:'new-auth'}},error:null})}};
  const exports={};new Function('require','exports',source)(name=>{if(!modules[name])throw Error(name);return modules[name]},exports);return exports; }
  return {route,calls};
 }
@@ -75,4 +77,35 @@ test('Super Admin directory routes paginated search to SQL and preserves the leg
  for(const query of ['page=0','page=1&pageSize=1000','page=1&status=ADMIN','page=NaN']){
    const before=f.calls.length;assert.equal((await api.GET(new Request('https://admin.okesih.com/api/superadmin/marketing?'+query))).status,400);assert.equal(f.calls.length,before);
  }
+});
+
+
+test('Coordinator with an upline can recruit; posted parent is ignored', async()=>{
+ const f=fixture({upline:'ancestor'});const r=await f.route('marketing/network').POST(request({...applicant,uplineId:'ancestor'}));
+ assert.equal(r.status,200);assert.equal(f.calls.find(c=>c.op==='insert').value.upline_id,'coordinator-id');
+ assert.equal((await f.route('marketing/network').GET()).status,200);
+});
+test('Promotion preserves parent and saves null, zero or custom coordinator rate atomically',async()=>{
+ for(const rate of [null,0,7]){
+ const f=fixture({role:'SUPERADMIN',existing:{id,user_id:'auth',full_name:'Mitra B',phone:'6281234567890',status:'ACTIVE',membership_level:'MITRA',upline_id:'A'}});
+ const response=await f.route('superadmin/marketing').PATCH(request({id,membershipLevel:'COORDINATOR',coordinatorCommissionOverride:rate}));assert.equal(response.status,200);
+ const body=await response.json();assert.equal(body.data.upline_id,'A');assert.equal(body.data.coordinator_commission_override,rate);assert.equal(body.data.membership_level,'COORDINATOR');
+ const wa=new URL(body.whatsappUrl);assert.equal(wa.pathname,'/6281234567890');assert.ok(wa.searchParams.get('text').includes('Rp '+(rate??5)+'/struk'));assert.match(wa.searchParams.get('text'),/Admin OKESIH/);
+ }
+});
+test('Invalid or excessive coordinator bonuses fail before mutation',async()=>{
+ for(const rate of [-1,1.5,31,'7',true]){
+ const f=fixture({role:'SUPERADMIN',existing:{id,user_id:'auth',phone:'6281234567890',status:'ACTIVE',membership_level:'MITRA',upline_id:'A'}});
+ assert.equal((await f.route('superadmin/marketing').PATCH(request({id,membershipLevel:'COORDINATOR',coordinatorCommissionOverride:rate}))).status,400);assert.equal(f.calls.some(c=>c.op==='update'),false);
+ }
+});
+
+test('Marketing profile displays custom, zero and global coordinator rates',async()=>{
+ for(const rate of [null,0,7]){
+  const f=fixture({upline:'A',override:rate});const response=await f.route('marketing/profile').GET();assert.equal(response.status,200);assert.equal((await response.json()).profile.coordinatorCommissionRate,rate??5);
+ }
+});
+test('Public referral lookup accepts a coordinator who has an upline',async()=>{
+ const f=fixture({existing:{full_name:'B',referral_code:'MKT-B',status:'ACTIVE',user_id:'B-auth',membership_level:'COORDINATOR',upline_id:'A'}});
+ const response=await f.route('marketing/referral').GET(new Request('https://www.okesih.com/api/marketing/referral?ref=MKT-B'));assert.equal(response.status,200);assert.equal((await response.json()).data.code,'MKT-B');
 });

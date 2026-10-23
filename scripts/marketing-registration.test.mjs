@@ -106,3 +106,23 @@ test('missing records and database failures do not masquerade as a fresh registr
   context.mock.method(globalThis, 'fetch', async () => Response.json({ message: 'Unavailable' }, { status: 503 }));
   assert.equal((await GET(request(createRegistrationToken(registrationId, secret)))).status, 503);
 });
+
+test('referral registration under a coordinator with an upline stays pending under that coordinator only', async context => {
+  let inserted;
+  context.mock.method(globalThis, 'fetch', async (input, options) => {
+    const url = new URL(String(input));
+    if (url.pathname.endsWith('/platform_settings')) return Response.json({ default_marketing_commission: 20 });
+    if (options.method === 'GET') return Response.json({ id: 'coordinator-b', status: 'ACTIVE', user_id: 'auth-b', membership_level: 'COORDINATOR', upline_id: 'coordinator-a' });
+    inserted = JSON.parse(options.body)[0];
+    return Response.json({ ...row, ...inserted });
+  });
+  const response = await POST(request(undefined, 'POST', {
+    fullName: row.full_name, phone: '081234567890', cityArea: row.city_area,
+    bankName: row.bank_name, bankAccountNumber: row.bank_account_number, bankAccountName: row.bank_account_name,
+    coordinatorReferralCode: 'MKT-B', uplineId: 'coordinator-a', status: 'ACTIVE',
+  }));
+  assert.equal(response.status, 200);
+  assert.equal(inserted.upline_id, 'coordinator-b');
+  assert.equal(inserted.status, 'PENDING');
+  assert.equal(inserted.membership_level, 'MITRA');
+});

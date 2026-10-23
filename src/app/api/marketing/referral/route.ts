@@ -23,7 +23,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Koordinator tidak ditemukan atau sudah tidak aktif." }, { status: 404 });
   }
 
-  const isCoord = isCoordinatorLevel(partner.membership_level) && !partner.upline_id;
+  const isCoord = isCoordinatorLevel(partner.membership_level);
 
   if (!isCoord) {
     return NextResponse.json({ error: "Kode referral ini bukan milik Koordinator Mitra." }, { status: 404 });

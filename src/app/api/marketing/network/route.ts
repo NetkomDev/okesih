@@ -16,7 +16,7 @@ async function coordinatorContext() {
   const { data: partner, error } = await admin.from("marketing_partners")
     .select("id, full_name, referral_code, status, membership_level, upline_id").eq("user_id", user.id).maybeSingle();
   if (error) throw error;
-  if (!partner || partner.status !== "ACTIVE" || partner.membership_level !== "COORDINATOR" || partner.upline_id) {
+  if (!partner || partner.status !== "ACTIVE" || partner.membership_level !== "COORDINATOR") {
     throw new DeviceApiError("Fitur ini khusus Koordinator Mitra aktif.", 403);
   }
   return { admin, partner };

@@ -154,7 +154,7 @@ export async function PATCH(request: Request) {
     if (!supabase) return NextResponse.json({ error: "Akses Super Admin diperlukan." }, { status: 401 });
 
     const body = await request.json();
-    const { id, status, commissionRate, notesAdmin, membershipLevel, uplineId } = body;
+    const { id, status, commissionRate, notesAdmin, membershipLevel, uplineId, coordinatorCommissionOverride } = body;
 
     if (!id) {
       return NextResponse.json({ error: "ID marketing partner diperlukan." }, { status: 400 });
@@ -176,21 +176,12 @@ export async function PATCH(request: Request) {
     let targetNotes = notesAdmin !== undefined ? notesAdmin : current.notes_admin;
     let targetLevel: string | undefined = undefined;
 
-    // Validasi penegakan batas 2 level kemitraan
+    // Pengangkatan tidak memutus upline; komisi dibatasi pada perekrut langsung.
     if (membershipLevel !== undefined) {
       const isCoord = String(membershipLevel).toUpperCase() === "COORDINATOR" || String(membershipLevel).toUpperCase() === "KOORDINATOR";
       targetLevel = isCoord ? "COORDINATOR" : "MITRA";
 
       if (isCoord) {
-        // 1. Koordinator tidak boleh memiliki upline (dilarang multi-tier > 2 level)
-        const hasExistingUpline = Boolean(current.upline_id) ||
-          (typeof current.notes_admin === "string" && current.notes_admin.includes("[UPLINE:"));
-        if (hasExistingUpline) {
-          return NextResponse.json({
-            error: "Mitra yang masih memiliki upline tidak dapat diangkat menjadi Koordinator. Lepaskan hubungan upline terlebih dahulu agar batas 2 level kemitraan terjaga."
-          }, { status: 400 });
-        }
-
         // 2. Koordinator harus berstatus aktif
         const finalStatus = status || current.status;
         if (finalStatus !== "ACTIVE") {
@@ -199,8 +190,6 @@ export async function PATCH(request: Request) {
           }, { status: 400 });
         }
 
-        updatePayload.upline_id = null;
-        targetNotes = (targetNotes || "").replace(/\[UPLINE:[^\]]+\]/g, "").trim();
       } else {
         // Jika mencabut status Koordinator, pastikan tidak ada downline yang menggantung
         const { count: downlineCount, error: downlineError } = await supabase
@@ -227,9 +216,7 @@ export async function PATCH(request: Request) {
         if (uplineId === id) {
           return NextResponse.json({ error: "Mitra tidak dapat menjadi upline untuk dirinya sendiri." }, { status: 400 });
         }
-        if (targetLevel === "COORDINATOR" || (!targetLevel && current.membership_level === "COORDINATOR")) {
-          return NextResponse.json({ error: "Koordinator Mitra tidak diperbolehkan memiliki upline." }, { status: 400 });
-        }
+
 
         const { data: uplinePartner, error: upError } = await supabase
           .from("marketing_partners")
@@ -247,11 +234,6 @@ export async function PATCH(request: Request) {
         if (!isUplineCoord) {
           return NextResponse.json({ error: "Upline yang dipilih harus berstatus Koordinator Mitra." }, { status: 400 });
         }
-        const uplineHasUpline = Boolean(uplinePartner.upline_id) ||
-          (typeof uplinePartner.notes_admin === "string" && uplinePartner.notes_admin.includes("[UPLINE:"));
-        if (uplineHasUpline) {
-          return NextResponse.json({ error: "Upline tidak boleh memiliki upline lain (maksimal 2 level jaringan kemitraan)." }, { status: 400 });
-        }
 
         updatePayload.upline_id = uplineId;
         const cleanUplineNotes = (targetNotes || "").replace(/\[UPLINE:[^\]]+\]/g, "").trim();
@@ -259,6 +241,28 @@ export async function PATCH(request: Request) {
       } else {
         updatePayload.upline_id = null;
         targetNotes = (targetNotes || "").replace(/\[UPLINE:[^\]]+\]/g, "").trim();
+      }
+    }
+
+    if ((membershipLevel !== undefined || coordinatorCommissionOverride !== undefined) && !isValidIndonesianWhatsAppNumber(current.phone)) {
+      return NextResponse.json({ error: "Perbaiki nomor WhatsApp mitra sebelum mengubah status koordinator." }, { status: 400 });
+    }
+    if (coordinatorCommissionOverride !== undefined) {
+      if ((targetLevel || current.membership_level) !== "COORDINATOR") return NextResponse.json({ error: "Bonus khusus hanya untuk Koordinator Mitra." }, { status: 400 });
+      if (coordinatorCommissionOverride !== null && (typeof coordinatorCommissionOverride !== "number" || !Number.isInteger(coordinatorCommissionOverride) || coordinatorCommissionOverride < 0 || coordinatorCommissionOverride > 100000)) {
+        return NextResponse.json({ error: "Bonus khusus harus berupa Rupiah bulat nonnegatif atau kosong untuk mengikuti global." }, { status: 400 });
+      }
+      updatePayload.coordinator_commission_override = coordinatorCommissionOverride;
+    }
+    if (targetLevel === "MITRA") updatePayload.coordinator_commission_override = null;
+    let bonusSettings: { coordinator_commission_per_receipt: number; default_marketing_commission: number; saas_fee_per_receipt: number } | null = null;
+    if (targetLevel === "COORDINATOR" || coordinatorCommissionOverride !== undefined) {
+      const rates = await supabase.from("platform_settings").select("coordinator_commission_per_receipt,default_marketing_commission,saas_fee_per_receipt").eq("id", "global").single();
+      if (rates.error || !rates.data) return NextResponse.json({ error: "Parameter bonus KorMit belum dapat dimuat." }, { status: 503 });
+      bonusSettings = rates.data;
+      const custom = coordinatorCommissionOverride !== undefined ? coordinatorCommissionOverride : current.coordinator_commission_override;
+      if (Number(custom ?? bonusSettings!.coordinator_commission_per_receipt) + Number(bonusSettings!.default_marketing_commission) > Number(bonusSettings!.saas_fee_per_receipt)) {
+        return NextResponse.json({ error: "Komisi langsung dan bonus KorMit tidak boleh melebihi tarif SaaS per struk." }, { status: 400 });
       }
     }
 
@@ -302,7 +306,7 @@ export async function PATCH(request: Request) {
     if (error || !data) {
       if (createdAuthUserId) await supabase.auth.admin.deleteUser(createdAuthUserId);
       console.error("Supabase update error:", error);
-      return NextResponse.json({ error: error?.message || "Data marketing sudah berubah. Muat ulang sebelum memverifikasi kembali." }, { status: error ? 500 : 409 });
+      return NextResponse.json({ error: error?.message || "Data marketing sudah berubah. Muat ulang sebelum memverifikasi kembali." }, { status: error ? (error.code === "23514" ? 400 : 500) : 409 });
     }
 
     // Normalisasi membership_level pada respons
@@ -322,15 +326,19 @@ export async function PATCH(request: Request) {
         "Silakan login, ganti password sementara di dashboard, lalu pasang aplikasi Marketing OKESIH.",
       ].join("\n");
       whatsappUrl = createWhatsAppUrl(data.phone, message);
-    } else if (membershipLevel !== undefined) {
-      const isPromoted = targetLevel === "COORDINATOR";
+    } else if (membershipLevel !== undefined || coordinatorCommissionOverride !== undefined) {
+      const isPromoted = (targetLevel || data.membership_level) === "COORDINATOR";
       const message = isPromoted
         ? [
-            `Halo ${cleanWhatsAppMessageField(data.full_name)}, selamat! Anda telah diangkat menjadi *Koordinator Mitra* OKESIH. 🎉`,
+            current.membership_level === "COORDINATOR"
+              ? `Halo ${cleanWhatsAppMessageField(data.full_name)}, pengaturan bonus KorMit Anda telah diperbarui.`
+              : `Halo ${cleanWhatsAppMessageField(data.full_name)}, selamat! Anda telah diangkat menjadi *Koordinator Mitra* OKESIH. 🎉`,
             "",
             "Menu KorMit kini telah aktif di akun Anda. Anda dapat mulai merekrut dan membina jaringan mitra marketing baru menggunakan link referral Anda di aplikasi.",
             "",
             "Buka Dashboard Marketing Anda untuk melihat menu *KorMit*.",
+            `Bonus tenant dari mitra binaan langsung: Rp ${Number(data.coordinator_commission_override ?? bonusSettings?.coordinator_commission_per_receipt ?? 0).toLocaleString("id-ID")}/struk (${data.coordinator_commission_override == null ? "mengikuti parameter global" : "bonus khusus"}).`,
+            "Bonus hanya berasal dari tenant mitra yang Anda rekrut langsung, bukan dari rekrutan mitra tersebut.",
             "",
             "Salam,",
             "Admin OKESIH",

@@ -49,7 +49,8 @@ BEGIN
  IF (SELECT commission_paid FROM public.marketing_partners WHERE id=coord)<>2500 THEN RAISE EXCEPTION 'Paid counter incorrect'; END IF;
  BEGIN PERFORM public.delete_marketing_partner_safely(child,admin_id); RAISE EXCEPTION 'Deleted financial history' USING ERRCODE='XX000'; EXCEPTION WHEN raise_exception THEN NULL; END;
  IF NOT EXISTS(SELECT FROM public.warkops WHERE id=wn AND marketing_agent_id=child) THEN RAISE EXCEPTION 'Partial delete'; END IF;
- BEGIN UPDATE public.marketing_partners SET membership_level='COORDINATOR' WHERE id=child; RAISE EXCEPTION 'Third tier allowed' USING ERRCODE='XX000'; EXCEPTION WHEN check_violation THEN NULL; END;
+ UPDATE public.marketing_partners SET membership_level='COORDINATOR' WHERE id=child;
+ IF (SELECT upline_id FROM public.marketing_partners WHERE id=child)<>coord THEN RAISE EXCEPTION 'Promotion detached upline'; END IF;
  BEGIN UPDATE public.marketing_partners SET membership_level='MITRA' WHERE id=coord; RAISE EXCEPTION 'Coordinator demoted with children' USING ERRCODE='XX000'; EXCEPTION WHEN check_violation THEN NULL; END;
  -- Rate changes apply to future settlements, never rewrite previous credits.
  UPDATE public.platform_settings SET default_marketing_commission=18,coordinator_commission_per_receipt=7 WHERE id='global';

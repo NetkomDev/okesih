@@ -22,7 +22,7 @@ async function getMarketingContext() {
     ...data,
     membership_level: resolvedLevel,
     commission_rate: rates?.default_marketing_commission !== undefined ? Number(rates.default_marketing_commission) : Number(data.commission_rate ?? 0),
-    coordinator_commission_rate: rates?.coordinator_commission_per_receipt !== undefined ? Number(rates.coordinator_commission_per_receipt) : 0,
+    coordinator_commission_rate: Number(data.coordinator_commission_override ?? rates.coordinator_commission_per_receipt),
   } as MarketingProfileRow;
   const { count, error: countError } = await admin.from("warkops").select("id", { count: "exact", head: true }).eq("marketing_agent_id", partner.id);
   if (countError) throw countError;

@@ -156,7 +156,7 @@ export async function PATCH(request: Request) {
 
   if (error) {
     console.error("Gagal menyimpan platform settings:", error);
-    return NextResponse.json({ error: "Parameter global gagal disimpan." }, { status: 500 });
+    return NextResponse.json({ error: error.code === "23514" ? error.message : "Parameter global gagal disimpan." }, { status: error.code === "23514" ? 400 : 500 });
   }
 
   // Terapkan durasi auto-dismiss secara serentak ke seluruh warkop tenant

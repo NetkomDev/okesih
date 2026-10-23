@@ -63,7 +63,7 @@ export default function MarketingNetworkPage() {
         {!data && !error && <p role="status">Memuat jaringan…</p>}
         {data && <>
           <RecruitmentForm onRegistered={() => void load()} />
-          <p className="kormit-rate">Komisi tenant langsung: <b>Rp {dashboard.profile.commissionRate.toLocaleString("id-ID")}/struk</b>. Bonus tenant mitra binaan: <b>Rp {dashboard.profile.coordinatorCommissionRate.toLocaleString("id-ID")}/struk</b>. Komisi masuk setelah tagihan tenant lunas, mengikuti parameter global saat pelunasan.</p>
+          <p className="kormit-rate">Komisi tenant langsung: <b>Rp {dashboard.profile.commissionRate.toLocaleString("id-ID")}/struk</b>. Bonus tenant mitra binaan: <b>Rp {dashboard.profile.coordinatorCommissionRate.toLocaleString("id-ID")}/struk</b>. Komisi masuk setelah tagihan tenant lunas. Bonus mengikuti tarif khusus KorMit jika ditetapkan, atau parameter global saat pelunasan. Bonus hanya dari tenant mitra binaan langsung.</p>
           <h2>Undang lewat link referral</h2><p>Bagikan link berikut. Pendaftaran mitra tetap melalui verifikasi Super Admin.</p>
           <label className="mkt-form" style={{ margin: "16px 0" }}>Link referral
             <span style={{ display: "flex", gap: "8px", alignItems: "stretch" }}>

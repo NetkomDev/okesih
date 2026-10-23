@@ -1096,3 +1096,12 @@
   .sa-billing-page .sa-billing-tabs button[aria-pressed="true"] { background: #0369a1 !important; color: #fff !important; }
   .sa-billing-page .sa-billing-qris:hover { transform: none; border-color: var(--sa-border) !important; box-shadow: none !important; }
 }
+
+.sa-coordinator-settings { width: 100%; max-width: 480px; padding: 24px; }
+.sa-coordinator-settings h2 { margin: 0 0 12px; font-size: 20px; }
+.sa-coordinator-settings p { margin: 10px 0; font-size: 14px; line-height: 1.5; color: var(--text-muted); }
+.sa-coordinator-settings label { display: block; margin-top: 16px; font-size: 14px; font-weight: 700; }
+.sa-coordinator-settings input { width: 100%; padding: 12px; margin-top: 8px; border: 1px solid var(--sa-border, #94a3b8); border-radius: 10px; background: var(--bg-deep-black); color: var(--text-pure-white); }
+.sa-coordinator-settings > div:last-child { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+.sa-coordinator-settings button { flex: 1 1 120px; min-height: 44px; }
+.sa-coordinator-settings [role="alert"] { color: #ef4444; }

@@ -257,9 +257,9 @@ Urutan wajib:
 
 Sistem dinyatakan siap hanya jika tidak ada POS/KDS demo statis, tidak ada transaksi publik yang dapat dibaca lintas pelanggan, perangkat tercabut langsung kehilangan akses, dan semua jalur finansial memiliki idempotensi serta audit.
 
-## 16. PANDUAN KANONIS — MULTI-TIER AFFILIATE (JARINGAN KEMITRAAN 2 LEVEL - SKEMA A)
+## 16. PANDUAN KANONIS — MULTI-TIER AFFILIATE (KOMISI DUA PENERIMA LANGSUNG)
 
-Sistem pemasaran OKESIH menggunakan model *Multi-Tier Affiliate* (Jaringan Kemitraan 2 Level). Seluruh besaran komisi **tidak dikunci (hardcoded)** di dalam sistem, melainkan bersifat dinamis dan dikendalikan terpusat oleh Super Admin melalui halaman **Parameter Master Global**.
+Kedalaman perekrutan OKESIH boleh bertingkat; setiap tagihan membayar maksimal dua penerima: pembina tenant dan satu upline langsungnya. Seluruh besaran komisi **tidak dikunci (hardcoded)** di dalam sistem, melainkan bersifat dinamis dan dikendalikan terpusat oleh Super Admin melalui **Parameter Master Global**, dengan bonus khusus per KorMit bila ditetapkan.
 
 ### 16.1. Konsep Utama & Terminologi
 
@@ -270,7 +270,7 @@ Sistem pemasaran OKESIH menggunakan model *Multi-Tier Affiliate* (Jaringan Kemit
   - `default_marketing_commission` (Komisi Marketing langsung)
   - `coordinator_commission_per_receipt` (Komisi Koordinator Mitra / Bonus Jaringan)
 
-### 16.2. Skema Komisi: Skema A (Terpusat pada Parameter Global)
+### 16.2. Skema Komisi: Global dan Bonus Khusus KorMit
 
 Pendapatan perusahaan (biaya sewa per struk) dipotong untuk mendistribusikan komisi secara otomatis berdasarkan variabel yang disetel di Parameter Master Global.
 
@@ -280,102 +280,102 @@ Pendapatan perusahaan (biaya sewa per struk) dipotong untuk mendistribusikan kom
 - **Komisi Koordinator Mitra (Bonus Jaringan):** Rp 5 / struk (Sesuai parameter global)
 - **Margin Bersih Perusahaan:** Rp 35 / struk (Hasil pengurangan otomatis oleh sistem: Rp 50 - Rp 10 - Rp 5)
 
-*(Catatan Dinamis: Jika sewaktu-waktu Super Admin mengubah nilai Komisi Koordinator menjadi Rp 7 di Parameter Master Global, maka seluruh perhitungan komisi tagihan yang dilunasi ke depannya akan otomatis mengikuti angka baru tersebut. Nilai komisi yang sudah tercatat pada mutasi lama tersimpan permanen sebagai snapshot dan tidak berubah).*
+*(Catatan Dinamis: Jika sewaktu-waktu Super Admin mengubah nilai Komisi Koordinator menjadi Rp 7 di Parameter Master Global, maka KorMit tanpa bonus khusus mengikuti angka baru tersebut pada pelunasan berikutnya; KorMit dengan bonus khusus tetap memakai nilai khususnya. Nilai komisi yang sudah tercatat pada mutasi lama tersimpan permanen sebagai snapshot dan tidak berubah).*
 
-285: ### 16.3. Batas & Integritas Jaringan
-286: 
-287: 1. **Jaringan Maksimal 2 Level Ketat:**
-288:    `Koordinator Mitra` → `Mitra Marketing (Downline)` → `Tenant (Warkop)`.
-289:    - Tidak ada bonus rekursif, tidak ada koordinator multi-level bertingkat, dan tidak ada komisi jaringan untuk diri sendiri.
-290:    - Koordinator **dilarang memiliki upline** (`upline_id IS NULL`).
-291:    - Mitra dilarang menjadi upline untuk dirinya sendiri (`upline_id != id`).
-292:    - Pengangkatan mitra menjadi Koordinator dilarang jika mitra tersebut masih terikat pada upline lain atau status akunnya tidak `ACTIVE`.
-293:    - Pencabutan status Koordinator dilarang selama mitra masih memiliki downline binaan.
-294:    - Integritas hierarki ini ditegakkan di layer database (`enforce_marketing_network()` trigger & check constraints) serta layer validasi API Super Admin.
-295: 2. **Peran Autentikasi:**
-296:    Keduanya menggunakan role autentikasi `MARKETING`. Tingkat keanggotaan disimpan pada atribut profil database (`membership_level`: `'KOORDINATOR'` / `'COORDINATOR'` vs `'MITRA'`), bukan dipercayakan kepada browser.
-297: 3. **Perekrutan Otomatis Berbasis Referral:**
-298:    Calon marketing yang mendaftar melalui tautan referral koordinator (`/marketing/daftar?ref=KODE_REFERRAL`) secara otomatis diikat (`upline_id`) ke koordinator tersebut. Tanpa referral valid, pendaftar menjadi mitra mandiri tanpa upline.
-299: 4. **Akuisisi Langsung oleh Koordinator:**
-300:    Jika seorang Koordinator Mitra mengakuisisi tenant secara langsung tanpa perantara mitra bawahan, koordinator tersebut menerima Komisi Langsung (Marketing) dan tidak ada komisi jaringan ganda.
-301: 5. **Kebijakan Akun Nonaktif (Suspended & Inactive):**
-302:    Penonaktifan akun mitra/koordinator (`status !== 'ACTIVE'`) menerapkan sanksi finansial operasional penuh, bukan sekadar penyamaran UI:
-303:    - **Penghentian Komisi Baru (Zero Commission on Inactive):** Akun nonaktif **kehilangan hak atas komisi baru**. Saat tagihan warkop dilunasi, sistem memvalidasi status: jika mitra pengakuisisi nonaktif, komisi langsung `DIRECT` tidak diberikan (Rp 0). Jika koordinator nonaktif, komisi jaringan `NETWORK` tidak diberikan (Rp 0). Komisi hanya terbit bila akun berstatus `ACTIVE`.
-304:    - **Pencegahan Pembayaran Pencairan:** Pengajuan pencairan berstatus `PENDING` **dilarang ditandai PAID** jika akun mitra penerima berstatus nonaktif atau ditangguhkan. Sistem menolak approval dengan pesan validasi eksplisit.
-305:    - **Pencairan Baru Ditolak:** Akun nonaktif diblokir dari mengajukan permohonan pencairan baru (HTTP 403).
-306:    - **Penyembunyian Data Finansial Penuh:** Seluruh total saldo, mutasi, dan rincian nominal komisi per tenant pada respon API `/api/marketing/dashboard` dinolkan (sanitized) sehingga tidak ada kebocoran data sensitif melalui inspeksi network/DevTools.
-307: 6. **Buku Mutasi Bersifat Permanen (Immutable Append-Only Ledger):**
-308:    - Mutasi komisi yang telah tercatat di `marketing_commission_mutations` bersifat permanen dan tidak boleh ditimpa (`UPSERT overwrite` dilarang).
-309:    - Nominal historis terlindungi dari perubahan tarif komisi di masa mendatang. Trigger database `guard_commission_history()` melarang operasi `UPDATE` dan `DELETE` pada mutasi komisi yang sudah tercatat.
-310: 7. **Penyatuan Sumber Saldo Tunggal (Single Source of Truth):**
-311:    - Saldo dashboard dan saldo pencairan dihitung dari sumber yang sama: total akumulasi mutasi komisi settled (`marketing_commission_mutations`) dikurangi total pencairan yang sudah dibayar (`commission_paid`) dan pencairan `PENDING`.
-312:    - Menghilangkan disparitas saldo akibat pemotongan limit tampilan mutasi atau perhitungan dari transaksi belum lunas.
-313: 8. **Finalitas Tagihan SaaS Lunas (`PAID`):**
-314:    - Tagihan SaaS yang berstatus `PAID` terkunci rapat. Tutup shift berikutnya tidak boleh menambah transaksi ke tagihan yang sudah lunas, melainkan membentuk tagihan baru per-shift agar seluruh transaksi warkop tercatat dan diperhitungkan komisinya secara adil.
-315: 
-316: ### 16.4. Alur Kerja (Workflow) Sistem Pemasaran
-317: 
-318: #### Fase 1: Pengaturan Master & Pengangkatan Koordinator
-319: 1. Super Admin membuka menu **Parameter Master Global** dan memastikan nilai `Komisi Koordinator Mitra` telah ditentukan.
-320: 2. Super Admin berpindah ke menu **Mitra Marketing** yang menampilkan daftar seluruh mitra.
-321: 3. Super Admin memilih salah satu mitra aktif yang belum memiliki upline, lalu menekan tombol aksi **"Jadikan Koordinator"**.
-322: 4. Status mitra berubah menjadi `Koordinator Mitra` dan sistem langsung mengaktifkan fitur jaringan untuk akun tersebut tanpa perlu menginput ulang besaran komisi secara manual. Jika diperlukan, Super Admin dapat mencabut status tersebut kembali ke `Mitra Marketing` selama koordinator tidak lagi memiliki downline aktif.
-323: 
-324: #### Fase 2: Perekrutan Jaringan (*Downline*)
-325: 1. Koordinator Mitra membuka aplikasi PWA Marketing. Bottom navigation kini menampilkan menu **"Jaringan"** (`/marketing/dashboard/jaringan`) lengkap dengan **Link Referral** pendaftaran unik (`https://sales.okesih.com/marketing/daftar?ref=KODE_REFERRAL`).
-326: 2. Koordinator membagikan tautan tersebut kepada calon mitra baru.
-327: 3. Calon mitra mengisi formulir pendaftaran melalui tautan tersebut. Sistem server memverifikasi kode referral dan mengikat `upline_id` calon mitra secara otomatis ke ID Koordinator bersangkutan.
-328: 
-329: #### Fase 3: Akuisisi Warkop & Operasional
-330: 1. Mitra Marketing (downline) mendaftarkan Warkop "A" melalui formulir akuisisi di PWA Marketing.
-331: 2. Super Admin memverifikasi dan menyetujui akun tenant Warkop "A".
-332: 3. Warkop "A" beroperasi dan mencetak 300 struk transaksi sah dalam satu hari.
-333: 4. Saat Tutup Shift, tagihan harian terbentuk Rp 15.000 (300 struk x Rp 50). Warkop "A" membayar tagihan melalui sistem QRIS / transfer bank.
-334: 
-335: #### Fase 4: Distribusi Komisi Otomatis (Trigger / Service RPC)
-336: 1. Saat pembayaran Warkop "A" diverifikasi dan status berubah menjadi `PAID`, sistem membaca nilai terkini dari `platform_settings`:
-337:    - `default_marketing_commission` (misal Rp 10)
-338:    - `coordinator_commission_per_receipt` (misal Rp 5)
-339: 2. Sistem memeriksa kelayakan akun:
-340:    - Jika mitra pengakuisisi berstatus `ACTIVE`, catat mutasi `DIRECT` ke tabel `marketing_commission_mutations`. Jika tidak aktif, mutasi `DIRECT` tidak terbit.
-341:    - Jika koordinator upline ada dan berstatus `ACTIVE`, catat mutasi `NETWORK`. Jika koordinator tidak aktif, mutasi `NETWORK` tidak terbit.
-342: 3. Pengecekan idempoten dilakukan sebelum pencatatan, menjamin mutasi append-only tidak menimpa nominal mutasi historis yang sudah tersimpan.
-343: 4. Mutasi ini langsung tampil di menu **"Komisi Berjalan"** masing-masing mitra aktif dengan rincian nama tenant dan nama mitra downline terkait.
-344: 
-345: ### 16.5. Skema Tabel Database
-346: 
-347: ```sql
-348: -- Tabel platform_settings (Parameter Master Global)
-349: ALTER TABLE public.platform_settings 
-350:   ADD COLUMN IF NOT EXISTS coordinator_commission_per_receipt NUMERIC(10, 2) NOT NULL DEFAULT 5.00;
-351: 
-352: -- Tabel marketing_partners (Tingkat Keanggotaan & Upline)
-353: ALTER TABLE public.marketing_partners 
-354:   ADD COLUMN IF NOT EXISTS membership_level VARCHAR(20) NOT NULL DEFAULT 'MITRA',
-355:   ADD COLUMN IF NOT EXISTS upline_id UUID REFERENCES public.marketing_partners(id) ON DELETE SET NULL;
-356: 
-357: -- Tabel Buku Mutasi Komisi (Idempoten, Immutable & Audit Trail)
-358: CREATE TABLE IF NOT EXISTS public.marketing_commission_mutations (
-359:   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-360:   billing_id UUID NOT NULL REFERENCES public.saas_billings(id) ON DELETE CASCADE,
-361:   warkop_id UUID NOT NULL REFERENCES public.warkops(id) ON DELETE CASCADE,
-362:   marketing_partner_id UUID NOT NULL REFERENCES public.marketing_partners(id) ON DELETE CASCADE,
-363:   source_partner_id UUID REFERENCES public.marketing_partners(id) ON DELETE SET NULL,
-364:   kind VARCHAR(20) NOT NULL CHECK (kind IN ('DIRECT', 'NETWORK')),
-365:   receipts_count INTEGER NOT NULL DEFAULT 0,
-366:   rate_per_receipt NUMERIC(10, 2) NOT NULL DEFAULT 0,
-367:   amount NUMERIC(12, 2) NOT NULL DEFAULT 0,
-368:   notes TEXT,
-369:   created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now()),
-370:   CONSTRAINT uq_billing_commission_kind UNIQUE (billing_id, kind)
-371: );
-372: ```
+### 16.3. Batas & Integritas Jaringan
+
+1. **Komisi maksimal dua penerima per tagihan:**
+   Rantai A → B → C diperbolehkan; tenant C memberi DIRECT kepada C dan NETWORK hanya kepada B.
+   - Tidak ada bonus rekursif ke leluhur dan tidak ada komisi jaringan untuk diri sendiri.
+   - Koordinator boleh memiliki upline; pengangkatan mempertahankan hubungan perekrut langsung.
+   - Mitra dilarang menjadi upline untuk dirinya sendiri (`upline_id != id`).
+   - Pengangkatan memerlukan status `ACTIVE` dan akun login. Siklus upline dilarang, termasuk siklus yang dicoba melalui permintaan bersamaan.
+   - Pencabutan status Koordinator dilarang selama mitra masih memiliki downline binaan.
+   - Integritas hierarki ini ditegakkan di layer database (`enforce_marketing_network()` trigger & check constraints) serta layer validasi API Super Admin.
+2. **Peran Autentikasi:**
+   Keduanya menggunakan role autentikasi `MARKETING`. Tingkat keanggotaan disimpan pada atribut profil database (`membership_level`: `'KOORDINATOR'` / `'COORDINATOR'` vs `'MITRA'`), bukan dipercayakan kepada browser.
+3. **Perekrutan Otomatis Berbasis Referral:**
+   Calon marketing yang mendaftar melalui tautan referral koordinator (`/marketing/daftar?ref=KODE_REFERRAL`) secara otomatis diikat (`upline_id`) ke koordinator tersebut. Tanpa referral valid, pendaftar menjadi mitra mandiri tanpa upline.
+4. **Akuisisi Langsung oleh Koordinator:**
+   Jika seorang Koordinator Mitra mengakuisisi tenant secara langsung tanpa perantara mitra bawahan, koordinator tersebut menerima komisi DIRECT. Jika ia memiliki upline KorMit aktif, upline langsung itu menerima NETWORK; tidak ada penerima lain.
+5. **Kebijakan Akun Nonaktif (Suspended & Inactive):**
+   Penonaktifan akun mitra/koordinator (`status !== 'ACTIVE'`) menerapkan sanksi finansial operasional penuh, bukan sekadar penyamaran UI:
+   - **Penghentian Komisi Baru (Zero Commission on Inactive):** Akun nonaktif **kehilangan hak atas komisi baru**. Saat tagihan warkop dilunasi, sistem memvalidasi status: jika mitra pengakuisisi nonaktif, komisi langsung `DIRECT` tidak diberikan (Rp 0). Jika koordinator nonaktif, komisi jaringan `NETWORK` tidak diberikan (Rp 0). Komisi hanya terbit bila akun berstatus `ACTIVE`.
+   - **Pencegahan Pembayaran Pencairan:** Pengajuan pencairan berstatus `PENDING` **dilarang ditandai PAID** jika akun mitra penerima berstatus nonaktif atau ditangguhkan. Sistem menolak approval dengan pesan validasi eksplisit.
+   - **Pencairan Baru Ditolak:** Akun nonaktif diblokir dari mengajukan permohonan pencairan baru (HTTP 403).
+   - **Penyembunyian Data Finansial Penuh:** Seluruh total saldo, mutasi, dan rincian nominal komisi per tenant pada respon API `/api/marketing/dashboard` dinolkan (sanitized) sehingga tidak ada kebocoran data sensitif melalui inspeksi network/DevTools.
+6. **Buku Mutasi Bersifat Permanen (Immutable Append-Only Ledger):**
+   - Mutasi komisi yang telah tercatat di `marketing_commission_mutations` bersifat permanen dan tidak boleh ditimpa (`UPSERT overwrite` dilarang).
+   - Nominal historis terlindungi dari perubahan tarif komisi di masa mendatang. Trigger database `guard_commission_history()` melarang operasi `UPDATE` dan `DELETE` pada mutasi komisi yang sudah tercatat.
+7. **Penyatuan Sumber Saldo Tunggal (Single Source of Truth):**
+   - Saldo dashboard dan saldo pencairan dihitung dari sumber yang sama: total akumulasi mutasi komisi settled (`marketing_commission_mutations`) dikurangi total pencairan yang sudah dibayar (`commission_paid`) dan pencairan `PENDING`.
+   - Menghilangkan disparitas saldo akibat pemotongan limit tampilan mutasi atau perhitungan dari transaksi belum lunas.
+8. **Finalitas Tagihan SaaS Lunas (`PAID`):**
+   - Tagihan SaaS yang berstatus `PAID` terkunci rapat. Tutup shift berikutnya tidak boleh menambah transaksi ke tagihan yang sudah lunas, melainkan membentuk tagihan baru per-shift agar seluruh transaksi warkop tercatat dan diperhitungkan komisinya secara adil.
+
+### 16.4. Alur Kerja (Workflow) Sistem Pemasaran
+
+#### Fase 1: Pengaturan Master & Pengangkatan Koordinator
+1. Super Admin membuka menu **Parameter Master Global** dan memastikan nilai `Komisi Koordinator Mitra` telah ditentukan.
+2. Super Admin berpindah ke menu **Mitra Marketing** yang menampilkan daftar seluruh mitra.
+3. Super Admin memilih salah satu mitra aktif yang belum memiliki upline, lalu menekan tombol aksi **"Jadikan Koordinator"**.
+4. Status mitra berubah menjadi `Koordinator Mitra` dan sistem langsung mengaktifkan fitur jaringan untuk akun tersebut tanpa perlu menginput ulang besaran komisi secara manual. Jika diperlukan, Super Admin dapat mencabut status tersebut kembali ke `Mitra Marketing` selama koordinator tidak lagi memiliki downline aktif.
+
+#### Fase 2: Perekrutan Jaringan (*Downline*)
+1. Koordinator Mitra membuka aplikasi PWA Marketing. Bottom navigation kini menampilkan menu **"Jaringan"** (`/marketing/dashboard/jaringan`) lengkap dengan **Link Referral** pendaftaran unik (`https://sales.okesih.com/marketing/daftar?ref=KODE_REFERRAL`).
+2. Koordinator membagikan tautan tersebut kepada calon mitra baru.
+3. Calon mitra mengisi formulir pendaftaran melalui tautan tersebut. Sistem server memverifikasi kode referral dan mengikat `upline_id` calon mitra secara otomatis ke ID Koordinator bersangkutan.
+
+#### Fase 3: Akuisisi Warkop & Operasional
+1. Mitra Marketing (downline) mendaftarkan Warkop "A" melalui formulir akuisisi di PWA Marketing.
+2. Super Admin memverifikasi dan menyetujui akun tenant Warkop "A".
+3. Warkop "A" beroperasi dan mencetak 300 struk transaksi sah dalam satu hari.
+4. Saat Tutup Shift, tagihan harian terbentuk Rp 15.000 (300 struk x Rp 50). Warkop "A" membayar tagihan melalui sistem QRIS / transfer bank.
+
+#### Fase 4: Distribusi Komisi Otomatis (Trigger / Service RPC)
+1. Saat pembayaran Warkop "A" diverifikasi dan status berubah menjadi `PAID`, sistem membaca nilai terkini dari `platform_settings`:
+   - `default_marketing_commission` (misal Rp 10)
+   - `coordinator_commission_per_receipt` (misal Rp 5)
+2. Sistem memeriksa kelayakan akun:
+   - Jika mitra pengakuisisi berstatus `ACTIVE`, catat mutasi `DIRECT` ke tabel `marketing_commission_mutations`. Jika tidak aktif, mutasi `DIRECT` tidak terbit.
+   - Jika koordinator upline langsung ada dan berstatus `ACTIVE`, catat satu mutasi `NETWORK` memakai `coordinator_commission_override` milik upline, atau tarif global bila NULL. Jika koordinator tidak aktif, mutasi `NETWORK` tidak terbit.
+3. Pengecekan idempoten dilakukan sebelum pencatatan, menjamin mutasi append-only tidak menimpa nominal mutasi historis yang sudah tersimpan.
+4. Mutasi ini langsung tampil di menu **"Komisi Berjalan"** masing-masing mitra aktif dengan rincian nama tenant dan nama mitra downline terkait.
+
+### 16.5. Skema Tabel Database
+
+```sql
+-- Tabel platform_settings (Parameter Master Global)
+ALTER TABLE public.platform_settings
+  ADD COLUMN IF NOT EXISTS coordinator_commission_per_receipt NUMERIC(10, 2) NOT NULL DEFAULT 5.00;
+
+-- Tabel marketing_partners (Tingkat Keanggotaan & Upline)
+ALTER TABLE public.marketing_partners
+  ADD COLUMN IF NOT EXISTS membership_level VARCHAR(20) NOT NULL DEFAULT 'MITRA',
+  ADD COLUMN IF NOT EXISTS upline_id UUID REFERENCES public.marketing_partners(id) ON DELETE SET NULL;
+
+-- Tabel Buku Mutasi Komisi (Idempoten, Immutable & Audit Trail)
+CREATE TABLE IF NOT EXISTS public.marketing_commission_mutations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  billing_id UUID NOT NULL REFERENCES public.saas_billings(id) ON DELETE CASCADE,
+  warkop_id UUID NOT NULL REFERENCES public.warkops(id) ON DELETE CASCADE,
+  marketing_partner_id UUID NOT NULL REFERENCES public.marketing_partners(id) ON DELETE CASCADE,
+  source_partner_id UUID REFERENCES public.marketing_partners(id) ON DELETE SET NULL,
+  kind VARCHAR(20) NOT NULL CHECK (kind IN ('DIRECT', 'NETWORK')),
+  receipts_count INTEGER NOT NULL DEFAULT 0,
+  rate_per_receipt NUMERIC(10, 2) NOT NULL DEFAULT 0,
+  amount NUMERIC(12, 2) NOT NULL DEFAULT 0,
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now()),
+  CONSTRAINT uq_billing_commission_kind UNIQUE (billing_id, kind)
+);
+```
 
 ## Audit PWA Mitra dan KorMit — 22 Oktober 2026
 
 ### Alur yang menjadi acuan
 
-1. Super Admin mengangkat mitra aktif dengan akun login melalui **Jadikan Koordinator** pada Mitra Marketing Lapangan. Koordinator tidak boleh memiliki upline. Jaringan maksimal dua tingkat: KorMit → Mitra; mitra binaan tidak dapat dipromosikan sebelum hubungannya dilepas.
+1. Super Admin mengangkat mitra aktif dengan akun login melalui **Jadikan Koordinator** pada Mitra Marketing Lapangan. Sejak perubahan 23 Oktober 2026, mitra dengan upline juga dapat dipromosikan; bonus tetap hanya untuk satu upline langsung.
 2. KorMit memperoleh menu **KorMit** (`/marketing/dashboard/kormit`). URL lama `/marketing/dashboard/jaringan` diarahkan ke halaman ini. Halaman memuat status mitra binaan, jumlah tenant, bonus jaringan yang sudah dikreditkan, tautan undangan, dan formulir rekrutmen. Mitra biasa tidak mendapat akses endpoint KorMit meskipun memanggil URL secara langsung.
 3. Formulir KorMit menyimpan calon mitra sebagai `PENDING` dan `MITRA`. `upline_id` berasal dari sesi koordinator yang divalidasi server, bukan nilai kiriman browser. UUID pendaftaran dipakai ulang saat mencoba ulang permintaan agar gangguan koneksi tidak membuat baris duplikat. Nomor rekening tetap string agar nol di awal tidak hilang.
 4. Setelah data tersimpan, KorMit mendapat tombol WhatsApp ke Super Admin. Pesan menyebut koordinator, calon mitra, wilayah, kode referral, dan **nomor calon mitra**. Pendaftaran tampil di dashboard Super Admin dengan nama KorMit perekrut.
@@ -384,7 +384,7 @@ Pendapatan perusahaan (biaya sewa per struk) dipotong untuk mendistribusikan kom
 
 ### Rumus komisi dan pencairan
 
-Parameter produksi yang dibaca saat audit: biaya SaaS Rp50/struk, komisi langsung Rp20/struk, bonus KorMit Rp5/struk. Tarif tidak diubah dalam audit ini. **Parameter Master Global** menjadi sumber tarif; kolom tarif lama pada profil/tenant bukan pengganti parameter global.
+Parameter produksi yang dibaca saat audit: biaya SaaS Rp50/struk, komisi langsung Rp20/struk, bonus KorMit Rp5/struk. Tarif tidak diubah dalam audit ini. **Parameter Master Global** menjadi sumber tarif langsung dan bonus default; sejak migrasi 33, `coordinator_commission_override` dapat mengganti bonus KorMit, tanpa mengganti tarif DIRECT. Kolom tarif lama pada profil/tenant tetap bukan sumber tarif langsung.
 
 | Hubungan tenant | Penerima langsung | Penerima bonus jaringan |
 |---|---|---|
@@ -439,7 +439,7 @@ File migrasi 27 memiliki fitur arsip tenant yang ikut menghapus ledger komisi. F
 
 - `npm run check`: lint tanpa error (18 peringatan yang sudah ada), 61 pengujian aplikasi lulus, build produksi dan pemeriksaan kebocoran secret lulus.
 - `scripts/kormit.test.mjs`: otorisasi KorMit, catatan legacy yang bukan otorisasi, input nomor/rekening, asal permintaan, upline dari sesi, status pending, pendaftaran ulang idempoten, kegagalan RPC tanpa fallback, serta kredensial persetujuan menuju nomor mitra baru dengan password enam digit.
-- `scripts/fixtures/kormit-assertions.sql`: mitra mandiri, tenant langsung KorMit, mitra binaan, total DIRECT + NETWORK, perubahan tarif historis, tarif nol/berlebih, akun nonaktif, larangan tingkat ketiga, reservasi, penolakan/pembayaran, pembayaran berulang, dan pelestarian riwayat saat penghapusan mitra.
+- `scripts/fixtures/kormit-assertions.sql`: mitra mandiri, tenant langsung KorMit, mitra binaan, total DIRECT + NETWORK, perubahan tarif historis, tarif nol/berlebih, akun nonaktif, promosi mitra dengan upline, reservasi, penolakan/pembayaran, pembayaran berulang, dan pelestarian riwayat saat penghapusan mitra.
 - Uji rantai billing: struk valid → tutup shift → unggah bukti → review Super Admin → satu kredit komisi; tutup ulang dan review ulang tidak menggandakan hasil; shift baru tidak mengubah tagihan lunas.
 - `scripts/test-kormit-concurrency.mjs`: dua permintaan Rp1.500 bersamaan dari saldo Rp2.000 menghasilkan tepat satu pengajuan; dua persetujuan pengajuan yang sama menghasilkan tepat satu pembayaran. Runner dibatasi ke database disposable localhost.
 - Browser Chrome dengan data fiktif: 320, 360, 390, 430, 768 px; navigasi enam item satu baris, target sentuh minimal 44 px, form submit/daftar berikutnya, tanpa overflow elemen utama, keypad HP/rekening, serta tidak tampilnya fitur rekrutmen untuk mitra biasa. Ini simulasi viewport, bukan pengujian langsung perangkat Android/iOS.
@@ -487,3 +487,26 @@ Validasi browser menggunakan lima status tagihan fiktif pada viewport 320, 360, 
 Uji tambahan berhasil untuk error jaringan → coba lagi → data kembali tampil, serta pergantian tema melalui tombol aplikasi. Kontras label filter aktif pada tema gelap diperiksa; tidak ada permintaan mutasi yang dikirim selama pengujian browser.
 
 Validasi akhir `npm run check` lulus: lint tanpa error (18 peringatan lama), 62 tes aplikasi, build produksi, dan pemeriksaan secret pada 145 file client. Build lokal mencatat satu kegagalan fetch parameter global saat prerender, tetapi menyelesaikan seluruh 77 halaman dengan exit code 0; pengujian browser Billing menggunakan respons parameter terkontrol. Tidak diperlukan migrasi database.
+
+## KorMit dengan upline dan bonus khusus — 23 Oktober 2026
+
+Struktur perekrutan boleh lebih dari dua tingkat. Pembayaran komisi tetap maksimal dua penerima per tagihan: mitra pembina tenant memperoleh DIRECT, dan satu KorMit perekrut langsung memperoleh NETWORK. Pada A → B → C → D, tenant B membayar B + A, tenant C membayar C + B, dan tenant D membayar D + C. A tidak menerima bonus tenant C/D. Laporan jaringan tetap menampilkan mitra binaan langsung saja.
+
+Tombol **Jadikan Koordinator** kini membuka popup. Super Admin memeriksa nama dan mengisi bonus khusus Rupiah/struk atau mengosongkannya untuk mengikuti global. `NULL` = global; `0` = tanpa bonus; angka positif = bonus khusus. **Simpan** mengirim satu UPDATE untuk level dan bonus; kegagalan mempertahankan popup untuk diperbaiki. KorMit aktif juga memiliki tombol **Atur bonus KorMit**. Nilai efektif digunakan pada dashboard/profil mitra, pelunasan, dan pesan WhatsApp.
+
+Pengangkatan tidak menghapus upline. Perekrutan dari menu KorMit mengunci `upline_id` dari sesi; tautan referral KorMit dengan upline juga valid. Calon mitra tetap PENDING sampai diverifikasi Super Admin. Akun nonaktif dan mitra biasa tetap tidak mendapat akses rekrutmen KorMit.
+
+Batas bonus khusus adalah tarif SaaS dikurangi komisi langsung. API dan database menolak nilai negatif, pecahan, serta total komisi berlebih. Perubahan tarif global yang bertentangan dengan bonus khusus yang tersimpan ditolak. Perubahan relasi/tarif diserialkan sebelum kunci baris untuk menolak siklus atau kombinasi tarif tidak sah saat permintaan bersamaan; pembaruan saldo pencairan tidak ikut mengambil kunci konfigurasi tersebut. Penghapusan mitra memakai urutan kunci yang sama dan tetap menolak penghapusan riwayat keuangan.
+
+Migrasi `33_coordinator_direct_upline_bonus.sql` menambah kolom nullable tanpa mengubah nilai global, hubungan yang sudah ada, atau ledger historis. Tarif dan hubungan saat pelunasan dipakai sebagai snapshot mutasi; mengubah bonus atau mengulang PAID tidak menghitung ulang mutasi lama. Mekanisme WA tetap membuka `wa.me` setelah penyimpanan berhasil; admin menekan Kirim di WhatsApp. Sistem tidak mengklaim pengiriman otomatis atau pesan sudah diterima.
+
+Validasi meliputi seluruh migrasi pada PostgreSQL disposable, assertion pembayaran/pencairan/direktori, serta rantai A–B–C–D. Uji serentak memastikan tepat satu perubahan pembentuk siklus berhasil, kombinasi tarif global/khusus tetap dalam batas SaaS, dan pencairan berulang tidak menggandakan pembayaran. Browser dengan data fiktif pada 320, 390, 640, dan 1440 px memeriksa popup, batal tanpa PATCH, bonus kosong/nol/khusus, batas nominal, dan error simpan. Tidak ada akun fiktif, pembayaran, atau pesan WA nyata dibuat di produksi.
+
+Contoh 100 struk, komisi DIRECT global Rp20, bonus global Rp5, dan bonus khusus B Rp7:
+
+| Tenant dibina oleh | Penerima DIRECT | Penerima NETWORK | Tidak menerima NETWORK |
+|---|---|---|---|
+| B (upline A) | B: Rp2.000 | A: Rp500 | B sendiri |
+| C (upline B) | C: Rp2.000 | B: Rp700 | A |
+
+Hasil rilis: 68 tes aplikasi lulus, lint tanpa error (18 peringatan lama), build produksi dan pemeriksaan secret pada 145 file client lulus. Migrasi 33 lolos preflight ROLLBACK, kemudian COMMIT di produksi dan dicatat applied. Verifikasi read-only memastikan lima mitra tetap memakai default (override NULL), tarif global tetap Rp20/Rp5/Rp50, laporan paginasi memuat kolom override, dan role authenticated tidak memiliki izin UPDATE langsung ke tabel mitra. Tidak ada ledger historis diubah. Migrasi tertunda 25–30 tidak diterapkan bersama perubahan ini.
