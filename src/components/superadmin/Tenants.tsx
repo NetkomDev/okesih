@@ -1,5 +1,6 @@
 "use client";
 import ModalFrame from "./ModalFrame";
+import { MobileDirectory, DirectoryDetail, useDirectoryPageSize } from "./MobileDirectory";
 import { randomDigits } from "@/lib/generated-credentials";
 import CopyCredential from "./CopyCredential";
 import AccessMessage from "./AccessMessage";
@@ -124,7 +125,10 @@ const loadMarketingPartners = async () => {
       console.error("Gagal memuat marketing partners:", e);
     }
   };
+const pageSize = useDirectoryPageSize();
+const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
 const [tenants, setTenants] = useState<TenantWarkop[]>([]);
+const selectedTenant = tenants.find((t) => t.id === selectedTenantId) || null;
 const [searchQuery, setSearchQuery] = useState("");
 const [tenantRegionFilter, setTenantRegionFilter] = useState("ALL");
 const [tenantPage, setTenantPage] = useState(1);
@@ -139,7 +143,7 @@ const loadTenants = useCallback(async () => {
     const requestId = ++tenantRequest.current;
     setTenantLoading(true); setTenantError("");
     try {
-      const params = new URLSearchParams({ page: String(tenantPage), pageSize: "25", search: searchQuery, province: tenantRegionFilter });
+      const params = new URLSearchParams({ page: String(tenantPage), pageSize: String(pageSize), search: searchQuery, province: tenantRegionFilter });
       const res = await fetch(`/api/superadmin/tenants?${params}`, { cache: "no-store" });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Tenant gagal dimuat.");
@@ -149,7 +153,7 @@ const loadTenants = useCallback(async () => {
     } catch (error) {
       if (requestId === tenantRequest.current) setTenantError(error instanceof Error ? error.message : "Tenant gagal dimuat.");
     } finally { if (requestId === tenantRequest.current) setTenantLoading(false); }
-  }, [tenantPage, searchQuery, tenantRegionFilter, setTotalTenants]);
+  }, [tenantPage, pageSize, searchQuery, tenantRegionFilter, setTotalTenants]);
 useEffect(() => {
     if (!isAuthorized) return;
     const invalidate = () => { tenantRequest.current++; };
@@ -420,7 +424,7 @@ const toggleTenantStatus = (id: string) => {
           if (!res.ok) {
             throw new Error(payload.error || "Gagal menghapus tenant.");
           }
-          setTenants((prev) => prev.filter((t) => t.id !== tenant.id));
+          await loadTenants();
           setTenantPagination((prev) => ({
             ...prev,
             total: Math.max(0, prev.total - 1),
@@ -447,6 +451,59 @@ const toggleTenantStatus = (id: string) => {
 useEffect(() => { const timer = setTimeout(() => void loadTenantApplications(), 0); return () => clearTimeout(timer); }, []);
 useEffect(() => { if (!isRegisterModalOpen) return; const timer = setTimeout(() => void loadMarketingPartners(), 0); return () => clearTimeout(timer); }, [isRegisterModalOpen]);
 useEffect(() => { if (createIntent !== "tenant") return; const timer = setTimeout(() => { handleOpenRegisterModal(); setCreateIntent(null); }, 0); return () => clearTimeout(timer); }, [createIntent, handleOpenRegisterModal, setCreateIntent]);
+const renderTenantActions = (t: TenantWarkop) => <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                          <Link
+                            href={`/menu/${t.slug}?table=01`}
+                            target="_blank"
+                            className="btn-secondary"
+                            style={{ padding: "0.35rem 0.65rem", fontSize: "0.75rem" }}
+                          >
+                            Cek QR Menu
+                          </Link>
+                          <button
+                            disabled={t.status === "ARCHIVED"}
+                            onClick={() => toggleTenantStatus(t.id)}
+                            style={{
+                              background: t.status === "ACTIVE" ? "rgba(239, 68, 68, 0.1)" : "rgba(16, 185, 129, 0.1)",
+                              border: t.status === "ACTIVE" ? "1px solid #EF4444" : "1px solid #10B981",
+                              color: t.status === "ACTIVE" ? "#EF4444" : "#059669",
+                              padding: "0.35rem 0.65rem",
+                              borderRadius: "6px",
+                              fontSize: "0.75rem",
+                              fontWeight: 800,
+                              cursor: "pointer",
+                            }}
+                          >
+                            {t.status === "ARCHIVED" ? "Diarsipkan" : t.status === "ACTIVE" ? "Suspend" : "Aktifkan"}
+                          </button>
+                          <button
+                            disabled={t.status === "ARCHIVED"}
+                            onClick={() => handleDeleteTenant(t)}
+                            title="Arsipkan dan Hapus Histori"
+                            style={{
+                              background: "rgba(239, 68, 68, 0.12)",
+                              border: "1px solid #EF4444",
+                              color: "#EF4444",
+                              padding: "0.35rem 0.65rem",
+                              borderRadius: "6px",
+                              fontSize: "0.75rem",
+                              fontWeight: 800,
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "4px",
+                            }}
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="3 6 5 6 21 6" />
+                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                              <line x1="10" y1="11" x2="10" y2="17" />
+                              <line x1="14" y1="11" x2="14" y2="17" />
+                            </svg>
+                            Hapus
+                          </button>
+
+</div>;
 return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={() => setAccessMessageUrl(null)} />}{accessTarget && <AccountAccessModal key={accessTarget.id} target={accessTarget} onClose={() => setAccessTarget(null)} onSaved={() => { void loadTenantApplications(); void loadTenants(); }} />}{activeTab === "tenants" && (
           <section
             className="glass-panel"
@@ -543,7 +600,8 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
               </div>
             )}
 
-            <div className="superadmin-table-container">
+            <MobileDirectory label="Daftar tenant" headers={["Nama tenant", "Kota", "Provinsi"]} rows={filteredTenants.map(t => ({ id: t.id, name: t.name, second: t.cityRegency, third: t.province }))} onSelect={setSelectedTenantId} />
+            <div className="superadmin-table-container sa-desktop-directory">
               <table className="sa-data-table" role="table" style={{ width: "100%", minWidth: "1050px", borderCollapse: "collapse", textAlign: "left", fontSize: "0.875rem" }}>
                 <thead role="rowgroup">
                   <tr
@@ -645,56 +703,7 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
 
                       <td role="cell" data-label="Aksi tenant" style={{ padding: "1rem", textAlign: "right", whiteSpace: "nowrap" }}>
                         <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
-                          <Link
-                            href={`/menu/${t.slug}?table=01`}
-                            target="_blank"
-                            className="btn-secondary"
-                            style={{ padding: "0.35rem 0.65rem", fontSize: "0.75rem" }}
-                          >
-                            Cek QR Menu
-                          </Link>
-                          <button
-                            disabled={t.status === "ARCHIVED"}
-                            onClick={() => toggleTenantStatus(t.id)}
-                            style={{
-                              background: t.status === "ACTIVE" ? "rgba(239, 68, 68, 0.1)" : "rgba(16, 185, 129, 0.1)",
-                              border: t.status === "ACTIVE" ? "1px solid #EF4444" : "1px solid #10B981",
-                              color: t.status === "ACTIVE" ? "#EF4444" : "#059669",
-                              padding: "0.35rem 0.65rem",
-                              borderRadius: "6px",
-                              fontSize: "0.75rem",
-                              fontWeight: 800,
-                              cursor: "pointer",
-                            }}
-                          >
-                            {t.status === "ARCHIVED" ? "Diarsipkan" : t.status === "ACTIVE" ? "Suspend" : "Aktifkan"}
-                          </button>
-                          <button
-                            disabled={t.status === "ARCHIVED"}
-                            onClick={() => handleDeleteTenant(t)}
-                            title="Arsipkan dan Hapus Histori"
-                            style={{
-                              background: "rgba(239, 68, 68, 0.12)",
-                              border: "1px solid #EF4444",
-                              color: "#EF4444",
-                              padding: "0.35rem 0.65rem",
-                              borderRadius: "6px",
-                              fontSize: "0.75rem",
-                              fontWeight: 800,
-                              cursor: "pointer",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: "4px",
-                            }}
-                          >
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                              <polyline points="3 6 5 6 21 6" />
-                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                              <line x1="10" y1="11" x2="10" y2="17" />
-                              <line x1="14" y1="11" x2="14" y2="17" />
-                            </svg>
-                            Hapus
-                          </button>
+                          {renderTenantActions(t)}
                         </div>
                       </td>
                     </tr>
@@ -704,9 +713,22 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
             </div>
             {tenantError && <p role="alert">{tenantError}</p>}
             {tenantLoading && <p role="status">Memuat tenant...</p>}
+            {!tenantLoading && !tenantError && !filteredTenants.length && <p className="sa-directory-empty">Tidak ada tenant yang cocok dengan pencarian.</p>}
             <Pagination pagination={tenantPagination} onPage={setTenantPage} loading={tenantLoading} />
           </section>
         )}
+{selectedTenant && <DirectoryDetail title={selectedTenant.name} subtitle="Detail tenant" onClose={() => setSelectedTenantId(null)} fields={[
+  ["Status tenant", selectedTenant.status === "ACTIVE" ? "Aktif" : selectedTenant.status === "ARCHIVED" ? "Diarsipkan" : "Nonaktif"],
+  ["Owner", selectedTenant.ownerName], ["WhatsApp owner", selectedTenant.phone], ["Alamat", selectedTenant.address],
+  ["Kota / kabupaten", selectedTenant.cityRegency], ["Provinsi", selectedTenant.province], ["Kode POS", selectedTenant.uniqueCodeRange],
+  ["Slug menu", selectedTenant.slug], ["Mitra pengelola", selectedTenant.marketingAgentName || "Direct HQ"],
+  ["Tarif komisi", `Rp ${selectedTenant.commissionPerReceipt.toLocaleString("id-ID")}/struk`],
+  ["Struk hari ini", selectedTenant.todayTransactions], ["Tagihan", `Rp ${selectedTenant.totalSaasBilling.toLocaleString("id-ID")}`],
+  ["Status tagihan", selectedTenant.paymentStatus === "PAID" ? "Lunas" : "Belum lunas"], ["Bergabung", selectedTenant.joinedDate],
+]} actions={<>
+  <button className="btn-secondary" style={{ marginBottom: 8 }} onClick={() => setAccessTarget({ kind: "TENANT", id: selectedTenant.id, name: `${selectedTenant.ownerName} — ${selectedTenant.name}`, phone: selectedTenant.phone, canReset: selectedTenant.status === "ACTIVE" })}>Perbaiki WA & akses</button>
+  {renderTenantActions(selectedTenant)}
+</>} />}
 {isRegisterModalOpen && (
         <ModalFrame label="Daftarkan tenant" onClose={() => setIsRegisterModalOpen(false)}>
           <div

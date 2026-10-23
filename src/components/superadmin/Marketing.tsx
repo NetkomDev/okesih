@@ -1,9 +1,12 @@
 "use client";
 import ModalFrame from "./ModalFrame";
+import { MobileDirectory, DirectoryDetail, useDirectoryPageSize } from "./MobileDirectory";
+import Pagination from "@/components/Pagination";
+import type { Pagination as PageInfo } from "@/lib/reporting";
 import { randomDigits } from "@/lib/generated-credentials";
 import CopyCredential from "./CopyCredential";
 import AccessMessage from "./AccessMessage";
-import { useCallback,useEffect,useState } from "react";
+import { useCallback,useEffect,useState,useRef } from "react";
 import { useSuperadmin } from "./context";
 import AccountAccessModal, { type AccountAccessTarget } from "./AccountAccessModal";
 interface MarketingAgent {
@@ -43,6 +46,15 @@ type MarketingFilterStatus = "ALL" | "PENDING" | "ACTIVE" | "INACTIVE";
 export default function MarketingFeature() {
 const { isDark, showToast, setConfirmModal, activeTab, createIntent, setCreateIntent, refreshSummary } = useSuperadmin();
 
+const pageSize = useDirectoryPageSize();
+const [marketingPage, setMarketingPage] = useState(1);
+const [pagination, setPagination] = useState<PageInfo>({ page: 1, pageSize: 25, total: 0, totalPages: 1 });
+const [counts, setCounts] = useState({ ALL: 0, ACTIVE: 0, PENDING: 0, INACTIVE: 0 });
+const [directoryLoading, setDirectoryLoading] = useState(false);
+const [directoryError, setDirectoryError] = useState("");
+const requestSequence = useRef(0);
+const [directoryRevision, setDirectoryRevision] = useState(0);
+const [selectedId, setSelectedId] = useState<string | null>(null);
 const [marketingList, setMarketingList] = useState<MarketingAgent[]>([]);
 const [accessMessageUrl, setAccessMessageUrl] = useState<string | null>(null);
 const [accessTarget, setAccessTarget] = useState<AccountAccessTarget | null>(null);
@@ -50,10 +62,17 @@ const [marketingWithdrawals, setMarketingWithdrawals] = useState<MarketingWithdr
 const [reviewingWithdrawalId, setReviewingWithdrawalId] = useState<string | null>(null);
 const [marketingFilterStatus, setMarketingFilterStatus] = useState<MarketingFilterStatus>("ALL");
 const [marketingSearchQuery, setMarketingSearchQuery] = useState<string>("");
-const loadMarketingPartners = async () => {
+const loadMarketingPartners = useCallback(async () => {
+    const requestId = ++requestSequence.current;
+    setDirectoryLoading(true); setDirectoryError("");
     try {
-      const res = await fetch("/api/superadmin/marketing");
+      const params = new URLSearchParams({ page: String(marketingPage), pageSize: String(pageSize), search: marketingSearchQuery, status: marketingFilterStatus });
+      const res = await fetch(`/api/superadmin/marketing?${params}`, { cache: "no-store" });
       const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Daftar mitra gagal dimuat.");
+      if (requestId !== requestSequence.current) return;
+      setPagination(json.pagination); setCounts(json.counts);
+      if (json.pagination.page !== marketingPage) setMarketingPage(json.pagination.page);
       if (json.data && Array.isArray(json.data)) {
         interface RawMarketingPartner {
           id: string;
@@ -100,9 +119,9 @@ const loadMarketingPartners = async () => {
         setMarketingList(mapped);
       }
     } catch (e) {
-      console.error("Gagal memuat marketing partners:", e);
-    }
-  };
+      if (requestId === requestSequence.current) setDirectoryError(e instanceof Error ? e.message : "Daftar mitra gagal dimuat.");
+    } finally { if (requestId === requestSequence.current) setDirectoryLoading(false); }
+  }, [marketingPage, pageSize, marketingSearchQuery, marketingFilterStatus]);
 const confirmMarketingActivation = (id: string) => {
       const partner = marketingList.find(item => item.id === id);
       if (!partner) return;
@@ -120,9 +139,7 @@ const handleUpdateMarketingStatus = async (id: string, newStatus: "ACTIVE" | "IN
       });
       const payload = await res.json();
       if (!res.ok) throw new Error(payload.error || "Server tidak dapat mengubah status mitra.");
-      setMarketingList((prev) =>
-        prev.map((m) => (m.id === id ? { ...m, status: newStatus } : m))
-      );
+      setDirectoryRevision(value => value + 1);
       showToast(
         "Status Marketing Diperbarui",
         payload.whatsappUrl
@@ -148,9 +165,7 @@ const handleUpdateMarketingStatus = async (id: string, newStatus: "ACTIVE" | "IN
       });
       const payload = await res.json();
       if (!res.ok) throw new Error(payload.error || "Gagal mengubah level keanggotaan.");
-      setMarketingList((prev) =>
-        prev.map((m) => (m.id === agent.id ? { ...m, membershipLevel: newLevel } : m))
-      );
+      setDirectoryRevision(value => value + 1);
       showToast(
         "Level Kemitraan Diperbarui",
         newLevel === "COORDINATOR"
@@ -188,7 +203,7 @@ const handleUpdateMarketingStatus = async (id: string, newStatus: "ACTIVE" | "IN
           if (!res.ok) {
             throw new Error(payload.error || "Gagal menghapus mitra marketing.");
           }
-          setMarketingList((prev) => prev.filter((m) => m.id !== agent.id));
+          setDirectoryRevision(value => value + 1);
           refreshSummary();
           showToast(
             "Marketing Berhasil Dihapus",
@@ -290,7 +305,7 @@ const handleCreateMarketing = async (e: React.FormEvent) => {
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Gagal menyimpan marketing.");
       if (!payload.whatsappUrl) throw new Error("Tautan WhatsApp marketing gagal disiapkan.");
-      await loadMarketingPartners(); refreshSummary();
+      setDirectoryRevision(value => value + 1); refreshSummary();
       setIsMarketingModalOpen(false);
       showToast("Marketing Berhasil Didaftarkan", `Kredensial ${newMkt.name} siap dikirim melalui WhatsApp Anda.`, "success");
       setAccessMessageUrl(payload.whatsappUrl);
@@ -300,8 +315,118 @@ const handleCreateMarketing = async (e: React.FormEvent) => {
       setIsMarketingSaving(false);
     }
   };
-useEffect(() => { const timer = setTimeout(() => { void loadMarketingPartners(); void loadMarketingWithdrawals(); }, 0); return () => clearTimeout(timer); }, []);
+useEffect(() => { const timer = setTimeout(() => { void loadMarketingWithdrawals(); }, 0); return () => clearTimeout(timer); }, []);
 useEffect(() => { if (createIntent !== "marketing") return; const timer = setTimeout(() => { handleOpenMarketingModal(); setCreateIntent(null); }, 0); return () => clearTimeout(timer); }, [createIntent, handleOpenMarketingModal, setCreateIntent]);
+useEffect(() => {
+  const invalidate = () => { requestSequence.current++; };
+  const timer = setTimeout(() => void loadMarketingPartners(), 250);
+  return () => { clearTimeout(timer); invalidate(); };
+}, [loadMarketingPartners, directoryRevision]);
+const selected = marketingList.find(m => m.id === selectedId);
+const renderMarketingActions = (m: MarketingAgent) => <>
+                            <button className="btn-secondary" style={{ marginBottom: 8, fontSize: 12 }} onClick={() => setAccessTarget({ kind: "MARKETING", id: m.id, name: m.name, phone: m.phone, canReset: m.status === "ACTIVE" })}>Perbaiki WA & akses</button>
+                            <div style={{ display: "flex", gap: "0.4rem", justifyContent: "flex-end" }}>
+                              {m.status === "PENDING" ? (
+                                <>
+                                  <button
+                                    onClick={() => confirmMarketingActivation(m.id)}
+                                    className="btn-primary"
+                                    style={{
+                                      background: "linear-gradient(135deg, #10B981, #059669)",
+                                      padding: "0.35rem 0.75rem",
+                                      fontSize: "0.75rem",
+                                      fontWeight: 800,
+                                    }}
+                                  >
+                                    ✓ Setujui
+                                  </button>
+                                  <button
+                                    onClick={() => handleUpdateMarketingStatus(m.id, "INACTIVE")}
+                                    className="btn-secondary"
+                                    style={{
+                                      padding: "0.35rem 0.65rem",
+                                      fontSize: "0.75rem",
+                                      color: "#EF4444",
+                                    }}
+                                  >
+                                    ✕ Tolak
+                                  </button>
+                                </>
+                              ) : (
+                                <>
+                                  {m.status === "ACTIVE" ? (
+                                    <>
+                                      {m.membershipLevel === "COORDINATOR" ? (
+                                        <button
+                                          onClick={() => handleToggleCoordinator(m)}
+                                          className="btn-secondary"
+                                          style={{
+                                            padding: "0.4rem 0.65rem",
+                                            fontSize: "0.75rem",
+                                            color: "#D97706",
+                                            borderColor: "rgba(245, 158, 11, 0.4)",
+                                            fontWeight: 700,
+                                          }}
+                                          title="Cabut Status Koordinator Mitra"
+                                        >
+                                          Cabut Koordinator
+                                        </button>
+                                      ) : (
+                                        <button
+                                          onClick={() => handleToggleCoordinator(m)}
+                                          className="btn-secondary"
+                                          style={{
+                                            padding: "0.4rem 0.65rem",
+                                            fontSize: "0.75rem",
+                                            color: "#6366F1",
+                                            borderColor: "rgba(99, 102, 241, 0.4)",
+                                            fontWeight: 700,
+                                            background: "rgba(99, 102, 241, 0.08)",
+                                          }}
+                                          title="Jadikan Koordinator Mitra"
+                                        >
+                                          👑 Jadikan Koordinator
+                                        </button>
+                                      )}
+                                      <button
+                                        onClick={() => handleUpdateMarketingStatus(m.id, "INACTIVE")}
+                                        className="btn-secondary"
+                                        style={{ padding: "0.4rem 0.55rem", fontSize: "0.75rem", color: isDark ? "#94A3B8" : "#64748B" }}
+                                        title="Nonaktifkan Kemitraan"
+                                      >
+                                        Suspend
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <button
+                                      onClick={() => confirmMarketingActivation(m.id)}
+                                      className="btn-secondary"
+                                      style={{ padding: "0.4rem 0.55rem", fontSize: "0.75rem", color: "#059669" }}
+                                      title="Aktifkan Kembali"
+                                    >
+                                      Aktifkan
+                                    </button>
+                                  )}
+                                </>
+                              )}
+                              <button
+                                onClick={() => handleDeleteMarketing(m)}
+                                className="btn-secondary"
+                                style={{
+                                  padding: "0.4rem 0.65rem",
+                                  fontSize: "0.75rem",
+                                  color: "#EF4444",
+                                  borderColor: "rgba(239, 68, 68, 0.4)",
+                                  fontWeight: 700,
+                                  background: "rgba(239, 68, 68, 0.08)",
+                                }}
+                                title="Hapus Akun & Seluruh Data Marketing"
+                              >
+                                Hapus
+                              </button>
+                            </div>
+
+</>;
 return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={() => setAccessMessageUrl(null)} />}{accessTarget && <AccountAccessModal key={accessTarget.id} target={accessTarget} onClose={() => setAccessTarget(null)} onSaved={() => void loadMarketingPartners()} />}{activeTab === "marketing" && (
           <section
             className="glass-panel"
@@ -405,14 +530,14 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
               <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
                 <span style={{ fontSize: "0.8rem", color: isDark ? "#94A3B8" : "#64748B", fontWeight: 700 }}>Status:</span>
                 {[
-                  { key: "ALL", label: `Semua (${marketingList.length})` },
-                  { key: "PENDING", label: `⏳ Pendaftar Baru (${marketingList.filter((m) => m.status === "PENDING").length})` },
-                  { key: "ACTIVE", label: `● Aktif (${marketingList.filter((m) => m.status === "ACTIVE").length})` },
-                  { key: "INACTIVE", label: `✕ Nonaktif (${marketingList.filter((m) => m.status === "INACTIVE").length})` },
+                  { key: "ALL", label: `Semua (${counts.ALL})` },
+                  { key: "PENDING", label: `⏳ Pendaftar Baru (${counts.PENDING})` },
+                  { key: "ACTIVE", label: `● Aktif (${counts.ACTIVE})` },
+                  { key: "INACTIVE", label: `✕ Nonaktif (${counts.INACTIVE})` },
                 ].map((tab) => (
                   <button
                     key={tab.key}
-                    onClick={() => setMarketingFilterStatus(tab.key as MarketingFilterStatus)}
+                    onClick={() => { setMarketingFilterStatus(tab.key as MarketingFilterStatus); setMarketingPage(1); }}
                     style={{
                       padding: "0.35rem 0.75rem",
                       borderRadius: "6px",
@@ -445,7 +570,7 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
                   type="text"
                   aria-label="Cari mitra marketing" placeholder="Cari kota, wilayah, atau nama..."
                   value={marketingSearchQuery}
-                  onChange={(e) => setMarketingSearchQuery(e.target.value)}
+                  onChange={(e) => { setMarketingSearchQuery(e.target.value); setMarketingPage(1); }}
                   style={{
                     width: "100%",
                     padding: "0.45rem 0.85rem",
@@ -460,7 +585,8 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
               </div>
             </div>
 
-            <div className="superadmin-table-container">
+            <MobileDirectory numericLast label="Daftar mitra" headers={["Nama mitra", "Wilayah", "Tenant"]} rows={marketingList.map(m => ({ id: m.id, name: m.name, second: m.area, third: m.totalTenantsAcquired, coordinator: m.membershipLevel === "COORDINATOR" }))} onSelect={setSelectedId} />
+            <div className="superadmin-table-container sa-desktop-directory">
               <table className="sa-data-table" role="table" style={{ width: "100%", minWidth: "1150px", borderCollapse: "collapse", textAlign: "left", fontSize: "0.875rem" }}>
                 <thead role="rowgroup">
                   <tr
@@ -484,16 +610,6 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
                 </thead>
                 <tbody role="rowgroup">
                   {marketingList
-                    .filter((m) => {
-                      const matchStatus = marketingFilterStatus === "ALL" || m.status === marketingFilterStatus;
-                      const q = marketingSearchQuery.toLowerCase();
-                      const matchQuery =
-                        !q ||
-                        m.name.toLowerCase().includes(q) ||
-                        m.area.toLowerCase().includes(q) ||
-                        m.referralCode.toLowerCase().includes(q);
-                      return matchStatus && matchQuery;
-                    })
                     .map((m) => {
                       const sisaKomisi = Math.max(0, m.totalCommissionEarned - m.commissionPaid - (m.pendingWithdrawal || 0));
                       return (
@@ -652,107 +768,7 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
                           </td>
 
                           <td role="cell" data-label="Aksi mitra" style={{ padding: "1rem", textAlign: "right", whiteSpace: "nowrap" }}>
-                            <button className="btn-secondary" style={{ marginBottom: 8, fontSize: 12 }} onClick={() => setAccessTarget({ kind: "MARKETING", id: m.id, name: m.name, phone: m.phone, canReset: m.status === "ACTIVE" })}>Perbaiki WA & akses</button>
-                            <div style={{ display: "flex", gap: "0.4rem", justifyContent: "flex-end" }}>
-                              {m.status === "PENDING" ? (
-                                <>
-                                  <button
-                                    onClick={() => confirmMarketingActivation(m.id)}
-                                    className="btn-primary"
-                                    style={{
-                                      background: "linear-gradient(135deg, #10B981, #059669)",
-                                      padding: "0.35rem 0.75rem",
-                                      fontSize: "0.75rem",
-                                      fontWeight: 800,
-                                    }}
-                                  >
-                                    ✓ Setujui
-                                  </button>
-                                  <button
-                                    onClick={() => handleUpdateMarketingStatus(m.id, "INACTIVE")}
-                                    className="btn-secondary"
-                                    style={{
-                                      padding: "0.35rem 0.65rem",
-                                      fontSize: "0.75rem",
-                                      color: "#EF4444",
-                                    }}
-                                  >
-                                    ✕ Tolak
-                                  </button>
-                                </>
-                              ) : (
-                                <>
-                                  {m.status === "ACTIVE" ? (
-                                    <>
-                                      {m.membershipLevel === "COORDINATOR" ? (
-                                        <button
-                                          onClick={() => handleToggleCoordinator(m)}
-                                          className="btn-secondary"
-                                          style={{
-                                            padding: "0.4rem 0.65rem",
-                                            fontSize: "0.75rem",
-                                            color: "#D97706",
-                                            borderColor: "rgba(245, 158, 11, 0.4)",
-                                            fontWeight: 700,
-                                          }}
-                                          title="Cabut Status Koordinator Mitra"
-                                        >
-                                          Cabut Koordinator
-                                        </button>
-                                      ) : (
-                                        <button
-                                          onClick={() => handleToggleCoordinator(m)}
-                                          className="btn-secondary"
-                                          style={{
-                                            padding: "0.4rem 0.65rem",
-                                            fontSize: "0.75rem",
-                                            color: "#6366F1",
-                                            borderColor: "rgba(99, 102, 241, 0.4)",
-                                            fontWeight: 700,
-                                            background: "rgba(99, 102, 241, 0.08)",
-                                          }}
-                                          title="Jadikan Koordinator Mitra"
-                                        >
-                                          👑 Jadikan Koordinator
-                                        </button>
-                                      )}
-                                      <button
-                                        onClick={() => handleUpdateMarketingStatus(m.id, "INACTIVE")}
-                                        className="btn-secondary"
-                                        style={{ padding: "0.4rem 0.55rem", fontSize: "0.75rem", color: isDark ? "#94A3B8" : "#64748B" }}
-                                        title="Nonaktifkan Kemitraan"
-                                      >
-                                        Suspend
-                                      </button>
-                                    </>
-                                  ) : (
-                                    <button
-                                      onClick={() => confirmMarketingActivation(m.id)}
-                                      className="btn-secondary"
-                                      style={{ padding: "0.4rem 0.55rem", fontSize: "0.75rem", color: "#059669" }}
-                                      title="Aktifkan Kembali"
-                                    >
-                                      Aktifkan
-                                    </button>
-                                  )}
-                                </>
-                              )}
-                              <button
-                                onClick={() => handleDeleteMarketing(m)}
-                                className="btn-secondary"
-                                style={{
-                                  padding: "0.4rem 0.65rem",
-                                  fontSize: "0.75rem",
-                                  color: "#EF4444",
-                                  borderColor: "rgba(239, 68, 68, 0.4)",
-                                  fontWeight: 700,
-                                  background: "rgba(239, 68, 68, 0.08)",
-                                }}
-                                title="Hapus Akun & Seluruh Data Marketing"
-                              >
-                                Hapus
-                              </button>
-                            </div>
+                            {renderMarketingActions(m)}
                           </td>
                         </tr>
                       );
@@ -760,8 +776,22 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
                 </tbody>
               </table>
             </div>
+            {directoryError && <p role="alert">{directoryError} <button className="btn-secondary" onClick={() => void loadMarketingPartners()}>Coba lagi</button></p>}
+            {directoryLoading && <p role="status">Memuat mitra…</p>}
+            {!directoryLoading && !directoryError && !marketingList.length && <p className="sa-directory-empty">Tidak ada mitra yang cocok dengan pencarian.</p>}
+            <Pagination pagination={pagination} onPage={setMarketingPage} loading={directoryLoading} />
           </section>
         )}
+{selected && <DirectoryDetail title={selected.name} subtitle={selected.membershipLevel === "COORDINATOR" ? "Koordinator Mitra" : "Mitra Marketing"} onClose={() => setSelectedId(null)} fields={[
+  ["Status", selected.status === "ACTIVE" ? "Aktif" : selected.status === "PENDING" ? "Menunggu persetujuan" : "Nonaktif"],
+  ["WhatsApp", selected.phone], ["Email", selected.email], ["Wilayah", selected.area], ["Kode referral", selected.referralCode],
+  ["Koordinator perekrut", selected.coordinatorName], ["Tenant binaan langsung", selected.totalTenantsAcquired],
+  ["Struk terkredit", selected.totalReceiptsGenerated], ["Tarif komisi langsung", `Rp ${selected.commissionPerReceipt.toLocaleString("id-ID")}/struk`],
+  ["Total komisi", `Rp ${selected.totalCommissionEarned.toLocaleString("id-ID")}`], ["Sudah dibayar", `Rp ${selected.commissionPaid.toLocaleString("id-ID")}`],
+  ["Pencairan menunggu", `Rp ${(selected.pendingWithdrawal || 0).toLocaleString("id-ID")}`],
+  ["Saldo tersedia", `Rp ${Math.max(0, selected.totalCommissionEarned - selected.commissionPaid - (selected.pendingWithdrawal || 0)).toLocaleString("id-ID")}`],
+  ["Bank", selected.bankName], ["Nomor rekening", selected.accountNumber], ["Nama pemilik rekening", selected.accountName], ["Catatan", selected.experienceNotes],
+]} actions={renderMarketingActions(selected)} />}
 {isMarketingModalOpen && (
         <ModalFrame label="Daftarkan marketing" onClose={() => setIsMarketingModalOpen(false)}>
           <div

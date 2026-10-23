@@ -1,3 +1,5 @@
+import { z } from "zod";
+import { paginationSchema } from "@/lib/reporting";
 import { createAccount } from "@/lib/create-account";
 import { NextResponse } from "next/server";
 import { randomDigits } from "@/lib/generated-credentials";
@@ -36,7 +38,17 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
     const city = searchParams.get("city");
-
+    if (searchParams.has("page") || searchParams.has("pageSize")) {
+      const parsed = paginationSchema.extend({ search: z.string().trim().max(120).default(""), status: z.enum(["ALL", "ACTIVE", "PENDING", "INACTIVE"]).default("ALL") }).safeParse(Object.fromEntries(searchParams));
+      if (!parsed.success) return NextResponse.json({ error: "Parameter daftar mitra tidak valid." }, { status: 400 });
+      const input = parsed.data;
+      const { data, error } = await supabase.rpc("report_superadmin_marketing_page", {
+        p_page: input.page, p_page_size: input.pageSize, p_search: input.search, p_status: input.status,
+      });
+      if (error || !data) return NextResponse.json({ error: "Daftar mitra belum dapat dimuat." }, { status: 503 });
+      return NextResponse.json(data, { headers: { "Cache-Control": "private, no-store" } });
+    }
+    // Existing callers (including the tenant registration selector) retain their contract.
     const { data, error } = await supabase.rpc("report_superadmin_marketing", {
       p_status: status && status !== "ALL" ? status : null,
       p_city: city && city !== "ALL" ? city : null,

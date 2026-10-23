@@ -446,3 +446,22 @@ File migrasi 27 memiliki fitur arsip tenant yang ikut menghapus ledger komisi. F
 - Tidak ada pesan WhatsApp nyata, akun marketing produksi fiktif, atau transfer uang yang dibuat selama pengujian.
 
 Status penerapan database: migrasi 31 berhasil COMMIT di produksi dan dicatat sebagai applied melalui Supabase CLI. Verifikasi read-only sesudahnya memastikan seluruh lima saldo dashboard sama dengan agregat daftar Super Admin; tarif tetap Rp20/Rp5/Rp50. Migrasi 25–30 tidak dijalankan sekaligus.
+
+## Audit daftar mobile Super Admin — 23 Oktober 2026
+
+Pada lebar layar hingga 640 px, daftar Tenant dan Mitra memakai tabel tiga kolom dengan 10 baris per halaman. Tenant menampilkan nama, kota, dan provinsi; Mitra menampilkan nama, wilayah, dan jumlah tenant binaan langsung. Koordinator ditandai titik biru beserta teks KorMit. Nama panjang dibatasi dua baris dan nilai jumlah nol tetap ditampilkan.
+
+Mengetuk baris membuka popup detail lengkap beserta tindakan admin yang sebelumnya tersedia. Popup menggunakan penguncian scroll, perangkap fokus, tombol tutup, dan Escape dari ModalFrame. Menutup detail mempertahankan pencarian, filter, halaman, dan posisi scroll. Tindakan yang membuka konfirmasi atau pengaturan akses menutup popup detail agar dialog tidak bertumpuk. Layout layar di atas 640 px tetap menggunakan tampilan sebelumnya dengan 25 baris per halaman.
+
+Daftar Mitra kini melakukan pencarian, filter status, dan pagination di database melalui `report_superadmin_marketing_page`. Penghitungan komisi dan tenant dilakukan untuk mitra pada halaman yang diminta; total dan badge filter dihitung dari seluruh hasil pencarian. Urutan dibuat deterministik dengan `created_at DESC, id DESC`. API tanpa parameter pagination tetap memakai laporan lama untuk kompatibilitas pemilih mitra pada modul lain. Respons lama yang terlambat tidak boleh menimpa hasil pencarian terbaru. Perubahan status, level, dan penghapusan memuat ulang daftar agar jumlah dan filter konsisten.
+
+Audit draft bersama menemukan referensi popup Tenant yang belum memiliki implementasi serta pagination Mitra yang masih mengambil seluruh data sebelum memotongnya. Keduanya telah diganti dengan komponen detail bersama dan pagination SQL. Perhitungan ledger serta kebijakan pembayaran komisi tidak diubah oleh pekerjaan tampilan ini.
+
+Validasi:
+
+- Pengujian database disposable menjalankan migrasi dan assertion regresi, termasuk 1.205 mitra: total, 121 halaman, halaman terakhir, pencarian, filter, urutan tanpa duplikasi, hasil kosong, dan penolakan akses anonim.
+- Browser Chrome memakai data fiktif 1.500 tenant dan 1.205 mitra: viewport 320, 360, 390, 430, 640, 768, dan 1440 px; jumlah baris, tiga kolom mobile, badge KorMit, angka nol, pencarian/pagination, popup, pemulihan scroll, serta tidak adanya overflow horizontal.
+- Interaksi tambahan: mode gelap, ketukan kolom wilayah, Escape, filter pendaftar, perpindahan ke konfirmasi persetujuan dan pengaturan akses, serta error jaringan dan coba lagi. Pengujian ini merupakan simulasi viewport, bukan perangkat Android/iOS fisik. Tidak ada pesan WhatsApp atau perubahan akun produksi yang dikirim saat pengujian.
+- Migrasi 32 diuji dengan ROLLBACK sebelum diterapkan dengan COMMIT di produksi, lalu ditandai applied. Verifikasi read-only: total lima mitra konsisten dengan laporan lama; permintaan dua baris menghasilkan dua baris; akses anonim ditolak. Migrasi tertunda 25–30 tidak dijalankan.
+- Simulasi persetujuan dengan PATCH fiktif memastikan mitra keluar dari filter PENDING dan jumlah pendaftar berkurang setelah daftar dimuat ulang.
+- `npm run check` lulus: lint tanpa error (18 peringatan lama), 62 pengujian aplikasi, build produksi, serta pemeriksaan secret pada 145 file client.

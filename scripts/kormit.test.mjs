@@ -1,3 +1,5 @@
+import { z } from "zod";
+import { paginationSchema } from "../src/lib/reporting.ts";
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -25,7 +27,7 @@ function fixture({role='MARKETING',level='COORDINATOR',status='ACTIVE',rpcError=
  }
  return {data:null,error:null};}return q;},async rpc(name,args){calls.push({rpc:name,args});return {data:rpcError?null:{members:[],totalCommission:0},error:rpcError}},auth:{admin:{deleteUser:async()=>({error:null})}}};
  function route(file){const source=ts.transpileModule(fs.readFileSync(new URL('../src/app/api/'+file+'/route.ts',import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
- const modules={'next/server':{NextResponse},'@supabase/supabase-js':{createClient:()=>db},'@/lib/supabase/admin':{createAdminClient:()=>db},'@/lib/supabase/server':{createServerSupabaseClient:async()=>({auth:{getUser:async()=>({data:{user:role?{id:'auth',app_metadata:{role}}:null}})}})},'@/lib/device-auth':{DeviceApiError,assertSameOrigin(req){if(req.headers.get('origin')!==new URL(req.url).origin)throw new DeviceApiError('Lintas situs',403)}},'@/lib/marketing-recruitment':{recruitmentSchema},'@/lib/generated-credentials':{randomDigits},'@/lib/whatsapp':whatsapp,'@/lib/app-origins':{APP_ORIGINS:{PUBLIC:'https://www.okesih.com'}},'@/lib/create-account':{createAccount:async(_db,username)=>({username,data:{user:{id:'new-auth'}},error:null})}};
+ const modules={'zod': { z }, '@/lib/reporting': { paginationSchema }, 'next/server':{NextResponse},'@supabase/supabase-js':{createClient:()=>db},'@/lib/supabase/admin':{createAdminClient:()=>db},'@/lib/supabase/server':{createServerSupabaseClient:async()=>({auth:{getUser:async()=>({data:{user:role?{id:'auth',app_metadata:{role}}:null}})}})},'@/lib/device-auth':{DeviceApiError,assertSameOrigin(req){if(req.headers.get('origin')!==new URL(req.url).origin)throw new DeviceApiError('Lintas situs',403)}},'@/lib/marketing-recruitment':{recruitmentSchema},'@/lib/generated-credentials':{randomDigits},'@/lib/whatsapp':whatsapp,'@/lib/app-origins':{APP_ORIGINS:{PUBLIC:'https://www.okesih.com'}},'@/lib/create-account':{createAccount:async(_db,username)=>({username,data:{user:{id:'new-auth'}},error:null})}};
  const exports={};new Function('require','exports',source)(name=>{if(!modules[name])throw Error(name);return modules[name]},exports);return exports; }
  return {route,calls};
 }
@@ -62,4 +64,15 @@ test('Super Admin approval sends six-digit temporary credentials to the new recr
  const response=await f.route('superadmin/marketing').PATCH(request({id,status:'ACTIVE'}));assert.equal(response.status,200);
  const body=await response.json();const wa=new URL(body.whatsappUrl);assert.equal(wa.pathname,'/6281234567890');assert.match(wa.searchParams.get('text'),/marketing_\d{3}/);assert.match(wa.searchParams.get('text'),/Password sementara:\n`\d{6}`/);
  assert.equal(body.data.upline_id,'coordinator-id');
+});
+
+test('Super Admin directory routes paginated search to SQL and preserves the legacy tenant selector',async()=>{
+ const f=fixture({role:'SUPERADMIN'}), api=f.route('superadmin/marketing');
+ let response=await api.GET(new Request('https://admin.okesih.com/api/superadmin/marketing?page=2&pageSize=10&search=Makassar&status=ACTIVE'));
+ assert.equal(response.status,200);assert.deepEqual(f.calls.at(-1),{rpc:'report_superadmin_marketing_page',args:{p_page:2,p_page_size:10,p_search:'Makassar',p_status:'ACTIVE'}});
+ response=await api.GET(new Request('https://admin.okesih.com/api/superadmin/marketing'));
+ assert.equal(response.status,200);assert.equal(f.calls.at(-1).rpc,'report_superadmin_marketing');
+ for(const query of ['page=0','page=1&pageSize=1000','page=1&status=ADMIN','page=NaN']){
+   const before=f.calls.length;assert.equal((await api.GET(new Request('https://admin.okesih.com/api/superadmin/marketing?'+query))).status,400);assert.equal(f.calls.length,before);
+ }
 });

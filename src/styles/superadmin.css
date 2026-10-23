@@ -968,3 +968,35 @@
   .sa-duration-options button { flex: 1 0 65px; }
   .superadmin-settings-grid > .glass-panel { padding: 18px !important; }
 }
+
+/* Phone directories use compact rows; full management data opens in a dialog. */
+.sa-phone-directory { display: none; }
+.sa-directory-detail { padding: 0 !important; overflow-y: auto; }
+.sa-directory-detail header { position: sticky; top: 0; z-index: 1; display: flex; gap: 16px; justify-content: space-between; align-items: flex-start; padding: 20px; background: var(--bg-primary, #0f172a); border-bottom: 1px solid var(--sa-border); }
+[data-theme="light"] .sa-directory-detail header { background: #fff; }
+.sa-directory-detail header p { margin: 0 0 6px; color: var(--text-muted); font-size: 12px; }
+.sa-directory-detail h2 { margin: 0; overflow-wrap: anywhere; }
+.sa-directory-detail header button { flex: 0 0 44px; min-height: 44px; }
+.sa-directory-detail dl { padding: 0 20px; margin: 0; }
+.sa-directory-detail dl > div { padding: 12px 0; border-bottom: 1px solid var(--sa-border); }
+.sa-directory-detail dt { color: var(--text-muted); font-size: 12px; margin-bottom: 5px; }
+.sa-directory-detail dd { margin: 0; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+.sa-directory-detail footer { padding: 20px; }
+.sa-directory-detail footer > div { flex-wrap: wrap; justify-content: flex-start !important; gap: 8px !important; }
+.sa-directory-detail footer button, .sa-directory-detail footer a { min-height: 44px; white-space: normal; display: inline-flex; align-items: center; justify-content: center; }
+@media (max-width: 640px) {
+  .sa-desktop-directory, .sa-directory-empty { display: none !important; }
+  .sa-phone-directory { display: block; border: 1px solid var(--sa-border); border-radius: 10px; overflow: hidden; }
+  .superadmin-main .sa-phone-directory table { width: 100%; min-width: 0; table-layout: fixed; border-collapse: collapse; }
+  .sa-phone-directory th { text-align: left; font-size: 11px; padding: 11px 8px; color: var(--text-muted); background: rgba(148,163,184,.08); }
+  .sa-phone-directory td { height: 60px; padding: 6px 8px; font-size: 12px; line-height: 1.4; vertical-align: middle; border-top: 1px solid var(--sa-border); overflow-wrap: anywhere; }
+  .sa-phone-directory tr:active { background: rgba(14,165,233,.08); }
+  .sa-phone-directory button { display: block; width: 100%; padding: 0; min-height: 44px; border: 0; background: transparent; color: inherit; text-align: left; font: inherit; font-weight: 700; cursor: pointer; }
+  .sa-phone-clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .sa-phone-directory td:not(:first-child) { color: var(--text-muted); }
+  .sa-phone-directory[data-numeric-last] td:last-child, .sa-phone-directory[data-numeric-last] th:last-child { text-align: right; }
+  .sa-kormit-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; color: #38bdf8; margin-top: 2px; }
+  [data-theme="light"] .sa-kormit-badge { color: #0369a1; }
+  .sa-kormit-badge i { width: 5px; height: 5px; background: currentColor; border-radius: 50%; }
+  .sa-modal-frame > .sa-directory-detail { padding: 0 !important; }
+}

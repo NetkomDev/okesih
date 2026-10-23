@@ -1,3 +1,5 @@
+import { z } from "zod";
+import { paginationSchema } from "../src/lib/reporting.ts";
 process.env.NEXT_PUBLIC_SUPABASE_URL = "https://mock.supabase.co";
 process.env.SUPABASE_SERVICE_ROLE_KEY = "mock-service-role-key-test";
 import test from 'node:test';
@@ -100,7 +102,7 @@ function createFixture({ userRole = 'SUPERADMIN', partnerExists = true, hasTenan
   }
 
   const modules = {
-    'next/server': { NextResponse, NextRequest },
+    'zod': { z }, '@/lib/reporting': { paginationSchema }, 'next/server': { NextResponse, NextRequest },
     '@supabase/supabase-js': {
       createClient: () => adminClient,
     },
