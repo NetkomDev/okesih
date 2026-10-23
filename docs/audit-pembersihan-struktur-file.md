@@ -1,61 +1,37 @@
-# Dokumentasi Pembersihan Struktur File & Audit Kebersihan Repositori OKESIH.COM
+# Audit pembersihan struktur file OKESIH.COM
 
-**Tanggal Pelaksanaan**: 23 Oktober 2026  
-**Status**: Selesai & Tervalidasi (Clean Working Tree)  
-**Tujuan**: Mengaudit seluruh struktur berkas aplikasi OKESIH.COM, mengidentifikasi dan memusnahkan berkas sampah/usang/tidak terpakai tanpa meninggalkan jejak (*zero footprint*), serta memvalidasi keutuhan build dan pengujian.
+Tanggal: 23 Oktober 2026. Audit lanjutan memeriksa source, aset publik, skrip, migrasi, dokumentasi, konfigurasi, dependensi, dan artefak lokal. File Next.js berbasis konvensi (page, route, layout, error, icon, favicon, proxy) diperiksa sebagai entry point, bukan dinilai dari jumlah import saja.
 
----
+## Pembersihan source dan dependensi
 
-## 1. Analisis Struktur Repositori
+| File/dependensi yang dihapus | Bukti dan pengganti aktif |
+|---|---|
+| `src/components/PwaLaunchBoundary.tsx` | Tidak diimpor. Implementasi lama memaksa dashboard ke login ketika resume; alur aktif memakai autentikasi route, StandaloneLauncher, dan PwaBackExitGuard. |
+| `isDashboardLaunch` di `src/lib/pwa-routing.ts` | Hanya dipakai komponen lama di atas dan tesnya. Helper serta asersi khususnya ikut dihapus. |
+| `src/components/CashierPinGate.tsx` | Tidak diimpor. POS aktif memakai CashierShiftGate dengan sesi kasir dan kepemilikan shift. |
+| `src/components/cashier-pin.css` dan `src/lib/device-pin.ts` | Hanya mendukung komponen PIN lokal yang tidak aktif. Dua tes helper lama ikut dihapus. PIN keamanan Owner dan PIN audit kasir tetap dipakai. |
+| `public/icons/icon-192.png` dan `public/icons/icon-512.png` | Tidak dirujuk source atau manifest aktif; semua manifest memakai pwa-192.png/pwa-512.png. |
+| Dependensi langsung `@serwist/sw` | Tidak diimpor; service worker memakai serwist dan @serwist/next/worker. Paket @serwist/next tidak bergantung pada paket ini. |
+| Dependensi dev langsung `pngjs` versi 7 | Tidak digunakan source, skrip, atau konfigurasi. pngjs versi 5 sebagai dependensi qrcode tetap dipertahankan oleh npm. |
 
-Hasil audit pohon direktori dan dependensi berkas aplikasi OKESIH.COM:
-- **`src/app/`**: Rute aplikasi Next.js 16 (App Router) mencakup seluruh dashboard (Owner, Kasir POS, Dapur KDS, Super Admin, Marketing, Antrean TV, dan Menu Publik).
-- **`src/components/`**: Komponen UI modular untuk landing, marketing, owner, kasir, superadmin, dan PWA lifecycle.
-- **`src/lib/`**: Modul utilitas bisnis, autentikasi berbasis peran kanonis, offline-first policy, enkripsi PIN, dan integrasi Supabase.
-- **`src/styles/`**: Lembar gaya CSS vanila per dashboard.
-- **`public/`**: Aset statis resmi (ikon PWA, audio notifikasi pesanan, logo SVG resmi, dan manifest).
-- **`scripts/`**: Skrip pengujian otomatis, fixtures database, dan penjaga keamanan pemindaian secret (*check-secrets*).
-- **`supabase/`**: Skrip migrasi terurut (01 hingga 34) dan skema database kanonis.
-- **`docs/`**: Dokumentasi arsitektur, blueprint aturan bisnis, dan laporan audit berkala.
+`package.json` dan lockfile diselaraskan melalui npm uninstall. Panduan `docs/pwa-launch.md` diperbarui karena sebelumnya masih menjelaskan redirect login, manifest bersama, dan PIN lokal yang sudah tidak berlaku. Penelusuran import terhadap 213 file TS/TSX/CSS setelah pembersihan tidak menemukan modul tanpa pemanggil di luar entry point framework.
 
----
+## Artefak lokal
 
-## 2. Daftar File dan Direktori yang Dieliminasi
+Sebanyak 875,23 MiB artefak lokal dihapus. Setelah validasi, cache `.next/`, `tsconfig.tsbuildinfo`, dan service worker hasil build `public/sw.js` dibersihkan. Artefak tersebut dibuat ulang saat menjalankan build; untuk menjalankan `npm start` setelah pembersihan, jalankan `npm run build` terlebih dahulu. Tidak ada salinan `.bak` atau folder karantina dibuat di proyek. Hasil tes sementara disimpan di luar folder aplikasi.
 
-Berikut adalah daftar berkas sampah, folder sisa eksperimen, berkas duplikat, dan kode mati yang telah dihapus secara tuntas:
+Pembersihan sebelumnya (commit afca4ad) telah menghapus cache eksperimen WhatsApp, stub blueprint root, print-table-stickers.ts yang tidak digunakan, direktori types kosong, dan metadata .DS_Store. Audit ini tidak mengklaim menghapus ulang berkas tersebut.
 
-| No | Berkas / Direktori | Ukuran / Sifat | Alasan Penghapusan & Keterangan |
-|---|---|---|---|
-| 1 | `/.wwebjs_auth/` | ~31 MB (Direktori) | Direktori lokal berisi cache dan sesi browser Chromium sisa eksperimen otomasi WhatsApp lawas. Sistem telah sepenuhnya beralih ke tautan langsung `https://wa.me/...`. |
-| 2 | `/blueprint_okesih.md` | 355 byte | Berkas stub 6 baris usang di root yang telah digantikan oleh `docs/blueprint.md` sebagai acuan tunggal arsitektur. |
-| 3 | `/src/components/owner/print-table-stickers.ts` | 667 byte | Berkas kode mati (*dead code*) sisa refactoring masa lalu yang tidak lagi diimpor oleh modul mana pun. Pembuatan dan cetak papan meja QRIS telah terpusat di `src/lib/table-sign.ts` dan `src/components/owner/QrisTables.tsx`. |
-| 4 | `/src/types/` | 0 byte (Direktori kosong) | Direktori kosong tanpa berkas apapun yang tertinggal dari migrasi tipe sebelumnya. |
-| 5 | `.DS_Store` (Root, `src/`, `public/`, `public/sound/`, `supabase/`) | Biner OS metadata | Berkas cache metadata sistem operasi macOS yang tidak memiliki fungsi pada kode aplikasi dan berpotensi mengotori repositori. |
+## File yang tetap diperlukan
 
----
+- `.env.local`, konfigurasi proyek Supabase lokal, `.git`, dan node_modules: konfigurasi, riwayat, serta dependensi pengembangan aktif.
+- Seluruh migrasi 01–34, fixtures, CI, skrip uji konkurensi, OCR, dan seed: digunakan untuk rekonstruksi database, operasi, atau validasi, meski bukan import runtime.
+- Manifest POS/KDS statis: kompatibilitas URL instalasi terdahulu.
+- logo.svg dan favicon.svg mempunyai isi identik, tetapi kedua URL masih dirujuk. Ikon/favikon di src/app juga merupakan metadata otomatis Next.js.
+- Laporan audit historis tetap menjadi catatan kondisi pada tanggal audit; bukan spesifikasi runtime saat ini.
 
-## 3. Penyelarasan & Penguatan Test Suite
+## Validasi
 
-Seiring dengan pembersihan berkas:
-1. **Perbaikan `scripts/account-access-recovery.test.mjs`**:
-   - Menyelaraskan asersi panjang password sementara dari format lama (>= 24 karakter) menjadi format standar 6 angka numerik (`^\d{6}$`) sesuai pembaruan sistem kredensial ringkas.
-2. **Pendaftaran Uji ke `package.json`**:
-   - Mendaftarkan `scripts/pwa-exit.test.mjs` dan `scripts/account-access-recovery.test.mjs` ke dalam perintah `npm test`.
-   - Total cakupan uji otomatis meningkat dari 68 tes menjadi **87 tes aktif**, seluruhnya lulus 100% tanpa kegagalan.
+`npm run check` memeriksa lint, seluruh tes, build produksi, dan secret pada bundle client. Hasil: 85 tes lulus (dua tes helper PIN lokal usang dihapus), lint 0 error dengan 18 warning yang sudah ada, build 77 halaman lulus, dan 146 file client lolos pemeriksaan secret. Build lokal mencatat fetch platform_settings gagal dalam lingkungan terbatas, tetapi proses selesai exit 0. Pemeriksaan referensi ulang tidak menemukan import kode atau manifest aktif menuju file yang dihapus.
 
----
-
-## 4. Hasil Verifikasi Akhir
-
-| Pemeriksaan | Perintah | Status | Keterangan |
-|---|---|---|---|
-| **Unit & Regression Tests** | `npm test` | **LULUS (87/87 pass, 0 fail)** | Seluruh modul kalkulasi komisi, pemulihan akun, keamanan auth, PWA exit guard, antrean TV, dan sinkronisasi tervalidasi. |
-| **Linting Kode** | `npm run lint` | **LULUS (0 error)** | Tidak ada pelanggaran aturan ESLint pada berkas manapun. |
-| **Build Produksi** | `npm run build` | **LULUS (77/77 routes)** | Kompilasi TypeScript, bundel Serwist Service Worker, optimasi halaman statis, dan audit secret (146 berkas client) berhasil 100%. |
-| **Git Working Tree** | `git status` | **CLEAN** | Tidak ada berkas untracked, berkas temporer, atau sisa artefak build yang tertinggal di working tree. |
-
----
-
-## 5. Kesimpulan
-
-Struktur repositori OKESIH.COM kini berada dalam kondisi sangat bersih, terorganisir dengan rapi, bebas dari berkas mati/usang, serta memiliki cakupan pengujian otomatis yang semakin komprehensif dan solid.
+Working tree bersih setelah commit bukan bukti bahwa cache build tidak ada; kebersihan artefak lokal diperiksa terpisah setelah build. Cache akan muncul kembali ketika aplikasi dikembangkan/dibangun. Riwayat Git tidak ditulis ulang.

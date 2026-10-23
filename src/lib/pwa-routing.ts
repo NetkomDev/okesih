@@ -82,10 +82,6 @@ export function installationKind(path: string): InstallationKind {
   return "DASHBOARD";
 }
 
-export function isDashboardLaunch(path: string) {
-  return path === "/" || /^\/(owner|superadmin|marketing|admin)(\/|$)/.test(path);
-}
-
 /**
  * Cek apakah halaman dibuka di dalam mode standalone PWA (terinstal).
  */

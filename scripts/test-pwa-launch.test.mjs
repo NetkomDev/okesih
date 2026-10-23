@@ -1,9 +1,8 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { test } from "node:test";
-import { detectActivePwaKind, installationKind, isDashboardLaunch, isRoleAllowedForPwa, isStandaloneApp, pwaKindForHostname, PWA_ROLE_CONFIGS } from "../src/lib/pwa-routing.ts";
+import { detectActivePwaKind, installationKind, isRoleAllowedForPwa, isStandaloneApp, pwaKindForHostname, PWA_ROLE_CONFIGS } from "../src/lib/pwa-routing.ts";
 import { APP_HOSTS, isApiAllowedOnSurface, roleHomeUrl, surfaceForHostname, surfaceForPath } from "../src/lib/app-origins.ts";
-import { createDevicePin, hashDevicePin, readDevicePin, devicePinKey } from "../src/lib/device-pin.ts";
 import dashboardManifestModule from "../src/lib/pwa-manifest.ts";
 import { getTrustedUserRole } from "../src/lib/auth-role.ts";
 import { requestPwaInstallation } from "../src/lib/pwa-install.ts";
@@ -76,7 +75,6 @@ test("public origin cannot be turned into an internal login portal by query stri
 });
 
 test("dedicated dashboards keep independent install identities", () => {
-  for (const path of ["/", "/owner", "/owner/menu", "/superadmin", "/marketing", "/admin"]) assert.equal(isDashboardLaunch(path), true, path);
   assert.equal(installationKind("/"), "DASHBOARD");
   assert.equal(installationKind("/owner"), "OWNER");
   assert.equal(installationKind("/owner/menu"), "OWNER");
@@ -84,9 +82,6 @@ test("dedicated dashboards keep independent install identities", () => {
   assert.equal(installationKind("/marketing/dashboard/komisi"), "MARKETING");
   assert.equal(installationKind("/superadmin"), "SUPERADMIN");
   assert.equal(installationKind("/admin"), "SUPERADMIN");
-  for (const path of ["/login", "/pos", "/kds", "/menu/risolinan", "/tv", "/ownership"]) {
-    assert.equal(isDashboardLaunch(path), false, path);
-  }
   assert.equal(installationKind("/pos"), "POS");
   assert.equal(installationKind("/kds"), "KDS");
 });
@@ -168,30 +163,6 @@ test("operational and dashboard manifests keep native launch targets", async () 
       ["/icons/pwa-512.png", "512x512", "image/png"],
     ]);
   }
-});
-
-test("PIN uses unique salts, verifies correct input, and rejects wrong input", async () => {
-  const first = await createDevicePin("123456");
-  const second = await createDevicePin("123456");
-  assert.notEqual(first.salt, second.salt);
-  assert.notEqual(first.hash, second.hash);
-  assert.equal(await hashDevicePin("123456", first.salt), first.hash);
-  assert.notEqual(await hashDevicePin("654321", first.salt), first.hash);
-  await assert.rejects(createDevicePin("1234"));
-  await assert.rejects(createDevicePin("abcdef"));
-});
-
-test("PIN storage is isolated by paired device and fails closed on corruption", async () => {
-  const values = new Map();
-  globalThis.localStorage = { getItem: (key) => values.get(key) ?? null };
-  assert.equal(readDevicePin("one"), null);
-  const record = await createDevicePin("246810");
-  values.set(devicePinKey("one"), JSON.stringify(record));
-  assert.deepEqual(readDevicePin("one"), record);
-  assert.equal(readDevicePin("two"), null);
-  values.set(devicePinKey("one"), "{}");
-  assert.throws(() => readDevicePin("one"));
-  delete globalThis.localStorage;
 });
 
 test("WhatsApp links normalize Indonesian numbers and preserve generated messages", () => {

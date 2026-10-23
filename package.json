@@ -17,7 +17,6 @@
   },
   "dependencies": {
     "@serwist/next": "^9.5.13",
-    "@serwist/sw": "^9.5.13",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.3",
     "@tesseract.js-data/eng": "^1.0.0",
@@ -40,7 +39,6 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.4.0",
-    "pngjs": "^7.0.0",
     "tsx": "^4.23.15",
     "typescript": "^5"
   }
