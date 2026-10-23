@@ -8,7 +8,7 @@ function EmptyState({ icon, title, text }: { icon: string; title: string; text: 
   return <div className="owner-empty"><span>{icon}</span><div><b>{title}</b><p>{text}</p></div></div>;
 }
 export default function DevicesFeature() {
-const { ready, error, setError, notice, setNotice, busy, setBusy, devices, loadDeviceCenter } = useOwnerData("devices");
+const { ready, refreshing, error, setError, notice, setNotice, busy, setBusy, devices, loadDeviceCenter } = useOwnerData("devices");
 
 const [pairingCode, setPairingCode] = useState("");
 const deviceAction = async (body: Record<string, unknown>) => {
@@ -21,7 +21,23 @@ const deviceAction = async (body: Record<string, unknown>) => {
     finally { setBusy(false); }
   };
 if (!ready) {
-  if (error) return <div className="owner-error" role="alert">{error}</div>;
+  if (error)
+    return (
+      <div className="owner-main">
+        <div className="owner-error" role="alert">
+          <span>{error}</span>
+          <button
+            type="button"
+            className="owner-error-retry-btn"
+            disabled={refreshing}
+            onClick={() => { setError(""); void loadDeviceCenter().catch(() => {}); }}
+          >
+            {refreshing ? "Memuat..." : "Coba lagi"}
+          </button>
+        </div>
+        <OwnerSkeleton variant="devices" />
+      </div>
+    );
   return <OwnerSkeleton variant="devices" />;
 }
 return (<>{error && <div className="owner-error" role="alert">{error}<button onClick={() => setError("")}>×</button></div>}{notice && <div className="owner-success">{notice}<button onClick={() => setNotice("")}>×</button></div>}{true && <section className="owner-device-page owner-page-panel">

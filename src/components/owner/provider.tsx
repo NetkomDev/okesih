@@ -102,19 +102,34 @@ export function useOwnerData(resource: Resource) {
   
   
   const [ready, setReady] = useState(!endpoints[resource]);
+  const [refreshing, setRefreshing] = useState(false);
   const sequence = useRef(0);
   const loadDashboard = useCallback(async () => {
     const endpoint = endpoints[resource];
     if (!endpoint) return;
     const current = ++sequence.current;
-    const result = await ownerFetch(`/api/owner/${endpoint}`, { cache: "no-store" });
-    if (current !== sequence.current) return;
-    setReady(true);
-    if (resource === "devices") setDevices(result.devices || []);
-    else setData(previous => ({ ...previous, ...result.data }));
+    setRefreshing(true);
+    try {
+      const result = await ownerFetch(`/api/owner/${endpoint}`, { cache: "no-store" });
+      if (current !== sequence.current) return;
+      setError("");
+      setReady(true);
+      if (resource === "devices") setDevices(result.devices || []);
+      else setData(previous => ({ ...previous, ...result.data }));
+      return result;
+    } catch (reason) {
+      if (current !== sequence.current) return;
+      const message = reason instanceof Error ? reason.message : "Gagal memuat data.";
+      setError(message);
+      throw reason;
+    } finally {
+      if (current === sequence.current) {
+        setRefreshing(false);
+      }
+    }
   }, [resource]);
   useEffect(() => {
-    const load = () => { void loadDashboard().catch(reason => setError(reason.message)); };
+    const load = () => { void loadDashboard().catch(() => {}); };
     const timer = setTimeout(load, 0);
     const supabase = createClient();
     const channel = supabase.channel(`owner-${resource}-${profile.id}`);
@@ -135,5 +150,5 @@ export function useOwnerData(resource: Resource) {
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Perubahan gagal disimpan."); }
     finally { setBusy(false); }
   };
-  return { ready, data: { ...data, profile }, setData, devices, error, setError, notice, setNotice, busy, setBusy, loadDashboard, loadDeviceCenter: loadDashboard, mutate };
+  return { ready, refreshing, data: { ...data, profile }, setData, devices, error, setError, notice, setNotice, busy, setBusy, loadDashboard, loadDeviceCenter: loadDashboard, mutate };
 }

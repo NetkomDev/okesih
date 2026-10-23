@@ -10,7 +10,7 @@ function EmptyState({ icon, title, text }: { icon: string; title: string; text: 
   return <div className="owner-empty"><span>{icon}</span><div><b>{title}</b><p>{text}</p></div></div>;
 }
 export default function WaitersFeature() {
-const { ready, data, error, setError, notice, setNotice, busy, mutate } = useOwnerData("waiters");
+const { ready, refreshing, data, error, setError, notice, setNotice, busy, mutate, loadDashboard } = useOwnerData("waiters");
 
 const [waiterModal, setWaiterModal] = useState(false);
 const [waiterForm, setWaiterForm] = useState({ name: "", phone: "" });
@@ -23,7 +23,23 @@ const createWaiter = (event: React.FormEvent) => {
     });
   };
 if (!ready) {
-  if (error) return <div className="owner-error" role="alert">{error}</div>;
+  if (error)
+    return (
+      <div className="owner-main">
+        <div className="owner-error" role="alert">
+          <span>{error}</span>
+          <button
+            type="button"
+            className="owner-error-retry-btn"
+            disabled={refreshing}
+            onClick={() => { setError(""); void loadDashboard().catch(() => {}); }}
+          >
+            {refreshing ? "Memuat..." : "Coba lagi"}
+          </button>
+        </div>
+        <OwnerSkeleton variant="waiters" />
+      </div>
+    );
   return <OwnerSkeleton variant="waiters" />;
 }
 return (<>{error && <div className="owner-error" role="alert">{error}<button onClick={() => setError("")}>×</button></div>}{notice && <div className="owner-success">{notice}<button onClick={() => setNotice("")}>×</button></div>}{true && <section id="waiter" className="owner-panel owner-page-panel">

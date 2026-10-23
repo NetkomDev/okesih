@@ -11,7 +11,7 @@
     "lint": "eslint",
     "check-secrets": "node scripts/check-secrets.mjs",
     "test:reporting": "node --import tsx --test scripts/reporting.test.mjs",
-    "test": "node --import tsx --test scripts/reporting.test.mjs scripts/pwa-exit.test.mjs scripts/account-access-recovery.test.mjs scripts/generated-credentials.test.mjs scripts/marketing-profile.test.mjs scripts/test-pwa-launch.test.mjs scripts/remediation.test.mjs && node --conditions=react-server --import tsx --test scripts/marketing-registration.test.mjs scripts/security-regression.test.mjs scripts/marketing-delete.test.mjs scripts/kormit.test.mjs",
+    "test": "node --import tsx --test scripts/reporting.test.mjs scripts/owner-whatsapp.test.mjs scripts/pwa-exit.test.mjs scripts/account-access-recovery.test.mjs scripts/generated-credentials.test.mjs scripts/marketing-profile.test.mjs scripts/test-pwa-launch.test.mjs scripts/remediation.test.mjs && node --conditions=react-server --import tsx --test scripts/marketing-registration.test.mjs scripts/security-regression.test.mjs scripts/marketing-delete.test.mjs scripts/kormit.test.mjs",
     "test:database": "bash scripts/test-database.sh",
     "check": "npm run lint && npm test && npm run build"
   },
@@ -22,7 +22,7 @@
     "@tesseract.js-data/eng": "^1.0.0",
     "jspdf": "^4.2.1",
     "jsqr": "^1.4.0",
-    "next": "16.4.0",
+    "next": "16.4.2",
     "qrcode": "^1.5.4",
     "react": "19.3.0",
     "react-dom": "19.3.0",
@@ -38,7 +38,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.4.0",
+    "eslint-config-next": "16.4.2",
     "tsx": "^4.23.15",
     "typescript": "^5"
   }

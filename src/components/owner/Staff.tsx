@@ -46,6 +46,7 @@ function EmptyState({
 export default function StaffFeature() {
   const {
     ready,
+    refreshing,
     data,
     error,
     setError,
@@ -124,8 +125,19 @@ export default function StaffFeature() {
   if (!ready) {
     if (error)
       return (
-        <div className="owner-error" role="alert">
-          {error}
+        <div className="owner-main">
+          <div className="owner-error" role="alert">
+            <span>{error}</span>
+            <button
+              type="button"
+              className="owner-error-retry-btn"
+              disabled={refreshing}
+              onClick={() => { setError(""); void loadDashboard().catch(() => {}); }}
+            >
+              {refreshing ? "Memuat..." : "Coba lagi"}
+            </button>
+          </div>
+          <OwnerSkeleton variant="staff" />
         </div>
       );
     return <OwnerSkeleton variant="staff" />;

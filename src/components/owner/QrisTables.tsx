@@ -19,7 +19,7 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
   return <div className="owner-modal-backdrop"><div className="owner-modal"><header><h3>{title}</h3><button onClick={onClose}>×</button></header>{children}</div></div>;
 }
 export default function QrisTablesFeature() {
-const { ready, data, setData, error, setError, notice, setNotice, busy, setBusy, loadDashboard, mutate } = useOwnerData("qris-tables");
+const { ready, refreshing, data, setData, error, setError, notice, setNotice, busy, setBusy, loadDashboard, mutate } = useOwnerData("qris-tables");
 
 const pathname = "/owner/qris-tables";
 const [tableInput, setTableInput] = useState("");
@@ -227,7 +227,23 @@ const handlePrintTableSigns = async (singleTableId?: string) => {
   }
 };
 if (!ready) {
-  if (error) return <div className="owner-error" role="alert">{error}</div>;
+  if (error)
+    return (
+      <div className="owner-main">
+        <div className="owner-error" role="alert">
+          <span>{error}</span>
+          <button
+            type="button"
+            className="owner-error-retry-btn"
+            disabled={refreshing}
+            onClick={() => { setError(""); void loadDashboard().catch(() => {}); }}
+          >
+            {refreshing ? "Memuat..." : "Coba lagi"}
+          </button>
+        </div>
+        <OwnerSkeleton variant="qris-tables" />
+      </div>
+    );
   return <OwnerSkeleton variant="qris-tables" />;
 }
 const { profile } = data;

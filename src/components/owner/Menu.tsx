@@ -14,7 +14,7 @@ function EmptyState({ icon, title, text }: { icon: string; title: string; text: 
   return <div className="owner-empty"><span>{icon}</span><div><b>{title}</b><p>{text}</p></div></div>;
 }
 export default function MenuFeature() {
-const { ready, data, error, setError, notice, setNotice, busy, mutate } = useOwnerData("menu");
+const { ready, refreshing, data, error, setError, notice, setNotice, busy, mutate, loadDashboard } = useOwnerData("menu");
 
 const [menuModal, setMenuModal] = useState(false);
 const [menuForm, setMenuForm] = useState({ name: "", price: "", category: "Kopi", description: "" });
@@ -47,7 +47,23 @@ const updateMenu = (event: React.FormEvent) => {
     });
   };
 if (!ready) {
-  if (error) return <div className="owner-error" role="alert">{error}</div>;
+  if (error)
+    return (
+      <div className="owner-main">
+        <div className="owner-error" role="alert">
+          <span>{error}</span>
+          <button
+            type="button"
+            className="owner-error-retry-btn"
+            disabled={refreshing}
+            onClick={() => { setError(""); void loadDashboard().catch(() => {}); }}
+          >
+            {refreshing ? "Memuat..." : "Coba lagi"}
+          </button>
+        </div>
+        <OwnerSkeleton variant="menu" />
+      </div>
+    );
   return <OwnerSkeleton variant="menu" />;
 }
 const { profile } = data;

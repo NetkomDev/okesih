@@ -3,6 +3,7 @@ import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { ownerFetch, money } from "./helpers";
 import { useOwnerData } from "./provider";
+import WhatsAppAdminButton from "./WhatsAppAdminButton";
 import OwnerIcon from "./Icon";
 import OwnerSkeleton from "./OwnerSkeleton";
 const BillingModal = dynamic(() => import("./BillingModal"));
@@ -49,6 +50,7 @@ function DeferredRevenue() {
 export default function OverviewFeature() {
   const {
     ready,
+    refreshing,
     data,
     error,
     setError,
@@ -60,6 +62,14 @@ export default function OverviewFeature() {
   } = useOwnerData("overview");
   const [billingOpen, setBillingOpen] = useState(false);
   const { metrics, activeCashier } = data;
+  const handleRetry = async () => {
+    setError("");
+    try {
+      await loadDashboard();
+    } catch {
+      // Error is captured and set in useOwnerData
+    }
+  };
   const closeShift = async () => {
     if (!activeCashier) return;
     const amount = window.prompt(
@@ -94,26 +104,60 @@ export default function OverviewFeature() {
   };
   if (!ready)
     return error ? (
-      <div className="owner-error" role="alert">
-        {error}
-        <button
-          onClick={() =>
-            void loadDashboard().catch((reason) => setError(reason.message))
-          }
-        >
-          Coba lagi
-        </button>
+      <div className="owner-home" style={{ paddingBottom: 64 }}>
+        <div className="owner-error" role="alert">
+          <span>{error}</span>
+          <button
+            type="button"
+            className="owner-error-retry-btn"
+            disabled={refreshing}
+            onClick={() => void handleRetry()}
+          >
+            {refreshing ? (
+              <>
+                <span className="owner-spin-icon" aria-hidden="true">🔄</span>
+                <span>Memuat...</span>
+              </>
+            ) : (
+              <>
+                <span aria-hidden="true">🔄</span>
+                <span>Coba lagi</span>
+              </>
+            )}
+          </button>
+        </div>
+        <OwnerSkeleton variant="overview" />
       </div>
     ) : (
       <OwnerSkeleton variant="overview" />
     );
   const billingStatus = metrics.billing?.status_bayar;
   return (
-    <div className="owner-home">
+    <div className="owner-home" style={{ paddingBottom: 64 }}>
       {error && (
         <div className="owner-error" role="alert">
-          {error}
-          <button onClick={() => setError("")}>×</button>
+          <span>{error}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <button
+              type="button"
+              className="owner-error-retry-btn"
+              disabled={refreshing}
+              onClick={() => void handleRetry()}
+            >
+              {refreshing ? (
+                <>
+                  <span className="owner-spin-icon" aria-hidden="true">🔄</span>
+                  <span>Memuat...</span>
+                </>
+              ) : (
+                <>
+                  <span aria-hidden="true">🔄</span>
+                  <span>Coba lagi</span>
+                </>
+              )}
+            </button>
+            <button type="button" onClick={() => setError("")} aria-label="Tutup notifikasi">×</button>
+          </div>
         </div>
       )}
       {notice && (
@@ -216,6 +260,7 @@ export default function OverviewFeature() {
         )}
       </section>
       <DeferredRevenue />
+      <WhatsAppAdminButton businessName={data.profile.nama} />
       {billingOpen && (
         <BillingModal
           onClose={() => setBillingOpen(false)}

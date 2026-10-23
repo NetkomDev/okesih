@@ -44,10 +44,18 @@ export async function requireOwner(request: Request, options: { allowOnboarding?
   if (membershipError || !membership) throw new OwnerApiError("Akses khusus owner.", 403);
 
   if (!options.allowOnboarding) {
-    const { data: tenant, error: tenantError } = await admin.from("warkops").select("archived_at").eq("id", membership.warkop_id).single();
+    const { data: tenant, error: tenantError } = await admin
+      .from("warkops")
+      .select("is_active")
+      .eq("id", membership.warkop_id)
+      .single();
     if (tenantError) throw tenantError;
-    if (tenant.archived_at) throw new OwnerApiError("Usaha telah diarsipkan.", 403);
-    const { data: onboarding, error } = await admin.from("owner_onboarding").select("password_changed_at").eq("warkop_id", membership.warkop_id).maybeSingle();
+    if (!tenant?.is_active) throw new OwnerApiError("Usaha telah dinonaktifkan atau diarsipkan.", 403);
+    const { data: onboarding, error } = await admin
+      .from("owner_onboarding")
+      .select("password_changed_at")
+      .eq("warkop_id", membership.warkop_id)
+      .maybeSingle();
     if (error) throw error;
     if (!onboarding?.password_changed_at) throw new OwnerApiError("Ganti password awal untuk melanjutkan.", 403);
   }
@@ -76,8 +84,14 @@ export function ownerErrorResponse(error: unknown) {
     ? error.status
     : error instanceof Error && "status" in error && typeof error.status === "number"
       ? error.status
-      : 500;
-  const message = error instanceof Error ? error.message : "Terjadi kesalahan internal.";
+      : typeof error === "object" && error !== null && "status" in error && typeof (error as { status: unknown }).status === "number"
+        ? (error as { status: number }).status
+        : 500;
+  const message = error instanceof Error
+    ? error.message
+    : typeof error === "object" && error !== null && "message" in error && typeof (error as { message: unknown }).message === "string"
+      ? (error as { message: string }).message
+      : "Terjadi kesalahan internal.";
   return Response.json({ error: message }, { status });
 }
 
