@@ -1,7 +1,9 @@
+import { assertSameOrigin } from "@/lib/device-auth";
 import { ownerErrorResponse, requireOwner, touchWarkopUpdatedAt } from "@/lib/owner-api";
 
 export async function POST(request: Request) {
   try {
+    assertSameOrigin(request);
     const { admin, warkopId } = await requireOwner(request);
     const body = await request.json();
     const name = String(body.name || "").trim();
@@ -15,6 +17,7 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
+    assertSameOrigin(request);
     const { admin, warkopId } = await requireOwner(request);
     const id = new URL(request.url).searchParams.get("id");
     const { error } = await admin.from("waiters").delete().eq("id", id).eq("warkop_id", warkopId);

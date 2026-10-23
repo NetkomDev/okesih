@@ -53,3 +53,16 @@ test('OCR validates decoded dimensions, terminates timeout and releases capacity
   assert.match(second.reason, /Batas waktu/);
   assert.ok(second.durationMs < 5000);
 });
+
+test('public queue endpoint serves demo items with no-store caching', async () => {
+  const { GET } = await import('../src/app/api/public/queue/[slug]/route.ts');
+  const response = await GET(new Request('https://okesih.com/api/public/queue/demo'), { params: Promise.resolve({ slug: 'demo' }) });
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('cache-control'), 'no-store, no-cache, must-revalidate');
+  const body = await response.json();
+  assert.equal(body.isDemo, true);
+  assert.equal(body.profile.slug, 'demo');
+  assert.ok(Array.isArray(body.cooking));
+  assert.ok(Array.isArray(body.ready));
+});
+

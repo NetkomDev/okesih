@@ -1,3 +1,4 @@
+import { assertSameOrigin } from "@/lib/device-auth";
 import { ownerErrorResponse, requireOwner, touchWarkopUpdatedAt } from "@/lib/owner-api";
 
 function normalizeCategory(value: unknown) {
@@ -7,6 +8,7 @@ function normalizeCategory(value: unknown) {
 
 export async function POST(request: Request) {
   try {
+    assertSameOrigin(request);
     const { admin, warkopId } = await requireOwner(request);
     const body = await request.json();
     if (!String(body.name || "").trim() || Number(body.price) <= 0) return Response.json({ error: "Nama dan harga menu wajib valid." }, { status: 400 });
@@ -21,6 +23,7 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
+    assertSameOrigin(request);
     const { admin, warkopId } = await requireOwner(request);
     const body = await request.json();
     const updates: Record<string, unknown> = {};
@@ -43,6 +46,7 @@ export async function PATCH(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
+    assertSameOrigin(request);
     const { admin, warkopId } = await requireOwner(request);
     const id = new URL(request.url).searchParams.get("id");
     if (!id) return Response.json({ error: "ID menu wajib diisi." }, { status: 400 });

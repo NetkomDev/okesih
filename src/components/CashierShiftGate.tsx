@@ -53,8 +53,9 @@ async function cashierRequest(path: string, init?: RequestInit) {
   return body;
 }
 
-export default function CashierShiftGate({ tenant, pendingCount, onShiftChanged, children }: {
+export default function CashierShiftGate({ tenant, warkopId, pendingCount, onShiftChanged, children }: {
   tenant: string;
+  warkopId?: string;
   pendingCount: number;
   onShiftChanged: () => Promise<void>;
   children: React.ReactNode;
@@ -97,18 +98,32 @@ export default function CashierShiftGate({ tenant, pendingCount, onShiftChanged,
   // Real-time synchronization for cashier shift & cash calculations
   useEffect(() => {
     const supabase = createCashierClient();
+    const channelName = warkopId ? `cashier-shift-${warkopId}` : "cashier-shift-realtime-channel";
+    const transactionsFilter = warkopId ? `warkop_id=eq.${warkopId}` : undefined;
+    const shiftsFilter = warkopId ? `warkop_id=eq.${warkopId}` : undefined;
+
     const channel = supabase
-      .channel("cashier-shift-realtime-channel")
+      .channel(channelName)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "transactions" },
+        {
+          event: "*",
+          schema: "public",
+          table: "transactions",
+          ...(transactionsFilter ? { filter: transactionsFilter } : {}),
+        },
         () => {
           void loadSession();
         }
       )
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "shifts" },
+        {
+          event: "*",
+          schema: "public",
+          table: "shifts",
+          ...(shiftsFilter ? { filter: shiftsFilter } : {}),
+        },
         () => {
           void loadSession();
         }
@@ -118,7 +133,7 @@ export default function CashierShiftGate({ tenant, pendingCount, onShiftChanged,
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [loadSession]);
+  }, [loadSession, warkopId]);
 
   const login = async (event: React.FormEvent) => {
     event.preventDefault();

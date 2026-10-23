@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getTrustedUserRole } from "@/lib/auth-role";
+import { assertSameOrigin } from "@/lib/device-auth";
 import { randomUUID } from "node:crypto";
 
 const MAX_QRIS_SIZE = 4 * 1024 * 1024; // 4MB
@@ -21,10 +22,11 @@ function getAdminClient() {
 
 export async function POST(request: Request) {
   try {
+    assertSameOrigin(request);
     const sessionClient = await createServerSupabaseClient();
     const { data: { user } } = await sessionClient.auth.getUser();
     const role = getTrustedUserRole(user);
-    const isSuperAdmin = role === "SUPERADMIN" || user?.email?.toLowerCase().startsWith("superadmin");
+    const isSuperAdmin = role === "SUPERADMIN";
 
     if (!user || !isSuperAdmin) {
       return NextResponse.json({ error: "Hanya super admin yang berhak mengunggah QRIS Pusat." }, { status: 403 });
@@ -87,9 +89,10 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("Superadmin upload QRIS error:", error);
+    const status = error && typeof error === "object" && "status" in error && typeof error.status === "number" ? error.status : 500;
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Terjadi kesalahan saat mengunggah QRIS Pusat." },
-      { status: 500 }
+      { status }
     );
   }
 }
