@@ -282,7 +282,7 @@ export default function MarketingDashboardPage() {
           <aside className="mkt-side-nav-column">
             <div className="mkt-tips-card">
               <span className="mkt-tips-badge">Tips Lapangan</span>
-              <h4>Tindak Lanjut Tenant Menunggak</h4>
+              <h4 className="mkt-tips-title" style={{ color: "#ffffff" }}>Tindak Lanjut Tenant Menunggak</h4>
               <p>
                 Buka menu <b className="mkt-highlight-text">Tenant Binaan</b> untuk melihat tenant yang berstatus belum bayar. Anda dapat langsung menekan tombol WhatsApp atau mendatangi outlet mereka untuk memastikan sistem kasir tetap berjalan lancar.
               </p>
