@@ -66,6 +66,7 @@ useEffect(() => {
     loadPlatformSettings();
     return () => { active = false; };
   }, [showToast]);
+const [billingError, setBillingError] = useState("");
 const [billingLogs, setBillingLogs] = useState<SaasBillingItem[]>([]);
 const [billingSummary, setBillingSummary] = useState<BillingSummary>({ totalBills: 0, paidCount: 0, totalPaidAmount: 0, pendingCount: 0 });
 const [isBillingsLoading, setIsBillingsLoading] = useState<boolean>(false);
@@ -125,6 +126,7 @@ const handleUploadCentralQris = async (e: React.ChangeEvent<HTMLInputElement>) =
   };
 const loadSaasBillings = useCallback(async () => {
     setIsBillingsLoading(true);
+    setBillingError("");
     try {
       const res = await fetch("/api/superadmin/saas-billings", { cache: "no-store" });
       const payload = await res.json();
@@ -132,7 +134,7 @@ const loadSaasBillings = useCallback(async () => {
       setBillingLogs(payload.data?.billings || []);
       if (payload.data?.summary) setBillingSummary(payload.data.summary);
     } catch (err) {
-      console.error("Gagal load saas-billings:", err);
+      setBillingError(err instanceof Error ? err.message : "Tagihan gagal dimuat.");
     } finally {
       setIsBillingsLoading(false);
     }
@@ -187,8 +189,24 @@ const handleRejectBilling = async (billingId: string, notes?: string) => {
       setIsBillingActionBusy(null);
     }
   };
+const filteredBillings = billingLogs
+                    .filter((b) => {
+                      if (billingFilter === "PAID" && b.statusBadge !== "PAID") return false;
+                      if (billingFilter === "GRACE_PERIOD" && b.statusBadge !== "GRACE_PERIOD") return false;
+                      if (billingFilter === "PENDING_REVIEW" && b.statusBadge !== "PENDING_REVIEW") return false;
+                      if (billingFilter === "UNPAID" && b.statusBadge !== "UNPAID" && b.statusBadge !== "OVERDUE") return false;
+                      if (billingSearchQuery.trim()) {
+                        const q = billingSearchQuery.toLowerCase();
+                        return (
+                          b.warkopName.toLowerCase().includes(q) ||
+                          b.tanggal.toLowerCase().includes(q) ||
+                          String(b.kodeUnik).includes(q)
+                        );
+                      }
+                      return true;
+                    });
 return (<>{activeTab === "qris_billing" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+          <div className="sa-billing-page" style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
             {/* 1. KPI Strip Ringkasan Finansial Setoran Sewa */}
             <div className="sa-responsive-grid sa-billing-summary"
               style={{
@@ -207,7 +225,7 @@ return (<>{activeTab === "qris_billing" && (
                 }}
               >
                 <div style={{ fontSize: "0.75rem", color: isDark ? "#94A3B8" : "#64748B", fontWeight: 700 }}>
-                  TOTAL ANTREAN SETORAN
+                  TOTAL TAGIHAN
                 </div>
                 <div style={{ fontSize: "1.6rem", fontWeight: 900, color: isDark ? "#FFF" : "#0F172A", marginTop: "4px" }}>
                   {billingLogs.length} <span style={{ fontSize: "0.85rem", fontWeight: 600, color: isDark ? "#94A3B8" : "#64748B" }}>Shift</span>
@@ -227,13 +245,13 @@ return (<>{activeTab === "qris_billing" && (
                 }}
               >
                 <div style={{ fontSize: "0.75rem", color: "#065F46", fontWeight: 700 }}>
-                  SETORAN LUNAS (TERVERIFIKASI)
+                  SETORAN LUNAS
                 </div>
                 <div style={{ fontSize: "1.6rem", fontWeight: 900, color: "#059669", marginTop: "4px" }}>
                   Rp {billingSummary.totalPaidAmount.toLocaleString("id-ID")}
                 </div>
                 <div style={{ fontSize: "0.72rem", color: "#047857", marginTop: "4px", fontWeight: 700 }}>
-                  ✓ {billingLogs.filter((b) => b.statusBadge === "PAID").length} warkop telah lunas
+                  ✓ {billingLogs.filter((b) => b.statusBadge === "PAID").length} tagihan lunas
                 </div>
               </div>
 
@@ -247,10 +265,10 @@ return (<>{activeTab === "qris_billing" && (
                 }}
               >
                 <div style={{ fontSize: "0.75rem", color: "#92400E", fontWeight: 700 }}>
-                  MASA TENGGANG (GRACE PERIOD)
+                  MASA TENGGANG
                 </div>
                 <div style={{ fontSize: "1.6rem", fontWeight: 900, color: "#D97706", marginTop: "4px" }}>
-                  {billingLogs.filter((b) => b.statusBadge === "GRACE_PERIOD").length} <span style={{ fontSize: "0.85rem", fontWeight: 600 }}>Warkop</span>
+                  {billingLogs.filter((b) => b.statusBadge === "GRACE_PERIOD").length} <span style={{ fontSize: "0.85rem", fontWeight: 600 }}>Tagihan</span>
                 </div>
                 <div style={{ fontSize: "0.72rem", color: "#B45309", marginTop: "4px", fontWeight: 600 }}>
                   ⏳ Batas pembayaran hari ini sebelum shift baru
@@ -267,7 +285,7 @@ return (<>{activeTab === "qris_billing" && (
                 }}
               >
                 <div style={{ fontSize: "0.75rem", color: "#1E40AF", fontWeight: 700 }}>
-                  PERLU REVIEW OCR / BELUM SETOR
+                  PERLU DITINJAU
                 </div>
                 <div style={{ fontSize: "1.6rem", fontWeight: 900, color: "#2563EB", marginTop: "4px" }}>
                   {billingLogs.filter((b) => b.statusBadge === "PENDING_REVIEW" || b.statusBadge === "UNPAID" || b.statusBadge === "OVERDUE").length} <span style={{ fontSize: "0.85rem", fontWeight: 600 }}>Menunggu</span>
@@ -280,7 +298,7 @@ return (<>{activeTab === "qris_billing" && (
 
             {/* 2. Banner Rekening & QRIS SaaS Platform Pusat (Ringkas & Expandable) */}
             <section
-              className="glass-panel"
+              className="glass-panel sa-billing-qris"
               style={{
                 padding: "1.25rem 1.5rem",
                 borderRadius: "14px",
@@ -288,8 +306,8 @@ return (<>{activeTab === "qris_billing" && (
                 background: isDark ? "rgba(15, 23, 42, 0.5)" : "#FFFFFF",
               }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+              <div className="sa-qris-heading" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>
+                <div className="sa-qris-identity" style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
                   <div
                     style={{
                       width: "56px",
@@ -338,7 +356,7 @@ return (<>{activeTab === "qris_billing" && (
                         ● Semua tenant
                       </span>
                     </div>
-                    <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginTop: "4px", fontSize: "0.78rem", color: isDark ? "#CBD5E1" : "#475569" }}>
+                    <div className="sa-qris-account" style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginTop: "4px", fontSize: "0.78rem", color: isDark ? "#CBD5E1" : "#475569" }}>
                       <span>Bank: <strong style={{ color: isDark ? "#FFF" : "#0F172A" }}>{centralBankName || "BCA"}</strong></span>
                       <span>No. Rekening: <strong style={{ color: isDark ? "#FFF" : "#0F172A" }}>{centralBankAccountNumber || "-"}</strong></span>
                       <span>a.n: <strong style={{ color: isDark ? "#FFF" : "#0F172A" }}>{centralBankAccountName || "-"}</strong></span>
@@ -349,6 +367,8 @@ return (<>{activeTab === "qris_billing" && (
 
                 <button
                   type="button"
+                  aria-expanded={isQrisConfigExpanded}
+                  aria-controls="sa-qris-config"
                   onClick={() => setIsQrisConfigExpanded(!isQrisConfigExpanded)}
                   className="btn-secondary"
                   style={{
@@ -360,13 +380,13 @@ return (<>{activeTab === "qris_billing" && (
                     padding: "6px 14px",
                   }}
                 >
-                  <span>{isQrisConfigExpanded ? "▲ Tutup Pengaturan" : "⚙️ Ubah QRIS & Rekening Pusat"}</span>
+                  <span>{isQrisConfigExpanded ? "Tutup pengaturan" : "Ubah QRIS & rekening"}</span>
                 </button>
               </div>
 
               {/* Panel Edit Expandable Form Konfigurasi QRIS */}
               {isQrisConfigExpanded && (
-                <div
+                <div id="sa-qris-config"
                   style={{
                     marginTop: "1.25rem",
                     paddingTop: "1.25rem",
@@ -423,9 +443,7 @@ return (<>{activeTab === "qris_billing" && (
                             <span style={{ fontSize: "10px", color: "#64748B", textAlign: "center" }}>Belum Ada QRIS</span>
                           )}
                         </div>
-                        <div style={{ color: "#475569", fontSize: "7.5px", fontWeight: 700, marginTop: "4px" }}>
-                          NMID: ID1029384756520
-                        </div>
+
                       </div>
 
                       <input
@@ -553,9 +571,9 @@ return (<>{activeTab === "qris_billing" && (
               )}
             </section>
 
-            {/* 3. Log Verifikasi Setoran Sewa (OCR AI) — LEBAR PENUH (100% FULL WIDTH) */}
+            {/* 3. Log Tagihan Tenant Sewa (OCR AI) — LEBAR PENUH (100% FULL WIDTH) */}
             <section
-              className="glass-panel"
+              className="glass-panel sa-directory-page sa-billing-directory"
               style={{
                 padding: "1.75rem",
                 borderRadius: "14px",
@@ -563,8 +581,9 @@ return (<>{activeTab === "qris_billing" && (
                 background: isDark ? undefined : "#FFFFFF",
               }}
             >
+              <div className="sa-directory-controls">
               {/* Header Bagian Log Antrean */}
-              <div
+              <div className="sa-billing-heading"
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
@@ -577,7 +596,7 @@ return (<>{activeTab === "qris_billing" && (
                 <div>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                     <h2 style={{ fontSize: "1.35rem", fontWeight: 800, color: "#0284C7", margin: 0 }}>
-                      Verifikasi Setoran
+                      Tagihan Tenant
                     </h2>
                     <span
                       style={{
@@ -589,11 +608,11 @@ return (<>{activeTab === "qris_billing" && (
                         borderRadius: "99px",
                       }}
                     >
-                      {billingLogs.length} Antrean Terdaftar
+                      {billingLogs.length} tagihan
                     </span>
                   </div>
                   <p style={{ fontSize: "0.825rem", color: isDark ? "#94A3B8" : "#64748B", margin: "0.35rem 0 0" }}>
-                    OCR membantu membaca nominal. Pelunasan hanya setelah Superadmin memeriksa penerimaan dana pada rekening.
+                    Periksa bukti transfer dan dana masuk sebelum menandai lunas.
                   </p>
                 </div>
 
@@ -613,13 +632,13 @@ return (<>{activeTab === "qris_billing" && (
                     }}
                     title="Segarkan Log Setoran"
                   >
-                    <span>{isBillingsLoading ? "Memuat..." : "🔄 Refresh Data"}</span>
+                    <span>{isBillingsLoading ? "Memuat..." : "Muat ulang"}</span>
                   </button>
                 </div>
               </div>
 
               {/* Bilah Kontrol: Filter Tabs & Kotak Pencarian */}
-              <div
+              <div className="sa-billing-filters"
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
@@ -632,7 +651,7 @@ return (<>{activeTab === "qris_billing" && (
                 }}
               >
                 {/* Filter Tabs */}
-                <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                <div className="sa-billing-tabs" role="group" aria-label="Filter status tagihan" style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
                   {[
                     { key: "ALL", label: `Semua (${billingLogs.length})` },
                     { key: "PAID", label: `✓ Valid Lunas (${billingLogs.filter((b) => b.statusBadge === "PAID").length})` },
@@ -642,6 +661,7 @@ return (<>{activeTab === "qris_billing" && (
                   ].map((tab) => (
                     <button
                       key={tab.key}
+                      aria-pressed={billingFilter === tab.key}
                       type="button"
                       onClick={() => setBillingFilter(tab.key as typeof billingFilter)}
                       style={{
@@ -662,12 +682,12 @@ return (<>{activeTab === "qris_billing" && (
                 </div>
 
                 {/* Input Pencarian Cepat Warkop / Tanggal */}
-                <div style={{ minWidth: "240px", flex: "0 1 300px" }}>
+                <div className="sa-billing-search" style={{ minWidth: "240px", flex: "0 1 300px" }}>
                   <input
                     type="text"
                     value={billingSearchQuery}
                     onChange={(e) => setBillingSearchQuery(e.target.value)}
-                    placeholder="🔍 Cari nama warkop / tanggal..."
+                    aria-label="Cari tagihan" placeholder="Cari tenant, tanggal, atau kode unik"
                     style={{
                       width: "100%",
                       padding: "0.45rem 0.85rem",
@@ -681,8 +701,11 @@ return (<>{activeTab === "qris_billing" && (
                 </div>
               </div>
 
+              </div>
+              <div className="sa-billing-results">
+              {billingError && <p role="alert">{billingError} <button className="btn-secondary" onClick={() => void loadSaasBillings()}>Coba lagi</button></p>}
               {/* List Log Setoran (Format Baris Lebar / Wide Cards) */}
-              <div
+              <div className="sa-billing-list"
                 style={{
                   display: "flex",
                   flexDirection: "column",
@@ -696,27 +719,12 @@ return (<>{activeTab === "qris_billing" && (
                   <div style={{ padding: "3rem 1.5rem", textAlign: "center", color: isDark ? "#94A3B8" : "#64748B", fontSize: "0.9rem" }}>
                     Sedang memuat data setoran sewa warkop...
                   </div>
-                ) : billingLogs.length === 0 ? (
+                ) : filteredBillings.length === 0 ? (
                   <div style={{ padding: "3rem 1.5rem", textAlign: "center", color: isDark ? "#94A3B8" : "#64748B", fontSize: "0.9rem", background: isDark ? "rgba(255,255,255,0.02)" : "#F8FAFC", borderRadius: "10px" }}>
-                    Belum ada riwayat tagihan sewa warkop saat ini.
+                    {billingError ? "Data tagihan belum tersedia." : billingLogs.length ? "Tidak ada tagihan yang cocok dengan pencarian atau filter." : "Belum ada tagihan tenant."}
                   </div>
                 ) : (
-                  billingLogs
-                    .filter((b) => {
-                      if (billingFilter === "PAID" && b.statusBadge !== "PAID") return false;
-                      if (billingFilter === "GRACE_PERIOD" && b.statusBadge !== "GRACE_PERIOD") return false;
-                      if (billingFilter === "PENDING_REVIEW" && b.statusBadge !== "PENDING_REVIEW") return false;
-                      if (billingFilter === "UNPAID" && b.statusBadge !== "UNPAID" && b.statusBadge !== "OVERDUE") return false;
-                      if (billingSearchQuery.trim()) {
-                        const q = billingSearchQuery.toLowerCase();
-                        return (
-                          b.warkopName.toLowerCase().includes(q) ||
-                          b.tanggal.toLowerCase().includes(q) ||
-                          String(b.kodeUnik).includes(q)
-                        );
-                      }
-                      return true;
-                    })
+                  filteredBillings
                     .map((item) => {
                       const isPaid = item.statusBadge === "PAID";
                       const isGrace = item.statusBadge === "GRACE_PERIOD";
@@ -725,6 +733,7 @@ return (<>{activeTab === "qris_billing" && (
                       return (
                         <div
                           key={item.id}
+                          className="sa-billing-item"
                           style={{
                             padding: "1.1rem 1.35rem",
                             borderRadius: "10px",
@@ -745,7 +754,7 @@ return (<>{activeTab === "qris_billing" && (
                             transition: "all 0.15s ease",
                           }}
                         >
-                          <div className="sa-responsive-grid"
+                          <div className="sa-responsive-grid sa-billing-item-grid"
                             style={{
                               display: "grid",
                               gridTemplateColumns: "1.8fr 1.8fr 1.6fr 1.4fr auto",
@@ -811,7 +820,7 @@ return (<>{activeTab === "qris_billing" && (
                                 </span>
                               </div>
                               <div style={{ fontSize: "0.72rem", color: isDark ? "#CBD5E1" : "#475569", marginTop: "3px" }}>
-                                Kode unik alokasi: <b style={{ color: "#059669" }}>{item.kodeUnik} (Klop)</b>
+                                Kode unik alokasi: <b style={{ color: "#059669" }}>{item.kodeUnik}</b>
                               </div>
                               <div style={{ fontSize: "0.68rem", color: item.buktiTransferUrl ? "#059669" : "#DC2626", marginTop: "2px" }}>
                                 {item.buktiTransferUrl ? "🧾 Berkas bukti diunggah" : "⚠️ Bukti belum diunggah"}
@@ -879,7 +888,7 @@ return (<>{activeTab === "qris_billing" && (
                                 }}
                                 title="Lihat rincian lengkap & bukti transfer"
                               >
-                                🔍 Detail
+                                Detail
                               </button>
 
                               {!isPaid && (
@@ -921,7 +930,7 @@ return (<>{activeTab === "qris_billing" && (
                                     }}
                                     title="Tolak bukti setoran"
                                   >
-                                    ✕
+                                    Tolak
                                   </button>
                                 </>
                               )}
@@ -932,13 +941,14 @@ return (<>{activeTab === "qris_billing" && (
                     })
                 )}
               </div>
+              </div>
             </section>
           </div>
         )}
 {selectedBillingDetail && (
           <ModalFrame label="Detail bukti pembayaran" onClose={() => setSelectedBillingDetail(null)}>
             <div
-              className="glass-panel"
+              className="glass-panel sa-billing-detail"
               style={{
                 maxWidth: "520px",
                 width: "100%",
@@ -960,6 +970,7 @@ return (<>{activeTab === "qris_billing" && (
                 </div>
                 <button
                   type="button"
+                  aria-label="Tutup detail tagihan"
                   onClick={() => setSelectedBillingDetail(null)}
                   style={{
                     background: "none",
@@ -1051,7 +1062,7 @@ return (<>{activeTab === "qris_billing" && (
                     <div style={{ color: isDark ? "#CBD5E1" : "#334155", lineHeight: 1.5 }}>
                       • Bank: <b>{selectedBillingDetail.ocrBank}</b>
                       <br />
-                      • Kecocokan Kode: <b>{selectedBillingDetail.kodeUnik} (Klop)</b>
+                      • Kode unik tagihan: <b>{selectedBillingDetail.kodeUnik}</b>
                       <br />
                       • Keyakinan pembacaan teks: <b style={{ color: "#059669" }}>{selectedBillingDetail.ocrConfidence}%</b>
                     </div>
@@ -1099,6 +1110,7 @@ return (<>{activeTab === "qris_billing" && (
                 )}
                 <button
                   type="button"
+                  aria-label="Tutup detail tagihan"
                   onClick={() => setSelectedBillingDetail(null)}
                   className="btn-secondary"
                   style={{

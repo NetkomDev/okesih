@@ -473,3 +473,17 @@ Panel judul, pencarian, filter, dan tindakan dipisahkan dari panel hasil pada ha
 Validasi UI menggunakan data fiktif di Chrome pada lebar 320, 360, 390, 430, 640, 768, dan 1440 px. Pemeriksaan geometri memastikan panel kontrol dan hasil sejajar, terpisah minimal 12 px, serta tabel memenuhi lebar panel hasil tanpa padding bersarang. Pencarian, pagination, popup, pemulihan scroll, filter, mode gelap, dan error/coba lagi lulus. Pengujian memakai simulasi viewport, bukan perangkat fisik; tidak mengirim WhatsApp atau mengubah data produksi.
 
 `npm run check` lulus: 62 tes aplikasi, lint tanpa error (18 peringatan yang sudah ada), build produksi, dan pemeriksaan secret pada 145 file client. Tidak diperlukan migrasi database untuk penyempurnaan tampilan ini.
+
+### Redaksi WhatsApp dan UI Billing mobile — 23 Oktober 2026
+
+Dua template WhatsApp perubahan level mitra (pengangkatan KorMit dan pengembalian menjadi mitra biasa) menggunakan penutup “Salam, Admin OKESIH”. Penelusuran seluruh kode aplikasi tidak menemukan lagi frasa “Super Admin OKESIH”; nama role dan otorisasi Super Admin tetap sesuai fungsi internal.
+
+Pada HP hingga 640 px, Billing menampilkan ringkasan dua kolom, panel QRIS/rekening yang ringkas, dan panel kontrol terpisah dari daftar tagihan. Kartu tagihan memakai susunan dua kolom untuk nominal dan informasi OCR; nama tenant, status, dan tombol tindakan memiliki baris penuh. Pencarian, filter status, pengaturan QRIS, dan detail tetap tersedia. Label statistik memakai satuan tagihan/shift sesuai data, bukan menganggap setiap tagihan mewakili tenant berbeda.
+
+Hasil pencarian kosong diberi pesan yang jelas; kegagalan memuat data menampilkan error dan tombol coba lagi. Filter status menyediakan `aria-pressed`, pengaturan QRIS menyediakan `aria-expanded`, dan tombol tutup detail diberi nama aksesibel. NMID contoh yang ditulis tetap serta klaim “Klop” tanpa pemeriksaan dihapus dari tampilan. Perhitungan tagihan, prosedur persetujuan/referensi bank, dan pembayaran tidak diubah.
+
+Validasi browser menggunakan lima status tagihan fiktif pada viewport 320, 360, 390, 430, 640, 768, dan 1440 px: tidak ada overflow horizontal; ringkasan dua kolom di HP; pencarian dan filter; popup detail; form QRIS; keypad rekening; serta tidak ada permintaan mutasi produksi. Pengujian dilakukan dengan simulasi viewport, bukan perangkat fisik. Tidak ada pesan WhatsApp atau pembayaran nyata dikirim.
+
+Uji tambahan berhasil untuk error jaringan → coba lagi → data kembali tampil, serta pergantian tema melalui tombol aplikasi. Kontras label filter aktif pada tema gelap diperiksa; tidak ada permintaan mutasi yang dikirim selama pengujian browser.
+
+Validasi akhir `npm run check` lulus: lint tanpa error (18 peringatan lama), 62 tes aplikasi, build produksi, dan pemeriksaan secret pada 145 file client. Build lokal mencatat satu kegagalan fetch parameter global saat prerender, tetapi menyelesaikan seluruh 77 halaman dengan exit code 0; pengujian browser Billing menggunakan respons parameter terkontrol. Tidak diperlukan migrasi database.

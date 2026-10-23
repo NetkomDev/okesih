@@ -333,13 +333,13 @@ export async function PATCH(request: Request) {
             "Buka Dashboard Marketing Anda untuk melihat menu *KorMit*.",
             "",
             "Salam,",
-            "Super Admin OKESIH",
+            "Admin OKESIH",
           ].join("\n")
         : [
             `Halo ${cleanWhatsAppMessageField(data.full_name)}, status keanggotaan Anda telah disesuaikan kembali menjadi *Mitra Marketing*.`,
             "",
             "Salam,",
-            "Super Admin OKESIH",
+            "Admin OKESIH",
           ].join("\n");
       whatsappUrl = createWhatsAppUrl(data.phone, message);
     }
