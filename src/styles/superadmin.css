@@ -1000,3 +1000,50 @@
   .sa-kormit-badge i { width: 5px; height: 5px; background: currentColor; border-radius: 50%; }
   .sa-modal-frame > .sa-directory-detail { padding: 0 !important; }
 }
+
+/* Separate controls and results on phones without changing the desktop layout. */
+.sa-directory-controls, .sa-directory-results { display: contents; }
+@media (max-width: 640px) {
+  .superadmin-main > section.glass-panel.sa-directory-page {
+    display: grid; gap: 14px; padding: 0 !important; border: 0 !important;
+    background: transparent !important; box-shadow: none; min-width: 0;
+  }
+  .sa-directory-page .sa-directory-controls,
+  .sa-directory-page .sa-directory-results {
+    display: block; min-width: 0; border: 1px solid var(--sa-border);
+    border-radius: 14px; background: var(--sa-panel); overflow: hidden;
+  }
+  .sa-directory-page .sa-directory-controls { padding: 16px; }
+  .sa-directory-page .sa-directory-heading { display: grid !important; grid-template-columns: minmax(0,1fr); gap: 14px !important; margin-bottom: 0 !important; }
+  .sa-directory-heading h2 { margin: 0 0 4px; font-size: 20px !important; letter-spacing: -.025em; }
+  .sa-directory-heading h2 + div { font-size: 13px !important; line-height: 1.5; }
+  .sa-directory-page .sa-directory-controls button { box-shadow: none; border-radius: 10px; font-size: 13px !important; }
+  .sa-directory-page .sa-directory-controls input,
+  .sa-directory-page .sa-directory-controls select { border-radius: 10px; }
+  .sa-directory-page .sa-tenant-tools { display: grid !important; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 10px !important; width: 100%; }
+  .sa-tenant-tools input { grid-column: 1 / -1; grid-row: 1; width: 100% !important; }
+  .sa-tenant-tools select { min-width: 0 !important; width: 100%; padding: 8px !important; }
+  .sa-tenant-tools button { padding: 8px !important; }
+  .sa-directory-page .sa-partner-actions { display: grid !important; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 10px !important; }
+  .sa-partner-actions .btn-primary { grid-column: 1; grid-row: 1; }
+  .sa-partner-actions .btn-secondary { grid-column: 2; grid-row: 1; }
+  .sa-directory-page .sa-partner-filters { display: flex; flex-direction: column; gap: 12px !important; padding: 0 !important; margin: 14px 0 0 !important; border: 0 !important; background: transparent !important; }
+  .sa-partner-filters .sa-search-field { order: -1; }
+  .sa-directory-page .sa-partner-status { display: grid !important; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px !important; width: 100%; }
+  .sa-partner-status > span { display: none; }
+  .sa-directory-page .sa-partner-status button { padding: 6px !important; font-size: 12px !important; font-weight: 600 !important; }
+  .sa-directory-page .sa-partner-status button[aria-pressed="true"] { background: #0369a1 !important; color: #fff !important; }
+  .sa-directory-results .sa-phone-directory { border: 0; border-radius: 0; }
+  .sa-directory-results .sa-phone-directory th { padding: 12px 10px; }
+  .sa-directory-results .sa-phone-directory td { padding: 6px 10px; }
+  .sa-directory-results > p { margin: 12px; font-size: 13px; }
+  .sa-directory-results > nav { padding: 12px !important; gap: 10px !important; border-top: 1px solid var(--sa-border); font-size: 12px; }
+  .sa-directory-results > nav > div { display: grid !important; grid-template-columns: repeat(2,minmax(0,1fr)); width: 100%; gap: 8px !important; }
+  .sa-directory-results > nav button { padding: 8px !important; font-size: 12px; border-radius: 10px; box-shadow: none; }
+  .sa-directory-results > nav button:disabled { opacity: .45; cursor: default; }
+}
+@media (max-width: 640px) {
+  .sa-directory-page .sa-directory-heading,
+  .sa-directory-page .sa-partner-actions { width: 100%; min-width: 0; }
+  .sa-directory-controls > .sa-directory-heading + div:not(.sa-partner-filters) { margin-top: 14px; }
+}

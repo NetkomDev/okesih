@@ -506,7 +506,7 @@ const renderTenantActions = (t: TenantWarkop) => <div style={{ display: "flex", 
 </div>;
 return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={() => setAccessMessageUrl(null)} />}{accessTarget && <AccountAccessModal key={accessTarget.id} target={accessTarget} onClose={() => setAccessTarget(null)} onSaved={() => { void loadTenantApplications(); void loadTenants(); }} />}{activeTab === "tenants" && (
           <section
-            className="glass-panel"
+            className="glass-panel sa-directory-page"
             style={{
               padding: "1.75rem",
               borderRadius: "14px",
@@ -514,7 +514,8 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
               background: isDark ? undefined : "#FFFFFF",
             }}
           >
-            <div
+            <div className="sa-directory-controls">
+            <div className="sa-directory-heading"
               style={{
                 display: "flex",
                 justifyContent: "space-between",
@@ -526,14 +527,14 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
             >
               <div>
                 <h2 style={{ fontSize: "1.3rem", fontWeight: 800, color: isDark ? "#FFF" : "#0F172A" }}>
-                  Daftar Klien Tenant Warkop Terdaftar
+                  Kelola Tenant
                 </h2>
                 <div style={{ fontSize: "0.825rem", color: isDark ? "#94A3B8" : "#64748B" }}>
-                  Kelola status aktivasi, penetapan rentang kode unik pembayaran, serta asosiasi marketing lapangan.
+                  Pantau tenant, status akun, dan mitra pengelola.
                 </div>
               </div>
 
-              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+              <div className="sa-tenant-tools" style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
                 <select
                   value={tenantRegionFilter}
                   onChange={(e) => { setTenantRegionFilter(e.target.value); setTenantPage(1); }}
@@ -575,7 +576,7 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
                     fontWeight: 800,
                   }}
                 >
-                  + Daftarkan Tenant
+                  + Tambah Tenant
                 </button>
               </div>
             </div>
@@ -600,6 +601,8 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
               </div>
             )}
 
+            </div>
+            <div className="sa-directory-results">
             <MobileDirectory label="Daftar tenant" headers={["Nama tenant", "Kota", "Provinsi"]} rows={filteredTenants.map(t => ({ id: t.id, name: t.name, second: t.cityRegency, third: t.province }))} onSelect={setSelectedTenantId} />
             <div className="superadmin-table-container sa-desktop-directory">
               <table className="sa-data-table" role="table" style={{ width: "100%", minWidth: "1050px", borderCollapse: "collapse", textAlign: "left", fontSize: "0.875rem" }}>
@@ -715,6 +718,7 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
             {tenantLoading && <p role="status">Memuat tenant...</p>}
             {!tenantLoading && !tenantError && !filteredTenants.length && <p className="sa-directory-empty">Tidak ada tenant yang cocok dengan pencarian.</p>}
             <Pagination pagination={tenantPagination} onPage={setTenantPage} loading={tenantLoading} />
+            </div>
           </section>
         )}
 {selectedTenant && <DirectoryDetail title={selectedTenant.name} subtitle="Detail tenant" onClose={() => setSelectedTenantId(null)} fields={[

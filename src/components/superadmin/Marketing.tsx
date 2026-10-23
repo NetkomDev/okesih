@@ -429,7 +429,7 @@ const renderMarketingActions = (m: MarketingAgent) => <>
 </>;
 return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={() => setAccessMessageUrl(null)} />}{accessTarget && <AccountAccessModal key={accessTarget.id} target={accessTarget} onClose={() => setAccessTarget(null)} onSaved={() => void loadMarketingPartners()} />}{activeTab === "marketing" && (
           <section
-            className="glass-panel"
+            className="glass-panel sa-directory-page"
             style={{
               padding: "1.75rem",
               borderRadius: "14px",
@@ -437,7 +437,8 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
               background: isDark ? undefined : "#FFFFFF",
             }}
           >
-            <div
+            <div className="sa-directory-controls">
+            <div className="sa-directory-heading"
               style={{
                 display: "flex",
                 justifyContent: "space-between",
@@ -449,14 +450,14 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
             >
               <div>
                 <h2 style={{ fontSize: "1.3rem", fontWeight: 800, color: isDark ? "#FFF" : "#0F172A" }}>
-                  Manajemen Marketing Lapangan &amp; Bagi Hasil Komisi
+                  Kelola Mitra
                 </h2>
                 <div style={{ fontSize: "0.825rem", color: isDark ? "#94A3B8" : "#64748B" }}>
-                  Kelola pendaftar mitra marketing dari landing page, setujui aktivasi per wilayah, dan tetapkan komisi bagi hasil per struk transaksi.
+                  Tinjau pendaftaran, koordinator, dan tenant binaan.
                 </div>
               </div>
 
-              <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+              <div className="sa-partner-actions" style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
                 <button
                   onClick={() => {
                     loadMarketingPartners();
@@ -466,7 +467,7 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
                   className="btn-secondary"
                   style={{ padding: "0.55rem 0.95rem", fontSize: "0.85rem", fontWeight: 700 }}
                 >
-                  🔄 Refresh Data
+                  Muat ulang
                 </button>
 
                 <button
@@ -487,7 +488,7 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
                     fontWeight: 800,
                   }}
                 >
-                  + Daftarkan Marketing Lapangan
+                  + Tambah Mitra
                 </button>
               </div>
             </div>
@@ -512,7 +513,7 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
             )}
 
             {/* Filter & Pemetaan Wilayah Bar */}
-            <div
+            <div className="sa-partner-filters"
               style={{
                 display: "flex",
                 justifyContent: "space-between",
@@ -527,7 +528,7 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
               }}
             >
               {/* Filter Status Pills */}
-              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
+              <div className="sa-partner-status" role="group" aria-label="Filter status mitra" style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
                 <span style={{ fontSize: "0.8rem", color: isDark ? "#94A3B8" : "#64748B", fontWeight: 700 }}>Status:</span>
                 {[
                   { key: "ALL", label: `Semua (${counts.ALL})` },
@@ -537,6 +538,7 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
                 ].map((tab) => (
                   <button
                     key={tab.key}
+                    aria-pressed={marketingFilterStatus === tab.key}
                     onClick={() => { setMarketingFilterStatus(tab.key as MarketingFilterStatus); setMarketingPage(1); }}
                     style={{
                       padding: "0.35rem 0.75rem",
@@ -585,6 +587,8 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
               </div>
             </div>
 
+            </div>
+            <div className="sa-directory-results">
             <MobileDirectory numericLast label="Daftar mitra" headers={["Nama mitra", "Wilayah", "Tenant"]} rows={marketingList.map(m => ({ id: m.id, name: m.name, second: m.area, third: m.totalTenantsAcquired, coordinator: m.membershipLevel === "COORDINATOR" }))} onSelect={setSelectedId} />
             <div className="superadmin-table-container sa-desktop-directory">
               <table className="sa-data-table" role="table" style={{ width: "100%", minWidth: "1150px", borderCollapse: "collapse", textAlign: "left", fontSize: "0.875rem" }}>
@@ -780,6 +784,7 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
             {directoryLoading && <p role="status">Memuat mitra…</p>}
             {!directoryLoading && !directoryError && !marketingList.length && <p className="sa-directory-empty">Tidak ada mitra yang cocok dengan pencarian.</p>}
             <Pagination pagination={pagination} onPage={setMarketingPage} loading={directoryLoading} />
+            </div>
           </section>
         )}
 {selected && <DirectoryDetail title={selected.name} subtitle={selected.membershipLevel === "COORDINATOR" ? "Koordinator Mitra" : "Mitra Marketing"} onClose={() => setSelectedId(null)} fields={[

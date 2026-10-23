@@ -465,3 +465,11 @@ Validasi:
 - Migrasi 32 diuji dengan ROLLBACK sebelum diterapkan dengan COMMIT di produksi, lalu ditandai applied. Verifikasi read-only: total lima mitra konsisten dengan laporan lama; permintaan dua baris menghasilkan dua baris; akses anonim ditolak. Migrasi tertunda 25–30 tidak dijalankan.
 - Simulasi persetujuan dengan PATCH fiktif memastikan mitra keluar dari filter PENDING dan jumlah pendaftar berkurang setelah daftar dimuat ulang.
 - `npm run check` lulus: lint tanpa error (18 peringatan lama), 62 pengujian aplikasi, build produksi, serta pemeriksaan secret pada 145 file client.
+
+### Penyempurnaan panel daftar HP — 23 Oktober 2026
+
+Panel judul, pencarian, filter, dan tindakan dipisahkan dari panel hasil pada halaman Tenant dan Mitra untuk layar hingga 640 px. Tabel menggunakan seluruh lebar panel hasil tanpa padding panel kontrol; jarak luar dan batas kolom tetap konsisten. Judul diringkas menjadi “Kelola Tenant” dan “Kelola Mitra”, dengan deskripsi sesuai fungsi halaman. Tombol tambah, filter status dua kolom, dan navigasi halaman dirapikan dengan target sentuh minimal 44 px. Filter status menyediakan `aria-pressed`. Tampilan layar lebih besar tetap memakai struktur visual sebelumnya.
+
+Validasi UI menggunakan data fiktif di Chrome pada lebar 320, 360, 390, 430, 640, 768, dan 1440 px. Pemeriksaan geometri memastikan panel kontrol dan hasil sejajar, terpisah minimal 12 px, serta tabel memenuhi lebar panel hasil tanpa padding bersarang. Pencarian, pagination, popup, pemulihan scroll, filter, mode gelap, dan error/coba lagi lulus. Pengujian memakai simulasi viewport, bukan perangkat fisik; tidak mengirim WhatsApp atau mengubah data produksi.
+
+`npm run check` lulus: 62 tes aplikasi, lint tanpa error (18 peringatan yang sudah ada), build produksi, dan pemeriksaan secret pada 145 file client. Tidak diperlukan migrasi database untuk penyempurnaan tampilan ini.
