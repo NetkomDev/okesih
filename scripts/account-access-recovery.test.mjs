@@ -50,7 +50,7 @@ for (const kind of ['MARKETING', 'TENANT']) {
     const resets = calls.filter(call => call.method === 'resetPassword');
     assert.equal(resets.length, 1);
     assert.equal(resets[0].id, 'auth-user');
-    assert.ok(resets[0].payload.password.length >= 24);
+    assert.ok(/^\d{6}$/.test(resets[0].payload.password));
     assert.equal(new URL(result.whatsappUrl).pathname, '/6281234567890');
     assert.ok(new URL(result.whatsappUrl).searchParams.get('text').includes(resets[0].payload.password));
     assert.equal(result.username, kind === 'MARKETING' ? 'marketing_123' : 'owner_123');
