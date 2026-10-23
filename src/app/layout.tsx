@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import PwaBackExitGuard from "@/components/PwaBackExitGuard";
 import SplashScreen from "@/components/SplashScreen";
 import PwaInstallCapture from "@/components/PwaInstallCapture";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
@@ -113,6 +114,7 @@ export default function RootLayout({
       <body>
         <ServiceWorkerRegister />
         <PwaInstallCapture />
+        <PwaBackExitGuard />
         <SplashScreen />
         {children}
       </body>

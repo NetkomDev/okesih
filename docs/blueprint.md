@@ -510,3 +510,17 @@ Contoh 100 struk, komisi DIRECT global Rp20, bonus global Rp5, dan bonus khusus 
 | C (upline B) | C: Rp2.000 | B: Rp700 | A |
 
 Hasil rilis: 68 tes aplikasi lulus, lint tanpa error (18 peringatan lama), build produksi dan pemeriksaan secret pada 145 file client lulus. Migrasi 33 lolos preflight ROLLBACK, kemudian COMMIT di produksi dan dicatat applied. Verifikasi read-only memastikan lima mitra tetap memakai default (override NULL), tarif global tetap Rp20/Rp5/Rp50, laporan paginasi memuat kolom override, dan role authenticated tidak memiliki izin UPDATE langsung ke tabel mitra. Tidak ada ledger historis diubah. Migrasi tertunda 25–30 tidak diterapkan bersama perubahan ini.
+
+## Peringatan keluar PWA Android — 23 Oktober 2026
+
+Pengaman bersama di root layout berlaku untuk PWA Android terpasang pada Super Admin, Owner, Mitra, dan Kasir. Halaman publik/login dan tab browser biasa tidak diintersep. Back dari halaman turunan tetap menavigasi ke halaman sebelumnya. Pada batas keluar, Back pertama menampilkan persis “Tekan kembali sekali lagi untuk menutup aplikasi”, tanpa tombol maupun timer. Ketuk area luar membatalkan; ketuk isi popup tidak menutup. Back berikutnya diserahkan kepada Android/browser untuk keluar atau minimize. Tidak ada pemanggilan logout maupun perubahan cookie/token akun.
+
+Browser yang menyediakan CloseWatcher dan Navigation API memakai watcher hanya ketika tidak ada entri sebelumnya di scope role yang sama. Watcher dikonsumsi saat popup muncul, sehingga Back kedua tidak ditahan. Perubahan rute, kembali dari background, dan BFCache memperbarui pengaman. Popup memakai portal, mengunci scroll/fokus, mendukung tema gelap, dan membuat konten belakang inert sementara. Escape dari keyboard membatalkan popup.
+
+Fallback mesin lama menggunakan satu pasangan entri History API, mempertahankan metadata router Next.js. Pembatalan memakai forward ke entri yang sama agar tidak menambah riwayat berulang. Fallback dibatasi oleh kebijakan browser terhadap riwayat sintetis sebelum interaksi pengguna; tidak dapat menjamin intersepsi native pada semua versi Android lama. Aplikasi tidak memakai window.close() atau beforeunload untuk memaksa penutupan.
+
+Validasi: tes controller untuk empat role, navigasi turunan, Back kedua, batal berulang, state router, remount, resume, cleanup, dan pengecualian rute publik. Chrome lokal menjalankan komponen popup asli pada viewport 390 dan 320 px, tema terang/gelap, CloseWatcher melalui sinyal Escape, ketuk dalam/luar, pemeriksaan tanpa tombol, navigasi mundur, dan marker sesi yang tetap tersimpan. Back kedua pada fixture dapat meninggalkan halaman. Pengujian ini bukan pengujian tombol sistem/minimize pada perangkat Android fisik; verifikasi perangkat tetap diperlukan untuk perilaku OS dan vendor browser.
+
+Referensi platform: [CloseWatcher](https://developer.mozilla.org/en-US/docs/Web/API/CloseWatcher) dan [intervensi riwayat Chromium](https://chromium.googlesource.com/chromium/src/+/refs/tags/135.0.7049.0/docs/history_manipulation_intervention.md).
+
+Pemeriksaan rilis: `npm run check` lulus (lint 0 error/18 warning lama, seluruh tes aplikasi lulus, build 77 halaman dan pemeriksaan secret 146 file client lulus); sembilan tes khusus pengaman juga dijalankan ulang setelah audit akhir. Build lokal mencatat fetch platform_settings gagal karena koneksi lingkungan, tetapi proses build selesai dengan exit 0. Tidak ada perubahan database.
