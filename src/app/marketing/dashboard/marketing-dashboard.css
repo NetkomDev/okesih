@@ -1810,3 +1810,51 @@ html, body {
 @media (max-width: 600px) {
   .kormit-fields, .kormit-members { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Home-only group shortcut, above the fixed navigation and device safe area. */
+.mkt-home-shell footer { margin-bottom: 72px; }
+
+.mkt-whatsapp-group-fab {
+  position: fixed;
+  right: max(18px, env(safe-area-inset-right));
+  bottom: calc(74px + max(6px, env(safe-area-inset-bottom)));
+  z-index: 79;
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  box-sizing: border-box;
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  border-radius: 50%;
+  background: linear-gradient(145deg, #25d366, #128c4a);
+  color: #fff;
+  text-decoration: none;
+  box-shadow: 0 6px 18px rgba(18, 140, 74, 0.3), 0 2px 5px rgba(0, 0, 0, 0.12);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.mkt-whatsapp-group-fab:visited { color: #fff; }
+.mkt-whatsapp-group-fab:focus-visible { outline: 3px solid #075e54; outline-offset: 4px; }
+.mkt-whatsapp-group-fab:active { transform: scale(0.96); }
+.mkt-whatsapp-group-badge {
+  position: absolute;
+  right: -3px;
+  bottom: -2px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #eafff1;
+  color: #075e54;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.12);
+}
+
+@media (hover: hover) {
+  .mkt-whatsapp-group-fab:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(18, 140, 74, 0.4); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mkt-whatsapp-group-fab { transition: none; }
+}
