@@ -3,6 +3,8 @@ import { randomUUID } from "node:crypto";
 import { OwnerApiError } from "@/lib/owner-api";
 import type { createAdminClient } from "@/lib/supabase/admin";
 
+export const MAX_MENU_IMAGE_BYTES = 200 * 1024;
+
 type Admin = ReturnType<typeof createAdminClient>;
 
 export async function readMenuRequest(request: Request) {
@@ -20,9 +22,13 @@ export async function readMenuRequest(request: Request) {
     throw new OwnerApiError("Foto menu harus berupa JPG, PNG, atau WebP maksimal 2 MB.", 400);
   }
   try {
-    const image = await sharp(Buffer.from(await file.arrayBuffer()), { limitInputPixels: 25_000_000 })
-      .rotate().resize(1200, 1200, { fit: "inside", withoutEnlargement: true }).webp({ quality: 82 }).toBuffer();
-    return { body, image };
+    const source = Buffer.from(await file.arrayBuffer());
+    for (const [size, quality] of [[800, 78], [800, 60], [640, 60], [480, 50]]) {
+      const image = await sharp(source, { limitInputPixels: 25_000_000 })
+        .rotate().resize(size, size, { fit: "inside", withoutEnlargement: true }).webp({ quality }).toBuffer();
+      if (image.length <= MAX_MENU_IMAGE_BYTES) return { body, image };
+    }
+    throw new Error("Image exceeds storage limit");
   } catch {
     throw new OwnerApiError("Foto menu tidak dapat dibaca. Pilih gambar lain.", 400);
   }

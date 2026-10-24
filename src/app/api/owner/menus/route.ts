@@ -63,8 +63,9 @@ export async function DELETE(request: Request) {
     const { admin, warkopId } = await requireOwner(request);
     const id = new URL(request.url).searchParams.get("id");
     if (!id) return Response.json({ error: "ID menu wajib diisi." }, { status: 400 });
-    const { error } = await admin.from("menus").delete().eq("id", id).eq("warkop_id", warkopId);
+    const { data: deleted, error } = await admin.from("menus").delete().eq("id", id).eq("warkop_id", warkopId).select("image_url");
     if (error) throw error;
+    for (const menu of deleted || []) await removeMenuImage(admin, warkopId, menu.image_url);
     await touchWarkopUpdatedAt(admin, warkopId);
     return Response.json({ success: true });
   } catch (error) { return ownerErrorResponse(error); }

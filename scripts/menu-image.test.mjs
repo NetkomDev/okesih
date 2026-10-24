@@ -1,11 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import sharp from 'sharp';
+import { randomBytes } from 'node:crypto';
 process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://menu-test.supabase.co';
 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key-with-sufficient-length';
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-key-with-sufficient-length';
-const { readMenuRequest } = await import('../src/lib/menu-image.ts');
-const { POST, PATCH } = await import('../src/app/api/owner/menus/route.ts');
+const { readMenuRequest, MAX_MENU_IMAGE_BYTES } = await import('../src/lib/menu-image.ts');
+const { POST, PATCH, DELETE } = await import('../src/app/api/owner/menus/route.ts');
 const photo = await sharp({ create: { width: 1500, height: 800, channels: 3, background: 'orange' } }).png().toBuffer();
 function request(menu, image, method = 'POST') {
   const body = new FormData();
@@ -19,7 +20,16 @@ test('valid photos are decoded, resized and converted to WebP', async () => {
   assert.equal(parsed.body.name, 'Kopi');
   const metadata = await sharp(parsed.image).metadata();
   assert.equal(metadata.format, 'webp');
-  assert.equal(metadata.width, 1200);
+  assert.equal(metadata.width, 800);
+  assert.ok(parsed.image.length <= MAX_MENU_IMAGE_BYTES);
+  assert.equal(metadata.exif, undefined);
+});
+test('detailed photos stay within the 200 KB storage budget', async () => {
+  const detailed = await sharp(randomBytes(1600 * 1200 * 3), { raw: { width: 1600, height: 1200, channels: 3 } }).jpeg({ quality: 85 }).toBuffer();
+  const { image } = await readMenuRequest(request({}, new File([detailed], 'photo.jpg', { type: 'image/jpeg' })));
+  assert.ok(image.length <= MAX_MENU_IMAGE_BYTES);
+  const metadata = await sharp(image).metadata();
+  assert.ok(metadata.width <= 800 && metadata.height <= 800);
 });
 test('corrupt, unsupported and oversized photos are rejected', async () => {
   for (const image of [new File(['bad'], 'bad.png', { type: 'image/png' }), new File(['<svg/>'], 'bad.svg', { type: 'image/svg+xml' }), new File([new Uint8Array(2097153)], 'big.png', { type: 'image/png' })]) {
@@ -44,6 +54,10 @@ test('create/edit saves tenant photo, preserves existing photo, isolates tenants
       if (method === 'GET') {
         assert.equal(url.searchParams.get('warkop_id'), 'eq.tenant');
         return deny ? Response.json({ message: 'not found' }, { status: 406 }) : Response.json({ image_url: 'https://menu-test.supabase.co/storage/v1/object/public/menu-images/tenant/abc.webp' });
+      }
+      if (method === 'DELETE') {
+        assert.equal(url.searchParams.get('warkop_id'), 'eq.tenant');
+        return Response.json([{ image_url: 'https://menu-test.supabase.co/storage/v1/object/public/menu-images/tenant/abc.webp' }]);
       }
       if (method === 'PATCH') assert.equal(url.searchParams.get('warkop_id'), 'eq.tenant');
       writes.push(JSON.parse(init.body));
@@ -71,5 +85,8 @@ test('create/edit saves tenant photo, preserves existing photo, isolates tenants
     deny = false; failSave = true;
     assert.notEqual((await POST(request(menu, file()))).status, 200);
     assert.equal(removals, 2);
+    const deletion = new Request('https://okesih.com/api/owner/menus?id=menu', { method: 'DELETE', headers: { origin: 'https://okesih.com', authorization: 'Bearer test-token' } });
+    assert.equal((await DELETE(deletion)).status, 200);
+    assert.equal(removals, 3);
   } finally { globalThis.fetch = original; }
 });

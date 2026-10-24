@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { ownerFetch } from "./helpers";
 import { useOwnerData } from "./provider";
 import MenuImageField from "./MenuImageField";
@@ -15,7 +15,31 @@ function money(value: number) {
   return `Rp ${Number(value || 0).toLocaleString("id-ID")}`;
 }
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
-  return <div className="owner-modal-backdrop"><div className="owner-modal owner-menu-modal"><header><h3>{title}</h3><button onClick={onClose}>×</button></header>{children}</div></div>;
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
+  useEffect(() => {
+    const dialog = dialogRef.current!;
+    const viewport = window.visualViewport;
+    const updateViewport = () => {
+      dialog.style.setProperty("--menu-viewport-height", `${viewport?.height ?? window.innerHeight}px`);
+      dialog.style.setProperty("--menu-viewport-top", `${viewport?.offsetTop ?? 0}px`);
+    };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    updateViewport();
+    dialog.showModal();
+    viewport?.addEventListener("resize", updateViewport);
+    viewport?.addEventListener("scroll", updateViewport);
+    window.addEventListener("resize", updateViewport);
+    return () => {
+      viewport?.removeEventListener("resize", updateViewport);
+      viewport?.removeEventListener("scroll", updateViewport);
+      window.removeEventListener("resize", updateViewport);
+      dialog.close();
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
+  return <dialog ref={dialogRef} className="owner-menu-dialog" aria-labelledby={titleId} onCancel={(event) => { event.preventDefault(); onClose(); }}><div className="owner-modal owner-menu-modal"><header><h3 id={titleId}>{title}</h3><button type="button" onClick={onClose} aria-label="Tutup popup">×</button></header>{children}</div></dialog>;
 }
 function EmptyState({ icon, title, text }: { icon: string; title: string; text: string }) {
   return <div className="owner-empty"><span>{icon}</span><div><b>{title}</b><p>{text}</p></div></div>;
