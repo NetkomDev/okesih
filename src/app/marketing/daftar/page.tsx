@@ -1,13 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import ThemeToggle from "@/components/ThemeToggle";
 import RegistrationStatus from "@/components/marketing/RegistrationStatus";
 import type { MarketingRegistration } from "@/lib/marketing-registration-types";
 import "./registration.css";
 
 export default function MarketingRegisterPage() {
+  const submitting = useRef(false);
+  const [referralRevision, setReferralRevision] = useState(0);
   const [referral, setReferral] = useState<{ name: string; code: string } | null>(null);
   const [referralError, setReferralError] = useState("");
   const [referralLoading, setReferralLoading] = useState(true);
@@ -50,7 +52,7 @@ export default function MarketingRegisterPage() {
       .catch(cause => { if (!controller.signal.aborted) setReferralError(cause instanceof Error ? cause.message : "Referral gagal diperiksa."); })
       .finally(() => { if (!controller.signal.aborted) setReferralLoading(false); });
     return () => controller.abort();
-  }, []);
+  }, [referralRevision]);
 
 
   useEffect(() => {
@@ -81,7 +83,9 @@ export default function MarketingRegisterPage() {
 
   const handleMarketingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting.current) return;
     if (referralLoading || referralError) { setMktError(referralError || "Tunggu pemeriksaan referral selesai."); return; }
+    submitting.current = true;
     setMktSubmitting(true);
     setMktError("");
 
@@ -113,6 +117,7 @@ export default function MarketingRegisterPage() {
     } catch (err: unknown) {
       setMktError(err instanceof Error ? err.message : "Terjadi kesalahan sistem saat mengirim pendaftaran.");
     } finally {
+      submitting.current = false;
       setMktSubmitting(false);
     }
   };
@@ -164,7 +169,7 @@ export default function MarketingRegisterPage() {
       </div>
 
       {referral && <p role="status" style={{ position: "relative", zIndex: 1, textAlign: "center" }}>Diundang Koordinator Mitra: <strong>{referral.name}</strong> ({referral.code})</p>}
-      {referralError && <p role="alert" className="mkt-alert error">{referralError} Hubungi koordinator untuk tautan yang benar.</p>}
+      {referralError && <p role="alert" className="mkt-alert error">{referralError} Hubungi koordinator untuk tautan yang benar. <button type="button" className="btn-secondary" onClick={() => { setReferralError(""); setReferralLoading(true); setReferralRevision(value => value + 1); }}>Periksa lagi</button></p>}
       {/* Header Bar */}
       <div
         style={{
@@ -530,12 +535,12 @@ export default function MarketingRegisterPage() {
               fontWeight: 600,
             }}
           >
-            💬 Setelah data tersimpan, aplikasi WhatsApp akan otomatis dibuka dengan pesan verifikasi untuk Admin. Tekan <strong>Kirim</strong> untuk menyelesaikan registrasi.
+            💬 Data pendaftaran disimpan sebelum WhatsApp dibuka. Tekan <strong>Kirim</strong> untuk memberi tahu Admin.
           </div>
 
           <button
             type="submit"
-            disabled={mktSubmitting}
+            disabled={mktSubmitting || referralLoading || Boolean(referralError)}
             className="btn-primary"
             style={{
               width: "100%",

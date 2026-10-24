@@ -109,3 +109,24 @@ test('Public referral lookup accepts a coordinator who has an upline',async()=>{
  const f=fixture({existing:{full_name:'B',referral_code:'MKT-B',status:'ACTIVE',user_id:'B-auth',membership_level:'COORDINATOR',upline_id:'A'}});
  const response=await f.route('marketing/referral').GET(new Request('https://www.okesih.com/api/marketing/referral?ref=MKT-B'));assert.equal(response.status,200);assert.equal((await response.json()).data.code,'MKT-B');
 });
+
+test('network report uses the session coordinator and shares the public registration link', async()=>{
+ const f=fixture(); const response=await f.route('marketing/network').GET();
+ assert.equal(response.status,200); const {data}=await response.json();
+ assert.equal(response.headers.get('cache-control'),'private, no-store');
+ assert.deepEqual(f.calls.find(c=>c.rpc==='report_marketing_network').args,{p_partner_id:'coordinator-id'});
+ const url=new URL(data.referralUrl);
+ assert.equal(url.origin,'https://www.okesih.com');assert.equal(url.pathname,'/marketing/daftar');assert.equal(url.searchParams.get('ref'),'MKT-MAK-123');
+});
+test('network read rejects inactive, ordinary partners and unauthenticated users',async()=>{
+ for(const config of [{role:null},{role:'OWNER'},{level:'MITRA'},{status:'INACTIVE'}]){
+  const f=fixture(config);assert.ok([401,403].includes((await f.route('marketing/network').GET()).status));assert.equal(f.calls.some(c=>c.rpc==='report_marketing_network'),false);
+ }
+});
+test('referral lookup rejects invalid, inactive and non-coordinator invitations',async()=>{
+ for(const candidate of [null,{status:'INACTIVE',user_id:'auth',membership_level:'COORDINATOR'},{status:'ACTIVE',user_id:null,membership_level:'COORDINATOR'},{status:'ACTIVE',user_id:'auth',membership_level:'MITRA'}]){
+  const f=fixture({existing:candidate});const response=await f.route('marketing/referral').GET(new Request('https://www.okesih.com/api/marketing/referral?ref=MKT-INVALID'));
+  assert.equal(response.status,404);
+ }
+ const f=fixture();assert.equal((await f.route('marketing/referral').GET(new Request('https://www.okesih.com/api/marketing/referral?ref=%3Cscript%3E'))).status,400);assert.equal(f.calls.length,0);
+});

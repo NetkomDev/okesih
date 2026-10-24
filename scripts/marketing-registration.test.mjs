@@ -126,3 +126,17 @@ test('referral registration under a coordinator with an upline stays pending und
   assert.equal(inserted.status, 'PENDING');
   assert.equal(inserted.membership_level, 'MITRA');
 });
+
+test('invalid or unavailable coordinator referral never silently registers an unlinked recruit', async context => {
+  const application = { fullName: row.full_name, phone: row.phone, cityArea: row.city_area, bankName: row.bank_name, bankAccountNumber: row.bank_account_number, bankAccountName: row.bank_account_name };
+  for (const candidate of [null, {id:'wrong',status:'INACTIVE',user_id:'auth',membership_level:'COORDINATOR'}, {id:'wrong',status:'ACTIVE',user_id:'auth',membership_level:'MITRA'}, {id:'wrong',status:'ACTIVE',user_id:null,membership_level:'COORDINATOR'}]) {
+    let inserts=0;
+    context.mock.method(globalThis,'fetch',async(input,options)=>{
+      if(options?.method==='POST'){inserts++;throw Error('Unexpected registration');}
+      if(String(input).includes('platform_settings'))return Response.json({default_marketing_commission:20});
+      return Response.json(candidate);
+    });
+    assert.equal((await POST(request(undefined,'POST',{...application,coordinatorReferralCode:'MKT-INVALID'}))).status,400);
+    assert.equal(inserts,0);context.mock.restoreAll();
+  }
+});

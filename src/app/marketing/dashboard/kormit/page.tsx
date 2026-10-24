@@ -25,7 +25,8 @@ export default function MarketingNetworkPage() {
     const sync = () => { if (document.visibilityState === "visible") void load(controller.signal); };
     const timer = window.setInterval(sync, 30000);
     window.addEventListener("focus", sync);
-    return () => { controller.abort(); clearTimeout(initial); clearInterval(timer); window.removeEventListener("focus", sync); };
+    document.addEventListener("visibilitychange", sync);
+    return () => { controller.abort(); clearTimeout(initial); clearInterval(timer); window.removeEventListener("focus", sync); document.removeEventListener("visibilitychange", sync); };
   }, [isAuthorized, dashboard?.profile.membershipLevel, load]);
   if (!isAuthorized || loading) return <MarketingLoading />;
   const shareText = [
@@ -77,14 +78,25 @@ export default function MarketingNetworkPage() {
           <button className="mkt-primary" onClick={async () => { try { await navigator.clipboard.writeText(data.referralUrl); setNotice("Link referral tersalin."); } catch { setNotice("Pilih teks link lalu salin secara manual."); } }}>Salin link referral</button>
           {notice && <p role="status">{notice}</p>}
           <p style={{ marginTop: "20px" }}><b>{data.members.length}</b> mitra · Bonus jaringan terkredit <b>Rp {data.totalCommission.toLocaleString("id-ID")}</b></p>
-          <div className="kormit-members">
-            {data.members.map(member => <article className="kormit-member" key={member.id}>
-              <div><h3>{member.name}</h3><p>{member.area}</p></div>
-              <span className={`kormit-status ${member.status.toLowerCase()}`}>{member.status === "ACTIVE" ? "Aktif" : member.status === "PENDING" ? "Menunggu persetujuan" : "Nonaktif"}</span>
-              <dl><div><dt>Tenant binaan</dt><dd>{member.tenants}</dd></div><div><dt>Bonus jaringan terkredit</dt><dd>Rp {member.networkCommission.toLocaleString("id-ID")}</dd></div></dl>
-            </article>)}
-          </div>
-          {!data.members.length && <p>Belum ada mitra di jaringan Anda. Bagikan link referral untuk mulai mengundang.</p>}
+          <section className="kormit-recruits" aria-labelledby="kormit-recruits-title">
+            <h2 id="kormit-recruits-title">Mitra binaan / rekrutan</h2>
+            <p>Daftar mitra yang Anda rekrut langsung. Tenant adalah jumlah usaha yang sudah terdaftar atas nama mitra, termasuk usaha nonaktif; pengajuan yang belum disetujui belum dihitung.</p>
+            <div className="kormit-table-wrap">
+              <table className="kormit-recruits-table">
+                <caption className="sr-only">Daftar mitra binaan langsung dan jumlah tenant</caption>
+                <colgroup><col style={{ width: "46%" }} /><col style={{ width: "32%" }} /><col style={{ width: "22%" }} /></colgroup>
+                <thead><tr><th scope="col">Nama Mitra</th><th scope="col">Wilayah</th><th scope="col">Tenant</th></tr></thead>
+                <tbody>
+                  {data.members.map(member => <tr key={member.id}>
+                    <th scope="row"><span className="kormit-recruit-name">{member.name}</span><span className={`kormit-status ${member.status.toLowerCase()}`}>{member.status === "ACTIVE" ? "Aktif" : member.status === "PENDING" ? "Menunggu persetujuan" : "Nonaktif"}</span></th>
+                    <td>{member.area || "—"}</td>
+                    <td><strong>{member.tenants.toLocaleString("id-ID")}</strong></td>
+                  </tr>)}
+                  {!data.members.length && <tr><td colSpan={3} className="kormit-table-empty">Belum ada mitra binaan. Daftarkan calon mitra atau bagikan link referral Anda.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          </section>
         </>}
       </>}
     </section>

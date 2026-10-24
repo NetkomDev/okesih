@@ -22,6 +22,11 @@ BEGIN
  IF (SELECT count(*) FROM public.marketing_commission_mutations WHERE billing_id IN(bill_b,bill_c,bill_d))<>6 THEN RAISE EXCEPTION 'Each bill must have two recipients'; END IF;
  report:=public.report_marketing_network(a);
  IF jsonb_array_length(report->'members')<>1 OR (report->'members'->0->>'id')<>b::text OR (report->>'totalCommission')::numeric<>500 THEN RAISE EXCEPTION 'Network report includes grandchildren'; END IF;
+ IF (report->'members'->0->>'tenants')::integer<>1 OR (report->'members'->0->>'area')<>'QA' THEN RAISE EXCEPTION 'Recruit tenant count or region wrong'; END IF;
+ UPDATE public.warkops SET is_active=false WHERE id=wb;
+ report:=public.report_marketing_network(a);
+ IF (report->'members'->0->>'tenants')::integer<>1 THEN RAISE EXCEPTION 'Registered inactive tenant should remain in count'; END IF;
+ UPDATE public.warkops SET is_active=true WHERE id=wb;
  BEGIN UPDATE public.marketing_partners SET upline_id=c WHERE id=a; RAISE EXCEPTION 'Cycle allowed' USING ERRCODE='XX000'; EXCEPTION WHEN check_violation THEN NULL; END;
  BEGIN UPDATE public.marketing_partners SET upline_id=a WHERE id=a; RAISE EXCEPTION 'Self cycle allowed' USING ERRCODE='XX000'; EXCEPTION WHEN check_violation THEN NULL; END;
  BEGIN UPDATE public.marketing_partners SET coordinator_commission_override=31 WHERE id=b; RAISE EXCEPTION 'Excessive rate allowed' USING ERRCODE='XX000'; EXCEPTION WHEN check_violation THEN NULL; END;

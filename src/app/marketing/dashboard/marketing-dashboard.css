@@ -1861,3 +1861,22 @@ html, body {
 @media (prefers-reduced-motion: reduce) {
   .mkt-whatsapp-group-fab { transition: none; }
 }
+
+.kormit-recruits { margin-top: 24px; }
+.kormit-recruits > p { color: #64748b; font-size: 13px; line-height: 1.6; }
+.kormit-table-wrap { margin-top: 16px; overflow: hidden; border: 1px solid #e2e8f0; border-radius: 14px; }
+.kormit-recruits-table { color: #0f172a; background: #fff; width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 14px; }
+.kormit-recruits-table th, .kormit-recruits-table td { padding: 14px 12px; text-align: left; vertical-align: top; overflow-wrap: anywhere; border-bottom: 1px solid #e2e8f0; }
+.kormit-recruits-table thead { background: #f1f5f9; color: #334155; }
+.kormit-recruits-table tbody th { font-weight: 600; }
+.kormit-recruits-table tr:last-child > * { border-bottom: 0; }
+.kormit-recruits-table th:last-child, .kormit-recruits-table td:last-child { text-align: right; }
+.kormit-recruit-name { display: block; margin-bottom: 8px; }
+.kormit-recruits-table .kormit-status { font-size: 11px; padding: 4px 6px; font-weight: 500; }
+.kormit-recruits-table .kormit-table-empty { padding: 24px 16px; text-align: center; color: #64748b; }
+@media (max-width: 400px) {
+  .kormit-recruits-table { font-size: 12px; }
+  .kormit-recruits-table th, .kormit-recruits-table td { padding: 12px 8px; }
+}
+
+.kormit-recruits-table caption { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
