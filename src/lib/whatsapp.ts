@@ -49,3 +49,8 @@ export function formatWhatsAppDate(value: string | Date) {
     year: "numeric",
   }).format(date);
 }
+
+// Keep credential characters intact; avoid WhatsApp code formatting and spaced digits.
+export function formatWhatsAppCredentials(username: string, password: string, passwordLabel = "Password") {
+  return `Username: ${username}\n${passwordLabel}: ${password}\nSalin username dan password persis seperti di atas, tanpa menambahkan spasi.`;
+}

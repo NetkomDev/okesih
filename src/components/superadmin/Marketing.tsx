@@ -837,7 +837,7 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
     <div><button type="button" className="btn-secondary" disabled={coordinatorSaving} onClick={() => setCoordinatorTarget(null)}>Batal</button><button type="submit" className="btn-primary" disabled={coordinatorSaving || !coordinatorRates}>{coordinatorSaving ? "Menyimpan…" : "Simpan"}</button></div>
   </form>
 </ModalFrame>}
-{selected && <DirectoryDetail title={selected.name} subtitle={selected.membershipLevel === "COORDINATOR" ? "Koordinator Mitra" : "Mitra Marketing"} onClose={() => setSelectedId(null)} fields={[
+{selected && <DirectoryDetail className="sa-partner-detail" title={selected.name} subtitle={selected.membershipLevel === "COORDINATOR" ? "Koordinator Mitra" : "Mitra Marketing"} onClose={() => setSelectedId(null)} fields={[
   ["Status", selected.status === "ACTIVE" ? "Aktif" : selected.status === "PENDING" ? "Menunggu persetujuan" : "Nonaktif"],
   ["WhatsApp", selected.phone], ["Email", selected.email], ["Wilayah", selected.area], ["Kode referral", selected.referralCode],
   ["Koordinator perekrut", selected.coordinatorName],

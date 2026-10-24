@@ -42,3 +42,16 @@ test('exhausted three-digit namespace stops without overwriting an account', asy
   assert.equal(result.data.user, null);
   assert.equal(result.error.code, 'email_exists');
 });
+
+test('WhatsApp credentials preserve exact characters without code formatting or added spaces', async () => {
+  const { formatWhatsAppCredentials, createWhatsAppUrl } = await import('../src/lib/whatsapp.ts');
+  for (const label of ['Password', 'Password sementara', 'Password baru']) {
+    const message = formatWhatsAppCredentials('owner_785', '510119', label);
+    const decoded = new URL(createWhatsAppUrl('081234567890', message)).searchParams.get('text');
+    assert.equal(decoded.split('\n')[0], 'Username: owner_785');
+    assert.equal(decoded.split('\n')[1], `${label}: 510119`);
+    assert.ok(!decoded.includes('`'));
+    assert.equal(decoded.match(/Username:\s*[*`]*([^\s*`]+)/)[1], 'owner_785');
+    assert.equal(decoded.match(/Password(?: sementara| baru)?:\s*[*`]*([^\s*`]+)/)[1], '510119');
+  }
+});

@@ -1,3 +1,4 @@
+import { formatWhatsAppCredentials } from "@/lib/whatsapp";
 import { createAccount } from "@/lib/create-account";
 import { randomDigits } from "@/lib/generated-credentials";
 import { NextResponse } from "next/server";
@@ -123,8 +124,7 @@ export async function PATCH(request: Request) {
       `Halo ${cleanWhatsAppMessageField(application.owner_name)}, pengajuan *${cleanWhatsAppMessageField(tenant.nama)}* telah diverifikasi dan diaktifkan oleh OKESIH. 🎉`,
       "",
       "*KREDENSIAL OWNER*",
-      `Username:\n\`${username}\``,
-      `Password sementara:\n\`${password}\``,
+      formatWhatsAppCredentials(username, password, "Password sementara"),
       `Login: ${APP_ORIGINS.PUBLIC}/login`,
       `Menu usaha: ${APP_ORIGINS.PUBLIC}/menu/${slug}`,
       "",

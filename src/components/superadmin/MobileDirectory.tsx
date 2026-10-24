@@ -52,11 +52,11 @@ export function MobileDirectory({ label, headers, rows, onSelect, numericLast = 
     </tbody>
   </table></div>;
 }
-export function DirectoryDetail({ title, subtitle, fields, actions, onClose }: {
-  title: string; subtitle: string; fields: [string, ReactNode][]; actions: ReactNode; onClose: () => void;
+export function DirectoryDetail({ title, subtitle, fields, actions, onClose, className = "" }: {
+  className?: string; title: string; subtitle: string; fields: [string, ReactNode][]; actions: ReactNode; onClose: () => void;
 }) {
   return <ModalFrame label={`Detail ${title}`} onClose={onClose}>
-    <section className="glass-panel sa-directory-detail">
+    <section className={`glass-panel sa-directory-detail ${className}`}>
       <header>
         <div>
           <p>{subtitle}</p>

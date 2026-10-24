@@ -1105,3 +1105,67 @@
 .sa-coordinator-settings > div:last-child { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
 .sa-coordinator-settings button { flex: 1 1 120px; min-height: 44px; }
 .sa-coordinator-settings [role="alert"] { color: #ef4444; }
+
+/* Partner details: fixed header and compact actions, with only the record scrolling. */
+.sa-modal-frame > .sa-partner-detail {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0 !important;
+}
+.sa-partner-detail > header {
+  position: static;
+  flex: 0 0 auto;
+  padding: 16px;
+  background: var(--bg-deep-black, #0f172a);
+}
+.sa-partner-detail > header > div { min-width: 0; }
+.sa-partner-detail > header h2 { font-size: 20px; line-height: 1.3; }
+.sa-partner-detail > header button { width: 44px; height: 44px; padding: 0; border-radius: 12px; }
+.sa-partner-detail > dl {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 16px;
+}
+.sa-partner-detail > dl > div { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); align-items: start; gap: 12px; padding: 12px 0; }
+.sa-partner-detail dt { margin: 0; font-size: 12px; line-height: 1.5; }
+.sa-partner-detail dd { font-size: 14px; font-weight: 600; }
+.sa-partner-detail > footer {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--sa-border);
+  background: var(--bg-deep-black, #0f172a);
+}
+[data-theme="light"] .sa-partner-detail > footer { background: #f8fafc; }
+.sa-partner-detail > footer > div { display: contents !important; }
+.sa-partner-detail > footer button {
+  width: 100%; min-width: 0; margin: 0 !important; padding: 10px 8px !important;
+  border-radius: 10px; font-size: 12px !important; line-height: 1.35; box-shadow: none;
+}
+.sa-partner-detail > footer > button { grid-column: 1 / -1; }
+.sa-modal-frame > .sa-account-access { padding: 0 !important; display: flex; flex-direction: column; overflow: hidden; }
+.sa-account-access-header { display: flex; flex: 0 0 auto; align-items: flex-start; gap: 12px; justify-content: space-between; padding: 18px 16px; border-bottom: 1px solid var(--sa-border); }
+.sa-account-access-header > div { min-width: 0; }
+.sa-account-access-header h2 { margin: 0; font-size: 20px; line-height: 1.3; }
+.sa-account-access-header p { margin: 8px 0 0; color: var(--text-muted); font-size: 14px; overflow-wrap: anywhere; }
+.sa-account-access-close { flex: 0 0 44px; width: 44px; height: 44px; padding: 0; font-size: 24px; border-radius: 12px; }
+.sa-account-access-body { padding: 16px; min-height: 0; overflow-y: auto; overscroll-behavior: contain; font-size: 14px; line-height: 1.5; }
+.sa-account-access-body form { display: grid; gap: 16px; }
+.sa-account-access-body label { font-size: 14px; font-weight: 600; line-height: 1.5; }
+.sa-account-access-body input[type="tel"] { display: block; width: 100%; padding: 12px; margin-top: 8px; border: 1px solid var(--sa-border); border-radius: 10px; background: var(--bg-deep-black); color: var(--text-pure-white); }
+.sa-account-access-body .sa-access-check { display: grid; grid-template-columns: 20px minmax(0, 1fr); align-items: start; gap: 12px; padding: 12px; border: 1px solid var(--sa-border); border-radius: 12px; font-weight: 500; }
+.sa-access-check input[type="checkbox"] { width: 20px; height: 20px; margin: 2px 0 0; accent-color: #f4512c; }
+.sa-account-access-body button[type="submit"] { width: 100%; padding: 12px; border-radius: 12px; font-size: 14px; }
+@media (max-height: 480px) {
+  .sa-modal-frame > .sa-partner-detail { overflow-y: auto; display: block; }
+  .sa-partner-detail > dl { overflow: visible; }
+}
+.sa-account-access-body section[aria-label="Akses akun baru"] { display: grid; gap: 12px; margin: 0 !important; padding: 12px !important; }
+.sa-account-access-body section[aria-label="Akses akun baru"] > div { display: grid !important; grid-template-columns: minmax(0, 1fr); gap: 12px !important; }
+.sa-account-access-body section[aria-label="Akses akun baru"] p { margin: 0; }
+.sa-account-access-body section[aria-label="Akses akun baru"] button,
+.sa-account-access-body section[aria-label="Akses akun baru"] a { width: 100%; margin-top: 8px; }

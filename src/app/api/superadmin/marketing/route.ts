@@ -1,3 +1,4 @@
+import { formatWhatsAppCredentials } from "@/lib/whatsapp";
 import { z } from "zod";
 import { paginationSchema } from "@/lib/reporting";
 import { createAccount } from "@/lib/create-account";
@@ -130,8 +131,7 @@ export async function POST(request: Request) {
     const message = [
       `Halo ${cleanWhatsAppMessageField(data.full_name)}, akun Marketing OKESIH Anda sudah aktif. 🎉`, "",
       `Kode referral: *${data.referral_code}*`,
-      `Username:\n\`${username}\``,
-      `Password:\n\`${String(body.password)}\``,
+      formatWhatsAppCredentials(username, String(body.password), "Password"),
       `Login: ${APP_ORIGINS.PUBLIC}/login`, "",
       "Setelah login, buka Dashboard Marketing lalu tekan Install Aplikasi agar OKESIH tersimpan di layar utama HP.",
       "Mohon segera ganti dan simpan kredensial dengan aman.", "", "Salam,", "Tim OKESIH",
@@ -319,8 +319,7 @@ export async function PATCH(request: Request) {
         `Halo ${cleanWhatsAppMessageField(data.full_name)}, pendaftaran Marketing OKESIH Anda telah disetujui. 🎉`,
         "",
         `Kode referral: *${cleanWhatsAppMessageField(data.referral_code)}*`,
-        `Username:\n\`${username}\``,
-        `Password sementara:\n\`${password}\``,
+        formatWhatsAppCredentials(username, password, "Password sementara"),
         `Login: ${APP_ORIGINS.PUBLIC}/login`,
         "",
         "Silakan login, ganti password sementara di dashboard, lalu pasang aplikasi Marketing OKESIH.",

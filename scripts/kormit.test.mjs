@@ -64,7 +64,7 @@ test('withdrawal RPC refusal never falls back to direct insertion',async()=>{
 test('Super Admin approval sends six-digit temporary credentials to the new recruit, never the coordinator',async()=>{
  const f=fixture({role:'SUPERADMIN',existing:{id,full_name:'Mitra Baru',phone:'6281234567890',status:'PENDING',user_id:null,referral_code:'MKT-MAK-456',membership_level:'MITRA',upline_id:'coordinator-id'}});
  const response=await f.route('superadmin/marketing').PATCH(request({id,status:'ACTIVE'}));assert.equal(response.status,200);
- const body=await response.json();const wa=new URL(body.whatsappUrl);assert.equal(wa.pathname,'/6281234567890');assert.match(wa.searchParams.get('text'),/marketing_\d{3}/);assert.match(wa.searchParams.get('text'),/Password sementara:\n`\d{6}`/);
+ const body=await response.json();const wa=new URL(body.whatsappUrl);assert.equal(wa.pathname,'/6281234567890');assert.match(wa.searchParams.get('text'),/marketing_\d{3}/);assert.match(wa.searchParams.get('text'),/^Password sementara: \d{6}$/m);
  assert.equal(body.data.upline_id,'coordinator-id');
 });
 

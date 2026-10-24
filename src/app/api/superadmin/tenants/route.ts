@@ -1,3 +1,4 @@
+import { formatWhatsAppCredentials } from "@/lib/whatsapp";
 import { createAccount } from "@/lib/create-account";
 import { z } from "zod";
 import { paginationSchema } from "@/lib/reporting";
@@ -194,8 +195,7 @@ export async function POST(request: Request) {
       `Aplikasi Kasir *${cleanWhatsAppMessageField(newWarkop.nama)}* Anda telah aktif dan siap digunakan.`,
       "",
       "Berikut kredensial login Owner:",
-      `Username:\n\`${finalOwnerUsername}\``,
-      `Password:\n\`${String(password)}\``,
+      formatWhatsAppCredentials(finalOwnerUsername, String(password), "Password"),
       `Login: ${APP_ORIGINS.PUBLIC}/login`,
       `Menu usaha: ${APP_ORIGINS.PUBLIC}/menu/${newWarkop.slug}`,
       "",
