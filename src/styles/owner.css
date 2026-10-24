@@ -2375,3 +2375,9 @@ img.owner-onboarding-logo {
 }
 
 
+
+.owner-menu-image-preview { display: block; width: 100%; max-height: 180px; object-fit: contain; border-radius: 12px; margin-top: 10px; }
+.owner-menu-image-field input[type="file"] { max-width: 100%; min-width: 0; }
+.owner-menu-image-field p[role="alert"] { color: #b91c1c; font-size: 13px; }
+
+.owner-menu-modal { max-height: calc(100dvh - 32px); overflow-y: auto; }

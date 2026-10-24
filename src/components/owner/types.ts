@@ -1,4 +1,4 @@
-export type MenuItem = { id: string; name: string; price: number; category: string; description: string; isAvailable: boolean };
+export type MenuItem = { id: string; name: string; price: number; category: string; description: string; imageUrl: string | null; isAvailable: boolean };
 export type Staff = { id: string; username: string; name: string; role: "KASIR" | "DAPUR"; status: "ACTIVE" | "INACTIVE"; onShift: boolean };
 export type Waiter = { id: string; name: string; phone: string | null; is_active: boolean };
 export type BusinessTable = { id: string; label: string; sort_order: number; is_active: boolean };
