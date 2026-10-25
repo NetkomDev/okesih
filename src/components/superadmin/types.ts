@@ -99,7 +99,9 @@ export interface ConfirmModalData {
   message: string;
   confirmText?: string;
   confirmVariant?: "danger" | "primary" | "success";
-  onConfirm: () => void;
+  targetName?: string;
+  requireVerification?: boolean;
+  onConfirm: () => void | Promise<void>;
 }
 export interface NewTenantCredentials {
   name: string;

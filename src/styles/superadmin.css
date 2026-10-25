@@ -1183,3 +1183,24 @@
 .sa-tenant-status.is-active { background: #dcfce7; color: #166534; }
 .sa-tenant-status.is-inactive { background: #fee2e2; color: #991b1b; }
 .sa-tenant-status.is-pending { background: #fef3c7; color: #92400e; }
+
+.sa-modal-frame > .sa-confirm-action { width: 100%; max-width: 460px; padding: 24px; background: var(--sa-panel); border: 1px solid var(--sa-border); border-radius: 20px; }
+.sa-confirm-action header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 18px; }
+.sa-confirm-icon { flex: 0 0 48px; width: 48px; height: 48px; display: grid; place-items: center; border-radius: 14px; color: #b45309; background: #fef3c7; }
+.sa-confirm-action header > div { min-width: 0; }
+.sa-confirm-action header p { margin: 0 0 5px; color: var(--text-muted); font-size: 12px; }
+.sa-confirm-action h2 { margin: 0; font-size: 20px; line-height: 1.3; overflow-wrap: anywhere; }
+.sa-confirm-target { display: grid; gap: 6px; padding: 14px; border: 1px solid var(--sa-border); border-radius: 12px; background: rgba(148,163,184,.08); overflow-wrap: anywhere; }
+.sa-confirm-target small { color: var(--text-muted); font-size: 12px; }
+.sa-confirm-target strong { font-size: 16px; line-height: 1.4; }
+.sa-confirm-description { margin: 16px 0; color: var(--text-muted); font-size: 14px; line-height: 1.65; overflow-wrap: anywhere; }
+.sa-confirm-action .sa-confirm-verification { display: grid; grid-template-columns: 20px minmax(0,1fr); gap: 12px; align-items: start; padding: 14px; border: 1px solid var(--sa-border); border-radius: 12px; font-size: 14px; line-height: 1.5; font-weight: 500; cursor: pointer; }
+.sa-confirm-verification input { width: 20px; height: 20px; margin: 2px 0 0; accent-color: #dc2626; }
+.sa-confirm-action footer { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1.5fr); gap: 10px; margin-top: 20px; }
+.sa-confirm-action footer button { min-width: 0; padding: 12px; border-radius: 12px; min-height: 48px; font-size: 14px; line-height: 1.4; }
+.sa-confirm-action.is-danger .sa-confirm-submit { background: #dc2626; color: #fff; box-shadow: none; }
+.sa-confirm-action button:disabled { opacity: .45; cursor: not-allowed; }
+.sa-confirm-error { padding: 12px; border-radius: 10px; background: #fee2e2; color: #991b1b; font-size: 14px; line-height: 1.5; }
+@media (max-width: 360px) { .sa-confirm-action footer { grid-template-columns: minmax(0,1fr); } }
+.sa-confirm-action > header, .sa-confirm-action > footer { background: transparent !important; border: 0 !important; }
+.superadmin-shell .sa-confirm-action button.sa-confirm-submit[type="button"] { color: #fff !important; }

@@ -1,5 +1,6 @@
 "use client";
-import ModalFrame from "./ModalFrame";
+import ConfirmActionModal from "./ConfirmActionModal";
+import type { ConfirmModalData } from "./types";
 import MobileNav from "./MobileNav";
 import PwaInstallButton from "@/components/PwaInstallButton";
 import PwaRoleInstallModal from "@/components/PwaRoleInstallModal";
@@ -19,14 +20,6 @@ interface ToastNotification {
   title: string;
   message: string;
   type: "success" | "error" | "info";
-}
-interface ConfirmModalData {
-  isOpen: boolean;
-  title: string;
-  message: string;
-  confirmText?: string;
-  confirmVariant?: "danger" | "primary" | "success";
-  onConfirm: () => void;
 }
 type AnalyticsPeriod = "today" | "week" | "month" | "year";
 interface AnalyticsData {
@@ -683,68 +676,6 @@ return (<SuperadminContext.Provider value={{ isDark, showToast, setConfirmModal,
       
 
       {/* MODAL 4: KONFIRMASI MODERN (PENGGANTI WINDOW.CONFIRM) */}
-      {confirmModal.isOpen && (
-        <ModalFrame label="Konfirmasi tindakan" onClose={() => setConfirmModal(c => ({ ...c, isOpen: false }))}>
-          <div
-            className="glass-panel"
-            style={{
-              maxWidth: "460px",
-              width: "100%",
-              padding: "1.75rem",
-              background: isDark ? "#090E17" : "#FFFFFF",
-              border: isDark ? "1px solid rgba(255, 255, 255, 0.15)" : "1px solid rgba(0, 0, 0, 0.12)",
-              borderRadius: "16px",
-              boxShadow: "0 20px 50px rgba(0, 0, 0, 0.35)",
-            }}
-          >
-            <h3
-              style={{
-                fontSize: "1.2rem",
-                fontWeight: 900,
-                color: isDark ? "#FFF" : "#0F172A",
-                marginBottom: "0.5rem",
-              }}
-            >
-              {confirmModal.title}
-            </h3>
-            <p
-              style={{
-                fontSize: "0.875rem",
-                color: isDark ? "#94A3B8" : "#64748B",
-                lineHeight: 1.5,
-                marginBottom: "1.5rem",
-              }}
-            >
-              {confirmModal.message}
-            </p>
-            <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end" }}>
-              <button
-                type="button"
-                onClick={() => setConfirmModal((c) => ({ ...c, isOpen: false }))}
-                className="btn-secondary"
-                style={{ padding: "0.55rem 1rem", fontSize: "0.85rem", fontWeight: 700 }}
-              >
-                Batal
-              </button>
-              <button
-                type="button"
-                onClick={confirmModal.onConfirm}
-                className="btn-primary"
-                style={{
-                  padding: "0.55rem 1.15rem",
-                  fontSize: "0.85rem",
-                  fontWeight: 800,
-                  background:
-                    confirmModal.confirmVariant === "danger"
-                      ? "linear-gradient(135deg, #EF4444, #DC2626)"
-                      : "linear-gradient(135deg, #10B981, #059669)",
-                }}
-              >
-                {confirmModal.confirmText || "Konfirmasi"}
-              </button>
-            </div>
-          </div>
-        </ModalFrame>
-      )}
+      {confirmModal.isOpen && <ConfirmActionModal data={confirmModal} onClose={() => setConfirmModal(c => ({ ...c, isOpen: false }))} />}
     </div></SuperadminContext.Provider>);
 }

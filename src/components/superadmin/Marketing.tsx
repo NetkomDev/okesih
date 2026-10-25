@@ -133,6 +133,19 @@ const confirmMarketingActivation = (id: string) => {
         await handleUpdateMarketingStatus(id, "ACTIVE");
       } });
   };
+const confirmMarketingSuspension = (partner: MarketingAgent) => {
+    const pending = partner.status === "PENDING";
+    setConfirmModal({
+      isOpen: true,
+      title: pending ? "Tolak pendaftaran mitra?" : "Suspend akses mitra?",
+      targetName: `${partner.name} (${partner.referralCode})`,
+      message: pending ? "Pendaftaran akan ditolak dan akun mitra tidak diaktifkan. Pastikan calon mitra yang dipilih sudah benar." : "Mitra akan dinonaktifkan dan tidak dapat menggunakan fitur operasional PWA Mitra. Data mitra tetap tersimpan. Pastikan mitra yang dipilih sudah benar.",
+      confirmText: pending ? "Ya, tolak pendaftaran" : "Ya, suspend mitra",
+      confirmVariant: "danger",
+      requireVerification: true,
+      onConfirm: () => handleUpdateMarketingStatus(partner.id, "INACTIVE"),
+    });
+  };
 const handleUpdateMarketingStatus = async (id: string, newStatus: "ACTIVE" | "INACTIVE") => {
     try {
       const res = await fetch("/api/superadmin/marketing", {
@@ -155,6 +168,7 @@ const handleUpdateMarketingStatus = async (id: string, newStatus: "ACTIVE" | "IN
       }
     } catch (error) {
       showToast("Gagal Memperbarui", error instanceof Error ? error.message : "Terjadi kesalahan jaringan ke server.", "error");
+      throw error;
     }
   };
 
@@ -214,13 +228,16 @@ const handleUpdateMarketingStatus = async (id: string, newStatus: "ACTIVE" | "IN
       }
     } catch (error) {
       showToast("Gagal Memperbarui", error instanceof Error ? error.message : "Terjadi kesalahan jaringan ke server.", "error");
+      throw error;
     }
   };
 
   const handleDeleteMarketing = (agent: MarketingAgent) => {
     setConfirmModal({
       isOpen: true,
-      title: "Hapus Akun & Data Mitra Marketing",
+      title: "Hapus mitra permanen?",
+      targetName: `${agent.name} (${agent.referralCode})`,
+      requireVerification: true,
       message: `Mitra "${agent.name}" (${agent.referralCode}) akan dihapus permanen beserta akun login, data rekening, dan riwayat mutasi komisinya.${
         agent.totalTenantsAcquired > 0
           ? ` Sebanyak ${agent.totalTenantsAcquired} tenant binaannya tetap aman dan beroperasi normal sebagai tenant langsung tanpa pemotongan komisi marketing.`
@@ -229,7 +246,6 @@ const handleUpdateMarketingStatus = async (id: string, newStatus: "ACTIVE" | "IN
       confirmText: "Ya, Hapus Permanen",
       confirmVariant: "danger",
       onConfirm: async () => {
-        setConfirmModal((c) => ({ ...c, isOpen: false }));
         showToast("Menghapus Marketing", `Sedang menghapus mitra ${agent.name}...`, "info");
         try {
           const res = await fetch(`/api/superadmin/marketing?id=${encodeURIComponent(agent.id)}`, {
@@ -252,6 +268,7 @@ const handleUpdateMarketingStatus = async (id: string, newStatus: "ACTIVE" | "IN
             err instanceof Error ? err.message : "Terjadi kesalahan saat menghapus mitra marketing.",
             "error"
           );
+          throw err;
         }
       },
     });
@@ -378,7 +395,7 @@ const renderMarketingActions = (m: MarketingAgent) => <>
                                     ✓ Setujui
                                   </button>
                                   <button
-                                    onClick={() => handleUpdateMarketingStatus(m.id, "INACTIVE")}
+                                    onClick={() => confirmMarketingSuspension(m)}
                                     className="btn-secondary"
                                     style={{
                                       padding: "0.35rem 0.65rem",
@@ -426,7 +443,7 @@ const renderMarketingActions = (m: MarketingAgent) => <>
                                         </button>
                                       )}
                                       <button
-                                        onClick={() => handleUpdateMarketingStatus(m.id, "INACTIVE")}
+                                        onClick={() => confirmMarketingSuspension(m)}
                                         className="btn-secondary"
                                         style={{ padding: "0.4rem 0.55rem", fontSize: "0.75rem", color: isDark ? "#94A3B8" : "#64748B" }}
                                         title="Nonaktifkan Kemitraan"

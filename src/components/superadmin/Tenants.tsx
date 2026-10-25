@@ -376,6 +376,8 @@ const toggleTenantStatus = (id: string) => {
 
     setConfirmModal({
       isOpen: true,
+      targetName: target.name,
+      requireVerification: !isNowActive,
       title: isNowActive ? "Aktifkan Tenant Warkop" : "Suspend Akses Tenant Warkop",
       message: isNowActive
         ? `Aktifkan kembali akses operasional untuk "${target.name}"?`
@@ -383,24 +385,20 @@ const toggleTenantStatus = (id: string) => {
       confirmText: isNowActive ? "Ya, Aktifkan" : "Ya, Suspend",
       confirmVariant: isNowActive ? "success" : "danger",
       onConfirm: async () => {
-        setTenants((prev) =>
-          prev.map((t) => (t.id === id ? { ...t, status: nextStatus } : t))
-        );
-        setConfirmModal((c) => ({ ...c, isOpen: false }));
-        showToast(
-          isNowActive ? "Tenant Diaktifkan" : "Tenant Ditangguhkan",
-          `Status ${target.name} sekarang: ${nextStatus}`,
-          isNowActive ? "success" : "info"
-        );
-
         try {
-          await fetch("/api/superadmin/tenants", {
+          const response = await fetch("/api/superadmin/tenants", {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ id, is_active: isNowActive }),
           });
-        } catch (e) {
-          console.error("Gagal update status warkop ke DB:", e);
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(payload.error || "Status tenant belum dapat diperbarui.");
+          setTenants(prev => prev.map(t => t.id === id ? { ...t, status: nextStatus } : t));
+          refreshSummary();
+          showToast(isNowActive ? "Tenant Diaktifkan" : "Tenant Ditangguhkan", `Status ${target.name} sekarang: ${nextStatus}`, isNowActive ? "success" : "info");
+        } catch (error) {
+          showToast("Gagal Memperbarui Tenant", error instanceof Error ? error.message : "Terjadi kesalahan jaringan.", "error");
+          throw error;
         }
       },
     });
@@ -409,12 +407,13 @@ const toggleTenantStatus = (id: string) => {
   const handleDeleteTenant = (tenant: TenantWarkop) => {
     setConfirmModal({
       isOpen: true,
-      title: "Arsipkan Tenant dan Hapus Histori Keuangan",
+      title: "Hapus histori tenant?",
+      targetName: tenant.name,
+      requireVerification: true,
       message: `Tenant "${tenant.name}" akan dinonaktifkan dan akses perangkat dicabut. Transaksi, billing, serta komisi terkait tenant dihapus permanen. Akun, katalog, dan pencairan mitra tetap disimpan. Lanjutkan?`,
       confirmText: "Arsipkan dan Hapus Histori",
       confirmVariant: "danger",
       onConfirm: async () => {
-        setConfirmModal((c) => ({ ...c, isOpen: false }));
         showToast("Menghapus Tenant", `Sedang menghapus tenant ${tenant.name}...`, "info");
         try {
           const res = await fetch(`/api/superadmin/tenants?id=${encodeURIComponent(tenant.id)}`, {
@@ -442,6 +441,7 @@ const toggleTenantStatus = (id: string) => {
             err instanceof Error ? err.message : "Terjadi kesalahan saat menghapus tenant.",
             "error"
           );
+          throw err;
         }
       },
     });
