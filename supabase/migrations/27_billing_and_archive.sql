@@ -1,17 +1,17 @@
 BEGIN;
-ALTER TABLE public.saas_billings ADD COLUMN proof_uploaded_at timestamptz,
- ADD COLUMN proof_sha256 text, ADD COLUMN settlement_reference text, ADD COLUMN settled_by uuid REFERENCES auth.users(id);
-CREATE UNIQUE INDEX billing_proof_unique ON public.saas_billings(proof_sha256) WHERE proof_sha256 IS NOT NULL;
-CREATE UNIQUE INDEX billing_settlement_unique ON public.saas_billings(settlement_reference) WHERE settlement_reference IS NOT NULL;
+ALTER TABLE public.saas_billings ADD COLUMN IF NOT EXISTS proof_uploaded_at timestamptz,
+ ADD COLUMN IF NOT EXISTS proof_sha256 text, ADD COLUMN IF NOT EXISTS settlement_reference text, ADD COLUMN IF NOT EXISTS settled_by uuid REFERENCES auth.users(id);
+CREATE UNIQUE INDEX IF NOT EXISTS billing_proof_unique ON public.saas_billings(proof_sha256) WHERE proof_sha256 IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS billing_settlement_unique ON public.saas_billings(settlement_reference) WHERE settlement_reference IS NOT NULL;
 -- Existing proofs have no reliable upload timestamp; retain them for a full window.
-UPDATE public.saas_billings SET proof_uploaded_at=now() WHERE bukti_transfer_url IS NOT NULL;
-ALTER TABLE public.warkops ADD COLUMN archived_at timestamptz;
-CREATE TABLE public.storage_cleanup_jobs(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),bucket text NOT NULL,path text NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),UNIQUE(bucket,path));
+UPDATE public.saas_billings SET proof_uploaded_at=now() WHERE bukti_transfer_url IS NOT NULL AND proof_uploaded_at IS NULL;
+ALTER TABLE public.warkops ADD COLUMN IF NOT EXISTS archived_at timestamptz;
+CREATE TABLE IF NOT EXISTS public.storage_cleanup_jobs(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),bucket text NOT NULL,path text NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),UNIQUE(bucket,path));
 ALTER TABLE public.storage_cleanup_jobs ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.storage_cleanup_jobs FROM anon,authenticated;
 GRANT ALL ON public.storage_cleanup_jobs TO service_role;
 
-CREATE FUNCTION public.submit_billing_proof(p_billing_id uuid,p_warkop_id uuid,p_actor uuid,p_path text,p_hash text,p_ocr text)
+CREATE OR REPLACE FUNCTION public.submit_billing_proof(p_billing_id uuid,p_warkop_id uuid,p_actor uuid,p_path text,p_hash text,p_ocr text)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
 DECLARE b public.saas_billings%ROWTYPE;
 BEGIN
@@ -25,7 +25,7 @@ BEGIN
  INSERT INTO public.audit_logs(warkop_id,actor_user_id,action,target_type,target_id) VALUES(p_warkop_id,p_actor,'OWNER_UPLOADED_SAAS_PROOF','saas_billing',b.id);
  RETURN jsonb_build_object('id',b.id,'status_bayar','PENDING_REVIEW','total_tagihan',b.total_tagihan,'tanggal',b.tanggal);
 END $$;
-CREATE FUNCTION public.review_billing(p_billing_id uuid,p_actor uuid,p_action text,p_reference text,p_notes text)
+CREATE OR REPLACE FUNCTION public.review_billing(p_billing_id uuid,p_actor uuid,p_action text,p_reference text,p_notes text)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
 DECLARE b public.saas_billings%ROWTYPE;
 BEGIN
@@ -50,7 +50,7 @@ END $$;
 REVOKE ALL ON FUNCTION public.submit_billing_proof(uuid,uuid,uuid,text,text,text),public.review_billing(uuid,uuid,text,text,text) FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION public.submit_billing_proof(uuid,uuid,uuid,text,text,text),public.review_billing(uuid,uuid,text,text,text) TO service_role;
 
-CREATE FUNCTION public.report_daily_billing(p_warkop_id uuid,p_date date)
+CREATE OR REPLACE FUNCTION public.report_daily_billing(p_warkop_id uuid,p_date date)
 RETURNS jsonb LANGUAGE sql STABLE SECURITY INVOKER SET search_path=public,pg_temp AS $$
  SELECT CASE WHEN count(*)=0 THEN NULL ELSE jsonb_build_object('tagihan_pokok',sum(tagihan_pokok),'kode_unik',sum(kode_unik),'total_tagihan',sum(total_tagihan),
  'status_bayar',CASE WHEN bool_and(status_bayar='PAID') THEN 'PAID' WHEN bool_or(status_bayar='PENDING_REVIEW') THEN 'PENDING_REVIEW' ELSE 'UNPAID' END) END
@@ -91,7 +91,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END $$;
-CREATE FUNCTION public.archive_tenant_and_purge_finance(p_warkop_id uuid,p_actor uuid)
+CREATE OR REPLACE FUNCTION public.archive_tenant_and_purge_finance(p_warkop_id uuid,p_actor uuid)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
 DECLARE w public.warkops%ROWTYPE;
 BEGIN
