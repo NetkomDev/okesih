@@ -187,23 +187,77 @@ const handleUpdateMarketingStatus = async (id: string, newStatus: "ACTIVE" | "IN
       setCoordinatorRates({ global: Number(payload.data.coordinatorCommissionPerReceipt), max: Number(payload.data.saasFeePerReceipt) - Number(payload.data.defaultMarketingCommission) });
     } catch (error) { setCoordinatorError(error instanceof Error ? error.message : "Parameter gagal dimuat."); }
   };
-  const saveCoordinatorSettings = async (event: React.FormEvent) => {
+  const confirmRevokeCoordinator = (agent: MarketingAgent) => {
+    setConfirmModal({
+      isOpen: true,
+      title: "Cabut status koordinator?",
+      targetName: `${agent.name} (${agent.referralCode})`,
+      message: `Status koordinator untuk "${agent.name}" akan dicabut dan dikembalikan menjadi Mitra biasa. Hak merekrut calon mitra dan perolehan bonus jaringan KorMit akan dinonaktifkan. Seluruh data mitra dan tenant binaan tetap aman.`,
+      confirmText: "Ya, Cabut Koordinator",
+      confirmVariant: "danger",
+      requireVerification: true,
+      onConfirm: () => handleToggleCoordinator(agent),
+    });
+  };
+  const saveCoordinatorSettings = (event: React.FormEvent) => {
     event.preventDefault();
     if (!coordinatorTarget || !coordinatorRates || coordinatorSaving) return;
     const bonus = coordinatorBonus.trim() === "" ? null : Number(coordinatorBonus);
     if (bonus !== null && (!/^\d+$/.test(coordinatorBonus) || !Number.isSafeInteger(bonus) || bonus > coordinatorRates.max)) {
       setCoordinatorError(`Bonus harus angka bulat antara Rp0–Rp${coordinatorRates.max.toLocaleString("id-ID")}, atau kosong untuk mengikuti global.`); return;
     }
-    setCoordinatorSaving(true); setCoordinatorError("");
-    try {
-      const response = await fetch("/api/superadmin/marketing", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: coordinatorTarget.id, membershipLevel: "COORDINATOR", coordinatorCommissionOverride: bonus }) });
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error || "Pengaturan koordinator gagal disimpan.");
-      setDirectoryRevision(value => value + 1); setCoordinatorTarget(null);
-      showToast("Pengaturan KorMit Disimpan", "Bonus dan status koordinator tersimpan. Pesan WhatsApp siap dikirim ke mitra.", "success");
-      if (payload.whatsappUrl) window.location.assign(payload.whatsappUrl);
-    } catch (error) { setCoordinatorError(error instanceof Error ? error.message : "Pengaturan gagal disimpan."); }
-    finally { setCoordinatorSaving(false); }
+    const target = coordinatorTarget;
+    const isPromoting = target.membershipLevel !== "COORDINATOR";
+    const bonusDesc = bonus === null
+      ? "mengikuti parameter global"
+      : bonus === 0
+      ? "tanpa bonus (Rp0)"
+      : `sebesar Rp${bonus.toLocaleString("id-ID")}/struk`;
+
+    setConfirmModal({
+      isOpen: true,
+      title: isPromoting ? "Jadikan Koordinator Mitra?" : "Simpan bonus KorMit?",
+      targetName: `${target.name} (${target.referralCode})`,
+      requireVerification: true,
+      message: isPromoting
+        ? `Mitra "${target.name}" akan diangkat menjadi Koordinator Mitra dengan bonus ${bonusDesc}. Fitur rekrutmen jaringan akan diaktifkan untuk akun ini.`
+        : `Pengaturan bonus untuk Koordinator "${target.name}" akan diperbarui menjadi ${bonusDesc}.`,
+      confirmText: isPromoting ? "Ya, Jadikan Koordinator" : "Ya, Simpan Perubahan",
+      confirmVariant: "primary",
+      onConfirm: async () => {
+        setCoordinatorSaving(true);
+        setCoordinatorError("");
+        try {
+          const response = await fetch("/api/superadmin/marketing", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              id: target.id,
+              membershipLevel: "COORDINATOR",
+              coordinatorCommissionOverride: bonus,
+            }),
+          });
+          const payload = await response.json();
+          if (!response.ok) throw new Error(payload.error || "Pengaturan koordinator gagal disimpan.");
+          setDirectoryRevision(value => value + 1);
+          setCoordinatorTarget(null);
+          showToast(
+            isPromoting ? "Koordinator Berhasil Diangkat" : "Pengaturan KorMit Disimpan",
+            isPromoting
+              ? `${target.name} berhasil menjadi Koordinator Mitra. Pesan WhatsApp siap dikirim.`
+              : "Bonus koordinator berhasil diperbarui. Pesan WhatsApp siap dikirim.",
+            "success"
+          );
+          if (payload.whatsappUrl) window.location.assign(payload.whatsappUrl);
+        } catch (error) {
+          setCoordinatorError(error instanceof Error ? error.message : "Pengaturan gagal disimpan.");
+          showToast("Gagal Memperbarui", error instanceof Error ? error.message : "Terjadi kesalahan jaringan ke server.", "error");
+          throw error;
+        } finally {
+          setCoordinatorSaving(false);
+        }
+      },
+    });
   };
   const handleToggleCoordinator = async (agent: MarketingAgent) => {
     const newLevel = agent.membershipLevel === "COORDINATOR" ? "MITRA" : "COORDINATOR";
@@ -412,7 +466,7 @@ const renderMarketingActions = (m: MarketingAgent) => <>
                                     <>
                                       {m.membershipLevel === "COORDINATOR" ? (
                                         <button
-                                          onClick={() => handleToggleCoordinator(m)}
+                                          onClick={() => confirmRevokeCoordinator(m)}
                                           className="btn-secondary"
                                           style={{
                                             padding: "0.4rem 0.65rem",
@@ -851,7 +905,30 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
     <p id="coordinator-bonus-help">{coordinatorRates ? `Bonus global Rp${coordinatorRates.global.toLocaleString("id-ID")}/struk. Batas bonus khusus Rp${coordinatorRates.max.toLocaleString("id-ID")}/struk. Nilai 0 berarti tanpa bonus.` : "Memuat parameter global…"}</p>
     {coordinatorError && <p role="alert">{coordinatorError}</p>}
     <p>Setelah disimpan, WhatsApp dibuka untuk mengirim pemberitahuan langsung kepada mitra ini.</p>
-    <div><button type="button" className="btn-secondary" disabled={coordinatorSaving} onClick={() => setCoordinatorTarget(null)}>Batal</button><button type="submit" className="btn-primary" disabled={coordinatorSaving || !coordinatorRates}>{coordinatorSaving ? "Menyimpan…" : "Simpan"}</button></div>
+    <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", justifyContent: "space-between", marginTop: "18px" }}>
+      {coordinatorTarget.membershipLevel === "COORDINATOR" && (
+        <button
+          type="button"
+          className="btn-secondary"
+          style={{ color: "#EF4444", borderColor: "rgba(239, 68, 68, 0.4)", marginRight: "auto" }}
+          disabled={coordinatorSaving}
+          onClick={() => {
+            const target = coordinatorTarget;
+            setCoordinatorTarget(null);
+            confirmRevokeCoordinator(target);
+          }}
+          title="Cabut Status Koordinator Mitra"
+        >
+          Cabut Koordinator
+        </button>
+      )}
+      <div style={{ display: "flex", gap: "10px", marginLeft: "auto" }}>
+        <button type="button" className="btn-secondary" disabled={coordinatorSaving} onClick={() => setCoordinatorTarget(null)}>Batal</button>
+        <button type="submit" className="btn-primary" disabled={coordinatorSaving || !coordinatorRates}>
+          {coordinatorSaving ? "Memproses…" : (coordinatorTarget.membershipLevel === "COORDINATOR" ? "Simpan" : "👑 Jadikan Koordinator")}
+        </button>
+      </div>
+    </div>
   </form>
 </ModalFrame>}
 {selected && <DirectoryDetail className="sa-partner-detail" title={selected.name} subtitle={selected.membershipLevel === "COORDINATOR" ? "Koordinator Mitra" : "Mitra Marketing"} onClose={() => setSelectedId(null)} fields={[
