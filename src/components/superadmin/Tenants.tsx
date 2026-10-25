@@ -721,14 +721,14 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
             </div>
           </section>
         )}
-{selectedTenant && <DirectoryDetail title={selectedTenant.name} subtitle="Detail tenant" onClose={() => setSelectedTenantId(null)} fields={[
-  ["Status tenant", selectedTenant.status === "ACTIVE" ? "Aktif" : selectedTenant.status === "ARCHIVED" ? "Diarsipkan" : "Nonaktif"],
+{selectedTenant && <DirectoryDetail className="sa-tenant-detail" title={selectedTenant.name} subtitle="Detail tenant" onClose={() => setSelectedTenantId(null)} fields={[
+  ["Status tenant", <span key="tenant-status" className={`sa-tenant-status ${selectedTenant.status === "ACTIVE" ? "is-active" : "is-inactive"}`}>{selectedTenant.status === "ACTIVE" ? "Aktif" : selectedTenant.status === "ARCHIVED" ? "Diarsipkan" : "Nonaktif"}</span>],
   ["Owner", selectedTenant.ownerName], ["WhatsApp owner", selectedTenant.phone], ["Alamat", selectedTenant.address],
   ["Kota / kabupaten", selectedTenant.cityRegency], ["Provinsi", selectedTenant.province], ["Kode POS", selectedTenant.uniqueCodeRange],
   ["Slug menu", selectedTenant.slug], ["Mitra pengelola", selectedTenant.marketingAgentName || "Direct HQ"],
   ["Tarif komisi", `Rp ${selectedTenant.commissionPerReceipt.toLocaleString("id-ID")}/struk`],
   ["Struk hari ini", selectedTenant.todayTransactions], ["Tagihan", `Rp ${selectedTenant.totalSaasBilling.toLocaleString("id-ID")}`],
-  ["Status tagihan", selectedTenant.paymentStatus === "PAID" ? "Lunas" : "Belum lunas"], ["Bergabung", selectedTenant.joinedDate],
+  ["Status tagihan", <span key="billing-status" className={`sa-tenant-status ${selectedTenant.paymentStatus === "PAID" ? "is-active" : "is-pending"}`}>{selectedTenant.paymentStatus === "PAID" ? "Lunas" : selectedTenant.paymentStatus === "GRACE_PERIOD" ? "Masa tenggang" : "Menunggak"}</span>], ["Bergabung", selectedTenant.joinedDate],
 ]} actions={<>
   <button className="btn-secondary" style={{ marginBottom: 8 }} onClick={() => setAccessTarget({ kind: "TENANT", id: selectedTenant.id, name: `${selectedTenant.ownerName} — ${selectedTenant.name}`, phone: selectedTenant.phone, canReset: selectedTenant.status === "ACTIVE" })}>Perbaiki WA & akses</button>
   {renderTenantActions(selectedTenant)}
