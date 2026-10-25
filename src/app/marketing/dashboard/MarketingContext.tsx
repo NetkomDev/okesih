@@ -53,6 +53,7 @@ export type CommissionWithdrawal = {
 
 export type DashboardData = {
   profile: {
+    photoUrl?: string | null;
     membershipLevel: MembershipLevel;
     coordinatorCommissionRate: number;
     name: string;

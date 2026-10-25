@@ -162,6 +162,7 @@ export async function GET() {
       data: {
         profile: {
           membershipLevel,
+          photoUrl: membershipLevel === "COORDINATOR" ? partner.profile_photo_url || null : null,
           coordinatorCommissionRate: coordinatorRate,
           name: partner.full_name,
           phone: partner.phone,

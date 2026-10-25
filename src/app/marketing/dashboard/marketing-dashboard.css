@@ -1880,3 +1880,44 @@ html, body {
 }
 
 .kormit-recruits-table caption { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* Coordinator portrait fills the right third, fading into the green header. */
+.mkt-header .mkt-header-photo {
+  left: auto !important; right: 0 !important; width: 33.333% !important;
+  height: 100% !important; object-fit: cover; object-position: center;
+  mask-image: linear-gradient(to right, transparent, #000 35%);
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 35%);
+}
+.mkt-header-with-photo > .mkt-brand, .mkt-header-with-photo > .mkt-welcome { max-width: 68%; }
+.mkt-header-with-photo::after { display: none; }
+.mkt-profile .mkt-profile-summary { border-top: 4px solid #0f766e; }
+.mkt-profile-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.mkt-profile-facts > div { background: #f5f9f8; border-radius: 12px; padding: 14px; min-width: 0; }
+.mkt-profile-identity { flex-wrap: wrap; }
+.mkt-profile-status { margin-left: auto; }
+.mkt-photo-settings { display: grid; grid-template-columns: minmax(140px, .8fr) 1fr; align-items: center; gap: 24px; }
+.mkt-photo-preview { position: relative; overflow: hidden; min-height: 170px; border-radius: 16px; background: linear-gradient(125deg, #042f2e, #0f766e); display: flex; align-items: center; padding: 20px; color: white; }
+.mkt-photo-preview > span { position: relative; z-index: 1; font-size: 14px; }
+.mkt-photo-preview img { left: auto !important; width: 40% !important; object-fit: cover; mask-image: linear-gradient(to right, transparent, #000 40%); -webkit-mask-image: linear-gradient(to right, transparent, #000 40%); }
+.mkt-photo-settings .mkt-primary { margin-top: 16px; width: auto; padding: 12px 24px; }
+.mkt-crop-dialog { margin: auto; border: 0; border-radius: 22px; padding: 0; width: min(440px, calc(100vw - 24px)); max-height: calc(100dvh - 32px); color: #0f172a; background: #fff; overflow-y: auto; overscroll-behavior: contain; }
+.mkt-crop-dialog::backdrop { background: #042f2eb3; backdrop-filter: blur(5px); }
+.mkt-crop-content { padding: 24px; }
+.mkt-crop-content canvas { display: block; width: auto; max-width: 100%; height: min(32dvh, 280px); aspect-ratio: 2 / 3; margin: 20px auto; background: #e2e8f0; border-radius: 12px; }
+.mkt-crop-content fieldset { display: grid; border: 0; padding: 0; gap: 10px; }
+.mkt-crop-content label { display: grid; gap: 4px; font-size: 13px; font-weight: 600; }
+.mkt-crop-content input[type="range"] { width: 100%; min-height: 30px; accent-color: #0f766e; }
+.mkt-crop-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px; }
+.mkt-crop-actions button { border: 0; border-radius: 12px; min-height: 48px; cursor: pointer; font-weight: 700; }
+.mkt-crop-actions button:disabled { opacity: .6; cursor: wait; }
+@media (max-width: 600px) {
+  .mkt-photo-settings { grid-template-columns: 1fr; gap: 16px; }
+  .mkt-photo-preview { min-height: 160px; }
+  .mkt-profile .mkt-profile-facts > div:first-child { grid-column: 1 / -1; }
+  .mkt-profile .mkt-profile-facts dd { font-size: 16px; }
+  .mkt-header-with-photo .mkt-brand { gap: 8px; }
+  .mkt-header-with-photo .mkt-logo { width: 36px; height: 36px; }
+  .mkt-header-with-photo .mkt-title { font-size: 15px; }
+  .mkt-header-with-photo .mkt-eyebrow { font-size: 10px; }
+  .mkt-crop-content { padding: 20px; }
+}

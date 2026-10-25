@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useMarketingData } from "../MarketingContext";
+import CoordinatorPhoto from "./CoordinatorPhoto";
 import MarketingLoading from "../MarketingLoading";
 import "../marketing-dashboard.css";
 
 type ProfileData = {
+  photoUrl: string | null;
   membershipLevel: string;
   coordinatorCommissionRate: number;
   id: string;
@@ -226,6 +228,8 @@ export default function MarketingProfilPage() {
               </dl>
               <p className="mkt-profile-hint">Tarif mengikuti Parameter Master Global saat tagihan tenant lunas. Riwayat komisi yang sudah masuk tidak berubah.</p>
             </section>
+
+            {profile.membershipLevel === "COORDINATOR" && <CoordinatorPhoto photoUrl={profile.photoUrl} onSaved={url => { setProfile(current => current ? { ...current, photoUrl: url } : current); void refreshDashboard(); }} />}
 
             <div className="mkt-profile-columns">
               <section className="mkt-panel">

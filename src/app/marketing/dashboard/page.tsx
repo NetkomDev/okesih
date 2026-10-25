@@ -69,7 +69,8 @@ export default function MarketingDashboardPage() {
         <div className="mkt-home-header-bg" aria-hidden="true" />
 
         {/* Header Dashboard Marketing bertema Hijau Tosca & Orange Elegan */}
-        <header className="mkt-header">
+        <header className={`mkt-header${data.profile.membershipLevel === "COORDINATOR" && data.profile.photoUrl ? " mkt-header-with-photo" : ""}`}>
+          {data.profile.membershipLevel === "COORDINATOR" && data.profile.photoUrl && <Image className="mkt-header-photo" src={data.profile.photoUrl} alt="" fill unoptimized sizes="33vw" priority />}
           <div className="mkt-brand">
             <Image
               className="mkt-logo"

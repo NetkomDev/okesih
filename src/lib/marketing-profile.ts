@@ -17,7 +17,7 @@ export const marketingProfileUpdateSchema = z.union([
 ]);
 
 export type MarketingProfileRow = {
-  membership_level?: string; coordinator_commission_rate?: number;
+  profile_photo_url?: string | null; membership_level?: string; coordinator_commission_rate?: number;
   id: string; user_id: string; username: string | null; full_name: string;
   phone: string; city_area: string; referral_code: string;
   bank_name: string; bank_account_number: string; bank_account_name: string;
@@ -26,7 +26,7 @@ export type MarketingProfileRow = {
 export function marketingProfile(row: MarketingProfileRow, totalTenants: number, authEmail?: string) {
   return {
     membershipLevel: row.membership_level || "MARKETING", coordinatorCommissionRate: Number(row.coordinator_commission_rate ?? 0),
-    id: row.id, userId: row.user_id,
+    id: row.id, userId: row.user_id, photoUrl: row.membership_level === "COORDINATOR" ? row.profile_photo_url || null : null,
     username: authEmail?.endsWith("@okesih.local") ? authEmail.slice(0, -"@okesih.local".length) : row.username || "",
     fullName: row.full_name, phone: row.phone,
     cityArea: row.city_area, referralCode: row.referral_code,
