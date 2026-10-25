@@ -80,3 +80,12 @@ test('credential save uses one auth update and profile save returns normalized d
   assert.equal(r.status,200);assert.deepEqual(calls.filter(c=>c.auth).map(c=>c.auth),[{email:'newname@okesih.local',email_confirm:true,password:' valid password '}]);
   const saved=await route.PATCH(patch(valid));assert.equal(saved.status,200);assert.equal((await saved.json()).profile.phone,'6281234567890');
 });
+
+test('coordinator photo endpoint is available only on the Marketing PWA', () => {
+  const path = '/api/marketing/profile/photo';
+  assert.equal(isApiAllowedOnSurface(path, 'MARKETING'), true);
+  for (const surface of ['PUBLIC', 'SUPERADMIN', 'OWNER', 'POS', 'KDS']) {
+    assert.equal(isApiAllowedOnSurface(path, surface), false);
+  }
+  assert.equal(isApiAllowedOnSurface('/api/marketing/profile/photo-other', 'MARKETING'), false);
+});

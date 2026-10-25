@@ -55,7 +55,7 @@ export function surfaceForApiPath(pathname: string): AppSurface | null {
   if (pathname === "/api/device" || pathname.startsWith("/api/device/")) return null;
   if (pathname === "/api/marketing/dashboard" || pathname.startsWith("/api/marketing/dashboard/")) return "MARKETING";
   if (pathname === "/api/marketing/network") return "MARKETING";
-  if (pathname === "/api/marketing/profile") return "MARKETING";
+  if (pathname === "/api/marketing/profile" || pathname === "/api/marketing/profile/photo") return "MARKETING";
   if (pathname === "/api/marketing/withdrawals" || pathname.startsWith("/api/marketing/withdrawals/")) return "MARKETING";
   return "PUBLIC";
 }
