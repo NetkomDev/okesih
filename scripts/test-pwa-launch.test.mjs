@@ -225,3 +225,52 @@ test("isStandaloneApp rejects desktop browser fullscreen and accepts standalone 
     }
   }
 });
+
+test("resolveOfflineContext delivers surface-accurate copy without POS leakage", async () => {
+  const { resolveOfflineContext } = await import("../src/lib/offline-surface.ts");
+
+  // 1. Super Admin via hostname
+  const superAdminByHost = resolveOfflineContext({ hostname: "admin.okesih.com" });
+  assert.equal(superAdminByHost.surface, "SUPERADMIN");
+  assert.equal(superAdminByHost.badge, "SUPER ADMIN");
+  assert.equal(superAdminByHost.secondaryHref, "/superadmin");
+  assert.equal(superAdminByHost.secondaryAction.includes("Super Admin"), true);
+  assert.equal(superAdminByHost.description.includes("kasir"), false);
+
+  // 2. Super Admin via pathname
+  const superAdminByPath = resolveOfflineContext({ pathname: "/superadmin/tenants" });
+  assert.equal(superAdminByPath.surface, "SUPERADMIN");
+  assert.equal(superAdminByPath.secondaryHref, "/superadmin");
+
+  // 3. Super Admin via referrer
+  const superAdminByRef = resolveOfflineContext({ referrer: "https://admin.okesih.com/superadmin" });
+  assert.equal(superAdminByRef.surface, "SUPERADMIN");
+
+  // 4. Super Admin via PWA kind
+  const superAdminByPwa = resolveOfflineContext({ pwaKind: "superadmin" });
+  assert.equal(superAdminByPwa.surface, "SUPERADMIN");
+
+  // 5. Owner
+  const owner = resolveOfflineContext({ hostname: "owner.okesih.com" });
+  assert.equal(owner.surface, "OWNER");
+  assert.equal(owner.secondaryHref, "/owner");
+  assert.equal(owner.description.includes("kasir"), false);
+
+  // 6. Marketing
+  const marketing = resolveOfflineContext({ hostname: "sales.okesih.com" });
+  assert.equal(marketing.surface, "MARKETING");
+  assert.equal(marketing.secondaryHref, "/marketing/dashboard");
+  assert.equal(marketing.description.includes("kasir"), false);
+
+  // 7. POS
+  const pos = resolveOfflineContext({ hostname: "pos.okesih.com" });
+  assert.equal(pos.surface, "POS");
+  assert.equal(pos.secondaryHref, "/pos");
+  assert.equal(pos.secondaryAction.includes("Kasir"), true);
+
+  // 8. Public Fallback
+  const publicDefault = resolveOfflineContext({ hostname: "okesih.com" });
+  assert.equal(publicDefault.surface, "PUBLIC");
+  assert.equal(publicDefault.secondaryHref, "/");
+  assert.equal(publicDefault.description.includes("kasir"), false);
+});

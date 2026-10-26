@@ -276,9 +276,49 @@ function getOfflineHtml(surface: "POS" | "KDS" | "PRIVILEGED" | "PUBLIC", pathna
   }
 
   if (surface === "PRIVILEGED") {
+    const isSuperAdmin = pathname.startsWith("/admin") || pathname.startsWith("/superadmin") || self.location.hostname === "admin.okesih.com";
+    const isOwner = pathname.startsWith("/owner") || self.location.hostname === "owner.okesih.com";
+    const isMarketing = pathname.startsWith("/marketing") || self.location.hostname === "sales.okesih.com";
+
+    if (isSuperAdmin) {
+      return createOfflineCard({
+        title: "Koneksi Super Admin Terputus",
+        desc: "Akses portal Super Admin memerlukan koneksi internet aktif demi keamanan akun, validasi hak akses, dan integritas data platform.",
+        primaryActionLabel: "Coba Sambungkan Kembali",
+        secondaryActionLabel: "Kembali ke Dashboard Super Admin",
+        secondaryActionUrl: "/superadmin",
+        badgeText: "Memerlukan Internet",
+        reloadTarget: pathname,
+      });
+    }
+
+    if (isOwner) {
+      return createOfflineCard({
+        title: "Koneksi Dashboard Owner Terputus",
+        desc: "Akses dashboard Owner memerlukan koneksi internet untuk memantau outlet, sinkronisasi laporan pendapatan, dan pengelolaan menu usaha.",
+        primaryActionLabel: "Coba Sambungkan Kembali",
+        secondaryActionLabel: "Kembali ke Dashboard Owner",
+        secondaryActionUrl: "/owner",
+        badgeText: "Memerlukan Internet",
+        reloadTarget: pathname,
+      });
+    }
+
+    if (isMarketing) {
+      return createOfflineCard({
+        title: "Koneksi Portal Mitra Terputus",
+        desc: "Akses portal kemitraan memerlukan internet untuk memantau komisi, pencairan saldo, dan jaringan mitra binaan.",
+        primaryActionLabel: "Coba Sambungkan Kembali",
+        secondaryActionLabel: "Kembali ke Dashboard Mitra",
+        secondaryActionUrl: "/marketing/dashboard",
+        badgeText: "Memerlukan Internet",
+        reloadTarget: pathname,
+      });
+    }
+
     return createOfflineCard({
       title: "Koneksi Dashboard Terputus",
-      desc: "Akses dashboard pengelolaan memerlukan koneksi internet stabil demi keamanan dan integritas data warkop.",
+      desc: "Akses dashboard pengelolaan memerlukan koneksi internet stabil demi keamanan dan integritas data platform.",
       primaryActionLabel: "Coba Sambungkan Kembali",
       secondaryActionLabel: "Kembali ke Beranda",
       secondaryActionUrl: "/",
@@ -359,8 +399,9 @@ serwist.setCatchHandler(async ({ request }) => {
     const isPrivileged =
       PRIVILEGED_HOSTS.has(hostname) ||
       pathname.startsWith("/admin") ||
+      pathname.startsWith("/superadmin") ||
       pathname.startsWith("/owner") ||
-      pathname.startsWith("/marketing/dashboard");
+      pathname.startsWith("/marketing");
 
     const surfaceKind: "POS" | "KDS" | "PRIVILEGED" | "PUBLIC" = isPos
       ? "POS"
