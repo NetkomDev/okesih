@@ -38,7 +38,7 @@ export async function POST(request: Request) {
 
     const { data } = admin.storage.from("business-logos").getPublicUrl(path);
     const logoUrl = data.publicUrl;
-    const { error } = await admin.from("warkops").update({ logo_url: logoUrl }).eq("id", warkopId);
+    const { error } = await admin.from("warkops").update({ logo_url: logoUrl }).eq("id", warkopId).select("id").single();
     if (error) {
       await admin.storage.from("business-logos").remove([path]);
       throw error;

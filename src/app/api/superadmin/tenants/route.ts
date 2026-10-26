@@ -1,3 +1,4 @@
+import { permanentlyDeleteEntity, processEntityDeletionJobs } from "@/lib/entity-deletion";
 import { formatWhatsAppCredentials } from "@/lib/whatsapp";
 import { createAccount } from "@/lib/create-account";
 import { z } from "zod";
@@ -28,6 +29,10 @@ export async function GET(request: Request) {
   try {
     const supabase = await superAdminClient();
     if (!supabase) return NextResponse.json({ error: "Akses Super Admin diperlukan." }, { status: 401 });
+    // Retry one previously authorized cleanup when an admin revisits the directory.
+    // Cron handles unattended retries; an external outage must not break the list.
+    try { await processEntityDeletionJobs(supabase, undefined, 1); }
+    catch (error) { console.error("Pending entity cleanup retry failed", error); }
     const query = paginationSchema.extend({ search: z.string().trim().max(120).default(""), province: z.string().max(100).default("") })
       .parse(Object.fromEntries(new URL(request.url).searchParams));
     const { data, error } = await supabase.rpc("report_superadmin_tenants", {
@@ -297,10 +302,9 @@ export async function DELETE(request: Request) {
     const session = await createServerSupabaseClient();
     const { data: { user } } = await session.auth.getUser();
     const id = z.string().uuid().parse(new URL(request.url).searchParams.get("id"));
-    const { data, error } = await admin.rpc("archive_tenant_and_purge_finance", { p_warkop_id: id, p_actor: user!.id });
-    if (error) throw error;
-    return NextResponse.json({ success: true, data, message: "Tenant diarsipkan; transaksi, billing, dan komisi terkait telah dihapus." });
+    const result = await permanentlyDeleteEntity(admin, "TENANT", id, user!.id);
+    return NextResponse.json(result, { status: result.cleanupPending ? 202 : 200, headers: { "Cache-Control": "no-store" } });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof z.ZodError ? "ID tenant tidak valid." : "Pengarsipan gagal. Tidak ada penghapusan sebagian." }, { status: error instanceof z.ZodError ? 400 : 500 });
+    return NextResponse.json({ error: error instanceof z.ZodError ? "ID tenant tidak valid." : "Tenant belum dihapus. Silakan muat ulang dan coba lagi." }, { status: error instanceof z.ZodError ? 400 : 500 });
   }
 }

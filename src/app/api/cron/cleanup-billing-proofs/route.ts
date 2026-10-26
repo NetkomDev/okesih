@@ -1,3 +1,4 @@
+import { processEntityDeletionJobs } from "@/lib/entity-deletion";
 import { deleteExpiredBillingProofs } from "@/lib/billing-proof-retention";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -10,8 +11,10 @@ export async function GET(request: Request) {
   if (!authorizedBySecret) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const result = await deleteExpiredBillingProofs(createAdminClient());
-    return Response.json({ success: true, ...result });
+    const admin = createAdminClient();
+    const cleanup = await processEntityDeletionJobs(admin);
+    const result = await deleteExpiredBillingProofs(admin);
+    return Response.json({ success: cleanup.pending === 0, ...result, entityCleanup: cleanup });
   } catch (error) {
     console.error("Gagal membersihkan bukti billing kedaluwarsa:", error);
     return Response.json({ error: "Pembersihan bukti billing gagal." }, { status: 500 });

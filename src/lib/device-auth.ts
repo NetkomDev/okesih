@@ -11,7 +11,7 @@ export const DEVICE_COOKIE: Record<DeviceType, string> = {
 };
 
 export class DeviceApiError extends Error {
-  constructor(message: string, public status = 500) {
+  constructor(message: string, public status = 500, public code?: string) {
     super(message);
   }
 }
@@ -62,7 +62,8 @@ export async function requireDevice(request: NextRequest, allowedTypes: DeviceTy
     .eq("device_type", matchedType)
     .maybeSingle();
 
-  if (error || !device) throw new DeviceApiError("Kredensial perangkat tidak valid.", 401);
+  if (error) throw new DeviceApiError("Status perangkat belum dapat diperiksa.", 503);
+  if (!device) throw new DeviceApiError("Perangkat telah dihapus permanen.", 401, "DEVICE_REMOVED");
   if (device.status !== "ACTIVE") throw new DeviceApiError("Akses perangkat telah dicabut.", 401);
   if (new Date(device.expires_at).getTime() <= Date.now()) {
     await admin.from("device_installations").update({ status: "EXPIRED" }).eq("id", device.id);
@@ -105,5 +106,5 @@ export function clearDeviceCookie(response: NextResponse, type: DeviceType) {
 export function deviceErrorResponse(error: unknown) {
   const status = error instanceof DeviceApiError ? error.status : 500;
   const message = error instanceof DeviceApiError ? error.message : "Terjadi kesalahan internal.";
-  return Response.json({ error: message }, { status, headers: { "Cache-Control": "no-store" } });
+  return Response.json({ error: message, ...(error instanceof DeviceApiError && error.code ? { code: error.code } : {}) }, { status, headers: { "Cache-Control": "no-store" } });
 }

@@ -139,6 +139,7 @@ export async function removeDeviceOperation(id: string) {
 }
 
 export async function clearDeviceData(type: "POS" | "KDS", preserveOperations = true) {
+  lastSnapshotMeta.delete(type);
   const db = await openDatabase();
   const cacheTx = db.transaction(STORE_CACHE, "readwrite");
   const cacheDone = transactionDone(cacheTx);

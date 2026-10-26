@@ -111,7 +111,23 @@ export function useDeviceApp(type: "POS" | "KDS", includeHistory = true) {
           cache: "no-store",
           headers: { "X-Device-Type": type },
         });
-        if (response.status === 401 || response.status === 403) { setAuthorized(false); setData(null); snapshot.current = null; setError("Akses perangkat tidak aktif. Perubahan tertunda tetap disimpan."); await clearDeviceData(type); return; }
+        if (response.status === 401 || response.status === 403) {
+          const failure = await response.json().catch(() => ({}));
+          const removedDeviceId = failure.code === "DEVICE_REMOVED"
+            ? snapshot.current?.device.id || (await readDeviceSnapshot<DeviceBootstrap>(type))?.value.device.id
+            : undefined;
+          setAuthorized(false); setData(null); snapshot.current = null;
+          await clearDeviceData(type);
+          if (failure.code === "DEVICE_REMOVED" && removedDeviceId) {
+            for (const operation of await listDeviceOperations(type)) {
+              if (operation.deviceId === removedDeviceId) await removeDeviceOperation(operation.id);
+            }
+            const remaining = await listDeviceOperations(type);
+            setPendingCount(remaining.length); setPendingOperations(remaining);
+          }
+          setError(failure.code === "DEVICE_REMOVED" ? "Perangkat atau tenant telah dihapus permanen. Data lokal perangkat dibersihkan." : "Akses perangkat tidak aktif. Perubahan tertunda tetap disimpan.");
+          return;
+        }
         const body = await response.json();
         if (!response.ok) throw new Error(body.error || "Data perangkat gagal dimuat.");
 

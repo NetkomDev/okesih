@@ -1,3 +1,4 @@
+import { permanentlyDeleteEntity, processEntityDeletionJobs } from "@/lib/entity-deletion";
 import { formatWhatsAppCredentials } from "@/lib/whatsapp";
 import { z } from "zod";
 import { paginationSchema } from "@/lib/reporting";
@@ -36,6 +37,10 @@ export async function GET(request: Request) {
     const supabase = await superAdminClient();
     if (!supabase) return NextResponse.json({ error: "Akses Super Admin diperlukan." }, { status: 401 });
 
+    // Retry one previously authorized cleanup when an admin revisits the directory.
+    // Cron handles unattended retries; an external outage must not break the list.
+    try { await processEntityDeletionJobs(supabase, undefined, 1); }
+    catch (error) { console.error("Pending entity cleanup retry failed", error); }
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
     const city = searchParams.get("city");
@@ -375,28 +380,12 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: "ID mitra marketing diperlukan." }, { status: 400 });
     }
 
-    const { data, error } = await supabase.rpc("delete_marketing_partner_safely", { p_partner_id: id, p_admin_id: user.id });
-    if (error || !data) {
-      const status = error?.code === "P0001" ? 409 : error?.code === "P0002" ? 404 : 503;
-      return NextResponse.json({ error: status === 503 ? "Penghapusan belum dapat dipastikan. Muat ulang data sebelum mencoba lagi." : error?.message }, { status });
-    }
-    let authCleanupPending = false;
-    if (data.userId) {
-      const result = await supabase.auth.admin.deleteUser(data.userId);
-      authCleanupPending = Boolean(result.error);
-      if (result.error) console.error("Marketing auth cleanup pending", { partnerId: id, userId: data.userId });
-    }
-    return NextResponse.json({ success: true, authCleanupPending,
-      message: `Mitra marketing ${data.name} berhasil dihapus.${authCleanupPending ? " Akun login belum terhapus; akses mitra telah terputus." : ""}`,
-      detachedTenantsCount: data.detachedTenantsCount,
-    });
+    if (!z.string().uuid().safeParse(id).success) return NextResponse.json({ error: "ID mitra tidak valid." }, { status: 400 });
+    const result = await permanentlyDeleteEntity(supabase, "MARKETING", id, user.id);
+    return NextResponse.json(result, { status: result.cleanupPending ? 202 : 200, headers: { "Cache-Control": "no-store" } });
   } catch (err: unknown) {
-    if (err instanceof DeviceApiError) {
-      return NextResponse.json({ error: err.message }, { status: err.status });
-    }
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Terjadi kesalahan internal saat menghapus marketing." },
-      { status: 500 }
-    );
+    if (err instanceof DeviceApiError) return NextResponse.json({ error: err.message }, { status: err.status });
+    const missing = typeof err === "object" && err !== null && "code" in err && err.code === "P0002";
+    return NextResponse.json({ error: missing ? "Mitra tidak ditemukan." : "Mitra belum dihapus. Muat ulang dan coba lagi." }, { status: missing ? 404 : 500 });
   }
 }

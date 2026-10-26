@@ -77,6 +77,14 @@ export async function POST(request: Request) {
       p_token_hash: sha256(customerToken), p_proof_path: proofPath,
     });
     if (rpcError) {
+      // A tenant may have been deleted while the proof was uploading.
+      if (proofPath) {
+        const tenant = await admin.from("warkops").select("id").eq("id", profile.id).maybeSingle();
+        if (!tenant.error && !tenant.data) {
+          const queued = await admin.from("storage_cleanup_jobs").upsert({ bucket: "bukti-transfer", path: proofPath }, { onConflict: "bucket,path" });
+          if (queued.error) console.error("Deleted tenant proof cleanup could not be queued", queued.error);
+        }
+      }
       // Keep deterministic proof on transient failures; retries may have committed.
       if (rpcError.code === "P0001") return Response.json({ error: rpcError.message }, { status: 409 });
       throw rpcError;

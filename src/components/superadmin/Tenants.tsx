@@ -407,11 +407,11 @@ const toggleTenantStatus = (id: string) => {
   const handleDeleteTenant = (tenant: TenantWarkop) => {
     setConfirmModal({
       isOpen: true,
-      title: "Hapus histori tenant?",
+      title: "Hapus tenant permanen?",
       targetName: tenant.name,
       requireVerification: true,
-      message: `Tenant "${tenant.name}" akan dinonaktifkan dan akses perangkat dicabut. Transaksi, billing, serta komisi terkait tenant dihapus permanen. Akun, katalog, dan pencairan mitra tetap disimpan. Lanjutkan?`,
-      confirmText: "Arsipkan dan Hapus Histori",
+      message: `Tenant "${tenant.name}" akan dihapus permanen beserta akun khusus tenant, menu, foto, meja, perangkat, transaksi, tagihan, dan komisi terkait. Akun yang juga digunakan tenant lain tetap disimpan. Tindakan ini tidak dapat dibatalkan. Lanjutkan?`,
+      confirmText: "Ya, Hapus Permanen",
       confirmVariant: "danger",
       onConfirm: async () => {
         showToast("Menghapus Tenant", `Sedang menghapus tenant ${tenant.name}...`, "info");
@@ -423,17 +423,19 @@ const toggleTenantStatus = (id: string) => {
           if (!res.ok) {
             throw new Error(payload.error || "Gagal menghapus tenant.");
           }
+          // Invalidate older requests so they cannot restore the removed row.
+          tenantRequest.current++;
+          setSelectedTenantId(null);
+          setTenants(current => current.filter(item => item.id !== tenant.id));
+          // Pagination and totals come from the same server snapshot, never decrement twice.
           await loadTenants();
-          setTenantPagination((prev) => ({
-            ...prev,
-            total: Math.max(0, prev.total - 1),
-          }));
-          setTotalTenants(Math.max(0, totalTenants - 1));
           refreshSummary();
+          void loadTenantApplications();
+          void loadMarketingPartners();
           showToast(
-            "Tenant Berhasil Diarsipkan",
-            `Tenant "${tenant.name}" diarsipkan dan histori keuangan terkait dihapus.`,
-            "success"
+            payload.cleanupPending ? "Pembersihan Tenant Berlanjut" : "Tenant Dihapus Permanen",
+            payload.cleanupPending ? `Tenant "${tenant.name}" sudah dihapus dari database. Pembersihan file atau akun login belum selesai dan akan dicoba ulang otomatis.` : `Tenant "${tenant.name}", file, dan akun khususnya telah dihapus permanen.`,
+            payload.cleanupPending ? "info" : "success"
           );
         } catch (err: unknown) {
           showToast(
@@ -477,9 +479,8 @@ const renderTenantActions = (t: TenantWarkop) => <div style={{ display: "flex", 
                             {t.status === "ARCHIVED" ? "Diarsipkan" : t.status === "ACTIVE" ? "Suspend" : "Aktifkan"}
                           </button>
                           <button
-                            disabled={t.status === "ARCHIVED"}
                             onClick={() => handleDeleteTenant(t)}
-                            title="Arsipkan dan Hapus Histori"
+                            title="Hapus Tenant Permanen"
                             style={{
                               background: "rgba(239, 68, 68, 0.12)",
                               border: "1px solid #EF4444",

@@ -292,7 +292,7 @@ const handleUpdateMarketingStatus = async (id: string, newStatus: "ACTIVE" | "IN
       title: "Hapus mitra permanen?",
       targetName: `${agent.name} (${agent.referralCode})`,
       requireVerification: true,
-      message: `Mitra "${agent.name}" (${agent.referralCode}) akan dihapus permanen beserta akun login, data rekening, dan riwayat mutasi komisinya.${
+      message: `Mitra "${agent.name}" (${agent.referralCode}) akan dihapus permanen beserta akun login khususnya, foto, data rekening, pengajuan, riwayat komisi, dan pencairannya. Hubungan mitra binaan akan dilepas; mitra binaan tetap memiliki akun sendiri.${
         agent.totalTenantsAcquired > 0
           ? ` Sebanyak ${agent.totalTenantsAcquired} tenant binaannya tetap aman dan beroperasi normal sebagai tenant langsung tanpa pemotongan komisi marketing.`
           : ""
@@ -309,12 +309,16 @@ const handleUpdateMarketingStatus = async (id: string, newStatus: "ACTIVE" | "IN
           if (!res.ok) {
             throw new Error(payload.error || "Gagal menghapus mitra marketing.");
           }
+          requestSequence.current++;
+          setSelectedId(null);
+          setMarketingList(current => current.filter(item => item.id !== agent.id));
           setDirectoryRevision(value => value + 1);
           refreshSummary();
+          void loadMarketingWithdrawals();
           showToast(
-            "Marketing Berhasil Dihapus",
-            `Mitra "${agent.name}" dan seluruh datanya berhasil dibersihkan dari database.`,
-            "success"
+            payload.cleanupPending ? "Pembersihan Mitra Berlanjut" : "Mitra Dihapus Permanen",
+            payload.cleanupPending ? `Data mitra "${agent.name}" sudah dihapus. Pembersihan file atau akun login belum selesai dan akan dicoba ulang otomatis.` : `Mitra "${agent.name}", file, dan akun khususnya telah dihapus permanen.`,
+            payload.cleanupPending ? "info" : "success"
           );
         } catch (err: unknown) {
           showToast(

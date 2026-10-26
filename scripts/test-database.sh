@@ -17,3 +17,5 @@ psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/fixtures/kormit-assertio
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/fixtures/directory-assertions.sql
 
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/fixtures/coordinator-chain-assertions.sql
+
+psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/fixtures/permanent-deletion-assertions.sql

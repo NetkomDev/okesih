@@ -15,10 +15,10 @@ const source = ts.transpileModule(
   { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }
 ).outputText;
 
-function createFixture({ userRole = 'SUPERADMIN', partnerExists = true, hasTenants = true, financialHistory = false } = {}) {
+function createFixture({ userRole = 'SUPERADMIN', partnerExists = true, hasTenants = true } = {}) {
   const calls = [];
   const partner = {
-    id: 'partner-uuid-1',
+    id: '00000000-0000-4000-8000-000000000001',
     full_name: 'Mitra Sukses',
     phone: '6281234567890',
     referral_code: 'MKT-SUKSES',
@@ -34,7 +34,7 @@ function createFixture({ userRole = 'SUPERADMIN', partnerExists = true, hasTenan
     async rpc(name, args) {
       calls.push({ op: 'rpc', name, args });
       if (!partnerExists) return { error: { code: 'P0002', message: 'Mitra tidak ditemukan.' } };
-      if (financialHistory) return { error: { code: 'P0001', message: 'Mitra memiliki riwayat komisi. Nonaktifkan akun.' } };
+
       return { data: { name: partner.full_name, userId: partner.user_id, detachedTenantsCount: warkops.length }, error: null };
     },
     from(table) {
@@ -130,6 +130,7 @@ function createFixture({ userRole = 'SUPERADMIN', partnerExists = true, hasTenan
     },
     '@/lib/create-account': { createAccount },
     '@/lib/generated-credentials': { randomDigits },
+    '@/lib/entity-deletion': { processEntityDeletionJobs:async()=>({pending:0,completed:0}), permanentlyDeleteEntity: async (db,type,id,actor) => { const {data,error}=await db.rpc('delete_entity_permanently',{p_type:type,p_id:id,p_actor:actor}); if(error) throw error; await db.auth.admin.deleteUser(data.userId); return {success:true,cleanupPending:false,detachedTenantsCount:data.detachedTenantsCount}; } },
     '@/lib/app-origins': {
       APP_ORIGINS: { PUBLIC: 'https://www.okesih.com' },
     },
@@ -152,7 +153,7 @@ function createFixture({ userRole = 'SUPERADMIN', partnerExists = true, hasTenan
 
 test('DELETE marketing rejects cross-origin request', async () => {
   const { route } = createFixture();
-  const req = new NextRequest('https://www.okesih.com/api/superadmin/marketing?id=partner-1', {
+  const req = new NextRequest('https://www.okesih.com/api/superadmin/marketing?id=00000000-0000-4000-8000-000000000001', {
     method: 'DELETE',
     headers: { origin: 'https://malicious-site.com' },
   });
@@ -164,7 +165,7 @@ test('DELETE marketing rejects cross-origin request', async () => {
 
 test('DELETE marketing requires superadmin session', async () => {
   const { route } = createFixture({ userRole: 'OWNER' });
-  const req = new NextRequest('https://www.okesih.com/api/superadmin/marketing?id=partner-1', {
+  const req = new NextRequest('https://www.okesih.com/api/superadmin/marketing?id=00000000-0000-4000-8000-000000000001', {
     method: 'DELETE',
     headers: { origin: 'https://www.okesih.com' },
   });
@@ -188,7 +189,7 @@ test('DELETE marketing requires id query parameter', async () => {
 
 test('DELETE marketing returns 404 when partner not found', async () => {
   const { route } = createFixture({ partnerExists: false });
-  const req = new NextRequest('https://www.okesih.com/api/superadmin/marketing?id=non-existent', {
+  const req = new NextRequest('https://www.okesih.com/api/superadmin/marketing?id=00000000-0000-4000-8000-000000000002', {
     method: 'DELETE',
     headers: { origin: 'https://www.okesih.com' },
   });
@@ -198,19 +199,19 @@ test('DELETE marketing returns 404 when partner not found', async () => {
 
 test('DELETE marketing uses an atomic database operation before deleting Auth', async () => {
   const { route, calls } = createFixture();
-  const req = new NextRequest('https://www.okesih.com/api/superadmin/marketing?id=partner-uuid-1', { method: 'DELETE', headers: { origin: 'https://www.okesih.com' } });
+  const req = new NextRequest('https://www.okesih.com/api/superadmin/marketing?id=00000000-0000-4000-8000-000000000001', { method: 'DELETE', headers: { origin: 'https://www.okesih.com' } });
   const res = await route.DELETE(req);
   const data = await res.json();
   assert.equal(res.status, 200);
   assert.equal(data.detachedTenantsCount, 2);
-  assert.equal(calls[0].name, 'delete_marketing_partner_safely');
+  assert.equal(calls[0].name, 'delete_entity_permanently');
   assert.equal(calls[1].op, 'deleteUser');
   assert.equal(calls.some(c => c.op === 'delete' || c.op === 'update'), false);
 });
-test('DELETE marketing preserves Auth and every relationship when financial history exists', async () => {
+test('DELETE marketing allows permanent removal with financial history', async () => {
   const { route, calls } = createFixture({ financialHistory: true });
-  const res = await route.DELETE(new NextRequest('https://www.okesih.com/api/superadmin/marketing?id=partner-uuid-1', { method: 'DELETE', headers: { origin: 'https://www.okesih.com' } }));
-  assert.equal(res.status, 409);
-  assert.equal(calls.length, 1);
-  assert.match((await res.json()).error, /Nonaktifkan/);
+  const res = await route.DELETE(new NextRequest('https://www.okesih.com/api/superadmin/marketing?id=00000000-0000-4000-8000-000000000001', { method: 'DELETE', headers: { origin: 'https://www.okesih.com' } }));
+  assert.equal(res.status, 200);
+  assert.equal(calls[0].args.p_type, 'MARKETING');
+  assert.equal(calls[1].op, 'deleteUser');
 });

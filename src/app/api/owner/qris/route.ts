@@ -38,7 +38,7 @@ export async function POST(request: Request) {
 
     const { data: publicUrl } = admin.storage.from("qris-warkop").getPublicUrl(path);
     const versionedUrl = publicUrl.publicUrl;
-    const { error } = await admin.from("warkops").update({ qris_image_url: versionedUrl, qris_merchant_name: merchantName, updated_at: new Date().toISOString() }).eq("id", warkopId);
+    const { error } = await admin.from("warkops").update({ qris_image_url: versionedUrl, qris_merchant_name: merchantName, updated_at: new Date().toISOString() }).eq("id", warkopId).select("id").single();
     if (error) {
       await admin.storage.from("qris-warkop").remove([path]);
       throw error;
