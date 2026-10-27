@@ -40,3 +40,22 @@ test('payment labels depend on recorded payment, never the confirming cashier or
   assert.match(orderPaymentLabel({ payment_method: 'CASH' }), /PERIKSA PEMBAYARAN LAMA/);
   assert.equal(orderPaymentLabel({ payment_method: 'QRIS', payment_status: 'PAID' }), 'QRIS · DIKONFIRMASI');
 });
+
+
+test('blocked browser storage preserves uncertain request keys within the page', async () => {
+  const { resilientIntentStorage, orderIntentKey, completeOrderIntent } = await import('../src/lib/order-intent.ts');
+  const store = resilientIntentStorage(() => { throw Error('Storage denied'); });
+  const first = await orderIntentKey(store, 'customer:tenant:table', { qty: 1 });
+  assert.equal(await orderIntentKey(store, 'customer:tenant:table', { qty: 1 }), first);
+  assert.notEqual(await orderIntentKey(store, 'customer:other:table', { qty: 1 }), first);
+  completeOrderIntent(store, 'customer:tenant:table');
+  assert.notEqual(await orderIntentKey(store, 'customer:tenant:table', { qty: 1 }), first);
+});
+test('failed intent cleanup never reports a successful order as failed or replays stale storage', async () => {
+  const { resilientIntentStorage, orderIntentKey, completeOrderIntent } = await import('../src/lib/order-intent.ts');
+  const underlying = storage();
+  const store = resilientIntentStorage(() => ({ ...underlying, removeItem() { throw Error('Read only'); } }));
+  const first = await orderIntentKey(store, 'payment:order', { cash: 20000 });
+  assert.doesNotThrow(() => completeOrderIntent(store, 'payment:order'));
+  assert.notEqual(await orderIntentKey(store, 'payment:order', { cash: 20000 }), first);
+});

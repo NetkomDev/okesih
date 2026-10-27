@@ -101,7 +101,7 @@ export default function MarketingKomisiPage() {
             <span>
               {isSuspended
                 ? "Saldo disembunyikan"
-                : `Akumulasi dari ${data.totals.receipts.toLocaleString("id-ID")} struk`}
+                : "Akumulasi mutasi komisi yang sudah dibukukan"}
             </span>
           </div>
           <div className="mkt-komisi-card">
@@ -317,8 +317,8 @@ export default function MarketingKomisiPage() {
                   <tr>
                     <th>Tenant Binaan</th>
                     <th>Wilayah</th>
-                    <th>Total Struk</th>
-                    <th>Tarif / Struk</th>
+                    <th>Struk Terkonfirmasi</th>
+                    <th>Tarif Acuan Saat Ini</th>
                     <th>Total Komisi</th>
                   </tr>
                 </thead>
@@ -336,7 +336,7 @@ export default function MarketingKomisiPage() {
                         <b>{tenant.receipts.toLocaleString("id-ID")}</b> struk
                       </td>
                       <td>
-                        {isSuspended ? "••••" : `${money(tenant.commissionPerReceipt || data?.profile?.commissionRate || 0)} / struk`}
+                        {isSuspended ? "••••" : `${money(data.profile.commissionRate || 0)} / struk`}
                       </td>
                       <td>
                         <strong style={{ color: "#047857", fontSize: "14px" }}>
@@ -357,7 +357,7 @@ export default function MarketingKomisiPage() {
           <div>
             <strong>Mekanisme Komisi Multi-Tier OKESIH:</strong>
             <p>
-              Tarif dan penerima komisi dikunci saat tagihan baru dibuat. Saat tagihan dilunasi, hak komisi tersebut masuk ke saldo Mitra dan Koordinator yang tercatat pada tagihan. Tagihan lama tanpa snapshot tetap mengikuti aturan pelunasan sebelumnya.
+              Jumlah struk terkonfirmasi mencakup struk yang tagihan layanannya belum lunas. Total komisi mengikuti mutasi yang sudah dibukukan; tarif historis per tagihan tersedia pada riwayat komisi. Tarif dan penerima komisi dikunci saat tagihan baru dibuat. Saat tagihan dilunasi, hak komisi tersebut masuk ke saldo Mitra dan Koordinator yang tercatat pada tagihan. Tagihan lama tanpa snapshot tetap mengikuti aturan pelunasan sebelumnya.
             </p>
           </div>
         </section>

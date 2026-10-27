@@ -37,14 +37,35 @@ Saat tagihan baru terbit, database mengunci tarif komisi, penerima langsung/jari
 
 ## Validasi
 
-- `npm run check`: lint, 122 tes aplikasi (77 + 45), TypeScript, build produksi, dan pemindaian secret. Status akhir dicatat pada bagian rilis setelah proses selesai.
-- PostgreSQL disposable: seluruh migrasi 01–41 dan tujuh fixture regresi, termasuk kasus audit di atas, lulus. Fixture hanya dijalankan pada database lokal.
+- `npm run check`: lint, 124 tes aplikasi (79 + 45), TypeScript, build produksi, dan pemindaian secret. Lulus setelah audit ulang. Lint masih memiliki warning nonblocking yang sudah ada.
+- PostgreSQL disposable: seluruh migrasi 01–42 dan tujuh fixture regresi, termasuk kasus audit di atas, lulus. Fixture hanya dijalankan pada database lokal.
 - Uji dua proses pembayaran konkuren: satu sukses, satu ditolak karena sudah dibayar; kas dan audit hanya satu kali. Script membatasi koneksi ke database pengujian lokal.
-- Browser Chrome mobile 390 × 844: respons API sintetis untuk pelanggan dan KDS. Ini menguji perilaku UI, sedangkan integritas SQL diuji terpisah; bukan klaim transaksi produksi end-to-end.
+- Browser Chrome mobile 390 × 844 pada build produksi lokal: seluruh skenario lulus, termasuk storage diblokir; respons API sintetis untuk pelanggan dan KDS. Ini menguji perilaku UI, sedangkan integritas SQL diuji terpisah; bukan klaim transaksi produksi end-to-end.
 - `probe-flow.sql` pada laporan awal merupakan reproduksi kondisi baseline, bukan acceptance test untuk sistem yang telah diperbaiki.
 
 ## Rilis
 
-Migrasi baru: `38_flow_reporting.sql`, `39_order_source.sql`, `40_order_payments_and_business_dates.sql`, dan `41_billing_snapshots_and_retention.sql`. Urutan rilis: validasi lokal → dry-run database → migrasi produksi → pemeriksaan baca API database → commit/push `main` → verifikasi status Vercel dan health produksi. Tidak menjalankan seed atau transaksi uji finansial pada produksi.
+Migrasi baru: `38_flow_reporting.sql`, `39_order_source.sql`, `40_order_payments_and_business_dates.sql`, dan `41_billing_snapshots_and_retention.sql`, serta `42_flow_integrity_reconciliation.sql`. Urutan rilis: validasi lokal → dry-run database → migrasi produksi → pemeriksaan baca API database → commit/push `main` → verifikasi status Vercel dan health produksi. Tidak menjalankan seed atau transaksi uji finansial pada produksi.
 
 Dry-run memastikan hanya empat migrasi tersebut yang tertunda. Preflight mendeteksi satu shift terbuka, satu order tunai aktif, dan satu billing belum lunas; karena itu perlakuan legacy di atas diperlukan. Hasil migrasi dan deployment final disampaikan bersama tautan deployment setelah push.
+
+## Audit ulang terhadap laporan dan rencana
+
+Audit ulang dilakukan setelah permintaan pengguna untuk memeriksa pekerjaan yang terlewat. Semua F01–F12 dicocokkan dengan kode aktif, fixture, dan katalog database produksi. Ditemukan dan ditangani:
+
+1. **Riwayat migrasi tidak membuktikan skema aktual.** Penerapan 40 sempat gagal karena unique key shift gabungan tidak ada di produksi. Proses lain kemudian menambahkan prasyarat, menerapkan 40–41, dan membuat commit `edf4d22`. Pengguna mengonfirmasi proses lain dihentikan. Pemeriksaan katalog menemukan relasi item–tenant, validasi nilai, dan RPC pairing dari migrasi 29 juga belum tersedia. Migrasi 42 memulihkannya secara aman; preflight produksi menemukan nol relasi lintas tenant dan nol nilai invalid. Simulasi menghapus pengaman tersebut di database lokal, menerapkan 42, lalu menjalankan regresi berhasil.
+2. **Tanggal settlement masih bisa diubah.** Angka realisasi Super Admin bergantung pada tanggal ini; pengaman lama hanya melindungi nominal. Migrasi 42 turut mengunci tanggal, aktor, serta referensi pelunasan setelah PAID. Tes mencoba memindahkan tanggal pembayaran dan memastikan ditolak.
+3. **Tampilan komisi Mitra masih ambigu.** Jumlah seluruh struk terkonfirmasi tidak sama dengan struk billing yang sudah lunas. Subtitle kini menjelaskan akumulasi mutasi; tarif acuan saat ini memakai konfigurasi global langsung dan dilabeli terpisah dari tarif historis pada riwayat ledger. Total komisi tetap berasal dari ledger.
+4. **Penyimpanan intent belum tahan kegagalan browser.** Penyimpanan session pelacakan sudah dilindungi, tetapi akses localStorage intent dapat melempar error sebelum pengiriman atau sesudah server sukses. Adapter kini mempertahankan key retry dalam memori halaman dan menangani kegagalan penyimpanan/penghapusan. Dua tes baru memverifikasi retry tidak berubah serta cleanup tidak melaporkan sukses sebagai gagal; browser tambahan memblokir kedua storage saat membuat order.
+5. **Cakupan bukti diperluas.** Ditambahkan alur QRIS sampai DONE, replay respons hilang, penolakan tanpa omzet/billing, dan shift hanya berisi penolakan. Dengan demikian bukti pembayaran tidak terbatas pada tunai.
+
+Batas tetap dinyatakan: snapshot bisnis KPI dan grafik berasal dari request terpisah yang diinvalidasi bersama, bukan satu transaksi baca atomik; polling memiliki jeda. Refund/void setelah konfirmasi dan verifikasi settlement bank otomatis belum merupakan fitur dalam rencana yang disepakati. Perubahan harga saat pelanggan sudah membayar QRIS tetap memerlukan pemeriksaan kasir; tidak diklaim terselesaikan oleh perbaikan pelaporan ini.
+
+### Status validasi dan rilis setelah audit ulang
+
+- `npm run check`: **lulus**, 124/124 tes, TypeScript/build berhasil, pemeriksaan 149 berkas client tidak menemukan secret.
+- Migrasi 01–42 pada database kosong dan tujuh fixture SQL: **lulus**. Simulasi skema tidak lengkap serta pembayaran konkuren: **lulus**.
+- Browser pelanggan/KDS pada build produksi lokal: **lulus**. Percobaan sebelumnya melalui server dev yang tidak lagi tersedia berhenti karena timeout navigasi; pengujian final menggunakan `next start` dan lulus.
+- Migrasi produksi 42: **berhasil**. Katalog produksi diverifikasi memiliki constraint tenant/item/pembayaran, trigger pengisian tenant item, fungsi pairing, dan penguncian settlement.
+- Smoke test baca produksi: **lulus** untuk identitas rumus analytics, keunikan tenant, laporan owner/Mitra, kolom pembayaran, serta agregasi kas berscope tenant. Tidak membuat transaksi finansial uji di produksi.
+- Commit/push perubahan audit ulang ke `main` dilakukan sesudah validasi ini. Identitas commit dan status deployment Vercel yang sesuai diverifikasi setelah push dan dicatat pada jawaban akhir; laporan ini tidak mengklaim UAT pembayaran bank/perangkat fisik.

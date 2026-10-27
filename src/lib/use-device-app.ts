@@ -1,7 +1,7 @@
 "use client";
 
 import { canOperateOffline, syncFailureKind } from "@/lib/offline-policy";
-import { orderIntentKey, completeOrderIntent } from "@/lib/order-intent";
+import { orderIntentKey, completeOrderIntent, browserOrderIntentStorage } from "@/lib/order-intent";
 import type { QueuedOperation } from "@/lib/device-offline";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cacheDeviceSnapshot, clearDeviceData, enqueueDeviceOperation, listDeviceOperations, readDeviceSnapshot, removeDeviceOperation } from "@/lib/device-offline";
@@ -251,7 +251,7 @@ export function useDeviceApp(type: "POS" | "KDS", includeHistory = true) {
     if (!data || (!navigator.onLine && !canOperateOffline(snapshot.current))) throw new Error("Batas operasi offline telah habis. Sambungkan internet.");
     const intent = { orderId, status, ...(type === "POS" && data.shift?.id ? { shiftId: data.shift.id } : {}) };
     const scope = `transition:${data.device.id}:${orderId}:${status}`;
-    const idempotencyKey = await orderIntentKey(localStorage, scope, intent);
+    const idempotencyKey = await orderIntentKey(browserOrderIntentStorage, scope, intent);
     const body = { ...intent, idempotencyKey };
     // Persist before network submission, including uncertain online responses.
     await enqueueDeviceOperation({ id: idempotencyKey, deviceType: type, deviceId: data.device.id, path: "/api/device/orders", body, createdAt: new Date().toISOString() });
@@ -267,7 +267,7 @@ export function useDeviceApp(type: "POS" | "KDS", includeHistory = true) {
       throw new Error(result.error || "Status pesanan gagal diperbarui.");
     }
     await removeDeviceOperation(idempotencyKey);
-    completeOrderIntent(localStorage, scope);
+    completeOrderIntent(browserOrderIntentStorage, scope);
     // A read started before this write may contain stale data.
     await refreshInFlight.current;
     await refresh(true);
@@ -281,11 +281,11 @@ export function useDeviceApp(type: "POS" | "KDS", includeHistory = true) {
     const response = await fetch("/api/device/cashier-orders", {
       method: "POST",
       headers: await deviceHeaders(type),
-      body: JSON.stringify({ ...intent, idempotencyKey: await orderIntentKey(localStorage, scope, intent) }),
+      body: JSON.stringify({ ...intent, idempotencyKey: await orderIntentKey(browserOrderIntentStorage, scope, intent) }),
     });
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || "Pesanan kasir gagal disimpan.");
-    completeOrderIntent(localStorage, scope);
+    completeOrderIntent(browserOrderIntentStorage, scope);
     // A read started before this write may contain stale data.
     await refreshInFlight.current;
     await refresh(true);
@@ -298,11 +298,11 @@ export function useDeviceApp(type: "POS" | "KDS", includeHistory = true) {
     const intent = { orderId, shiftId: data.shift.id, ...(cashReceived === undefined ? {} : { cashReceived }) };
     const response = await fetch("/api/device/payments", {
       method: "POST", headers: await deviceHeaders(type),
-      body: JSON.stringify({ ...intent, idempotencyKey: await orderIntentKey(localStorage, scope, intent) }),
+      body: JSON.stringify({ ...intent, idempotencyKey: await orderIntentKey(browserOrderIntentStorage, scope, intent) }),
     });
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || "Pembayaran gagal dicatat.");
-    completeOrderIntent(localStorage, scope);
+    completeOrderIntent(browserOrderIntentStorage, scope);
     await refreshInFlight.current; await refresh(true);
     return result as { change: number };
   };

@@ -1,6 +1,6 @@
 "use client";
 import { customerSessionStorage, readCustomerOrders, rememberCustomerOrder, resolveCustomerTable, type CustomerOrderSession } from "@/lib/customer-order-session";
-import { orderIntentKey, completeOrderIntent } from "@/lib/order-intent";
+import { orderIntentKey, completeOrderIntent, browserOrderIntentStorage } from "@/lib/order-intent";
 
 import Image from "next/image";
 import { Suspense, useEffect, useMemo, useState } from "react";
@@ -163,7 +163,7 @@ function CustomerMenuContent() {
         slug: warkopId, tableId, paymentMethod, proofImage: paymentMethod === "QRIS" ? proofImage : null,
         items: Object.values(cart).map((item) => ({ menuId: item.menu.id, qty: item.qty, notes: item.notes })),
       };
-      const response = await fetch("/api/public/orders", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...input, idempotencyKey: await orderIntentKey(localStorage, `customer:${warkopId}:${tableId}`, input) }) });
+      const response = await fetch("/api/public/orders", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...input, idempotencyKey: await orderIntentKey(browserOrderIntentStorage, `customer:${warkopId}:${tableId}`, input) }) });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "Pesanan gagal disimpan.");
       setOrder(body.order); setCustomerToken(body.customerToken); setOrderStatus("AWAITING_CONFIRMATION"); setPaymentStatus("");
@@ -171,7 +171,7 @@ function CustomerMenuContent() {
       setSavedOrders(rememberCustomerOrder(customerSessionStorage(), warkopId, {
         order: body.order, token: body.customerToken, tableId, tableNumber, paymentMethod, savedAt: Date.now(),
       }));
-      completeOrderIntent(localStorage, `customer:${warkopId}:${tableId}`);
+      completeOrderIntent(browserOrderIntentStorage, `customer:${warkopId}:${tableId}`);
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Pesanan gagal disimpan."); }
     finally { setBusy(false); }
   };

@@ -1,6 +1,6 @@
 # Rencana perbaikan alur pemesanan dan pendapatan
 
-Baseline: `4273efc`. Sumber: [laporan audit](laporan-flow-pemesanan.md). Status awal: sedang dikerjakan.
+Baseline: `4273efc`. Sumber: [laporan audit](laporan-flow-pemesanan.md). Status: implementasi dan audit ulang selesai; migrasi produksi sampai 42 serta seluruh validasi lulus. Verifikasi deployment commit akhir dilakukan setelah push.
 
 ## Urutan implementasi
 
@@ -16,7 +16,7 @@ Baseline: `4273efc`. Sumber: [laporan audit](laporan-flow-pemesanan.md). Status 
 
 ## Keputusan bisnis yang dimintakan klarifikasi
 
-Pertanyaan dikirim saat awal pekerjaan, sesuai AGENTS.md yang melarang asumsi atas kebutuhan ambigu. Pekerjaan tahap 1–3 dapat berjalan sambil menunggu.
+Keputusan berikut menjadi dasar implementasi. Klarifikasi dikirim saat awal pekerjaan; pengguna melanjutkan pekerjaan dan memberikan kebijakan pembayaran serta retensi berikut.
 
 - Pembayaran tunai QR: bayar saat diantar dengan pencatatan pelunasan kasir, atau wajib lunas sebelum dapur.
 jawaban: bayar saat diantar dengan pencatatan pelunasan kasir.
@@ -45,4 +45,8 @@ Setelah pengguna menginstruksikan “lanjutkan”, opsi rekomendasi dilanjutkan 
 
 ## Catatan pelaksanaan
 
-- Rencana dibuat sebelum implementasi. Status tiap tahap, keputusan pengguna, hasil tes, dan hasil rilis akan diperbarui pada dokumen ini/laporan hasil.
+- Tahap 1–5: F01–F12 telah diimplementasikan melalui migrasi 38–41 dan perubahan UI/API.
+- Tahap 6: 122 tes awal, tujuh fixture SQL, pembayaran konkuren, dan browser pelanggan/KDS lulus. Audit ulang menambah dua tes penyimpanan browser, regresi QRIS/penolakan/tanggal settlement, dan simulasi perbedaan skema produksi.
+- Tahap 7: migrasi 38–41 serta commit `edf4d22` sudah dibuat oleh proses sebelumnya. Saat audit ulang, proses lain dihentikan atas konfirmasi pengguna; perubahan tersebut dipertahankan.
+- Tambahan audit ulang: migrasi 42 memulihkan pengaman tenant/item dan pairing yang tidak tersedia di produksi walaupun versi lama tercatat terpasang; mengunci tanggal/identitas settlement. Label Mitra dan ketahanan intent terhadap kegagalan penyimpanan diperbaiki.
+- Status dan batas kepastian per temuan tersedia pada [laporan hasil](hasil-perbaikan.md).

@@ -57,6 +57,7 @@ BEGIN
  PERFORM public.submit_billing_proof(bill,w,owner_id,'saas-billings/'||w||'/proof.png',encode(extensions.digest(bill::text,'sha256'),'hex'),'QA');
  PERFORM public.review_billing(bill,admin_id,'APPROVE','flow-'||bill,NULL);
  PERFORM public.review_billing(bill,admin_id,'APPROVE','flow-'||bill,NULL);
+ BEGIN UPDATE public.saas_billings SET commission_settled_at=now()-interval '1 day' WHERE id=bill; RAISE EXCEPTION 'Settlement date mutable' USING ERRCODE='XX000'; EXCEPTION WHEN check_violation THEN NULL; END;
  IF (SELECT total_amount FROM public.marketing_commission_mutations WHERE billing_id=bill AND partner_id=partner AND kind='DIRECT') IS DISTINCT FROM rate THEN RAISE EXCEPTION 'Direct snapshot not honored'; END IF;
  IF (SELECT total_amount FROM public.marketing_commission_mutations WHERE billing_id=bill AND partner_id=coord AND kind='NETWORK') IS DISTINCT FROM bonus THEN RAISE EXCEPTION 'Network snapshot not honored'; END IF;
  IF EXISTS(SELECT FROM public.marketing_commission_mutations WHERE billing_id=bill AND partner_id=replacement) THEN RAISE EXCEPTION 'New recipient stole old entitlement'; END IF;
@@ -66,5 +67,35 @@ BEGIN
  IF public.close_shift(empty_shift,0)->>'billing_id' IS NOT NULL THEN RAISE EXCEPTION 'Empty retry charged'; END IF;
  IF has_function_privilege('anon','public.record_order_payment(uuid,uuid,uuid,jsonb,text)','EXECUTE') THEN RAISE EXCEPTION 'Payment exposed'; END IF;
  RAISE NOTICE 'PASS flow payments: QR source, pending cash, date boundary, cash collection, DONE gate, shift gate, idempotency, snapshot rates/recipients, zero shifts, ACL';
+END $$;
+DO $$
+DECLARE w uuid:=gen_random_uuid(); cashier uuid:=gen_random_uuid(); device uuid:=gen_random_uuid(); kitchen uuid:=gen_random_uuid();
+ shift uuid:=gen_random_uuid(); menu uuid:=gen_random_uuid(); oid uuid; rejected uuid; input jsonb; result jsonb;
+BEGIN
+ INSERT INTO public.warkops(id,nama,slug) VALUES(w,'QRIS QA','qris-'||w);
+ INSERT INTO public.warkop_members(id,warkop_id,username,role) VALUES(cashier,w,'cashier','KASIR');
+ INSERT INTO public.device_installations(id,warkop_id,device_type,device_name,token_hash,expires_at)
+ VALUES(device,w,'POS','POS',device::text,now()+interval '1 day'),(kitchen,w,'KDS','KDS',kitchen::text,now()+interval '1 day');
+ INSERT INTO public.shifts(id,warkop_id,opened_by,device_id) VALUES(shift,w,cashier,device);
+ INSERT INTO public.warkop_tables(warkop_id,label) VALUES(w,'1');
+ INSERT INTO public.menus(id,warkop_id,nama,harga,kategori) VALUES(menu,w,'QA',10000,'Drink');
+ input:=jsonb_build_object('idempotencyKey',gen_random_uuid(),'tableNumber','1','paymentMethod','QRIS','items',jsonb_build_array(jsonb_build_object('menuId',menu,'qty',1)));
+ result:=public.create_order_v2(w,input,'qris','token','proof.png'); oid:=(result->>'id')::uuid;
+ IF (public.create_order_v2(w,input,'qris','token','proof.png')->>'id')::uuid<>oid THEN RAISE EXCEPTION 'Lost response duplicates QRIS'; END IF;
+ PERFORM public.transition_order_v2(w,device,cashier,jsonb_build_object('idempotencyKey',gen_random_uuid(),'orderId',oid,'status','COOKING','shiftId',shift),'qris-confirm');
+ IF NOT EXISTS(SELECT FROM public.transactions WHERE id=oid AND payment_status='PAID' AND payment_received_by=cashier AND payment_shift_id=shift) THEN RAISE EXCEPTION 'QRIS confirmation did not record verification'; END IF;
+ PERFORM public.transition_order_v2(w,kitchen,NULL,jsonb_build_object('idempotencyKey',gen_random_uuid(),'orderId',oid,'status','READY'),'qris-ready');
+ PERFORM public.transition_order_v2(w,kitchen,NULL,jsonb_build_object('idempotencyKey',gen_random_uuid(),'orderId',oid,'status','DONE'),'qris-done');
+ input:=input||jsonb_build_object('idempotencyKey',gen_random_uuid());
+ rejected:=(public.create_order_v2(w,input,'reject','token2','proof2.png')->>'id')::uuid;
+ PERFORM public.transition_order_v2(w,device,cashier,jsonb_build_object('idempotencyKey',gen_random_uuid(),'orderId',rejected,'status','REJECTED','shiftId',shift),'reject');
+ IF (public.report_transaction_summary(w)->>'receiptCount')::int<>1 OR public.report_shift_cash(w,shift)<>0 THEN RAISE EXCEPTION 'QRIS/rejection cash or receipt mismatch'; END IF;
+ result:=public.close_shift(shift,0);
+ IF (result->>'total_transactions')::int<>1 THEN RAISE EXCEPTION 'Rejected order billed'; END IF;
+ INSERT INTO public.shifts(id,warkop_id,opened_by,device_id) VALUES(gen_random_uuid(),w,cashier,device) RETURNING id INTO shift;
+ -- A rejected-only shift must also produce no bill, even if historical data links the rejected row.
+ UPDATE public.transactions SET shift_id=shift WHERE id=rejected;
+ IF public.close_shift(shift,0)->>'billing_id' IS NOT NULL THEN RAISE EXCEPTION 'Rejected-only shift billed'; END IF;
+ RAISE NOTICE 'PASS QRIS lifecycle, lost-response replay, rejection, rejected-only shift, immutable settlement date';
 END $$;
 ROLLBACK;

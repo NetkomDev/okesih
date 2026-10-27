@@ -41,6 +41,14 @@ try{
  await page.getByRole('button',{name:'Tambah Kopi QA',exact:true}).click();await page.getByRole('button',{name:'Lihat ringkasan pesanan'}).click();
  await page.getByRole('button',{name:'Kirim Pesanan'}).waitFor();await page.getByText('Meja Baru',{exact:true}).first().waitFor();
  console.log('PASS browser customer: submit, reload recovery, second-order reset, invalid QR isolation, stable ID after rename');
+ await page.addInitScript(() => {
+   Object.defineProperty(window, 'localStorage', { configurable: true, get() { throw new DOMException('Blocked', 'SecurityError'); } });
+   Object.defineProperty(window, 'sessionStorage', { configurable: true, get() { throw new DOMException('Blocked', 'SecurityError'); } });
+ });
+ await page.goto(`${base}/menu/flow-qa?tid=${table}`, { waitUntil: 'domcontentloaded' });
+ await sendCash();await page.getByRole('heading',{name:'Menunggu konfirmasi kasir'}).waitFor();
+ assert.equal(creates,3);
+ console.log('PASS browser customer: blocked local/session storage still allows order submission');
  const kds=await context.newPage();let paid=false,done=false,posts=[];
  await kds.clock.install();
  await kds.route('**/api/device/bootstrap*',route=>route.fulfill({json:{serverTime:new Date().toISOString(),device:{id:'device',name:'QA KDS',type:'KDS',expiresAt:new Date(Date.now()+86400000).toISOString()},profile:{id:'tenant',nama:'QA',slug:'qa',is_active:true,offline_limit_hours:4,queue_dismiss_seconds:1},menus:[],tables:[],waiters:[],shift:null,hasAuditPin:false,orders:done?[]:[{id:'order-kds',table_number:'1',nomor_antrean:8,total_harga:20000,payment_method:'CASH',payment_status:paid?'PAID':'PENDING',order_source:'CUSTOMER_QR',status_pesanan:'READY',waiter_name:'Kasir: QA',created_at:new Date(Date.now()-120000).toISOString(),updated_at:new Date(Date.now()-120000).toISOString(),items:[{id:'i',nama_menu:'Kopi QA',harga_satuan:20000,qty:1,notes:null}]}]}}));
