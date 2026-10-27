@@ -126,8 +126,8 @@ export async function renderTableSignToCanvas(
   ctx.restore();
 
   // 4. Hasilkan dan Gambar QR Code Menu Digital
-  // URL menggunakan format ringkas ?t= agar modul QR Code berukuran besar & renggang (mudah discan kamera HP)
-  const menuUrl = `${origin}/menu/${profile.slug}?t=${encodeURIComponent(table.label)}`;
+  // UUID meja menjaga QR tetap valid ketika label meja diubah.
+  const menuUrl = `${origin}/menu/${profile.slug}?tid=${encodeURIComponent(table.id)}`;
   const qrDataUrl = await QRCode.toDataURL(menuUrl, {
     width: 600,
     margin: 1,

@@ -14,7 +14,7 @@ function money(value: number) {
   return `Rp ${Number(value || 0).toLocaleString("id-ID")}`;
 }
 
-export default function RevenueChart() {
+export default function RevenueChart({ revision = 0 }: { revision?: number }) {
   const [revenuePeriod, setRevenuePeriod] = useState<RevenuePeriod>("day");
   const [revenueData, setRevenueData] = useState<RevenueData | null>(null);
   const [revenueLoading, setRevenueLoading] = useState(true);
@@ -42,7 +42,7 @@ export default function RevenueChart() {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [revenuePeriod]);
+  }, [revenuePeriod, revision]);
   const revenueSeries = revenueData?.series || [];
   const revenueMaximum = Math.max(
     ...revenueSeries.map((item) => item.value),
@@ -85,7 +85,7 @@ export default function RevenueChart() {
           <div>
             <span>PERFORMA USAHA</span>
             <h2 id="owner-chart-title">Tren penjualan</h2>
-            <p>Lihat perkembangan penjualan usaha Anda.</p>
+            <p>Omzet berdasarkan waktu konfirmasi kasir (WITA), bukan waktu uang tunai diterima. Data lama tanpa waktu konfirmasi memakai waktu pemesanan.</p>
           </div>
           <div
             className="owner-chart-filters"
@@ -117,7 +117,7 @@ export default function RevenueChart() {
             <strong>{money(revenueData?.total || 0)}</strong>
           </div>
           <div>
-            <small>Rata-rata</small>
+            <small>{revenuePeriod === "day" ? "Rata-rata per 3 jam beromzet" : revenuePeriod === "year" ? "Rata-rata per bulan beromzet" : "Rata-rata per hari beromzet"}</small>
             <b>{money(revenueData?.average || 0)}</b>
           </div>
           <div>

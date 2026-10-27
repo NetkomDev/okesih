@@ -91,7 +91,7 @@ export function useOwnerSession() {
 
 type Resource = "overview" | "menu" | "staff" | "waiters" | "qris-tables" | "devices" | "pin";
 const endpoints: Partial<Record<Resource, string>> = { overview: "dashboard", menu: "menus", staff: "staff", waiters: "waiters", "qris-tables": "tables", devices: "devices" };
-const tables: Partial<Record<Resource, string[]>> = { overview: ["transactions", "shifts"], menu: ["menus"], staff: ["shifts", "warkop_members"], waiters: ["waiters"], "qris-tables": ["warkop_tables"] };
+const tables: Partial<Record<Resource, string[]>> = { overview: ["transactions", "shifts", "saas_billings"], menu: ["menus"], staff: ["shifts", "warkop_members"], waiters: ["waiters"], "qris-tables": ["warkop_tables"] };
 
 // Each mounted route owns its data and subscription; the layout only owns identity/onboarding.
 export function useOwnerData(resource: Resource) {
@@ -104,6 +104,8 @@ export function useOwnerData(resource: Resource) {
   const [ready, setReady] = useState(!endpoints[resource]);
   const [refreshing, setRefreshing] = useState(false);
   const sequence = useRef(0);
+  const [revision, setRevision] = useState(0);
+  const [syncedAt, setSyncedAt] = useState<string | null>(null);
   const loadDashboard = useCallback(async () => {
     const endpoint = endpoints[resource];
     if (!endpoint) return;
@@ -114,6 +116,8 @@ export function useOwnerData(resource: Resource) {
       if (current !== sequence.current) return;
       setError("");
       setReady(true);
+      setRevision(value => value + 1);
+      setSyncedAt(new Date().toISOString());
       if (resource === "devices") setDevices(result.devices || []);
       else setData(previous => ({ ...previous, ...result.data }));
       return result;
@@ -135,8 +139,17 @@ export function useOwnerData(resource: Resource) {
     const channel = supabase.channel(`owner-${resource}-${profile.id}`);
     for (const table of tables[resource] || []) channel.on("postgres_changes", { event: "*", schema: "public", table, filter: `warkop_id=eq.${profile.id}` }, load);
     if (tables[resource]?.length) channel.subscribe();
+    const foreground = () => { if (navigator.onLine && document.visibilityState === "visible") load(); };
+    const poll = resource === "overview" ? window.setInterval(foreground, 30000) : undefined;
+    window.addEventListener("online", foreground);
+    document.addEventListener("visibilitychange", foreground);
     const invalidate = () => { sequence.current++; };
-    return () => { clearTimeout(timer); invalidate(); void supabase.removeChannel(channel); };
+    return () => {
+      clearTimeout(timer); clearInterval(poll); invalidate();
+      window.removeEventListener("online", foreground);
+      document.removeEventListener("visibilitychange", foreground);
+      void supabase.removeChannel(channel);
+    };
   }, [resource, profile.id, loadDashboard]);
   
   const [notice, setNotice] = useState("");
@@ -150,5 +163,5 @@ export function useOwnerData(resource: Resource) {
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Perubahan gagal disimpan."); }
     finally { setBusy(false); }
   };
-  return { ready, refreshing, data: { ...data, profile }, setData, devices, error, setError, notice, setNotice, busy, setBusy, loadDashboard, loadDeviceCenter: loadDashboard, mutate };
+  return { ready, refreshing, revision, syncedAt, data: { ...data, profile }, setData, devices, error, setError, notice, setNotice, busy, setBusy, loadDashboard, loadDeviceCenter: loadDashboard, mutate };
 }

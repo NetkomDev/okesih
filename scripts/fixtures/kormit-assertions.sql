@@ -52,7 +52,7 @@ BEGIN
  UPDATE public.marketing_partners SET membership_level='COORDINATOR' WHERE id=child;
  IF (SELECT upline_id FROM public.marketing_partners WHERE id=child)<>coord THEN RAISE EXCEPTION 'Promotion detached upline'; END IF;
  BEGIN UPDATE public.marketing_partners SET membership_level='MITRA' WHERE id=coord; RAISE EXCEPTION 'Coordinator demoted with children' USING ERRCODE='XX000'; EXCEPTION WHEN check_violation THEN NULL; END;
- -- Rate changes apply to future settlements, never rewrite previous credits.
+ -- Rate changes apply to newly issued bills, never rewrite previous credits.
  UPDATE public.platform_settings SET default_marketing_commission=18,coordinator_commission_per_receipt=7 WHERE id='global';
  INSERT INTO public.saas_billings(warkop_id,tanggal,total_transactions,tagihan_pokok,kode_unik,total_tagihan,status_bayar) VALUES(wn,current_date+1,10,500,126,626,'PAID');
  IF (SELECT sum(total_amount) FROM public.marketing_commission_mutations WHERE partner_id=child)<>2180 THEN RAISE EXCEPTION 'Historical direct rate changed'; END IF;
@@ -86,6 +86,7 @@ BEGIN
  INSERT INTO public.warkop_members(id,warkop_id,user_id,username,role) VALUES(member,w,owner_id,'QA','OWNER');
  INSERT INTO public.shifts(id,warkop_id,opened_by) VALUES(shift,w,member);
  INSERT INTO public.transactions(warkop_id,shift_id,status_pesanan,total_harga,payment_method,nomor_antrean) VALUES(w,shift,'DONE',10000,'CASH',1),(w,shift,'VOID',10000,'CASH',2),(w,shift,'REJECTED',10000,'CASH',3),(w,shift,'AWAITING_CONFIRMATION',10000,'CASH',4);
+ UPDATE public.transactions SET payment_status='PAID',payment_shift_id=shift WHERE warkop_id=w AND status_pesanan='DONE';
  result:=public.close_shift(shift,10000,NULL); bill:=(result->>'billing_id')::uuid;
  IF (result->>'total_transactions')::int<>1 THEN RAISE EXCEPTION 'Invalid receipts billed'; END IF;
  IF (public.close_shift(shift,10000,NULL)->>'billing_id')::uuid<>bill THEN RAISE EXCEPTION 'Repeated close duplicates billing'; END IF;
@@ -96,7 +97,7 @@ BEGIN
  IF (SELECT count(*) FROM public.marketing_commission_mutations WHERE billing_id=bill)<>1 THEN RAISE EXCEPTION 'Review duplicate commission'; END IF;
  INSERT INTO public.shifts(id,warkop_id,opened_by) VALUES(second_shift,w,member);
  result:=public.close_shift(second_shift,0,NULL);
- IF (result->>'billing_id')::uuid=bill THEN RAISE EXCEPTION 'Second shift overwrote settled billing'; END IF;
+ IF result->>'billing_id' IS NOT NULL OR (result->>'total_tagihan')::numeric<>0 THEN RAISE EXCEPTION 'Empty shift billed'; END IF;
  IF (SELECT total_transactions FROM public.saas_billings WHERE id=bill)<>1 THEN RAISE EXCEPTION 'Settled receipt count changed'; END IF;
  RAISE NOTICE 'Billing → proof → approval → commission assertions passed.';
 END $$;

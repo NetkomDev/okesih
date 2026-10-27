@@ -1,4 +1,5 @@
 "use client";
+import { customerSessionStorage, readCustomerOrders, rememberCustomerOrder, resolveCustomerTable, type CustomerOrderSession } from "@/lib/customer-order-session";
 import { orderIntentKey, completeOrderIntent } from "@/lib/order-intent";
 
 import Image from "next/image";
@@ -44,6 +45,10 @@ function CustomerMenuContent() {
   const paramTableId = searchParams.get("tableId") || searchParams.get("tid") || "";
   const paramTable = searchParams.get("t") || searchParams.get("table") || "";
 
+  const explicitTable = ["tableId", "tid", "t", "table"].some(key => searchParams.has(key));
+  const [savedOrders, setSavedOrders] = useState<CustomerOrderSession[]>([]);
+  const [statusTable, setStatusTable] = useState("");
+  const [statusPayment, setStatusPayment] = useState<"QRIS" | "CASH">("QRIS");
   const [payload, setPayload] = useState<MenuPayload | null>(null);
   const [tableId, setTableId] = useState(paramTableId);
   const [tableNumber, setTableNumber] = useState(paramTable);
@@ -54,6 +59,7 @@ function CustomerMenuContent() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [order, setOrder] = useState<OrderResult | null>(null);
+  const [paymentStatus, setPaymentStatus] = useState("");
   const [orderStatus, setOrderStatus] = useState("AWAITING_CONFIRMATION");
   const [customerToken, setCustomerToken] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Semua");
@@ -61,24 +67,17 @@ function CustomerMenuContent() {
 
   useEffect(() => {
     if (!warkopId) return;
-    fetch(`/api/public/menu/${encodeURIComponent(warkopId)}`)
+    const controller = new AbortController();
+    fetch(`/api/public/menu/${encodeURIComponent(warkopId)}`, { signal: controller.signal })
       .then(async (response) => {
         const body = await response.json();
         if (!response.ok) throw new Error(body.error || "Menu gagal dimuat.");
+        if (controller.signal.aborted) return;
         
-        const cleanParamTable = paramTable.trim().toLowerCase();
-        let matchedTable = (paramTableId ? body.tables.find((table: BusinessTable) => table.id === paramTableId) : null)
-          || (cleanParamTable ? body.tables.find((table: BusinessTable) => table.label.trim().toLowerCase() === cleanParamTable) : null);
-
-        if (!matchedTable && typeof window !== "undefined") {
-          try {
-            const cached = sessionStorage.getItem(`okesih_table_${warkopId}`);
-            if (cached) {
-              const parsed = JSON.parse(cached);
-              matchedTable = body.tables.find((table: BusinessTable) => table.id === parsed.id || table.label === parsed.label);
-            }
-          } catch {}
-        }
+        let cachedTable = null;
+        try { cachedTable = JSON.parse(sessionStorage.getItem(`okesih_table_${warkopId}`) || "null"); } catch {}
+        const matchedTable = resolveCustomerTable(body.tables, { id: paramTableId, label: paramTable, explicit: explicitTable }, cachedTable);
+        if (explicitTable && !matchedTable) setError("QR meja tidak valid atau meja sudah nonaktif. Silakan scan ulang QR meja.");
 
         if (matchedTable && typeof window !== "undefined") {
           try {
@@ -89,20 +88,44 @@ function CustomerMenuContent() {
         setPayload(body);
         setTableId(matchedTable?.id || "");
         setTableNumber(matchedTable?.label || "");
+        const sessions = readCustomerOrders(customerSessionStorage(), warkopId);
+        setSavedOrders(sessions);
+        const recent = sessions.find(row => !explicitTable || row.tableId === matchedTable?.id);
+        if (recent) {
+          setOrder(recent.order); setCustomerToken(recent.token); setOrderStatus("LOADING"); setPaymentStatus("");
+          setStatusTable(recent.tableNumber); setStatusPayment(recent.paymentMethod);
+        } else {
+          setOrder(null); setCustomerToken(""); setOrderStatus("AWAITING_CONFIRMATION"); setPaymentStatus("");
+        }
       })
-      .catch((reason) => setError(reason instanceof Error ? reason.message : "Menu gagal dimuat."));
-  }, [paramTable, paramTableId, warkopId]);
+      .catch((reason) => { if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : "Menu gagal dimuat."); });
+    return () => controller.abort();
+  }, [paramTable, paramTableId, warkopId, explicitTable]);
 
   useEffect(() => {
     if (!order || !customerToken) return;
-    const timer = window.setInterval(async () => {
-      const response = await fetch(`/api/public/orders/${order.id}`, { headers: { Authorization: `Bearer ${customerToken}` }, cache: "no-store" });
-      if (!response.ok) return;
-      const body = await response.json();
-      setOrderStatus(body.order.status_pesanan);
-      if (["DONE", "REJECTED", "VOID"].includes(body.order.status_pesanan)) window.clearInterval(timer);
-    }, 4000);
-    return () => window.clearInterval(timer);
+    const controller = new AbortController();
+    let inFlight = false;
+    let terminal = false;
+    const poll = async () => {
+      if (inFlight || terminal || !navigator.onLine) return;
+      inFlight = true;
+      try {
+        const response = await fetch(`/api/public/orders/${order.id}`, { headers: { Authorization: `Bearer ${customerToken}` }, cache: "no-store", signal: controller.signal });
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.error || "Status pesanan belum dapat dimuat.");
+        if (controller.signal.aborted) return;
+        setError(""); setOrderStatus(body.order.status_pesanan); setPaymentStatus(body.order.payment_status || "");
+        terminal = ["DONE", "REJECTED", "VOID"].includes(body.order.status_pesanan);
+      } catch (reason) {
+        if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : "Koneksi terputus. Status akan diperiksa kembali.");
+      } finally { inFlight = false; }
+    };
+    void poll();
+    const timer = window.setInterval(() => { if (document.visibilityState === "visible") void poll(); }, 4000);
+    const foreground = () => { if (document.visibilityState === "visible") void poll(); };
+    window.addEventListener("online", foreground); document.addEventListener("visibilitychange", foreground);
+    return () => { controller.abort(); window.clearInterval(timer); window.removeEventListener("online", foreground); document.removeEventListener("visibilitychange", foreground); };
   }, [customerToken, order]);
 
   const total = useMemo(() => Object.values(cart).reduce((sum, item) => sum + Number(item.menu.harga) * item.qty, 0), [cart]);
@@ -143,22 +166,27 @@ function CustomerMenuContent() {
       const response = await fetch("/api/public/orders", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...input, idempotencyKey: await orderIntentKey(localStorage, `customer:${warkopId}:${tableId}`, input) }) });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "Pesanan gagal disimpan.");
+      setOrder(body.order); setCustomerToken(body.customerToken); setOrderStatus("AWAITING_CONFIRMATION"); setPaymentStatus("");
+      setStatusTable(tableNumber); setStatusPayment(paymentMethod); setCheckout(false);
+      setSavedOrders(rememberCustomerOrder(customerSessionStorage(), warkopId, {
+        order: body.order, token: body.customerToken, tableId, tableNumber, paymentMethod, savedAt: Date.now(),
+      }));
       completeOrderIntent(localStorage, `customer:${warkopId}:${tableId}`);
-      setOrder(body.order); setCustomerToken(body.customerToken); setCheckout(false);
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Pesanan gagal disimpan."); }
     finally { setBusy(false); }
   };
 
-  if (!payload) return <div className="customer-loading" role="status" aria-label={error || "Menyiapkan menu"}><Image src="/logo.svg?v=2" width={64} height={64} alt="OKESIH"/></div>;
+  if (!payload) return <div className="customer-loading" role="status"><Image src="/logo.svg?v=2" width={64} height={64} alt="OKESIH"/>{error && <p role="alert">{error}</p>}</div>;
   if (order) return (
     <main className="customer-order-status">
       <Image src="/logo.svg?v=2" width={64} height={64} alt="OKESIH"/>
       <span>ANTREAN</span>
       <strong>#{String(order.queueNumber).padStart(3, "0")}</strong>
-      <h1>{orderStatus === "AWAITING_CONFIRMATION" ? "Menunggu konfirmasi kasir" : orderStatus === "COOKING" ? "Pesanan sedang disiapkan" : orderStatus === "READY" ? "Pesanan siap diantar" : orderStatus === "DONE" ? "Pesanan selesai" : "Pesanan tidak dapat diproses"}</h1>
-      <p>Meja {formatTableNumber(tableNumber)} · {paymentMethod === "CASH" ? "Bayar tunai saat pesanan diantar" : "QRIS sedang diverifikasi"}</p>
+      <h1>{orderStatus === "LOADING" ? "Memeriksa status pesanan" : orderStatus === "AWAITING_CONFIRMATION" ? "Menunggu konfirmasi kasir" : orderStatus === "COOKING" ? "Pesanan sedang disiapkan" : orderStatus === "READY" ? "Pesanan siap diantar" : orderStatus === "DONE" ? "Pesanan selesai" : "Pesanan tidak dapat diproses"}</h1>
+      <p>Meja {formatTableNumber(statusTable)} · {statusPayment === "CASH" ? (paymentStatus === "PAID" ? "Pembayaran tunai sudah dicatat kasir" : "Bayar tunai saat pesanan diantar") : ["COOKING", "READY", "DONE"].includes(orderStatus) ? "QRIS dikonfirmasi kasir" : ["REJECTED", "VOID"].includes(orderStatus) ? "Hubungi kasir untuk pemeriksaan pembayaran QRIS" : "QRIS sedang diverifikasi"}</p>
       <b>Rp {Number(order.total).toLocaleString("id-ID")}</b>
-      <button className="btn-secondary" onClick={() => { setOrder(null); setCart({}); setProofImage(null); }}>Pesan Sekarang</button>
+      {error && <p role="alert">{error}</p>}
+      <button className="btn-secondary" onClick={() => { setOrder(null); setCustomerToken(""); setOrderStatus("AWAITING_CONFIRMATION"); setPaymentStatus(""); setCart({}); setProofImage(null); setError(""); }}>Pesan Sekarang</button>
       <CustomerInstallCard />
     </main>
   );
@@ -182,6 +210,12 @@ function CustomerMenuContent() {
       )}
     </header>
     {error && <div className="customer-error">{error}<button onClick={() => setError("")}>×</button></div>}
+    {savedOrders.length > 0 && <nav aria-label="Pesanan sebelumnya" style={{ padding: "12px" }}>
+      {savedOrders.map(saved => <button className="btn-secondary" key={saved.order.id} onClick={() => {
+        setOrder(saved.order); setCustomerToken(saved.token); setOrderStatus("LOADING"); setPaymentStatus("");
+        setStatusTable(saved.tableNumber); setStatusPayment(saved.paymentMethod); setError("");
+      }}>Lihat pesanan #{saved.order.queueNumber} · Meja {saved.tableNumber}</button>)}
+    </nav>}
     <div className="customer-menu-tools">
       <label className="customer-search"><span aria-hidden="true">⌕</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Cari menu favorit..." aria-label="Cari menu" />{search && <button onClick={() => setSearch("")} aria-label="Hapus pencarian">×</button>}</label>
       <nav className="customer-categories" aria-label="Kategori menu">{categories.map((category) => <button key={category} className={selectedCategory === category ? "active" : ""} onClick={() => setSelectedCategory(category)}>{category}</button>)}</nav>

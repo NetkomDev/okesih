@@ -1,4 +1,5 @@
 "use client";
+import { orderPaymentLabel } from "@/lib/order-payment";
 import { DeviceSyncQueue } from "@/components/DeviceSyncQueue";
 
 import Image from "next/image";
@@ -134,7 +135,7 @@ export default function KdsModulePage() {
     [app.data?.orders],
   );
 
-  // Ticker per detik untuk countdown real-time dan evaluasi auto-dismiss
+  // Ticker untuk usia pesanan. Penyelesaian memerlukan konfirmasi petugas.
   const [now, setNow] = useState<number>(0);
   useEffect(() => {
     const initialTimer = window.setTimeout(() => setNow(Date.now()), 0);
@@ -144,34 +145,6 @@ export default function KdsModulePage() {
       clearInterval(timer);
     };
   }, []);
-
-  const autoDismissSeconds = Number(app.data?.profile?.queue_dismiss_seconds || 60);
-  const autoDismissingRef = useRef<Set<string>>(new Set());
-
-  // Auto-Dismiss pesanan READY setelah melewati durasi parameter master
-  useEffect(() => {
-    if (!app.data || ready.length === 0) return;
-    const dismissMs = autoDismissSeconds * 1000;
-    if (now === 0) return;
-    const currentMs = now;
-
-    ready.forEach((order) => {
-      if (autoDismissingRef.current.has(order.id)) return;
-      const readyTime = new Date(order.updated_at || order.created_at).getTime();
-      const elapsed = currentMs - readyTime;
-
-      if (elapsed >= dismissMs) {
-        autoDismissingRef.current.add(order.id);
-        void app.transitionOrder(order.id, "DONE")
-          .catch((reason) => {
-            app.setError(reason instanceof Error ? reason.message : "Status tiket gagal diperbarui.");
-          })
-          .finally(() => {
-            autoDismissingRef.current.delete(order.id);
-          });
-      }
-    });
-  }, [ready, now, app, autoDismissSeconds]);
 
   // 1. Dering saat ada pesanan masuk dari kasir (COOKING)
   useEffect(() => {
@@ -307,12 +280,7 @@ export default function KdsModulePage() {
               ⚡ {app.pendingCount} antrean sync
             </span>
           )}
-          <div
-            className="kds-dismiss-chip"
-            title={`Durasi antrean pesanan siap bertahan sebelum otomatis dianggap telah diambil oleh waiter (diatur oleh Super Admin Pusat)`}
-          >
-            <span>⏱ Auto-Dismiss: <b>{autoDismissSeconds}s</b></span>
-          </div>
+          <div className="kds-dismiss-chip"><span>Konfirmasi diantar secara manual</span></div>
           <button
             type="button"
             className={`kds-btn kds-btn-bell ${audioEnabled && audioUnlocked ? "active" : ""}`}
@@ -391,7 +359,6 @@ export default function KdsModulePage() {
                   action="✓ Siap Diantar"
                   busy={busyId === order.id}
                   onAction={() => void transition(order, "READY")}
-                  autoDismissSeconds={autoDismissSeconds}
                 />
               ))
             )}
@@ -420,10 +387,9 @@ export default function KdsModulePage() {
                   key={order.id}
                   now={now}
                   order={order}
-                  action="★ Sudah Diambil"
+                  action="✓ Sudah Diantar"
                   busy={busyId === order.id}
                   onAction={() => void transition(order, "DONE")}
-                  autoDismissSeconds={autoDismissSeconds}
                 />
               ))
             )}
@@ -440,29 +406,18 @@ function Ticket({
   busy,
   onAction,
   now,
-  autoDismissSeconds,
 }: {
   order: DeviceOrder;
   action: string;
   busy: boolean;
   onAction: () => void;
   now: number;
-  autoDismissSeconds?: number;
 }) {
   const age = Math.max(0, Math.floor((now - new Date(order.created_at).getTime()) / 60_000));
   const isCooking = order.status_pesanan === "COOKING";
-  const orderedAtCashier = order.waiter_name?.startsWith("Kasir:");
-  const paymentLabel = orderedAtCashier
-    ? (order.payment_method === "CASH" ? "TUNAI DI KASIR" : "QRIS DI KASIR")
-    : (order.payment_method === "CASH" ? "TUNAI · TAGIH" : "QRIS LUNAS");
+  const paymentLabel = orderPaymentLabel(order);
 
   const urgencyClass = age >= 15 ? "urgent" : age >= 8 ? "warn" : "normal";
-
-  const dismissLimit = autoDismissSeconds || 60;
-  const readyTime = new Date(order.updated_at || order.created_at).getTime();
-  const readyElapsedSec = Math.max(0, Math.floor((now - readyTime) / 1000));
-  const remainingSec = Math.max(0, dismissLimit - readyElapsedSec);
-  const progressPercent = Math.min(100, Math.max(0, (remainingSec / dismissLimit) * 100));
 
   return (
     <article className={`kds-card ${isCooking ? "status-cooking" : "status-ready"} ${urgencyClass}`}>
@@ -491,23 +446,8 @@ function Ticket({
         ))}
       </div>
 
-      {!isCooking && (
-        <div className="kds-dismiss-progress-container" title={`Pesanan otomatis dianggap telah diambil oleh waiter dalam ${remainingSec} detik`}>
-          <div className="kds-dismiss-label">
-            <span>⏱ Diambil Waiter</span>
-            <b>{remainingSec}s</b>
-          </div>
-          <div className="kds-progress-track">
-            <div
-              className="kds-progress-fill"
-              style={{
-                width: `${progressPercent}%`,
-                backgroundColor: remainingSec <= 10 ? "#EF4444" : remainingSec <= 25 ? "#F59E0B" : "#10B981",
-              }}
-            />
-          </div>
-        </div>
-      )}
+      {!isCooking && order.payment_status !== "PAID" && <p className="kds-notice">Minta kasir mencatat pelunasan sebelum pesanan ditandai sudah diantar.</p>}
+
 
       <footer className="kds-card-footer">
         <div className="kds-card-meta">
@@ -518,7 +458,7 @@ function Ticket({
         <button
           type="button"
           className={`kds-action-btn ${isCooking ? "btn-ready" : "btn-done"}`}
-          disabled={busy}
+          disabled={busy || (!isCooking && order.payment_status !== "PAID")}
           onClick={onAction}
         >
           {busy ? "Memproses..." : action}

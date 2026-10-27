@@ -1,4 +1,5 @@
 "use client";
+import { orderPaymentLabel } from "@/lib/order-payment";
 import { useCashierShift } from "@/components/CashierShiftGate";
 import Pagination from "@/components/Pagination";
 import { Icon,getCashierInitials,getOrderCashier } from "@/components/pos/helpers";
@@ -111,7 +112,7 @@ return (<><main className="pos-history-page">
         <div className="pos-history-intro">
           <small>REKAP TRANSAKSI</small>
           <h1>Histori Pesanan &amp; Audit Kasir</h1>
-          <p>Rekap seluruh transaksi, nama kasir pelaksana, dan rincian pembayaran untuk keperluan audit owner.</p>
+          <p>Periode mengikuti konfirmasi kasir (WITA); transaksi lama tanpa konfirmasi dan pesanan pending mengikuti waktu pemesanan. Omzet tunai berbeda dari kas yang sudah diterima.</p>
         </div>
         <div className="pos-history-actions">
           {app.data?.hasAuditPin && (
@@ -360,7 +361,7 @@ return (<><main className="pos-history-page">
                     </td>
                     <td>
                       <span className={`pos-audit-pay-pill ${order.payment_method.toLowerCase()}`}>
-                        {order.payment_method === "CASH" ? "💵 TUNAI" : "📱 QRIS"}
+                        {orderPaymentLabel(order)}
                       </span>
                     </td>
                     <td>
@@ -480,7 +481,7 @@ return (<><main className="pos-history-page">
 
                 <footer className="pos-hm-footer">
                   <span className={`pos-audit-pay-pill ${order.payment_method.toLowerCase()}`}>
-                    {order.payment_method === "CASH" ? "💵 TUNAI" : "📱 QRIS"}
+                    {orderPaymentLabel(order)}
                   </span>
                   <div className="pos-hm-amount-action">
                     <strong className="pos-hm-amount">

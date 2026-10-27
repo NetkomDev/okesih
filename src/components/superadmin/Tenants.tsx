@@ -44,7 +44,7 @@ interface TenantWarkop {
   commissionPerReceipt: number;
   todayTransactions: number;
   totalSaasBilling: number;
-  paymentStatus: "PAID" | "UNPAID" | "GRACE_PERIOD";
+  paymentStatus: "PAID" | "UNPAID" | "GRACE_PERIOD" | "PENDING_REVIEW" | "NO_BILLING";
   status: "ACTIVE" | "SUSPENDED" | "ARCHIVED";
   joinedDate: string;
 }
@@ -410,7 +410,7 @@ const toggleTenantStatus = (id: string) => {
       title: "Hapus tenant permanen?",
       targetName: tenant.name,
       requireVerification: true,
-      message: `Tenant "${tenant.name}" akan dihapus permanen beserta akun khusus tenant, menu, foto, meja, perangkat, transaksi, tagihan, dan komisi terkait. Akun yang juga digunakan tenant lain tetap disimpan. Tindakan ini tidak dapat dibatalkan. Lanjutkan?`,
+      message: `Tenant "${tenant.name}" akan dihapus permanen beserta akun khusus tenant, menu, foto, meja, dan perangkat. Tenant yang memiliki transaksi, tagihan, atau komisi tidak dapat dihapus; gunakan Nonaktifkan. Akun yang juga digunakan tenant lain tetap disimpan. Tindakan ini tidak dapat dibatalkan. Lanjutkan?`,
       confirmText: "Ya, Hapus Permanen",
       confirmVariant: "danger",
       onConfirm: async () => {
@@ -693,7 +693,7 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
                               color: t.paymentStatus === "PAID" ? (isDark ? "#34D399" : "#059669") : t.paymentStatus === "GRACE_PERIOD" ? (isDark ? "#FBBF24" : "#D97706") : "#EF4444",
                             }}
                           >
-                            {t.paymentStatus === "PAID" ? "● Lunas" : t.paymentStatus === "GRACE_PERIOD" ? "● Grace Period" : "● Menunggak"}
+                            {t.paymentStatus === "PAID" ? "● Lunas" : t.paymentStatus === "PENDING_REVIEW" ? "● Menunggu verifikasi" : t.paymentStatus === "NO_BILLING" ? "Belum ada tagihan" : t.paymentStatus === "GRACE_PERIOD" ? "● Grace Period" : "● Belum lunas"}
                           </span>
                           {t.status === "ACTIVE" ? (
                             <span className="badge badge-ready" style={{ width: "fit-content" }}>AKTIF</span>
@@ -729,7 +729,7 @@ return (<>{accessMessageUrl && <AccessMessage url={accessMessageUrl} onClose={()
   ["Slug menu", selectedTenant.slug], ["Mitra pengelola", selectedTenant.marketingAgentName || "Direct HQ"],
   ["Tarif komisi", `Rp ${selectedTenant.commissionPerReceipt.toLocaleString("id-ID")}/struk`],
   ["Struk hari ini", selectedTenant.todayTransactions], ["Tagihan", `Rp ${selectedTenant.totalSaasBilling.toLocaleString("id-ID")}`],
-  ["Status tagihan", <span key="billing-status" className={`sa-tenant-status ${selectedTenant.paymentStatus === "PAID" ? "is-active" : "is-pending"}`}>{selectedTenant.paymentStatus === "PAID" ? "Lunas" : selectedTenant.paymentStatus === "GRACE_PERIOD" ? "Masa tenggang" : "Menunggak"}</span>], ["Bergabung", selectedTenant.joinedDate],
+  ["Status tagihan", <span key="billing-status" className={`sa-tenant-status ${selectedTenant.paymentStatus === "PAID" ? "is-active" : "is-pending"}`}>{selectedTenant.paymentStatus === "PAID" ? "Lunas" : selectedTenant.paymentStatus === "PENDING_REVIEW" ? "Menunggu verifikasi" : selectedTenant.paymentStatus === "NO_BILLING" ? "Belum ada tagihan" : selectedTenant.paymentStatus === "GRACE_PERIOD" ? "Masa tenggang" : "Belum lunas"}</span>], ["Bergabung", selectedTenant.joinedDate],
 ]} actions={<>
   <button className="btn-secondary" style={{ marginBottom: 8 }} onClick={() => setAccessTarget({ kind: "TENANT", id: selectedTenant.id, name: `${selectedTenant.ownerName} — ${selectedTenant.name}`, phone: selectedTenant.phone, canReset: selectedTenant.status === "ACTIVE" })}>Perbaiki WA & akses</button>
   {renderTenantActions(selectedTenant)}

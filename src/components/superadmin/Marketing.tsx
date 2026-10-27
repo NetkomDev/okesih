@@ -292,7 +292,7 @@ const handleUpdateMarketingStatus = async (id: string, newStatus: "ACTIVE" | "IN
       title: "Hapus mitra permanen?",
       targetName: `${agent.name} (${agent.referralCode})`,
       requireVerification: true,
-      message: `Mitra "${agent.name}" (${agent.referralCode}) akan dihapus permanen beserta akun login khususnya, foto, data rekening, pengajuan, riwayat komisi, dan pencairannya. Hubungan mitra binaan akan dilepas; mitra binaan tetap memiliki akun sendiri.${
+      message: `Mitra "${agent.name}" (${agent.referralCode}) akan dihapus permanen beserta akun login khususnya, foto, data rekening, dan pengajuan. Mitra dengan riwayat komisi, pencairan, atau hak komisi tagihan tidak dapat dihapus; gunakan Nonaktifkan. Hubungan mitra binaan akan dilepas; mitra binaan tetap memiliki akun sendiri.${
         agent.totalTenantsAcquired > 0
           ? ` Sebanyak ${agent.totalTenantsAcquired} tenant binaannya tetap aman dan beroperasi normal sebagai tenant langsung tanpa pemotongan komisi marketing.`
           : ""

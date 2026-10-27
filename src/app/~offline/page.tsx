@@ -21,7 +21,7 @@ export default function OfflineFallbackPage() {
       referrer: document.referrer,
       pwaKind,
     });
-    setConfig(resolved);
+    const contextTimer = window.setTimeout(() => setConfig(resolved), 0);
 
     const handleOnline = () => {
       setIsReconnecting(true);
@@ -32,6 +32,7 @@ export default function OfflineFallbackPage() {
 
     window.addEventListener("online", handleOnline);
     return () => {
+      window.clearTimeout(contextTimer);
       window.removeEventListener("online", handleOnline);
     };
   }, []);

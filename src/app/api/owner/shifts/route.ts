@@ -28,7 +28,7 @@ export async function POST(request: Request) {
       p_actual_cash_deposited: input.actualCash,
       p_notes: input.notes || "Ditutup oleh Owner.",
     });
-    if (error) throw error;
+    if (error) throw new OwnerApiError(error.message, 409);
     await admin.from("audit_logs").insert({
       warkop_id: warkopId,
       actor_user_id: user.id,

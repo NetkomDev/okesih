@@ -23,7 +23,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const admin = createAdminClient();
   const { data: order, error } = await admin
     .from("transactions")
-    .select("id,table_number,nomor_antrean,total_harga,payment_method,status_pesanan,created_at,updated_at")
+    .select("id,table_number,nomor_antrean,total_harga,payment_method,payment_status,status_pesanan,created_at,updated_at")
     .eq("id", id)
     .eq("customer_access_token_hash", sha256(token))
     .maybeSingle();

@@ -29,6 +29,10 @@ interface AnalyticsData {
   newTenants: number;
   receipts: number;
   grossBilling: number;
+  paidBilling: number;
+  outstandingBilling: number;
+  directCommission: number;
+  networkCommission: number;
   marketingCommission: number;
   netRevenue: number;
   startAt: string;
@@ -154,21 +158,34 @@ const [confirmModal, setConfirmModal] = useState<ConfirmModalData>({
 useEffect(() => {
     if (!isAuthorized) return;
     let active = true;
+    let inFlight = false;
+    const controller = new AbortController();
     const loadAnalytics = async () => {
+      if (inFlight) return;
+      inFlight = true;
       setAnalyticsLoading(true);
       try {
-        const response = await fetch(`/api/superadmin/analytics?period=${analyticsPeriod}`, { cache: "no-store" });
+        const response = await fetch(`/api/superadmin/analytics?period=${analyticsPeriod}`, { cache: "no-store", signal: controller.signal });
         const payload = await response.json();
         if (!response.ok) throw new Error(payload.error || "Gagal memuat riwayat pencapaian.");
         if (active) setAnalytics(payload.data);
       } catch (error) {
         if (active) showToast("Analytics Tidak Tersedia", error instanceof Error ? error.message : "Terjadi kesalahan jaringan.", "error");
       } finally {
+        inFlight = false;
         if (active) setAnalyticsLoading(false);
       }
     };
     loadAnalytics();
-    return () => { active = false; };
+    const foreground = () => { if (navigator.onLine && document.visibilityState === "visible") void loadAnalytics(); };
+    const poll = window.setInterval(foreground, 30000);
+    window.addEventListener("online", foreground);
+    document.addEventListener("visibilitychange", foreground);
+    return () => {
+      active = false; controller.abort(); clearInterval(poll);
+      window.removeEventListener("online", foreground);
+      document.removeEventListener("visibilitychange", foreground);
+    };
   }, [analyticsPeriod, isAuthorized, showToast, summaryRevision]);
 
 if (roleMismatch) {

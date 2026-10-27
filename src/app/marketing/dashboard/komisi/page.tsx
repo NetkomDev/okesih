@@ -357,7 +357,7 @@ export default function MarketingKomisiPage() {
           <div>
             <strong>Mekanisme Komisi Multi-Tier OKESIH:</strong>
             <p>
-              Besaran komisi dikendalikan terpusat melalui Parameter Master Global. Saat tenant melunasi tagihan sewa struk, komisi langsung diteruskan ke saldo Mitra Marketing dan bonus jaringan diberikan kepada Koordinator Mitra pembina.
+              Tarif dan penerima komisi dikunci saat tagihan baru dibuat. Saat tagihan dilunasi, hak komisi tersebut masuk ke saldo Mitra dan Koordinator yang tercatat pada tagihan. Tagihan lama tanpa snapshot tetap mengikuti aturan pelunasan sebelumnya.
             </p>
           </div>
         </section>

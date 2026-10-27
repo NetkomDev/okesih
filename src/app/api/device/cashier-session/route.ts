@@ -24,11 +24,14 @@ async function activeShift(admin: Awaited<ReturnType<typeof requireDevice>>["adm
   if (error) throw error;
   if (!shift) return null;
 
-  const [{ data: member }, { data: device }, { data: cashRows }] = await Promise.all([
+  const [memberResult, deviceResult, cashResult] = await Promise.all([
     admin.from("warkop_members").select("id,username,display_name").eq("id", shift.opened_by).maybeSingle(),
     admin.from("device_installations").select("id,device_name").eq("id", shift.device_id).maybeSingle(),
-    admin.from("transactions").select("total_harga").eq("shift_id", shift.id).eq("payment_method", "CASH").not("status_pesanan", "in", "(VOID,REJECTED)"),
+    admin.rpc("report_shift_cash", { p_warkop_id: warkopId, p_shift_id: shift.id }),
   ]);
+  for (const result of [memberResult, deviceResult, cashResult]) if (result.error) throw result.error;
+  const member = memberResult.data;
+  const device = deviceResult.data;
 
   return {
     id: shift.id,
@@ -37,7 +40,7 @@ async function activeShift(admin: Awaited<ReturnType<typeof requireDevice>>["adm
     deviceId: shift.device_id,
     deviceName: device?.device_name || "Perangkat Kasir",
     openedAt: shift.opened_at,
-    expectedCash: (cashRows || []).reduce((sum, row) => sum + Number(row.total_harga || 0), 0),
+    expectedCash: Number(cashResult.data || 0),
   };
 }
 
@@ -97,11 +100,10 @@ export async function POST(request: NextRequest) {
       p_actual_cash_deposited: input.actualCash,
       p_notes: input.notes || null,
     });
-    if (error) throw error;
+    if (error) throw new DeviceApiError(error.message, 409);
     return Response.json({ result: data }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (error instanceof z.ZodError) return Response.json({ error: "Data shift kasir tidak valid." }, { status: 400 });
     return deviceErrorResponse(error);
   }
 }
-

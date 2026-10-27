@@ -77,10 +77,10 @@ return (<>{activeTab === "platform_config" && (
               }}
             >
               <h3 style={{ fontSize: "1.15rem", fontWeight: 800, color: "#0284C7", marginBottom: "0.5rem" }}>
-                ⏱️ Parameter Master: Auto-Dismiss Antrean Dapur &amp; TV
+                ⏱️ Parameter Master: Durasi Tampilan Antrean TV
               </h3>
               <p style={{ fontSize: "0.825rem", color: isDark ? "#94A3B8" : "#64748B", marginBottom: "1.25rem", lineHeight: 1.5 }}>
-                Berapa lama pesanan berstatus <strong>HIJAU (Siap Diantar)</strong> bertahan di layar Dapur / TV tenant warkop sebelum otomatis dianggap telah diambil oleh waiter dan dihapus dari antrean.
+                Berapa lama nomor pesanan siap tampil di TV. Pengaturan ini hanya mengatur tampilan TV; pesanan di dapur diselesaikan manual setelah pembayaran tercatat.
               </p>
 
               <div className="sa-duration-options" style={{ display: "flex", gap: "0.5rem", alignItems: "center", marginBottom: "1rem" }}>
@@ -197,7 +197,7 @@ return (<>{activeTab === "platform_config" && (
               </div>
               <p style={{ marginBottom: "16px", fontSize: "13px", color: isDark ? "#94A3B8" : "#64748B" }}>
                 Margin per struk perusahaan: <strong>Rp {Math.max(0, saasFeePerReceipt - defaultCommissionRate - coordinatorCommission).toLocaleString("id-ID")}</strong>.
-                Komisi dihitung otomatis dari Parameter Master Global saat tagihan dilunasi.
+                Tarif dan penerima komisi dikunci saat tagihan baru dibuat. Komisi masuk saldo setelah tagihan dilunasi.
               </p>
               {settingsError && <p role="alert">Parameter gagal dimuat. Muat ulang halaman sebelum menyimpan.</p>}
               <div style={{ paddingTop: "1rem", borderTop: isDark ? "1px solid rgba(255,255,255,.1)" : "1px solid rgba(15,23,42,.1)" }}>

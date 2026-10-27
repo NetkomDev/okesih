@@ -9,6 +9,9 @@ import { createCashierClient, createClient } from "@/lib/supabase/client";
 
 export type DeviceOrder = {
   cashier_name?: string;
+  payment_status?: "PENDING" | "PAID" | "LEGACY_UNVERIFIED";
+  payment_received_at?: string | null;
+  order_source?: "CUSTOMER_QR" | "POS" | "LEGACY";
   id: string; table_number: string; nomor_antrean: number; total_harga: number; payment_method: "QRIS" | "CASH";
   payment_proof_url: string | null; status_pesanan: string; waiter_name: string | null; created_at: string; updated_at: string;
   items: { id: string; nama_menu: string; harga_satuan: number; qty: number; notes: string | null }[];
@@ -289,6 +292,21 @@ export function useDeviceApp(type: "POS" | "KDS", includeHistory = true) {
     return result.order as { id: string; nomor_antrean: number; total_harga: number; status_pesanan: string };
   };
 
+  const recordPayment = async (orderId: string, cashReceived?: number) => {
+    if (type !== "POS" || !navigator.onLine || !data?.shift?.id) throw new Error("Pencatatan pembayaran memerlukan kasir, shift aktif, dan koneksi internet.");
+    const scope = `payment:${data.device.id}:${orderId}`;
+    const intent = { orderId, shiftId: data.shift.id, ...(cashReceived === undefined ? {} : { cashReceived }) };
+    const response = await fetch("/api/device/payments", {
+      method: "POST", headers: await deviceHeaders(type),
+      body: JSON.stringify({ ...intent, idempotencyKey: await orderIntentKey(localStorage, scope, intent) }),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || "Pembayaran gagal dicatat.");
+    completeOrderIntent(localStorage, scope);
+    await refreshInFlight.current; await refresh(true);
+    return result as { change: number };
+  };
+
   const resolveOperation = async (id: string, discard: boolean) => {
     const operation = (await listDeviceOperations(type)).find((op) => op.id === id);
     if (!operation) return;
@@ -296,5 +314,5 @@ export function useDeviceApp(type: "POS" | "KDS", includeHistory = true) {
     else await enqueueDeviceOperation({ ...operation, blocked: false, failure: undefined });
     await refresh();
   };
-  return { pendingOperations, resolveOperation, data, authorized, pairing, online, cachedAt, pendingCount, error, setError, beginPairing, transitionOrder, createCashierOrder, refresh };
+  return { pendingOperations, resolveOperation, data, authorized, pairing, online, cachedAt, pendingCount, error, setError, beginPairing, transitionOrder, createCashierOrder, recordPayment, refresh };
 }

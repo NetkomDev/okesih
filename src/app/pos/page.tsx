@@ -1,4 +1,5 @@
 "use client";
+import { orderPaymentLabel } from "@/lib/order-payment";
 import { DeviceSyncQueue } from "@/components/DeviceSyncQueue";
 import { Icon,getOrderCashier } from "@/components/pos/helpers";
 
@@ -196,6 +197,23 @@ export default function PosModulePage() {
   if (!app.data) return <div className="device-loading"><Image src="/okesih-logo-animated.svg" width={90} height={90} alt="OKESIH"/><b>{app.error || "Menyiapkan Kasir..."}</b></div>;
 
   const update = async (order: DeviceOrder, status: "COOKING" | "DONE" | "REJECTED") => { setBusy(true); app.setError(""); try { await app.transitionOrder(order.id, status); setHistoryRevision(value => value + 1); setSelected(null); } catch (reason) { app.setError(reason instanceof Error ? reason.message : "Pesanan gagal diperbarui."); } finally { setBusy(false); } };
+  const collectPayment = async (order: DeviceOrder) => {
+    if (busy || !app.online) return;
+    let received: number | undefined;
+    if (order.payment_method === "CASH") {
+      const input = window.prompt(`Catat uang yang benar-benar diterima untuk pesanan #${order.nomor_antrean}. Total Rp ${Number(order.total_harga).toLocaleString("id-ID")}. Untuk transaksi lama, periksa dulu agar tidak menagih dua kali.`, String(order.total_harga));
+      if (input === null) return;
+      received = Number(input.replace(/[^0-9]/g, ""));
+      if (!Number.isFinite(received) || received < Number(order.total_harga)) { app.setError("Uang diterima kurang dari total pesanan."); return; }
+    } else if (!window.confirm("Bukti dan penerimaan pembayaran QRIS sudah diperiksa dan benar?")) return;
+    setBusy(true); app.setError("");
+    try {
+      const result = await app.recordPayment(order.id, received);
+      setHistoryRevision(value => value + 1); setSelected(null);
+      setSaleMessage(`Pembayaran tercatat.${order.payment_method === "CASH" ? ` Kembalian Rp ${result.change.toLocaleString("id-ID")}.` : ""}`);
+    } catch (reason) { app.setError(reason instanceof Error ? reason.message : "Pembayaran belum tercatat."); }
+    finally { setBusy(false); }
+  };
   const changeQty = (menuId: string, delta: number) => setCart((current) => { const nextQty = (current[menuId]?.qty || 0) + delta; if (nextQty <= 0) { const next = { ...current }; delete next[menuId]; return next; } return { ...current, [menuId]: { qty: Math.min(nextQty, 99), notes: current[menuId]?.notes || "" } }; });
   const submitCashierOrder = async (cashPayment?: number) => {
     if (!cartItems.length || cashierOrderSubmitting.current) return;
@@ -466,7 +484,7 @@ export default function PosModulePage() {
                     key={order.id}
                     order={order}
                     onOpen={() => setSelected(order)}
-                    onQuickReadyDone={(ord) => void update(ord, "DONE")}
+                    onQuickReadyDone={(ord) => ord.payment_status === "PAID" ? void update(ord, "DONE") : setSelected(ord)}
                     busy={busy}
                     now={ordersNow}
                   />
@@ -555,7 +573,7 @@ export default function PosModulePage() {
           <strong>{new Date(selected.created_at).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}</strong>
         </div>
       </div>
-      <div className={`ops-payment ${selected.payment_method.toLowerCase()}`}>{selected.payment_method === "CASH" ? "BAYAR TUNAI" : "QRIS — VERIFIKASI BUKTI"}</div>{selected.payment_proof_url && <a className="ops-proof" href={selected.payment_proof_url} target="_blank" rel="noreferrer">Buka Bukti Pembayaran</a>}<div className="ops-items">{selected.items.map((item) => <div key={item.id}><span>{item.qty}× {item.nama_menu}{item.notes && <small>{item.notes}</small>}</span><b>Rp {(Number(item.harga_satuan) * item.qty).toLocaleString("id-ID")}</b></div>)}</div><strong className="ops-total">Total Rp {Number(selected.total_harga).toLocaleString("id-ID")}</strong>{selected.status_pesanan === "AWAITING_CONFIRMATION" ? <div className="ops-modal-actions"><button disabled={busy} className="danger" onClick={() => void update(selected, "REJECTED")}>Tolak</button><button disabled={busy} className="primary" onClick={() => void update(selected, "COOKING")}>{busy ? "Menyimpan..." : "Konfirmasi & Kirim ke Dapur"}</button></div> : selected.status_pesanan === "READY" ? <button disabled={busy} className="primary" onClick={() => void update(selected, "DONE")}>Tandai Sudah Diantar</button> : selected.status_pesanan === "DONE" ? <p style={{ color: "#16a34a", fontWeight: 800 }}>✓ Pesanan sudah selesai diantar.</p> : <p>Status: Sedang disiapkan dapur</p>}</section></div>}
+      <div className={`ops-payment ${selected.payment_method.toLowerCase()}`}>{orderPaymentLabel(selected)}</div>{selected.payment_proof_url && <a className="ops-proof" href={selected.payment_proof_url} target="_blank" rel="noreferrer">Buka Bukti Pembayaran</a>}<div className="ops-items">{selected.items.map((item) => <div key={item.id}><span>{item.qty}× {item.nama_menu}{item.notes && <small>{item.notes}</small>}</span><b>Rp {(Number(item.harga_satuan) * item.qty).toLocaleString("id-ID")}</b></div>)}</div>{selected.payment_status !== "PAID" && ["COOKING", "READY", "DONE"].includes(selected.status_pesanan) && <button disabled={busy || !app.online} className="primary" onClick={() => void collectPayment(selected)}>{selected.payment_method === "CASH" ? "Catat Pelunasan Tunai" : "Konfirmasi Pembayaran QRIS"}</button>}<strong className="ops-total">Total Rp {Number(selected.total_harga).toLocaleString("id-ID")}</strong>{selected.status_pesanan === "AWAITING_CONFIRMATION" ? <div className="ops-modal-actions"><button disabled={busy} className="danger" onClick={() => void update(selected, "REJECTED")}>Tolak</button><button disabled={busy} className="primary" onClick={() => void update(selected, "COOKING")}>{busy ? "Menyimpan..." : "Konfirmasi & Kirim ke Dapur"}</button></div> : selected.status_pesanan === "READY" ? <button disabled={busy || selected.payment_status !== "PAID"} className="primary" onClick={() => void update(selected, "DONE")}>Tandai Sudah Diantar</button> : selected.status_pesanan === "DONE" ? <p style={{ color: "#16a34a", fontWeight: 800 }}>✓ Pesanan sudah selesai diantar.</p> : <p>Status: Sedang disiapkan dapur</p>}</section></div>}
   </div></CashierShiftGate>;
 }
 
@@ -659,7 +677,7 @@ function OrderCard({
           <strong>Rp {Number(order.total_harga).toLocaleString("id-ID")}</strong>
         </div>
         <span className={`pos-ticket-pay ${order.payment_method.toLowerCase()}`}>
-          {order.payment_method === "CASH" ? "💵 TUNAI" : "📱 QRIS"}
+          {orderPaymentLabel(order)}
         </span>
       </footer>
 

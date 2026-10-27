@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
       deviceType === "POS"
         ? admin.from("shifts").select("id,opened_at,status,opened_by").eq("warkop_id", warkopId).eq("device_id", device.id).eq("status", "OPEN").order("opened_at", { ascending: false }).limit(1).maybeSingle()
         : Promise.resolve({ data: null, error: null }),
-      readAllRows(() => admin.from("transactions").select("id,table_number,nomor_antrean,total_harga,payment_method,payment_proof_url,status_pesanan,waiter_name,created_at,updated_at").eq("warkop_id", warkopId).in("status_pesanan", statuses).order("created_at").order("id")),
+      readAllRows(() => admin.from("transactions").select("id,table_number,nomor_antrean,total_harga,payment_method,payment_proof_url,status_pesanan,order_source,payment_status,payment_received_at,waiter_name,created_at,updated_at").eq("warkop_id", warkopId).in("status_pesanan", statuses).order("created_at").order("id")),
       auditPinSettings(admin, warkopId),
     ]);
 

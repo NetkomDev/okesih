@@ -71,7 +71,7 @@ export interface TenantWarkop {
   commissionPerReceipt: number;
   todayTransactions: number;
   totalSaasBilling: number;
-  paymentStatus: "PAID" | "UNPAID" | "GRACE_PERIOD";
+  paymentStatus: "PAID" | "UNPAID" | "GRACE_PERIOD" | "PENDING_REVIEW" | "NO_BILLING";
   status: "ACTIVE" | "SUSPENDED";
   joinedDate: string;
 }
@@ -122,6 +122,10 @@ export interface AnalyticsData {
   newTenants: number;
   receipts: number;
   grossBilling: number;
+  paidBilling: number;
+  outstandingBilling: number;
+  directCommission: number;
+  networkCommission: number;
   marketingCommission: number;
   netRevenue: number;
   startAt: string;

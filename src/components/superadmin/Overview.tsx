@@ -9,7 +9,7 @@ const totalActiveTenants = analytics?.activeTenants ?? 0;
 const totalAllTransactions = analytics?.receipts ?? 0;
 const totalGrossSaasBilling = analytics?.grossBilling ?? 0;
 const totalMarketingCommission = analytics?.marketingCommission ?? 0;
-const netPlatformRevenue = analytics?.netRevenue ?? totalGrossSaasBilling - totalMarketingCommission;
+const netPlatformRevenue = analytics?.netRevenue ?? 0;
 const periodLabel = { today: "Hari ini", week: "Minggu ini", month: "Bulan ini", year: "Tahun ini" }[analyticsPeriod];
 return (<>{activeTab === "overview" && (
             <section className="superadmin-overview" style={{ marginBottom: "2rem" }}>
@@ -147,7 +147,7 @@ return (<>{activeTab === "overview" && (
                 Rp {totalMarketingCommission.toLocaleString("id-ID")}
               </div>
               <div style={{ fontSize: "0.75rem", color: isDark ? "#E9D5FF" : "#6D28D9", marginTop: "0.4rem" }}>
-                Komisi dari {analytics?.totalMarketing ?? 0} mitra sales lapangan
+                Langsung Rp {(analytics?.directCommission ?? 0).toLocaleString("id-ID")} · Jaringan Rp {(analytics?.networkCommission ?? 0).toLocaleString("id-ID")}
               </div>
             </div>
 
@@ -167,7 +167,7 @@ return (<>{activeTab === "overview" && (
               }}
             >
               <div style={{ fontSize: "0.75rem", color: isDark ? "#38BDF8" : "#0284C7", fontWeight: 800, marginBottom: "0.35rem" }}>
-                NET PENDAPATAN OKESIH HQ
+                MARGIN POKOK TEREALISASI
               </div>
               <div
                 style={{
@@ -179,11 +179,17 @@ return (<>{activeTab === "overview" && (
                 Rp {netPlatformRevenue.toLocaleString("id-ID")}
               </div>
               <div style={{ fontSize: "0.75rem", color: isDark ? "#7DD3FC" : "#0369A1", marginTop: "0.4rem", fontWeight: 700 }}>
-                Gross dikurangi komisi marketing
+                Pokok dilunasi dikurangi komisi langsung & jaringan; sebelum biaya lain
               </div>
             </div>
           </div>
 
+          <p style={{ fontSize: "0.85rem", marginBottom: "1rem" }}>
+            Pokok dilunasi pada periode ini: <b>Rp {(analytics?.paidBilling ?? 0).toLocaleString("id-ID")}</b> ·
+            Sisa pokok tagihan yang terbit pada periode ini: <b>Rp {(analytics?.outstandingBilling ?? 0).toLocaleString("id-ID")}</b>.
+            Komisi mengikuti tanggal mutasi; kode unik tidak termasuk pokok. Waktu WITA.
+            {analytics?.endAt && <> Diperbarui {new Date(analytics.endAt).toLocaleTimeString("id-ID", { timeZone: "Asia/Makassar" })}.</>}
+          </p>
           <div className="superadmin-insights-grid">
             <div className="superadmin-insight-card">
               <div className="superadmin-insight-heading">

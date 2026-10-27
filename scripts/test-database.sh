@@ -19,3 +19,6 @@ psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/fixtures/directory-asser
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/fixtures/coordinator-chain-assertions.sql
 
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/fixtures/permanent-deletion-assertions.sql
+psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/fixtures/flow-reporting-assertions.sql
+
+psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/fixtures/flow-payment-assertions.sql

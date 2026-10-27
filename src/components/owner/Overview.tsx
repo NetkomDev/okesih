@@ -14,7 +14,7 @@ const RevenueChart = dynamic(() => import("./RevenueChart"), {
     </div>
   ),
 });
-function DeferredRevenue() {
+function DeferredRevenue({ revision }: { revision: number }) {
   const target = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
   useEffect(() => {
@@ -38,7 +38,7 @@ function DeferredRevenue() {
   return (
     <div ref={target} className="owner-deferred-chart">
       {visible ? (
-        <RevenueChart />
+        <RevenueChart revision={revision} />
       ) : (
         <div className="owner-chart-placeholder" aria-hidden="true">
           <span className="owner-skeleton-box" />
@@ -51,6 +51,8 @@ export default function OverviewFeature() {
   const {
     ready,
     refreshing,
+    revision,
+    syncedAt,
     data,
     error,
     setError,
@@ -193,14 +195,14 @@ export default function OverviewFeature() {
           <div>
             <span>
               <OwnerIcon name="cash" />
-              Tunai
+              Omzet tunai
             </span>
             <b>{money(metrics.cash)}</b>
           </div>
           <div>
             <span>
               <OwnerIcon name="qr" />
-              QRIS
+              Omzet QRIS
             </span>
             <b>{money(metrics.qris)}</b>
           </div>
@@ -259,7 +261,8 @@ export default function OverviewFeature() {
           </button>
         )}
       </section>
-      <DeferredRevenue />
+      <p className="owner-sync-time">{syncedAt ? `Diperbarui ${new Date(syncedAt).toLocaleTimeString("id-ID", { timeZone: "Asia/Makassar" })} WITA` : "Menunggu sinkronisasi"}</p>
+      <DeferredRevenue revision={revision} />
       <WhatsAppAdminButton businessName={data.profile.nama} />
       {billingOpen && (
         <BillingModal
